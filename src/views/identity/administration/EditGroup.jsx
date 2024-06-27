@@ -18,6 +18,7 @@ import {
   useListGroupMembersQuery,
   useListGroupOwnersQuery,
   useListGroupQuery,
+  useListGroupSenderAuthQuery,
 } from 'src/store/api/groups'
 import { useDispatch } from 'react-redux'
 import { ModalService } from 'src/components/utilities'
@@ -32,6 +33,7 @@ const EditGroup = () => {
   let query = useQuery()
   const groupId = query.get('groupId')
   const tenantDomain = query.get('tenantDomain')
+  // const calculatedGroupType = query.get('calculatedGroupType')
   const [queryError, setQueryError] = useState(false)
   const [refreshToken, setRefresh] = useState('')
   const {
@@ -40,6 +42,13 @@ const EditGroup = () => {
     error,
     isSuccess,
   } = useListGroupQuery({ tenantDomain, groupId })
+
+  const {
+    data: SenderAuth = {},
+    isFetching: SenderAuthisFetching,
+    error: SenderAuthError,
+    isSuccess: SenderAuthIsSuccess,
+  } = useListGroupSenderAuthQuery({ tenantDomain, groupId })
 
   const {
     data: members = [],
@@ -97,6 +106,7 @@ const EditGroup = () => {
       setQueryError(true)
     }
   }, [groupId, tenantDomain, dispatch])
+
   const onSubmit = (values) => {
     const shippedValues = {
       tenantID: tenantDomain,
@@ -154,6 +164,12 @@ const EditGroup = () => {
                   {isSuccess && (
                     <Form
                       onSubmit={onSubmit}
+                      initialValues={{
+                        ...(group[0].calculatedGroupType === 'Microsoft 365' ||
+                        group[0].calculatedGroupType === 'Distribution List'
+                          ? { allowExternal: !SenderAuth.enabled }
+                          : {}),
+                      }}
                       render={({ handleSubmit, submitting, values }) => {
                         return (
                           <CForm onSubmit={handleSubmit}>
@@ -304,8 +320,18 @@ const EditGroup = () => {
                   {isFetching && <CSpinner />}
                   {isSuccess && (
                     <>
-                      This is the (raw) information for this group.
-                      <pre>{JSON.stringify(group, null, 2)}</pre>
+                      <div>
+                        This is the (raw) information for this group.
+                        <pre>{JSON.stringify(group, null, 2)}</pre>
+                      </div>
+                      <div>
+                        This is the (raw) information for SenderAuth.
+                        {SenderAuthisFetching && <CSpinner />}
+                        {SenderAuthIsSuccess && <pre>{JSON.stringify(SenderAuth, null, 2)}</pre>}
+                        {SenderAuthError && (
+                          <div>Error fetching SenderAuth data: {SenderAuthError.message}</div>
+                        )}
+                      </div>
                     </>
                   )}
                 </CCardBody>
