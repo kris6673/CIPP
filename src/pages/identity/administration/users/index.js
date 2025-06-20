@@ -13,17 +13,32 @@ const Page = () => {
   const filters = [
     {
       filterName: "Account Enabled",
-      value: [{ id: "accountEnabled", value: "Yes" }],
+      value: [{ id: "accountEnabled", value: "Yes", filterMode: "equals" }],
       type: "column",
     },
     {
       filterName: "Account Disabled",
-      value: [{ id: "accountEnabled", value: "No" }],
+      value: [{ id: "accountEnabled", value: "No", filterMode: "equals" }],
       type: "column",
     },
     {
       filterName: "Guest Accounts",
-      value: [{ id: "userType", value: "Guest" }],
+      value: [{ id: "userType", value: "Guest", filterMode: "equals" }],
+      type: "column",
+    },
+    {
+      filterName: "Users with Email (Contains)",
+      value: [{ id: "mail", value: "@", filterMode: "contains" }],
+      type: "column",
+    },
+    {
+      filterName: "Display Names Starting with 'A'",
+      value: [{ id: "displayName", value: "A", filterMode: "startsWith" }],
+      type: "column",
+    },
+    {
+      filterName: "Users Without Phone Numbers",
+      value: [{ id: "businessPhones", value: "", filterMode: "empty" }],
       type: "column",
     },
   ];

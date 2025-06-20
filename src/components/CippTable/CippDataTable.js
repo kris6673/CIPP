@@ -450,6 +450,49 @@ export const CippDataTable = (props) => {
           return true;
         }
       },
+      presetFilter: (row, columnId, filterValue) => {
+        // Custom filter function that handles different filter modes
+        const rowValue = row.getValue(columnId);
+        
+        // Check if we have a stored filter mode for this column
+        const filterMode = window.cippActiveFilterModes?.get(columnId);
+        
+        if (rowValue === null || rowValue === undefined) {
+          return filterMode === 'empty';
+        }
+        
+        const stringValue = String(rowValue).toLowerCase();
+        const searchValue = String(filterValue).toLowerCase();
+        
+        switch (filterMode) {
+          case 'contains':
+            return stringValue.includes(searchValue);
+          case 'startsWith':
+            return stringValue.startsWith(searchValue);
+          case 'endsWith':
+            return stringValue.endsWith(searchValue);
+          case 'equals':
+            return stringValue === searchValue;
+          case 'notEqual':
+            return stringValue !== searchValue;
+          case 'notContains':
+            return !stringValue.includes(searchValue);
+          case 'empty':
+            return !rowValue || rowValue === '' || rowValue === null || rowValue === undefined;
+          case 'notEmpty':
+            return rowValue && rowValue !== '' && rowValue !== null && rowValue !== undefined;
+          case 'regex':
+            try {
+              const regex = new RegExp(filterValue, "i");
+              return regex.test(String(rowValue));
+            } catch {
+              return false;
+            }
+          default:
+            // Fallback to default includes behavior
+            return stringValue.includes(searchValue);
+        }
+      },
     },
     globalFilterFn: "contains",
     enableGlobalFilterModes: true,

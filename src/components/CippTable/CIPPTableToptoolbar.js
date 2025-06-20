@@ -71,6 +71,7 @@ export const CIPPTableToptoolbar = ({
   const currentTenant = useSettings()?.currentTenant;
 
   const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
+  const [activeFilterModes, setActiveFilterModes] = useState(new Map());
   const handleActionMenuOpen = (event) => setActionMenuAnchor(event.currentTarget);
   const handleActionMenuClose = () => setActionMenuAnchor(null);
 
@@ -184,7 +185,29 @@ export const CIPPTableToptoolbar = ({
     }
     if (filterType === "column") {
       table.setShowColumnFilters(true);
-      table.setColumnFilters(filter);
+      
+      // Enhanced to support filter modes - store filter modes separately
+      const newFilterModes = new Map();
+      const formattedFilters = filter.map((filterItem) => {
+        const columnFilter = {
+          id: filterItem.id,
+          value: filterItem.value, // Keep actual value for display
+        };
+        
+        // Store filter mode separately if specified
+        if (filterItem.filterMode && filterItem.filterMode !== 'equals') {
+          newFilterModes.set(filterItem.id, filterItem.filterMode);
+          columnFilter.filterFn = 'presetFilter';
+        }
+        
+        return columnFilter;
+      });
+      
+      // Update the active filter modes
+      setActiveFilterModes(newFilterModes);
+      // Store in global variable for the custom filter function
+      window.cippActiveFilterModes = newFilterModes;
+      table.setColumnFilters(formattedFilters);
     }
     if (filterType === "reset") {
       table.resetGlobalFilter();
@@ -382,15 +405,24 @@ export const CIPPTableToptoolbar = ({
                 </MenuItem>
               )}
               <Divider />
-              {filterList?.map((filter) => (
+              {filterList?.map((filter, index) => (
                 <MenuItem
-                  key={filter.id}
+                  key={filter.id || index}
                   onClick={() => {
                     filterPopover.handleClose();
                     setTableFilter(filter.value, filter.type, filter.filterName);
                   }}
                 >
-                  <ListItemText primary={filter.filterName} />
+                  <ListItemText 
+                    primary={filter.filterName}
+                    secondary={
+                      filter.type === 'column' && filter.value?.length > 0 
+                        ? filter.value.map(v => 
+                            `${v.id} ${v.filterMode || 'equals'} "${v.value}"`
+                          ).join(', ')
+                        : undefined
+                    }
+                  />
                 </MenuItem>
               ))}
             </Menu>

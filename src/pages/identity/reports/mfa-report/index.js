@@ -20,28 +20,28 @@ const Page = () => {
     {
       filterName: "Enabled, licensed users",
       value: [
-        { id: "AccountEnabled", value: "Yes" },
-        { id: "isLicensed", value: "Yes" },
+        { id: "AccountEnabled", value: "Yes", filterMode: "equals" },
+        { id: "isLicensed", value: "Yes", filterMode: "equals" },
       ],
       type: "column",
     },
     {
       filterName: "Enabled, licensed users missing MFA",
       value: [
-        { id: "AccountEnabled", value: "Yes" },
-        { id: "isLicensed", value: "Yes" },
-        { id: "MFARegistration", value: "No" },
+        { id: "AccountEnabled", value: "Yes", filterMode: "equals" },
+        { id: "isLicensed", value: "Yes", filterMode: "equals" },
+        { id: "MFARegistration", value: "No", filterMode: "equals" },
       ],
       type: "column",
     },
     {
       filterName: "No MFA methods registered",
-      value: [{ id: "MFARegistration", value: "No" }],
+      value: [{ id: "MFARegistration", value: "No", filterMode: "equals" }],
       type: "column",
     },
     {
       filterName: "MFA methods registered",
-      value: [{ id: "MFARegistration", value: "Yes" }],
+      value: [{ id: "MFARegistration", value: "Yes", filterMode: "equals" }],
       type: "column",
     },
   ];
