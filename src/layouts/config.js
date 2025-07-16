@@ -604,6 +604,11 @@ export const nativeMenuItems = [
             permissions: ["Exchange.Contact.*"],
           },
           {
+            title: "HVE Accounts",
+            path: "/email/administration/hve-accounts",
+            permissions: ["Exchange.Mailbox.*"],
+          },
+          {
             title: "Quarantine",
             path: "/email/administration/quarantine",
             permissions: ["Exchange.SpamFilter.*"],
