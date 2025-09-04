@@ -43,8 +43,13 @@ const Page = () => {
           defaultAttributes[attribute.label] = { Value: user?.[attribute.label] };
         });
       }
+      
+      // Use fallback for usageLocation if user's usageLocation is null/undefined
+      const usageLocation = user?.usageLocation || userSettingsDefaults?.usageLocation || null;
+      
       formControl.reset({
         ...user,
+        usageLocation: usageLocation,
         defaultAttributes: defaultAttributes,
         tenantFilter: userSettingsDefaults.currentTenant,
         licenses: user.assignedLicenses.map((license) => ({
