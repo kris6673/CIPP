@@ -84,12 +84,16 @@ const extractAllResults = (data) => {
       }
     }
 
-    const text = `${actionType}: ${licenseList}`;
+    // Enhanced text with better formatting
+    const text = `🪪 ${actionType}: ${licenseList}`;
     return {
       text,
       copyField: licenseList,
       severity: "success",
-      details: null,
+      details: Array.isArray(licenses) && licenses.length > 3 ? {
+        licenses: licenses,
+        count: Array.isArray(licenses) ? licenses.length : 1
+      } : null,
     };
   };
 
@@ -115,7 +119,7 @@ const extractAllResults = (data) => {
       const ignoreKeys = ["metadata", "Metadata", "severity"];
 
       if (typeof obj === "object") {
-        // Check for license removal information
+        // Check for license removal information at the current level
         const licenseKeys = ["removedLicenses", "licensesRemoved", "RemovedLicenses"];
         for (const licenseKey of licenseKeys) {
           if (obj[licenseKey]) {
@@ -135,6 +139,20 @@ const extractAllResults = (data) => {
           if (["Results", "Result", "results", "result"].includes(key)) {
             if (Array.isArray(value)) {
               value.forEach((valItem) => {
+                // Check for license info within individual results
+                if (valItem && typeof valItem === "object") {
+                  for (const licenseKey of licenseKeys) {
+                    if (valItem[licenseKey]) {
+                      const licenseInfo = formatLicenseInfo(valItem[licenseKey], "Licenses Removed");
+                      if (licenseInfo) {
+                        results.push(licenseInfo);
+                      }
+                      // Remove the license key so it doesn't get processed again
+                      delete valItem[licenseKey];
+                    }
+                  }
+                }
+                
                 const processed = processResultItem(valItem);
                 if (processed) {
                   results.push(processed);
