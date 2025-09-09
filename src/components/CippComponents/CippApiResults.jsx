@@ -21,6 +21,7 @@ import React from "react";
 import { CippTableDialog } from "./CippTableDialog";
 import { EyeIcon } from "@heroicons/react/24/outline";
 import { useDialog } from "../../hooks/use-dialog";
+import { getCippLicenseTranslation } from "../../utils/get-cipp-license-translation";
 
 const extractAllResults = (data) => {
   const results = [];
@@ -59,6 +60,39 @@ const extractAllResults = (data) => {
     return null;
   };
 
+  // Helper function to format license information for display
+  const formatLicenseInfo = (licenses, actionType) => {
+    if (!licenses || (Array.isArray(licenses) && licenses.length === 0)) {
+      return null;
+    }
+
+    let licenseList;
+    try {
+      // Use the license translation utility
+      const translatedLicenses = getCippLicenseTranslation(licenses);
+      licenseList = Array.isArray(translatedLicenses) 
+        ? translatedLicenses.join(", ") 
+        : translatedLicenses;
+    } catch (error) {
+      // Fallback if translation fails
+      if (Array.isArray(licenses)) {
+        licenseList = licenses.join(", ");
+      } else if (typeof licenses === "string") {
+        licenseList = licenses;
+      } else {
+        licenseList = String(licenses);
+      }
+    }
+
+    const text = `${actionType}: ${licenseList}`;
+    return {
+      text,
+      copyField: licenseList,
+      severity: "success",
+      details: null,
+    };
+  };
+
   const extractFrom = (obj) => {
     if (!obj) return;
 
@@ -81,9 +115,23 @@ const extractAllResults = (data) => {
       const ignoreKeys = ["metadata", "Metadata", "severity"];
 
       if (typeof obj === "object") {
+        // Check for license removal information
+        const licenseKeys = ["removedLicenses", "licensesRemoved", "RemovedLicenses"];
+        for (const licenseKey of licenseKeys) {
+          if (obj[licenseKey]) {
+            const licenseInfo = formatLicenseInfo(obj[licenseKey], "Licenses Removed");
+            if (licenseInfo) {
+              results.push(licenseInfo);
+            }
+          }
+        }
+
         Object.keys(obj).forEach((key) => {
           const value = obj[key];
           if (ignoreKeys.includes(key)) return;
+          // Skip license keys as they're handled above
+          if (licenseKeys.includes(key)) return;
+          
           if (["Results", "Result", "results", "result"].includes(key)) {
             if (Array.isArray(value)) {
               value.forEach((valItem) => {
