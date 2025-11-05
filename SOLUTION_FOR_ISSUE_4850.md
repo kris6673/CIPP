@@ -96,6 +96,17 @@ $ExclusionDomains = @(
 - No false positive alerts will be generated for these domains going forward
 - DKIM standard will also skip these domains, maintaining consistency
 
+## Applying the Fix
+
+A patch file `cipp-api-fix-4850.patch` has been provided in this repository. To apply it to the CIPP-API repository:
+
+```bash
+cd /path/to/CIPP-API
+git apply /path/to/CIPP/cipp-api-fix-4850.patch
+```
+
+Or manually apply the changes as described above.
+
 ## Testing
 1. Verify that new `.mail.onmicrosoft.com` domains are not added to the analyser when syncing tenant domains
 2. Confirm that other domains continue to be analysed correctly

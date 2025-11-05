@@ -1,0 +1,24 @@
+diff --git a/Modules/CIPPCore/Public/Entrypoints/Activity Triggers/Domain Analyser/Push-DomainAnalyserTenant.ps1 b/Modules/CIPPCore/Public/Entrypoints/Activity Triggers/Domain Analyser/Push-DomainAnalyserTenant.ps1
+index d628b652..4eb9deea 100644
+--- a/Modules/CIPPCore/Public/Entrypoints/Activity Triggers/Domain Analyser/Push-DomainAnalyserTenant.ps1	
++++ b/Modules/CIPPCore/Public/Entrypoints/Activity Triggers/Domain Analyser/Push-DomainAnalyserTenant.ps1	
+@@ -23,6 +23,7 @@ function Push-DomainAnalyserTenant {
+             # Remove domains that are not wanted, and used for cloud signature services. Same exclusions also found in Invoke-CIPPStandardAddDKIM
+             $ExclusionDomains = @(
+                 '*.microsoftonline.com'
++                '*.mail.onmicrosoft.com'
+                 '*.exclaimer.cloud'
+                 '*.excl.cloud'
+                 '*.codetwo.online'
+diff --git a/Modules/CIPPCore/Public/Standards/Invoke-CIPPStandardAddDKIM.ps1 b/Modules/CIPPCore/Public/Standards/Invoke-CIPPStandardAddDKIM.ps1
+index 719b6428..08c58271 100644
+--- a/Modules/CIPPCore/Public/Standards/Invoke-CIPPStandardAddDKIM.ps1
++++ b/Modules/CIPPCore/Public/Standards/Invoke-CIPPStandardAddDKIM.ps1
+@@ -76,6 +76,7 @@ function Invoke-CIPPStandardAddDKIM {
+     # Same exclusions also found in Push-DomainAnalyserTenant
+     $ExclusionDomains = @(
+         '*.microsoftonline.com'
++        '*.mail.onmicrosoft.com'
+         '*.exclaimer.cloud'
+         '*.excl.cloud'
+         '*.codetwo.online'
