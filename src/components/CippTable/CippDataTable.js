@@ -97,6 +97,7 @@ export const CippDataTable = (props) => {
     simple = false,
     cardButton,
     offCanvas = false,
+    offCanvasOnRowClick = false,
     noCard = false,
     hideTitle = false,
     refreshFunction,
@@ -106,6 +107,7 @@ export const CippDataTable = (props) => {
     maxHeightOffset = "380px",
     defaultSorting = [],
     isInDialog = false,
+    showBulkExportAction = true,
   } = props;
   const [columnVisibility, setColumnVisibility] = useState(initialColumnVisibility);
   const [configuredSimpleColumns, setConfiguredSimpleColumns] = useState(simpleColumns);
@@ -113,6 +115,8 @@ export const CippDataTable = (props) => {
   const [usedColumns, setUsedColumns] = useState([]);
   const [offcanvasVisible, setOffcanvasVisible] = useState(false);
   const [offCanvasData, setOffCanvasData] = useState({});
+  const [offCanvasRowIndex, setOffCanvasRowIndex] = useState(0);
+  const [filteredRows, setFilteredRows] = useState([]);
   const [customComponentData, setCustomComponentData] = useState({});
   const [customComponentVisible, setCustomComponentVisible] = useState(false);
   const [actionData, setActionData] = useState({ data: {}, action: {}, ready: false });
@@ -279,12 +283,45 @@ export const CippDataTable = (props) => {
       baseBackgroundColor: theme.palette.background.paper,
     }),
     muiTablePaperProps: ({ table }) => ({
-      //not sx
-      style: {
-        zIndex: table.getState().isFullScreen ? 1000 : undefined,
-        top: table.getState().isFullScreen ? 64 : undefined,
+      sx: {
+        ...(table.getState().isFullScreen && {
+          position: 'fixed !important',
+          top: '64px !important',
+          bottom: '0 !important',
+          left: { xs: '0 !important', lg: settings?.sidebarCollapse ? '73px !important' : '270px !important' },
+          right: '0 !important',
+          zIndex: '1300 !important',
+          m: '0 !important',
+          p: '16px !important',
+          overflow: 'auto',
+          bgcolor: 'background.paper',
+          maxWidth: 'none !important',
+          width: 'auto !important',
+          height: 'auto !important',
+        }),
       },
     }),
+    muiTableBodyRowProps:
+      offCanvasOnRowClick && offCanvas
+        ? ({ row }) => ({
+            onClick: () => {
+              setOffCanvasData(row.original);
+              // Find the index of this row in the filtered rows
+              const filteredRowsArray = table.getFilteredRowModel().rows;
+              const indexInFiltered = filteredRowsArray.findIndex(
+                (r) => r.original === row.original
+              );
+              setOffCanvasRowIndex(indexInFiltered >= 0 ? indexInFiltered : 0);
+              setOffcanvasVisible(true);
+            },
+            sx: {
+              cursor: "pointer",
+              "&:hover": {
+                backgroundColor: "action.hover",
+              },
+            },
+          })
+        : undefined,
     // Add global styles to target the specific filter components
     enableColumnFilterModes: true,
     muiTableHeadCellProps: {
@@ -398,21 +435,21 @@ export const CippDataTable = (props) => {
                     currentTenant: row.original.Tenant,
                   });
                 }
-                
+
                 if (action.noConfirm && action.customFunction) {
                   action.customFunction(row.original, action, {});
                   closeMenu();
                   return;
                 }
-                
+
                 // Handle custom component differently
-                if (typeof action.customComponent === 'function') {
+                if (typeof action.customComponent === "function") {
                   setCustomComponentData({ data: row.original, action: action });
                   setCustomComponentVisible(true);
                   closeMenu();
                   return;
                 }
-                
+
                 // Standard dialog flow
                 setActionData({
                   data: row.original,
@@ -436,6 +473,12 @@ export const CippDataTable = (props) => {
               onClick={() => {
                 closeMenu();
                 setOffCanvasData(row.original);
+                // Find the index of this row in the filtered rows
+                const filteredRowsArray = table.getFilteredRowModel().rows;
+                const indexInFiltered = filteredRowsArray.findIndex(
+                  (r) => r.original === row.original
+                );
+                setOffCanvasRowIndex(indexInFiltered >= 0 ? indexInFiltered : 0);
                 setOffcanvasVisible(true);
               }}
             >
@@ -451,6 +494,12 @@ export const CippDataTable = (props) => {
             onClick={() => {
               closeMenu();
               setOffCanvasData(row.original);
+              // Find the index of this row in the filtered rows
+              const filteredRowsArray = table.getFilteredRowModel().rows;
+              const indexInFiltered = filteredRowsArray.findIndex(
+                (r) => r.original === row.original
+              );
+              setOffCanvasRowIndex(indexInFiltered >= 0 ? indexInFiltered : 0);
               setOffcanvasVisible(true);
             }}
           >
@@ -486,6 +535,7 @@ export const CippDataTable = (props) => {
               setConfiguredSimpleColumns={setConfiguredSimpleColumns}
               queueMetadata={getRequestData.data?.pages?.[0]?.Metadata}
               isInDialog={isInDialog}
+              showBulkExportAction={showBulkExportAction}
             />
           )}
         </>
@@ -667,6 +717,19 @@ export const CippDataTable = (props) => {
   }, [table.getSelectedRowModel().rows]);
 
   useEffect(() => {
+    // Update filtered rows whenever table filtering/sorting changes
+    if (table && table.getFilteredRowModel) {
+      const rows = table.getFilteredRowModel().rows;
+      setFilteredRows(rows.map((row) => row.original));
+    }
+  }, [
+    table,
+    table.getState().columnFilters,
+    table.getState().globalFilter,
+    table.getState().sorting,
+  ]);
+
+  useEffect(() => {
     //check if the simplecolumns are an array,
     if (Array.isArray(simpleColumns) && simpleColumns.length > 0) {
       setConfiguredSimpleColumns(simpleColumns);
@@ -740,24 +803,46 @@ export const CippDataTable = (props) => {
         extendedData={offCanvasData}
         extendedInfoFields={offCanvas?.extendedInfoFields}
         actions={actions}
-        children={offCanvas?.children}
+        title={offCanvasData?.Name || offCanvas?.title || "Extended Info"}
+        children={
+          offCanvas?.children ? (row) => offCanvas.children(row, offCanvasRowIndex) : undefined
+        }
         customComponent={offCanvas?.customComponent}
+        onNavigateUp={() => {
+          const newIndex = offCanvasRowIndex - 1;
+          if (newIndex >= 0 && filteredRows && filteredRows[newIndex]) {
+            setOffCanvasRowIndex(newIndex);
+            setOffCanvasData(filteredRows[newIndex]);
+          }
+        }}
+        onNavigateDown={() => {
+          const newIndex = offCanvasRowIndex + 1;
+          if (filteredRows && newIndex < filteredRows.length) {
+            setOffCanvasRowIndex(newIndex);
+            setOffCanvasData(filteredRows[newIndex]);
+          }
+        }}
+        canNavigateUp={offCanvasRowIndex > 0}
+        canNavigateDown={filteredRows && offCanvasRowIndex < filteredRows.length - 1}
         {...offCanvas}
       />
       {/* Render custom component */}
       {customComponentVisible &&
         customComponentData?.action &&
-        typeof customComponentData.action.customComponent === 'function' &&
+        typeof customComponentData.action.customComponent === "function" &&
         customComponentData.action.customComponent(customComponentData.data, {
           drawerVisible: customComponentVisible,
           setDrawerVisible: setCustomComponentVisible,
           fromRowAction: true,
-        })
-      }
+        })}
 
       {/* Render standard dialog */}
       {useMemo(() => {
-        if (!actionData.ready || (actionData.action && typeof actionData.action.customComponent === 'function')) return null;
+        if (
+          !actionData.ready ||
+          (actionData.action && typeof actionData.action.customComponent === "function")
+        )
+          return null;
         return (
           <CippApiDialog
             createDialog={createDialog}

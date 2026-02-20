@@ -1,6 +1,6 @@
 import { Button } from "@mui/material";
-import { CippTablePage } from "/src/components/CippComponents/CippTablePage.jsx";
-import { Layout as DashboardLayout } from "/src/layouts/index.js";
+import { CippTablePage } from "../../../../components/CippComponents/CippTablePage.jsx";
+import { Layout as DashboardLayout } from "../../../../layouts/index.js";
 import Link from "next/link";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import {
@@ -11,6 +11,7 @@ import {
   LockOpen,
   Lock,
   GroupSharp,
+  CloudSync,
 } from "@mui/icons-material";
 import { Stack } from "@mui/system";
 import { useState } from "react";
@@ -34,31 +35,28 @@ const Page = () => {
       color: "success",
     },
     {
-      label: "Hide from Global Address List",
-      type: "POST",
-      url: "/api/ExecGroupsHideFromGAL",
-      icon: <VisibilityOff />,
-      data: {
-        ID: "mail",
-        GroupType: "groupType",
-        HidefromGAL: true,
-      },
-      confirmText:
-        "Are you sure you want to hide this mailbox from the global address list? Remember this will not work if the group is AD Synched.",
-      multiPost: false,
-    },
-    {
-      label: "Unhide from Global Address List",
+      label: "Set Global Address List Visibility",
       type: "POST",
       url: "/api/ExecGroupsHideFromGAL",
       icon: <Visibility />,
       data: {
         ID: "mail",
         GroupType: "groupType",
-        HidefromGAL: false,
       },
+      fields: [
+        {
+          type: "radio",
+          name: "HidefromGAL",
+          label: "Global Address List Visibility",
+          options: [
+            { label: "Hidden", value: true },
+            { label: "Shown", value: false },
+          ],
+          validators: { required: "Please select a visibility option" },
+        },
+      ],
       confirmText:
-        "Are you sure you want to unhide this mailbox from the global address list? Remember this will not work if the group is AD Synched.",
+        "Are you sure you want to hide this group from the global address list? Remember this will not work if the group is AD Synched.",
       multiPost: false,
     },
     {
@@ -87,6 +85,32 @@ const Page = () => {
       },
       confirmText:
         "Are you sure you want to allow messages from people inside and outside the organisation? Remember this will not work if the group is AD Synched.",
+      multiPost: false,
+    },
+    {
+      label: "Set Source of Authority",
+      type: "POST",
+      url: "/api/ExecSetCloudManaged",
+      icon: <CloudSync />,
+      data: {
+        ID: "id",
+        displayName: "displayName",
+        type: "!Group",
+      },
+      fields: [
+        {
+          type: "radio",
+          name: "isCloudManaged",
+          label: "Source of Authority",
+          options: [
+            { label: "Cloud Managed", value: true },
+            { label: "On-Premises Managed", value: false },
+          ],
+          validators: { required: "Please select a source of authority" },
+        },
+      ],
+      confirmText:
+        "Are you sure you want to change the source of authority for '[displayName]'? Setting it to On-Premises Managed will take until the next sync cycle to show the change.",
       multiPost: false,
     },
     {
@@ -263,6 +287,11 @@ const Page = () => {
       "mailEnabled",
       "securityEnabled",
       "visibility",
+      "assignedLicenses",
+      "licenseProcessingState.state",
+      "onPremisesSamAccountName",
+      "membershipRule",
+      "onPremisesSyncEnabled",
     ],
     actions: actions,
   };
@@ -296,11 +325,11 @@ const Page = () => {
         "mailNickname",
         "groupType",
         "assignedLicenses",
+        "licenseProcessingState.state",
         "visibility",
         "onPremisesSamAccountName",
         "membershipRule",
         "onPremisesSyncEnabled",
-        "userPrincipalName",
       ]}
     />
   );
