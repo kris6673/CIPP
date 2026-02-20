@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback, useState } from "react";
-import { Divider, Button, Alert } from "@mui/material";
+import { Divider, Button, Alert, CircularProgress } from "@mui/material";
 import { Grid } from "@mui/system";
 import { useForm, useWatch } from "react-hook-form";
 import { Add } from "@mui/icons-material";
@@ -47,7 +47,7 @@ export const CippApplicationDeployDrawer = ({
           : null;
       }
     },
-    [formControl.setValue]
+    [formControl.setValue],
   );
 
   useEffect(() => {
@@ -96,6 +96,7 @@ export const CippApplicationDeployDrawer = ({
   const handleSubmit = () => {
     const formData = formControl.getValues();
     const formattedData = { ...formData };
+    formattedData.tenantFilter = "allTenants"; //added to prevent issues with location check. temp fix
     formattedData.selectedTenants = selectedTenants.map((tenant) => ({
       defaultDomainName: tenant.value,
       customerId: tenant.addedFields.customerId,
@@ -138,8 +139,8 @@ export const CippApplicationDeployDrawer = ({
               {deployApplication.isLoading
                 ? "Deploying..."
                 : deployApplication.isSuccess
-                ? "Deploy Another"
-                : "Deploy Application"}
+                  ? "Deploy Another"
+                  : "Deploy Application"}
             </Button>
             <Button variant="outlined" onClick={handleCloseDrawer}>
               Close
@@ -426,6 +427,7 @@ export const CippApplicationDeployDrawer = ({
                 onClick={() => {
                   searchApp(formControl.getValues("searchQuery"), "StoreApp");
                 }}
+                disabled={winGetSearchResults.isPending}
               >
                 Search
               </Button>
@@ -446,8 +448,8 @@ export const CippApplicationDeployDrawer = ({
                 }
                 multiple={false}
                 formControl={formControl}
-                disabled={winGetSearchResults.isLoading}
-                isFetching={winGetSearchResults.isLoading}
+                disabled={winGetSearchResults.isPending}
+                isFetching={winGetSearchResults.isPending}
               />
             </Grid>
             <Grid size={{ md: 6, xs: 12 }}>
@@ -541,6 +543,7 @@ export const CippApplicationDeployDrawer = ({
                 onClick={() => {
                   searchApp(formControl.getValues("searchQuery"), "choco");
                 }}
+                disabled={ChocosearchResults.isPending}
               >
                 Search
               </Button>
@@ -561,7 +564,7 @@ export const CippApplicationDeployDrawer = ({
                 }
                 multiple={false}
                 formControl={formControl}
-                isFetching={ChocosearchResults.isLoading}
+                isFetching={ChocosearchResults.isPending}
               />
             </Grid>
 
