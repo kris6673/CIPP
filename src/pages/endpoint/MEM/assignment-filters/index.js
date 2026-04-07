@@ -1,15 +1,28 @@
-import { Button } from "@mui/material";
+import { Button, SvgIcon, Tooltip, Chip } from "@mui/material";
 import { CippTablePage } from "../../../../components/CippComponents/CippTablePage.jsx";
 import { Layout as DashboardLayout } from "../../../../layouts/index.js";
 import Link from "next/link";
 import { TrashIcon } from "@heroicons/react/24/outline";
-import { Edit, Add, Book } from "@mui/icons-material";
+import { Edit, Add, Book, Sync, CloudDone, Bolt } from "@mui/icons-material";
 import { Stack } from "@mui/system";
 import { useSettings } from "../../../../hooks/use-settings";
+import { useDialog } from "../../../../hooks/use-dialog";
+import { CippApiDialog } from "../../../../components/CippComponents/CippApiDialog";
+import { CippQueueTracker } from "../../../../components/CippTable/CippQueueTracker";
+import { useState, useEffect } from "react";
 
 const Page = () => {
   const pageTitle = "Assignment Filters";
   const { currentTenant } = useSettings();
+  const tenant = currentTenant;
+  const isAllTenants = tenant === "AllTenants";
+  const [useReportDB, setUseReportDB] = useState(isAllTenants);
+  const [syncQueueId, setSyncQueueId] = useState(null);
+  const syncDialog = useDialog();
+
+  useEffect(() => {
+    setUseReportDB(currentTenant === "AllTenants");
+  }, [currentTenant]);
 
   const actions = [
     {
@@ -62,28 +75,95 @@ const Page = () => {
     actions: actions,
   };
 
-  return (
-    <CippTablePage
-      title={pageTitle}
-      cardButton={
-        <Stack direction="row" spacing={1}>
-          <Button component={Link} href="assignment-filters/add" startIcon={<Add />}>
-            Add Assignment Filter
+  const simpleColumns = [
+    ...(useReportDB ? ["CacheTimestamp"] : []),
+    ...(useReportDB && isAllTenants ? ["Tenant"] : []),
+    "displayName",
+    "description",
+    "platform",
+    "assignmentFilterManagementType",
+    "rule",
+  ];
+
+  const pageActions = [
+    <Stack key="actions-stack" direction="row" spacing={1} alignItems="center">
+      {useReportDB && (
+        <>
+          <CippQueueTracker
+            queueId={syncQueueId}
+            queryKey={`assignment-filters-${tenant}`}
+            title="Assignment Filters Sync"
+          />
+          <Button
+            startIcon={<SvgIcon fontSize="small"><Sync /></SvgIcon>}
+            size="xs"
+            onClick={syncDialog.handleOpen}
+          >
+            Sync
           </Button>
-        </Stack>
-      }
-      apiUrl="/api/ListAssignmentFilters"
-      queryKey={`assignment-filters-${currentTenant}`}
-      actions={actions}
-      offCanvas={offCanvas}
-      simpleColumns={[
-        "displayName",
-        "description",
-        "platform",
-        "assignmentFilterManagementType",
-        "rule",
-      ]}
-    />
+        </>
+      )}
+      <Tooltip
+        title={
+          isAllTenants
+            ? "AllTenants always uses cached data"
+            : useReportDB
+              ? "Showing cached data from the Reporting Database — click to switch to live"
+              : "Showing live data — click to switch to cache"
+        }
+      >
+        <span>
+          <Chip
+            icon={useReportDB ? <CloudDone /> : <Bolt />}
+            label={useReportDB ? "Cached" : "Live"}
+            color="primary"
+            size="small"
+            onClick={isAllTenants ? undefined : () => setUseReportDB((prev) => !prev)}
+            clickable={!isAllTenants}
+            disabled={isAllTenants}
+            variant="outlined"
+          />
+        </span>
+      </Tooltip>
+    </Stack>,
+  ];
+
+  return (
+    <>
+      <CippTablePage
+        title={pageTitle}
+        cardButton={
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Button component={Link} href="assignment-filters/add" startIcon={<Add />}>
+              Add Assignment Filter
+            </Button>
+            {pageActions}
+          </Stack>
+        }
+        apiUrl={`/api/ListAssignmentFilters${useReportDB ? "?UseReportDB=true" : ""}`}
+        queryKey={`assignment-filters-${tenant}-${useReportDB}`}
+        actions={actions}
+        offCanvas={offCanvas}
+        simpleColumns={simpleColumns}
+      />
+      <CippApiDialog
+        createDialog={syncDialog}
+        title="Sync Assignment Filters Report"
+        fields={[]}
+        api={{
+          type: "GET",
+          url: "/api/ExecCIPPDBCache",
+          confirmText: `Run Assignment Filters cache sync for ${tenant}? This will update data immediately.`,
+          relatedQueryKeys: [`assignment-filters-${tenant}-true`],
+          data: { Name: "AssignmentFilters" },
+          onSuccess: (result) => {
+            if (result?.Metadata?.QueueId) {
+              setSyncQueueId(result?.Metadata?.QueueId);
+            }
+          },
+        }}
+      />
+    </>
   );
 };
 

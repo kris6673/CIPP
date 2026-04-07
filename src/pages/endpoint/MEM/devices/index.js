@@ -4,7 +4,7 @@ import { CippApiDialog } from "../../../../components/CippComponents/CippApiDial
 import { useSettings } from "../../../../hooks/use-settings";
 import { useDialog } from "../../../../hooks/use-dialog.js";
 import { EyeIcon } from "@heroicons/react/24/outline";
-import { Box, Button } from "@mui/material";
+import { Button, SvgIcon, Tooltip, Chip } from "@mui/material";
 import {
   Sync,
   RestartAlt,
@@ -20,12 +20,25 @@ import {
   AutoMode,
   Recycling,
   ManageAccounts,
+  CloudDone,
+  Bolt,
 } from "@mui/icons-material";
+import { Stack } from "@mui/system";
+import { CippQueueTracker } from "../../../../components/CippTable/CippQueueTracker";
+import { useState, useEffect } from "react";
 
 const Page = () => {
   const pageTitle = "Devices";
   const tenantFilter = useSettings().currentTenant;
+  const isAllTenants = tenantFilter === "AllTenants";
+  const [useReportDB, setUseReportDB] = useState(isAllTenants);
+  const [syncQueueId, setSyncQueueId] = useState(null);
   const depSyncDialog = useDialog();
+  const syncDialog = useDialog();
+
+  useEffect(() => {
+    setUseReportDB(tenantFilter === "AllTenants");
+  }, [tenantFilter]);
 
   const actions = [
     {
@@ -385,6 +398,8 @@ const Page = () => {
   };
 
   const simpleColumns = [
+    ...(useReportDB ? ["CacheTimestamp"] : []),
+    ...(useReportDB && isAllTenants ? ["Tenant"] : []),
     "deviceName",
     "userPrincipalName",
     "complianceState",
@@ -398,25 +413,67 @@ const Page = () => {
     "joinType",
   ];
 
+  const pageActions = [
+    <Stack key="actions-stack" direction="row" spacing={1} alignItems="center">
+      {useReportDB && (
+        <>
+          <CippQueueTracker
+            queueId={syncQueueId}
+            queryKey={`MEMDevices-${tenantFilter}`}
+            title="Managed Devices Sync"
+          />
+          <Button
+            startIcon={<SvgIcon fontSize="small"><Sync /></SvgIcon>}
+            size="xs"
+            onClick={syncDialog.handleOpen}
+          >
+            Sync
+          </Button>
+        </>
+      )}
+      <Tooltip
+        title={
+          isAllTenants
+            ? "AllTenants always uses cached data"
+            : useReportDB
+              ? "Showing cached data from the Reporting Database — click to switch to live"
+              : "Showing live data — click to switch to cache"
+        }
+      >
+        <span>
+          <Chip
+            icon={useReportDB ? <CloudDone /> : <Bolt />}
+            label={useReportDB ? "Cached" : "Live"}
+            color="primary"
+            size="small"
+            onClick={isAllTenants ? undefined : () => setUseReportDB((prev) => !prev)}
+            clickable={!isAllTenants}
+            disabled={isAllTenants}
+            variant="outlined"
+          />
+        </span>
+      </Tooltip>
+    </Stack>,
+  ];
+
   return (
     <>
       <CippTablePage
         title={pageTitle}
-        apiUrl="/api/ListGraphRequest"
-        apiData={{
-          Endpoint: "deviceManagement/managedDevices",
-        }}
-        apiDataKey="Results"
+        apiUrl={useReportDB ? "/api/ListManagedDevices?UseReportDB=true" : "/api/ListGraphRequest"}
+        apiData={useReportDB ? undefined : { Endpoint: "deviceManagement/managedDevices" }}
+        apiDataKey={useReportDB ? undefined : "Results"}
         actions={actions}
-        queryKey={`MEMDevices-${tenantFilter}`}
+        queryKey={`MEMDevices-${tenantFilter}-${useReportDB}`}
         offCanvas={offCanvas}
         simpleColumns={simpleColumns}
         cardButton={
-          <Box sx={{ display: "flex", gap: 1 }}>
+          <Stack direction="row" spacing={1} alignItems="center">
             <Button onClick={depSyncDialog.handleOpen} startIcon={<Sync />}>
               Sync DEP
             </Button>
-          </Box>
+            {pageActions}
+          </Stack>
         }
       />
       <CippApiDialog
@@ -427,6 +484,23 @@ const Page = () => {
           url: "/api/ExecSyncDEP",
           data: {},
           confirmText: `Are you sure you want to sync Apple Device Enrollment Program (DEP) tokens? This will sync all DEP tokens for ${tenantFilter}. This may take several minutes to complete in the background, and can only be done every 15 minutes.`,
+        }}
+      />
+      <CippApiDialog
+        createDialog={syncDialog}
+        title="Sync Managed Devices Report"
+        fields={[]}
+        api={{
+          type: "GET",
+          url: "/api/ExecCIPPDBCache",
+          confirmText: `Run Managed Devices cache sync for ${tenantFilter}? This will update device data immediately.`,
+          relatedQueryKeys: [`MEMDevices-${tenantFilter}-true`],
+          data: { Name: "ManagedDevices" },
+          onSuccess: (result) => {
+            if (result?.Metadata?.QueueId) {
+              setSyncQueueId(result?.Metadata?.QueueId);
+            }
+          },
         }}
       />
     </>
