@@ -81,7 +81,7 @@ Turning off **Remediate** prevents future fixes but doesn’t undo changes alrea
 
 ## **Key Takeaways**
 
-* Standards automatically reapply settings every **3 hours** for consistency.
+* Standards automatically reapply settings every **12 hours** for consistency.
 * Categories and templates simplify management across multiple tenants.
 * Customization and manual runs give you flexibility to meet tenant-specific needs.
 
