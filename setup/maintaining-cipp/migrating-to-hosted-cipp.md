@@ -57,29 +57,63 @@ NOTE: If you sponsor with an organization GitHub account, please send in a messa
 
 ### 3. Transfer Your Key Vault Secrets
 
+The CIPP Key Vault holds four secrets you'll need to enter into the hosted setup wizard:
+
 {% stepper %}
 {% step %}
 Return to your **self-hosted** instance → **Application Settings** → **Backend**.
 {% endstep %}
 
 {% step %}
-Click **Go to Keyvault**. Keep this tab open.
+Click **Go to Keyvault**. This opens the Azure portal on your Key Vault's **Overview** blade. Keep this tab open.
 {% endstep %}
 
 {% step %}
-In your **hosted** instance, open the CIPP **Setup Wizard**.
+**Grant yourself permission to read the secrets.**
+
+By default, even the user who deployed CIPP does not have data plane access to the secret values; only management plane access to the vault itself. You need to add a role assignment.
+
+1. In the Key Vault's left navigation, click **Access control (IAM)**.
+2. Click **+ Add** → **Add role assignment**.
+3. On the **Role** tab, search for and select **Key Vault Secrets User**, then click **Next**.
+4. On the **Members** tab, leave **Assign access to** set to **User, group, or service principal** and click **+ Select members**.
+5. Search for your own account, click it so it appears in the **Selected members** list, then click **Select** → **Next**.
+6. Click **Review + assign** twice to confirm.
+
+{% hint style="info" %}
+Role assignment usually propagates within 30–60 seconds. If you get a "Caller is not authorized" error in the next step, wait a moment and refresh.
+{% endhint %}
 {% endstep %}
 
 {% step %}
-Select **“I have an existing application and would like to manually enter my tokens.”**
+**Open the secrets list.**
+
+In the Key Vault's left navigation, expand **Objects** and click **Secrets**. You should see the four secrets listed above.
 {% endstep %}
 
 {% step %}
-**Copy** each value from your self-hosted Key Vault (step 2) into the corresponding fields in your hosted environment.
+**Reveal and copy each secret value.**
+
+For each of the four secrets:
+
+1. Click the secret name (e.g. `ApplicationID`).
+2. Click the row for the **current version** (the GUID shown under "Current Version").
+3. At the bottom of the version page, click **Show Secret Value**.
+4. Click the **copy** icon to the right of the revealed value.
+5. Switch to your hosted CIPP tab and paste the value into the matching field in the setup wizard (see the table at the top of this section).
+6. Use the browser back button twice to return to the secrets list, and repeat for the next secret.
+
+{% hint style="warning" %}
+Treat these values like passwords. The Application Secret and Refresh Token together grant unattended access to every customer tenant connected through your CIPP-SAM application. Don't paste them into anything other than the hosted setup wizard.
+{% endhint %}
 {% endstep %}
 
 {% step %}
-Click **Next** to finish the wizard.
+In your **hosted** instance, open the CIPP **Setup Wizard** (if you haven't already) and select **"I have an existing application and would like to manually enter my tokens."**
+{% endstep %}
+
+{% step %}
+Confirm all four fields are populated, then click \*\*Next\*\* to finish the wizard.
 {% endstep %}
 {% endstepper %}
 
