@@ -68,7 +68,7 @@ Turning off **Remediate** prevents future fixes but doesn’t undo changes alrea
 
 ### Template Reapplication
 
-* Templates reapply every **3 hours**, maintaining the desired state.
+* Templates reapply every **12 hours**, maintaining the desired state.
 * If changes are made by admins, they are automatically reverted to match the template.
 * Update a template once, and all linked tenants will receive the changes.
 
