@@ -4,7 +4,7 @@ description: First things to check out after setting up CIPP.
 
 # Recommended First Steps
 
-Welcome to the post-setup implementation guide for CIPP! In this guide, you will learn how to navigate and configure various settings within the CIPP application. Let's discover some of the key features of CIPP and see how to use them.&#x20;
+Welcome to the post-setup implementation guide for CIPP! In this guide, you will learn how to navigate and configure various settings within the CIPP application. Let's discover some of the key features of CIPP and see how to use them.
 
 {% hint style="info" %}
 This guide is not meant to be exhaustive but rather point you towards other pages in the documentation for a deeper dive. Click any of the available links for more information on each page.
@@ -22,11 +22,11 @@ Using the [tenant-select.md](../../user-documentation/shared-features/menu-bar/t
 
 Let's setup some personal things first. The [user-settings.md](../../user-documentation/shared-features/menu-bar/user-settings.md "mention") section has your personal preferences and profile information. Let's start by setting up CIPP the way you like it.
 
-## Change How CIPP Looks to You
+### Change How CIPP Looks to You
 
 Click the [display-mode.md](../../user-documentation/shared-features/menu-bar/display-mode.md "mention") toggle to switch to your preferred mode to display CIPP.
 
-## Application Settings
+### Application Settings
 
 Let's go check out some of the [settings](../../user-documentation/cipp/settings/ "mention") next.
 
@@ -92,17 +92,17 @@ Let's go check out the standards next by navigating to Tenant Administration > [
 
 Standards allow you to create a baseline for a tenant. This means you can easily deploy your wanted settings to any tenant. With how important Standards are to the function and power of CIPP, we'll take a deeper dive in [standards-setup.md](standards-setup.md "mention"), or you can review the full [standards](../../user-documentation/tenant/standards/ "mention")[ ](../../user-documentation/tenant/standards/)documentation.
 
-### Best Practice Analyser
+## Report Builder
 
-Let's go check out some reporting. Click on Tenant Administration > Standards & Drift > [bpa-report](../../user-documentation/tenant/standards/bpa-report/ "mention") next.
+Let's go check out some reporting. Click on Tools > [report-builder](../../user-documentation/tools/report-builder/ "mention") next.
 
-The BPA gives you the ability to zoom in on your tenants and their current state. You can use custom reports or use the included examples to tell your clients what actions they need to take to become more secure.
+The Report Builder gives you the ability to zoom in on your tenants and their current state. You can use custom built reports or import catalog examples to tell your clients what actions they need to take to become more secure.
 
 ## Alerts
 
 Talking about best practices. You want to be notified when something goes wrong, so let's look at some of the alert options available in Tenant Administration > Administration > [alert-configuration](../../user-documentation/tenant/administration/alert-configuration/ "mention").
 
-The documentation linked above has lots of information on the two types of alerts you can configure in CIPP:&#x20;
+The documentation linked above has lots of information on the two types of alerts you can configure in CIPP:
 
 * Audit Log Alert: Microsoft Audit Log received alert
 * Scripted CIPP Alert: Data processed by CIPP on a schedule
