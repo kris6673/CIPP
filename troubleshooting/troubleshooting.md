@@ -78,6 +78,10 @@ When executing the first authorization for CIPP, a trusted device was used. This
 
 The user that authorized the CSP or Graph API connection has had their password changed, sessions revoked, or account disabled. Reauthorization is required by using the Setup Wizard "Refresh Tokens for existing application registration" option.
 
+### We could not connect to the API to retrieve the permissions. There might be a problem with the secure application model configuration. The returned error is: Could not get token: invalid_grant:AADSTS700003: Device object was not found in the tenant 'xxxxxxxxxx' directory.
+
+The device used during the SAM authorization is no longer registered or has been removed from Entra ID in the partner tenant. Reauthorization using the CIPP Service Account is required by using the Setup Wizard option "Refresh Tokens for existing application registration", on a compliant device if required.
+
 ### AADSTS50076: Due to a configuration change made by your administrator, or because you moved to a new location, you must use multi-factor authentication to access
 
 This error can have three causes.
