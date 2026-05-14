@@ -378,8 +378,8 @@
         "type": "autoComplete",
         "name": "HaloPSA.DefaultPriority",
         "label": "HaloPSA Default Priority",
-        "placeholder": "Select a priority for CIPP-generated tickets, leave blank for default",
-        "helperText": "Optional. When set, every CIPP-generated alert ticket is created at this HaloPSA priority - useful for routing through your SLA workflow. The list is restricted to priorities defined on the SLA attached to the selected Ticket Type, so set the Ticket Type first and save before choosing one here. Leave blank to let HaloPSA apply the default priority defined on the Ticket Type.",
+        "placeholder": "Select a priority, leave blank for default",
+        "helperText": "Optional. Sets the priority on every CIPP-generated ticket. Restricted to priorities on the Ticket Type's SLA. Leave blank to use the SLA default.",
         "fullRow": true,
         "multiple": false,
         "api": {
@@ -394,10 +394,9 @@
           "showRefresh": true
         },
         "condition": {
-          "field": "HaloPSA.Enabled",
-          "compareType": "is",
-          "compareValue": true,
-          "action": "disable"
+          "field": "HaloPSA.TicketType",
+          "compareType": "hasValue",
+          "action": "hide"
         }
       },
       {
@@ -406,10 +405,9 @@
         "label": "Consolidate Tickets",
         "helperText": "Adds repeat alerts (same title) as a note on the existing open ticket instead of raising a new one. Turns on the Outcome dropdown below, which needs a valid private note action.",
         "condition": {
-          "field": "HaloPSA.Enabled",
-          "compareType": "is",
-          "compareValue": true,
-          "action": "disable"
+          "field": "HaloPSA.TicketType",
+          "compareType": "hasValue",
+          "action": "hide"
         }
       },
       {
@@ -444,10 +442,9 @@
         "label": "Link Tickets to affected Users",
         "helperText": "Raises one ticket per affected user and links it to the matching HaloPSA contact (by Azure Object ID, then email/login). No match falls back to the client's General User, with the UPN in the ticket body.",
         "condition": {
-          "field": "HaloPSA.Enabled",
-          "compareType": "is",
-          "compareValue": true,
-          "action": "disable"
+          "field": "HaloPSA.TicketType",
+          "compareType": "hasValue",
+          "action": "hide"
         }
       }
     ],
