@@ -62,6 +62,8 @@ export const TabbedLayout = (props) => {
           >
             {visibleTabs.map((option) => {
               const icon = getIconByName(option.icon, { fontSize: 'small' })
+              const iconPosition = option.iconPosition ?? 'start'
+              const compactIcon = icon && ['end', 'start'].includes(iconPosition)
 
               return (
                 <Tab
@@ -69,7 +71,8 @@ export const TabbedLayout = (props) => {
                   label={option.label}
                   value={option.path}
                   icon={icon ?? undefined}
-                  iconPosition={icon ? (option.iconPosition ?? 'start') : undefined}
+                  iconPosition={icon ? iconPosition : undefined}
+                  sx={compactIcon ? { minHeight: 48, py: 1.5 } : undefined}
                 />
               )
             })}
