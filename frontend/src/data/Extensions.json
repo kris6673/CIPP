@@ -375,6 +375,32 @@
         }
       },
       {
+        "type": "autoComplete",
+        "name": "HaloPSA.DefaultPriority",
+        "label": "HaloPSA Default Priority",
+        "placeholder": "Select a priority for CIPP-generated tickets, leave blank for default",
+        "helperText": "Optional. When set, every CIPP-generated alert ticket is created at this HaloPSA priority - useful for routing through your SLA workflow. The list is restricted to priorities defined on the SLA attached to the selected Ticket Type, so set the Ticket Type first and save before choosing one here. Leave blank to let HaloPSA apply the default priority defined on the Ticket Type.",
+        "fullRow": true,
+        "multiple": false,
+        "api": {
+          "url": "/api/ExecExtensionMapping",
+          "data": {
+            "List": "HaloPSAFields"
+          },
+          "queryKey": "HaloPriorities",
+          "dataKey": "Priorities",
+          "labelField": "name",
+          "valueField": "priorityid",
+          "showRefresh": true
+        },
+        "condition": {
+          "field": "HaloPSA.Enabled",
+          "compareType": "is",
+          "compareValue": true,
+          "action": "disable"
+        }
+      },
+      {
         "type": "switch",
         "name": "HaloPSA.ConsolidateTickets",
         "label": "Consolidate Tickets",

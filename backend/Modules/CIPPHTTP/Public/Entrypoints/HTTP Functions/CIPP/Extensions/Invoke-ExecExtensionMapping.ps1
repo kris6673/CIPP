@@ -37,9 +37,11 @@ Function Invoke-ExecExtensionMapping {
       'HaloPSAFields' {
         $TicketTypes = Get-HaloTicketType
         $Outcomes = Get-HaloTicketOutcome
+        $Priorities = Get-HaloPriority
         $Result = @{
           'TicketTypes' = $TicketTypes
           'Outcomes'    = $Outcomes
+          'Priorities'  = $Priorities
         }
       }
       'PWPushFields' {
