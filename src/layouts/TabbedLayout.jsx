@@ -3,6 +3,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { Box, Divider, Stack, Tab, Tabs } from '@mui/material'
 import { useSearchParams } from 'next/navigation'
 import { ApiGetCall } from '../api/ApiCall'
+import { getIconByName } from '../utils/icon-registry'
 
 export const TabbedLayout = (props) => {
   const { tabOptions, children } = props
@@ -59,9 +60,19 @@ export const TabbedLayout = (props) => {
               },
             }}
           >
-            {visibleTabs.map((option) => (
-              <Tab key={option.path} label={option.label} value={option.path} />
-            ))}
+            {visibleTabs.map((option) => {
+              const icon = getIconByName(option.icon, { fontSize: 'small' })
+
+              return (
+                <Tab
+                  key={option.path}
+                  label={option.label}
+                  value={option.path}
+                  icon={icon ?? undefined}
+                  iconPosition={icon ? (option.iconPosition ?? 'start') : undefined}
+                />
+              )
+            })}
           </Tabs>
           <Divider />
         </Box>

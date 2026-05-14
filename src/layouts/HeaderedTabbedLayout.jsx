@@ -17,6 +17,7 @@ import {
 } from "@mui/material";
 import { ActionsMenu } from "../components/actions-menu";
 import { useMediaQuery } from "@mui/material";
+import { getIconByName } from "../utils/icon-registry";
 
 export const HeaderedTabbedLayout = (props) => {
   const {
@@ -112,9 +113,19 @@ export const HeaderedTabbedLayout = (props) => {
                   },
                 }}
               >
-                {tabOptions.map((option) => (
-                  <Tab key={option.path} label={option.label} value={option.path} />
-                ))}
+                {tabOptions.map((option) => {
+                  const icon = getIconByName(option.icon, { fontSize: "small" });
+
+                  return (
+                    <Tab
+                      key={option.path}
+                      label={option.label}
+                      value={option.path}
+                      icon={icon ?? undefined}
+                      iconPosition={icon ? (option.iconPosition ?? "start") : undefined}
+                    />
+                  );
+                })}
               </Tabs>
               <Divider />
             </div>
@@ -142,6 +153,8 @@ HeaderedTabbedLayout.propTypes = {
     PropTypes.shape({
       label: PropTypes.string.isRequired,
       path: PropTypes.string.isRequired,
+      icon: PropTypes.string,
+      iconPosition: PropTypes.oneOf(["bottom", "end", "start", "top"]),
     })
   ).isRequired,
   title: PropTypes.string.isRequired,
