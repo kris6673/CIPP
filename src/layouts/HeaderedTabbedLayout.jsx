@@ -102,7 +102,16 @@ export const HeaderedTabbedLayout = (props) => {
               )}
             </Stack>
             <div>
-              <Tabs onChange={handleTabsChange} value={currentTab?.path} variant="scrollable">
+              <Tabs
+                onChange={handleTabsChange}
+                value={currentTab?.path}
+                variant="scrollable"
+                sx={{
+                  "& .MuiTab-root:first-of-type": {
+                    ml: 2,
+                  },
+                }}
+              >
                 {tabOptions.map((option) => (
                   <Tab key={option.path} label={option.label} value={option.path} />
                 ))}

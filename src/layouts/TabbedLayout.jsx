@@ -55,7 +55,7 @@ export const TabbedLayout = (props) => {
             variant="scrollable"
             sx={{
               '& .MuiTab-root:first-of-type': {
-                ml: 1,
+                ml: 2,
               },
             }}
           >
