@@ -99,12 +99,32 @@ const CippIntegrationSettings = ({ children }) => {
     formControl.setValue("integrationCompany", null);
   };
 
+  // Companies often differ from the GDAP tenant name only by case or legal suffix
+  // ("Company A LTD" vs "Company a Ltd" vs "Company A Limited"), so compare on a
+  // normalized form: lowercased, punctuation stripped, trailing legal suffixes removed.
+  const normalizeCompanyName = (name) => {
+    if (!name) return "";
+    let normalized = name
+      .toLowerCase()
+      .replace(/[.,'()&]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const legalSuffixes = /\s(ltd|limited|llc|llp|inc|incorporated|plc|pty|corp|corporation|gmbh|bv|co)$/;
+    while (legalSuffixes.test(normalized)) {
+      normalized = normalized.replace(legalSuffixes, "").trim();
+    }
+    return normalized;
+  };
+
   const handleAutoMap = () => {
     const newTableData = [];
     tenantList.data?.pages[0]?.forEach((tenant) => {
-      const matchingCompany = mappings.data.Companies.find(
-        (company) => company.name === tenant.displayName
+      const normalizedTenant = normalizeCompanyName(tenant.displayName);
+      const matchingCompanies = mappings.data.Companies.filter(
+        (company) => normalizeCompanyName(company.name) === normalizedTenant
       );
+      // More than one company collapsing to the same name is ambiguous - leave it manual.
+      const matchingCompany = matchingCompanies.length === 1 ? matchingCompanies[0] : null;
       if (
         Array.isArray(tableData) &&
         tableData?.find((item) => item.TenantId === tenant.customerId)
