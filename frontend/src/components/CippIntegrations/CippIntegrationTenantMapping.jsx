@@ -269,7 +269,7 @@ const CippIntegrationSettings = ({ children }) => {
                 reportTitle={`${extension.id}-tenant-map`}
                 data={tableData}
                 simple={false}
-                simpleColumns={["IntegrationName", "Tenant", "TenantDomain"]}
+                simpleColumns={["IntegrationName", "Tenant", "TenantDomain", "TenantId"]}
                 isFetching={mappings.isFetching}
                 refreshFunction={() => mappings.refetch()}
               />
