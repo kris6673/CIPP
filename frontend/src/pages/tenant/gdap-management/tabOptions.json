@@ -1,0 +1,37 @@
+[
+  {
+    "label": "Overview",
+    "path": "/tenant/gdap-management",
+    "icon": "Dashboard"
+  },
+  {
+    "label": "Relationships",
+    "path": "/tenant/gdap-management/relationships",
+    "icon": "Share"
+  },
+  {
+    "label": "Role Mappings",
+    "path": "/tenant/gdap-management/roles",
+    "icon": "AdminPanelSettings"
+  },
+  {
+    "label": "Role Templates",
+    "path": "/tenant/gdap-management/role-templates",
+    "icon": "Description"
+  },
+  {
+    "label": "Invites",
+    "path": "/tenant/gdap-management/invites",
+    "icon": "Mail"
+  },
+  {
+    "label": "Onboarding",
+    "path": "/tenant/gdap-management/onboarding",
+    "icon": "CheckCircle"
+  },
+  {
+    "label": "Offboarding",
+    "path": "/tenant/gdap-management/offboarding",
+    "icon": "Warning"
+  }
+]

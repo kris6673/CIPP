@@ -1,0 +1,12 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "PowerShell",
+      "name": "Launch Windows Terminal CIPP Dev with Docker",
+      "request": "launch",
+      "cwd": "${cwd}",
+      "script": ". '${cwd}\\build\\tools\\Start-Cipp-Dev-Windows-docker.ps1'"
+    }
+  ]
+}

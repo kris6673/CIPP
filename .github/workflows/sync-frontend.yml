@@ -1,0 +1,65 @@
+name: Sync Frontend from CIPP
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # Every 6 hours
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'CIPP branch to sync from'
+        required: false
+        default: 'dev'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout CIPP-NG
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - name: Checkout CIPP frontend source
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.CIPP_REPO || 'KelvinTegelaar/CIPP' }}
+          ref: ${{ inputs.branch || 'dev' }}
+          path: _source
+
+      - name: Sync frontend
+        run: |
+          # Preserve the subfolder .gitignore
+          cp frontend/.gitignore /tmp/frontend-gitignore 2>/dev/null || true
+
+          # Clear existing frontend content
+          rm -rf frontend/*
+
+          # Copy frontend source files
+          cp -r _source/src frontend/src
+          cp -r _source/public frontend/public
+          cp -r _source/scripts frontend/scripts
+          for f in package.json yarn.lock next.config.js .prettierrc.json .prettierignore eslint.config.mjs cspell.json; do
+            [ -f "_source/$f" ] && cp "_source/$f" "frontend/$f"
+          done
+
+          # Restore .gitignore
+          cp /tmp/frontend-gitignore frontend/.gitignore 2>/dev/null || true
+
+          # Cleanup
+          rm -rf _source
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add frontend/
+          if git diff --cached --quiet; then
+            echo "No changes to sync"
+            exit 0
+          fi
+          git commit -m "chore: sync frontend from CIPP $(date -u +%Y-%m-%d)"
+          git push

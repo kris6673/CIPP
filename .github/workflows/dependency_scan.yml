@@ -1,0 +1,33 @@
+---
+name: Dependency Vulnerability Scan
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'frontend/package.json'
+      - 'frontend/yarn.lock'
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
+  cancel-in-progress: true
+jobs:
+  yarn-audit:
+    if: github.repository_owner == 'CyberDrain'
+    name: yarn audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 22.13.0
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.13.0"
+          cache: 'yarn'
+          cache-dependency-path: frontend/yarn.lock
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+      - name: Audit for high/critical vulnerabilities
+        run: yarn audit --level high

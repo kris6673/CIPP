@@ -1,0 +1,25 @@
+# Git
+.git/
+.gitignore
+
+# IDE
+.vs/
+.vscode/
+
+# Docker
+build/docker-compose*.yml
+build/.dockerignore
+
+# Build artifacts
+backend/Output/
+
+# Frontend build artifacts (source is needed for multi-stage build)
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# Docs / non-runtime
+docs/
+*.md
+.env
+build/.env.example

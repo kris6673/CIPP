@@ -1,0 +1,48 @@
+---
+name: Backend PSScriptAnalyzer
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'backend/**/*.ps1'
+      - 'backend/**/*.psm1'
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
+  cancel-in-progress: true
+jobs:
+  psscriptanalyzer:
+    if: github.repository_owner == 'CyberDrain'
+    name: PSScriptAnalyzer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
+      - name: Run PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          $results = Invoke-ScriptAnalyzer -Path ./backend -Recurse -Severity Error,Warning -ExcludeRule PSAvoidUsingWriteHost
+          if ($results) {
+            $results | Format-Table -AutoSize
+            $errors = $results | Where-Object { $_.Severity -eq 'Error' }
+            if ($errors) {
+              Write-Error "PSScriptAnalyzer found $($errors.Count) error(s). Please fix before merging."
+              exit 1
+            } else {
+              Write-Warning "PSScriptAnalyzer found $($results.Count) warning(s). Review recommended."
+            }
+          } else {
+            Write-Host "PSScriptAnalyzer: no issues found."
+          }
+      - name: Upload PSScriptAnalyzer results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: psscriptanalyzer-results
+          path: psscriptanalyzer-results.txt
+          if-no-files-found: ignore

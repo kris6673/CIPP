@@ -1,0 +1,28 @@
+# OS files
+Thumbs.db
+.DS_Store
+
+# IDE / editor
+.vs/
+.copilot-memory/
+*.user
+*.suo
+
+# Logs
+*.log
+
+# Local settings (contains secrets)
+.env
+
+# Runtime-generated files
+_startup.ps1
+_http_bundle.ps1
+_cache/
+
+# Local dev: ModuleBuilder-compiled CIPP modules overlaid into the dev container
+build/.devmodules/
+localfiles/
+
+graphify-out/
+.claude/
+CLAUDE.md

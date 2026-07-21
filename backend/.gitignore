@@ -1,0 +1,4 @@
+# Build output
+Output/
+Shared/CIPPSharp/obj/
+Config/function-permissions.json

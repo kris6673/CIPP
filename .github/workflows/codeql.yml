@@ -1,0 +1,34 @@
+---
+name: "CodeQL"
+on:
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - 'frontend/**'
+  schedule:
+    - cron: "26 17 * * 0"
+jobs:
+  analyze:
+    if: github.repository_owner == 'CyberDrain'
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["javascript"]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          source-root: frontend
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
