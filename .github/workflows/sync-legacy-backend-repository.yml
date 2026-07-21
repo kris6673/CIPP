@@ -1,86 +1,92 @@
-name: Sync Backend from CIPP-API
+name: Sync Legacy Backend Repository
 
 on:
-  schedule:
-    - cron: '0 */6 * * *'   # Every 6 hours
+  push:
+    branches: [dev, main]
+    paths:
+      - 'backend/**'
   workflow_dispatch:
     inputs:
-      branch:
-        description: 'CIPP-API branch to sync from'
-        required: false
-        default: 'dev'
+      full_sync:
+        description: 'Copy all of backend/ instead of only the pushed diff'
+        type: boolean
+        default: true
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: sync-backend-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   sync:
+    if: github.repository == 'CyberDrain/CIPP'
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout CIPP-NG
+      - name: Checkout source (CyberDrain/CIPP)
         uses: actions/checkout@v4
         with:
-          ref: dev
+          fetch-depth: 0
 
-      - name: Checkout CIPP-API source
+      - name: Checkout target (KelvinTegelaar/CIPP-API)
         uses: actions/checkout@v4
         with:
           repository: ${{ vars.CIPP_API_REPO || 'KelvinTegelaar/CIPP-API' }}
-          ref: ${{ inputs.branch || 'dev' }}
-          path: _source
+          ref: ${{ github.ref_name }}
+          path: _target
+          token: ${{ secrets.CIPP_SYNC_TOKEN }}
 
-      - name: Sync backend
+      - name: Apply changes to target
         run: |
-          # Preserve the subfolder .gitignore
-          cp backend/.gitignore /tmp/backend-gitignore 2>/dev/null || true
+          set -euo pipefail
+          SRC_PREFIX="backend/"
+          BEFORE="${{ github.event.before }}"
 
-          # Clear existing backend content
-          rm -rf backend/*
+          # Full copy when manually dispatched, on a brand-new branch, or when
+          # the previous tip is unreachable (force push). Never deletes target
+          # files - extra files in the target repo are allowed.
+          full_sync() {
+            echo "Performing full sync of ${SRC_PREFIX}"
+            rsync -a --exclude='.gitignore' "${SRC_PREFIX}" _target/
+          }
 
-          # ── Whitelist: folders to copy ──
-          for dir in Config AddChocoApp AddMSPApp ExecMaintenanceScripts Tests Shared; do
-            if [ -d "_source/$dir" ]; then
-              cp -r "_source/$dir" "backend/$dir"
-              echo "  $dir: copied"
-            else
-              echo "  $dir: not found, skipping"
-            fi
-          done
-
-          # ── Modules: copy all except excluded ──
-          mkdir -p backend/Modules
-          for mod in _source/Modules/*/; do
-            mod_name=$(basename "$mod")
-            case "$mod_name" in
-              AzureFunctions.PowerShell.Durable.SDK|CippEntrypoints) echo "  Modules/$mod_name: excluded"; continue ;;
-            esac
-            cp -r "$mod" "backend/Modules/$mod_name"
-            echo "  Modules/$mod_name: copied"
-          done
-
-          # ── Whitelist: individual files to copy ──
-          for f in cspell.json version_latest.txt; do
-            if [ -f "_source/$f" ]; then
-              cp "_source/$f" "backend/$f"
-              echo "  $f: copied"
-            fi
-          done
-
-          # Restore .gitignore
-          cp /tmp/backend-gitignore backend/.gitignore 2>/dev/null || true
-
-          # Cleanup
-          rm -rf _source
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || \
+             [ -z "$BEFORE" ] || \
+             [ "$BEFORE" = "0000000000000000000000000000000000000000" ] || \
+             ! git cat-file -e "$BEFORE" 2>/dev/null; then
+            full_sync
+          else
+            echo "Syncing diff ${BEFORE}..${GITHUB_SHA}"
+            git diff --no-renames --name-status "$BEFORE" "$GITHUB_SHA" -- "$SRC_PREFIX" |
+            while IFS=$'\t' read -r status path; do
+              rel="${path#"$SRC_PREFIX"}"
+              # The subfolder .gitignore is specific to this repo; the target keeps its own
+              [ "$rel" = ".gitignore" ] && continue
+              if [ "$status" = "D" ]; then
+                echo "  delete: $rel"
+                rm -f "_target/$rel"
+              else
+                echo "  copy:   $rel"
+                mkdir -p "_target/$(dirname "$rel")"
+                cp "$path" "_target/$rel"
+              fi
+            done
+          fi
 
       - name: Commit and push
         run: |
+          set -euo pipefail
+          cd _target
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add backend/
+          git add -A
           if git diff --cached --quiet; then
             echo "No changes to sync"
             exit 0
           fi
-          git commit -m "chore: sync backend from CIPP-API $(date -u +%Y-%m-%d)"
-          git push
+          COMMIT_MSG="$(cd .. && git log -1 --pretty=%B "$GITHUB_SHA")"
+          git commit -m "$COMMIT_MSG" -m "Synced from CyberDrain/CIPP@${GITHUB_SHA}"
+          # Retry once in case the target branch moved while we were running
+          git push || { git pull --rebase && git push; }
