@@ -5,9 +5,6 @@
 // its vault as $env:WEBSITE_SITE_NAME (see Get-CippKeyVaultName). webAppName defaults to
 // the existing vault name for exactly that reason.
 
-@description('Name used as a fallback — unused when webAppName is supplied explicitly.')
-param baseName string = 'CIPP'
-
 @description('Container image for the cipp web app.')
 param containerImage string = 'DOCKER|ghcr.io/cyberdrain/cipp:latest'
 

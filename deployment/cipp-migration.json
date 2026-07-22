@@ -5,17 +5,10 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "3871814453089556875"
+      "templateHash": "10011865180776502969"
     }
   },
   "parameters": {
-    "baseName": {
-      "type": "string",
-      "defaultValue": "CIPP",
-      "metadata": {
-        "description": "Name used as a fallback — unused when webAppName is supplied explicitly."
-      }
-    },
     "containerImage": {
       "type": "string",
       "defaultValue": "DOCKER|ghcr.io/cyberdrain/cipp:latest",
