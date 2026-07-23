@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/router";
 import { useForm, useWatch } from "react-hook-form";
 import { Box, Button, Container, Stack, Typography } from "@mui/material";
+import { Grid } from "@mui/system";
 import { ArrowBack, Save } from "@mui/icons-material";
 import { Layout as DashboardLayout } from "../../../layouts/index.js";
 import { ApiGetCall, ApiPostCall } from "../../../api/ApiCall";
@@ -12,11 +13,14 @@ import CippButtonCard from "../../../components/CippCards/CippButtonCard";
 import {
   CippSharePointTemplateBuilder,
   CippSharePointTemplateBuilderSkeleton,
+  CippSharePointTemplateQuickStats,
+  CippSharePointTemplateQuickStatsSkeleton,
 } from "../../../components/CippComponents/CippSharePointTemplateBuilder";
 
 const emptyTemplate = {
   templateName: "",
-  createAsTeams: false,
+  siteType: "sharePoint",
+  overrideSiteType: false,
   createMissingGroups: false,
   skipIfExists: false,
   siteTemplates: [],
@@ -63,12 +67,18 @@ const Page = () => {
   useEffect(() => {
     const result = Array.isArray(templateData) ? templateData[0] : templateData?.Results;
     if (!result) return;
+    const normalizeSiteType = (value) =>
+      value === "teams" || value?.value === "teams" ? "teams" : "sharePoint";
     formControl.reset({
       templateName: copy ? `${result.templateName || ""} (Copy)` : result.templateName || "",
-      createAsTeams: !!result.createAsTeams,
+      siteType: normalizeSiteType(result.siteType),
+      overrideSiteType: !!result.overrideSiteType,
       createMissingGroups: !!result.createMissingGroups,
       skipIfExists: !!result.skipIfExists,
-      siteTemplates: result.siteTemplates || [],
+      siteTemplates: (result.siteTemplates || []).map((site) => ({
+        ...site,
+        siteType: normalizeSiteType(site.siteType),
+      })),
     });
     formControl.trigger();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -109,63 +119,67 @@ const Page = () => {
               </Typography>
             </Box>
 
-            {/* Template settings: name + options, save in the card footer */}
-            <CippButtonCard
-              title="Template Settings"
-              isFetching={isLoadingTemplate}
-              CardButton={
-                <Stack direction="row" spacing={2} alignItems="center">
-                  <Button
-                    variant="contained"
-                    startIcon={<Save />}
-                    onClick={formControl.handleSubmit(handleSubmit)}
-                    disabled={
-                      isLoadingTemplate ||
-                      saveTemplate.isPending ||
-                      missingRootPerms ||
-                      !formControl.formState.isValid
-                    }
-                  >
-                    {saveTemplate.isPending ? "Saving..." : "Save Template"}
-                  </Button>
-                  {missingRootPerms && (
-                    <Typography variant="caption" color="error">
-                      Every site template needs at least one root-level permission object.
-                    </Typography>
-                  )}
-                </Stack>
-              }
-            >
-              <Stack spacing={1}>
-                <CippFormComponent
-                  type="textField"
-                  label="Template Name"
-                  name="templateName"
-                  formControl={formControl}
-                  validators={{ required: "A template name is required" }}
-                />
-                <CippFormComponent
-                  type="switch"
-                  label="Create as Microsoft Teams"
-                  name="createAsTeams"
-                  formControl={formControl}
-                />
-                <CippFormComponent
-                  type="switch"
-                  label="Create groups if they do not exist"
-                  name="createMissingGroups"
-                  formControl={formControl}
-                  helperText="Missing groups are created as security groups during deployment."
-                />
-                <CippFormComponent
-                  type="switch"
-                  label="Skip if exists"
-                  name="skipIfExists"
-                  formControl={formControl}
-                  helperText="If a site or team with the same name already exists in the tenant, leave it untouched: no libraries or permissions are applied to it."
-                />
-              </Stack>
-            </CippButtonCard>
+            <Grid container spacing={2} alignItems="stretch">
+              <Grid size={{ xs: 12, md: 8, lg: 9 }}>
+                <CippButtonCard
+                  title="Template Settings"
+                  isFetching={isLoadingTemplate}
+                  CardButton={
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <Button
+                        variant="contained"
+                        startIcon={<Save />}
+                        onClick={formControl.handleSubmit(handleSubmit)}
+                        disabled={
+                          isLoadingTemplate ||
+                          saveTemplate.isPending ||
+                          missingRootPerms ||
+                          !formControl.formState.isValid
+                        }
+                      >
+                        {saveTemplate.isPending ? "Saving..." : "Save Template"}
+                      </Button>
+                      {missingRootPerms && (
+                        <Typography variant="caption" color="error">
+                          Every site template needs at least one root-level permission object.
+                        </Typography>
+                      )}
+                    </Stack>
+                  }
+                >
+                  <Stack spacing={1}>
+                    <CippFormComponent
+                      type="textField"
+                      label="Template Name"
+                      name="templateName"
+                      formControl={formControl}
+                      validators={{ required: "A template name is required" }}
+                    />
+                    <CippFormComponent
+                      type="switch"
+                      label="Create groups if they do not exist"
+                      name="createMissingGroups"
+                      formControl={formControl}
+                      helperText="Missing groups are created as security groups during deployment."
+                    />
+                    <CippFormComponent
+                      type="switch"
+                      label="Skip if exists"
+                      name="skipIfExists"
+                      formControl={formControl}
+                      helperText="If a site or team with the same name already exists in the tenant, leave it untouched: no libraries or permissions are applied to it."
+                    />
+                  </Stack>
+                </CippButtonCard>
+              </Grid>
+              <Grid size={{ xs: 12, md: 4, lg: 3 }}>
+                {isLoadingTemplate ? (
+                  <CippSharePointTemplateQuickStatsSkeleton />
+                ) : (
+                  <CippSharePointTemplateQuickStats formControl={formControl} />
+                )}
+              </Grid>
+            </Grid>
 
             <CippApiResults apiObject={saveTemplate} />
 

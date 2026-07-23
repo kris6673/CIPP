@@ -5,14 +5,15 @@ function Invoke-CIPPSharePointTemplateDeploy {
 
     .DESCRIPTION
     Provisions every site template in a SharePoint provisioning template against one tenant.
-    When the template is marked createAsTeams the container is created as a full Microsoft
-    Team first (via the Teams API, so channels and Teams functionality stay intact) and the
-    document libraries are added to the backing SharePoint site afterwards. Otherwise a plain
-    SharePoint site is created. Root-level and per-library permissions are applied by group
+    Each site has a siteType (sharePoint or teams). When overrideSiteType is set, the template
+    siteType is used for every site; otherwise each site's own siteType applies. Teams sites
+    are created via the Teams API so channels and Teams functionality stay intact, then
+    document libraries are added to the backing SharePoint site. SharePoint sites use the
+    plain site-creation path. Root-level and per-library permissions are applied by group
     display name, optionally creating missing groups as security groups.
 
     .PARAMETER TemplateData
-    The deserialized template object (templateName, createAsTeams, createMissingGroups, siteTemplates)
+    The deserialized template object (templateName, siteType, overrideSiteType, createMissingGroups, siteTemplates)
 
     .PARAMETER SiteOwner
     UPN set as the owner of every site or Team the template creates
@@ -58,6 +59,17 @@ function Invoke-CIPPSharePointTemplateDeploy {
     $SiteIndex = -1
     foreach ($SiteTemplate in $TemplateData.siteTemplates) {
         $SiteIndex++
+        # Resolve site type: template override wins, otherwise the site's own siteType.
+        # Select controls may persist {label,value}; unwrap to the string value.
+        $RawSiteType = if ($TemplateData.overrideSiteType -eq $true) {
+            $TemplateData.siteType
+        } else {
+            $SiteTemplate.siteType
+        }
+        $SiteType = [string]($RawSiteType.value ?? $RawSiteType)
+        if ($SiteType -notin @('sharePoint', 'teams')) { $SiteType = 'sharePoint' }
+        $IsTeams = $SiteType -eq 'teams'
+
         # Step counter for this site: prerequisites, create, site permissions, then one step
         # per library. Shown as 'Step x of y' in the live progress messages.
         $TotalSteps = 3 + @($SiteTemplate.libraries).Count
@@ -67,7 +79,7 @@ function Invoke-CIPPSharePointTemplateDeploy {
             # libraries or permission changes are applied to anything this run didn't create.
             if ($SkipIfExists) {
                 $AlreadyExists = $false
-                if ($TemplateData.createAsTeams -eq $true) {
+                if ($IsTeams) {
                     $EscapedName = $SiteTemplate.displayName -replace "'", "''"
                     $ExistingGroups = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/groups?`$filter=displayName eq '$EscapedName'&`$select=id" -tenantid $TenantFilter -AsApp $true
                     $AlreadyExists = @($ExistingGroups).Count -gt 0
@@ -91,7 +103,7 @@ function Invoke-CIPPSharePointTemplateDeploy {
             }
             # Create the container first: a full Team (Teams API) so all Teams functionality
             # stays intact, or a plain SharePoint site otherwise.
-            if ($TemplateData.createAsTeams -eq $true) {
+            if ($IsTeams) {
                 Update-DeployStep -Index $SiteIndex -Status 'running' -Message "Step 2 of ${TotalSteps}: Creating Team and waiting for its SharePoint site"
                 $Team = New-CIPPTeam -DisplayName $SiteTemplate.displayName -Description ($SiteTemplate.description ?? '') -Owner $SiteOwner -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
                 $SiteUrl = $Team.SiteUrl

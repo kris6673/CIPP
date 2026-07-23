@@ -37,8 +37,24 @@ function Invoke-ExecSharePointTemplate {
                 # Keep only the template payload; strip transport/metadata fields.
                 $TemplateObject = $Request.Body | Select-Object -Property * -ExcludeProperty Action, TemplateId
 
-                # Stamp audit metadata. CreatedBy/On only on first save, UpdatedBy/On on every save.
-                if (-not $Request.Body.TemplateId) {
+                # Stamp audit metadata. CreatedBy/On only on first save (or preserved from existing
+                # JSON on edit — the form does not round-trip those fields). UpdatedBy/On every save.
+                if ($Request.Body.TemplateId) {
+                    $Existing = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'SharePointTemplate' and RowKey eq '$GUID'"
+                    if ($Existing?.JSON) {
+                        $ExistingData = $Existing.JSON | ConvertFrom-Json
+                        if ($ExistingData.CreatedBy) {
+                            $TemplateObject | Add-Member -NotePropertyName 'CreatedBy' -NotePropertyValue $ExistingData.CreatedBy -Force
+                            $TemplateObject | Add-Member -NotePropertyName 'CreatedOn' -NotePropertyValue $ExistingData.CreatedOn -Force
+                        } else {
+                            $TemplateObject | Add-Member -NotePropertyName 'CreatedBy' -NotePropertyValue ($User.userDetails ?? 'CIPP-API') -Force
+                            $TemplateObject | Add-Member -NotePropertyName 'CreatedOn' -NotePropertyValue (Get-Date).ToString('o') -Force
+                        }
+                    } else {
+                        $TemplateObject | Add-Member -NotePropertyName 'CreatedBy' -NotePropertyValue ($User.userDetails ?? 'CIPP-API') -Force
+                        $TemplateObject | Add-Member -NotePropertyName 'CreatedOn' -NotePropertyValue (Get-Date).ToString('o') -Force
+                    }
+                } else {
                     $TemplateObject | Add-Member -NotePropertyName 'CreatedBy' -NotePropertyValue ($User.userDetails ?? 'CIPP-API') -Force
                     $TemplateObject | Add-Member -NotePropertyName 'CreatedOn' -NotePropertyValue (Get-Date).ToString('o') -Force
                 }
