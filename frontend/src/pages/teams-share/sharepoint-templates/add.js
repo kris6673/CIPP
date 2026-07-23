@@ -1,9 +1,9 @@
 import { useEffect } from "react";
 import { useRouter } from "next/router";
 import { useForm, useWatch } from "react-hook-form";
-import { Box, Button, Container, Stack, Typography } from "@mui/material";
+import { Box, Button, Container, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import { Grid } from "@mui/system";
-import { ArrowBack, Save } from "@mui/icons-material";
+import { ArrowBack, InfoOutlined, Save } from "@mui/icons-material";
 import { Layout as DashboardLayout } from "../../../layouts/index.js";
 import { ApiGetCall, ApiPostCall } from "../../../api/ApiCall";
 import { CippHead } from "../../../components/CippComponents/CippHead";
@@ -15,6 +15,8 @@ import {
   CippSharePointTemplateBuilderSkeleton,
   CippSharePointTemplateQuickStats,
   CippSharePointTemplateQuickStatsSkeleton,
+  getSiteTemplateSaveIssues,
+  siteTemplateBlocksSave,
 } from "../../../components/CippComponents/CippSharePointTemplateBuilder";
 
 const emptyTemplate = {
@@ -50,12 +52,10 @@ const Page = () => {
   // Show a skeleton on the first load of an existing template (no cached data yet).
   const isLoadingTemplate = !!template && templateQuery.isLoading;
 
-  // Root-level permission objects are mandatory on every site template; block saving until
-  // each one has at least one grant. The cards themselves flag the offenders in red.
+  // Site-template fields that block Save (name, root perms, library names). Cards outline offenders in red.
   const siteTemplatesValue = useWatch({ control: formControl.control, name: "siteTemplates" });
-  const missingRootPerms = (siteTemplatesValue || []).some(
-    (site) => !Array.isArray(site?.permissions) || site.permissions.length === 0
-  );
+  const siteTemplatesBlockSave = (siteTemplatesValue || []).some(siteTemplateBlocksSave);
+  const siteTemplateSaveIssues = getSiteTemplateSaveIssues(siteTemplatesValue || []);
 
   const saveTemplate = ApiPostCall({
     relatedQueryKeys: ["ListSharePointTemplates", "ExecSharePointTemplate"],
@@ -133,16 +133,30 @@ const Page = () => {
                         disabled={
                           isLoadingTemplate ||
                           saveTemplate.isPending ||
-                          missingRootPerms ||
+                          siteTemplatesBlockSave ||
                           !formControl.formState.isValid
                         }
                       >
                         {saveTemplate.isPending ? "Saving..." : "Save Template"}
                       </Button>
-                      {missingRootPerms && (
-                        <Typography variant="caption" color="error">
-                          Every site template needs at least one root-level permission object.
-                        </Typography>
+                      {siteTemplatesBlockSave && (
+                        <Tooltip
+                          title={
+                            <Box component="ul" sx={{ m: 0, pl: 2 }}>
+                              {siteTemplateSaveIssues.map((issue) => (
+                                <li key={issue}>{issue}</li>
+                              ))}
+                            </Box>
+                          }
+                        >
+                          <IconButton
+                            size="small"
+                            aria-label="What needs fixing before save"
+                            sx={{ color: "error.main" }}
+                          >
+                            <InfoOutlined fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                       )}
                     </Stack>
                   }

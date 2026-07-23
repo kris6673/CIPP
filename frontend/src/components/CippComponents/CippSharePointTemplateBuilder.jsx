@@ -57,6 +57,32 @@ const newSiteTemplate = (siteType = "sharePoint") => ({
   libraries: [],
 });
 
+/** True when a site card has issues that keep Save disabled (name, root perms, library names). */
+export const siteTemplateBlocksSave = (site) => {
+  if (!site?.displayName?.trim()) return true;
+  if (!Array.isArray(site?.permissions) || site.permissions.length === 0) return true;
+  if ((site?.libraries || []).some((lib) => !lib?.name?.trim())) return true;
+  return false;
+};
+
+/** Human-readable save blockers for site templates (for the Save footer info tooltip). */
+export const getSiteTemplateSaveIssues = (sites = []) => {
+  const issues = [];
+  sites.forEach((site, index) => {
+    const label = site?.displayName?.trim() || `Site Template ${index + 1}`;
+    if (!site?.displayName?.trim()) {
+      issues.push(`${label}: needs a name`);
+    }
+    if (!Array.isArray(site?.permissions) || site.permissions.length === 0) {
+      issues.push(`${label}: root permissions required`);
+    }
+    if ((site?.libraries || []).some((lib) => !lib?.name?.trim())) {
+      issues.push(`${label}: every library needs a name`);
+    }
+  });
+  return issues;
+};
+
 const CARD_WIDTH = 320;
 
 // One document library row inside a site card. Shows a lock when it carries unique permissions and
@@ -64,8 +90,10 @@ const CARD_WIDTH = 320;
 const LibraryRow = ({ formControl, name, onRemove, onConfigurePermissions }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const permissions = useWatch({ control: formControl.control, name: `${name}.permissions` });
+  const libraryName = useWatch({ control: formControl.control, name: `${name}.name` });
   const permCount = Array.isArray(permissions) ? permissions.length : 0;
   const openMenu = Boolean(anchorEl);
+  const missingName = !libraryName?.trim();
 
   return (
     <Box
@@ -79,7 +107,9 @@ const LibraryRow = ({ formControl, name, onRemove, onConfigurePermissions }) => 
         "&:hover": { bgcolor: "action.hover" },
       }}
     >
-      <Folder fontSize="small" sx={{ color: "text.secondary" }} />
+      <Tooltip title={missingName ? "Library name required" : "Document library"}>
+        <Folder fontSize="small" sx={{ color: missingName ? "error.main" : "text.secondary" }} />
+      </Tooltip>
       <Controller
         name={`${name}.name`}
         control={formControl.control}
@@ -197,6 +227,8 @@ const SiteTemplateCard = ({ formControl, name, index, onRemove, onConfigurePermi
   const [anchorEl, setAnchorEl] = useState(null);
   const [siteTypeOpen, setSiteTypeOpen] = useState(false);
   const permissions = useWatch({ control: formControl.control, name: `${name}.permissions` });
+  const displayName = useWatch({ control: formControl.control, name: `${name}.displayName` });
+  const libraries = useWatch({ control: formControl.control, name: `${name}.libraries` });
   const cardSiteType = useWatch({ control: formControl.control, name: `${name}.siteType` });
   const overrideSiteType = useWatch({ control: formControl.control, name: "overrideSiteType" });
   const templateSiteType = useWatch({ control: formControl.control, name: "siteType" });
@@ -211,8 +243,11 @@ const SiteTemplateCard = ({ formControl, name, index, onRemove, onConfigurePermi
     name: `${name}.libraries`,
   });
 
-  // Root-level permission objects are mandatory: flag the card in red until one is added.
+  // Flag anything on this card that keeps Save disabled (same rules as form + save checks).
+  const missingDisplayName = !displayName?.trim();
   const missingRootPerms = permCount === 0;
+  const incompleteLibraries = (libraries || []).some((lib) => !lib?.name?.trim());
+  const cardBlocksSave = missingDisplayName || missingRootPerms || incompleteLibraries;
 
   return (
     <Card
@@ -221,8 +256,8 @@ const SiteTemplateCard = ({ formControl, name, index, onRemove, onConfigurePermi
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
-        border: missingRootPerms ? "2px solid" : "none",
-        borderColor: missingRootPerms ? "error.main" : "transparent",
+        border: cardBlocksSave ? "2px solid" : "none",
+        borderColor: cardBlocksSave ? "error.main" : "transparent",
       }}
     >
       {/* Brand header — CyberDrain navy; icon tracks effective site type */}
@@ -285,8 +320,8 @@ const SiteTemplateCard = ({ formControl, name, index, onRemove, onConfigurePermi
               permCount > 0 ? "Edit site permissions" : "Add site permissions"
             }
             onClick={() => onConfigurePermissions()}
-            sx={{ color: permCount > 0 ? "#fff" : "error.light" }}
-          >
+            sx={{ color: permCount > 0 ? "#fff" : "error.main" }}
+            >
             <Lock fontSize="small" />
           </IconButton>
         </Tooltip>
@@ -343,27 +378,6 @@ const SiteTemplateCard = ({ formControl, name, index, onRemove, onConfigurePermi
           </MenuItem>
         </Menu>
       </Box>
-
-      {/* Mandatory root permissions: clickable error strip until at least one grant exists */}
-      {missingRootPerms && (
-        <Box
-          role="button"
-          onClick={() => onConfigurePermissions()}
-          sx={{
-            bgcolor: "error.main",
-            color: "error.contrastText",
-            px: 1.5,
-            py: 0.5,
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
-            cursor: "pointer",
-          }}
-        >
-          <Lock sx={{ fontSize: 14 }} />
-          <Typography variant="caption">Root permissions required — click to add</Typography>
-        </Box>
-      )}
 
       {/* Body: document libraries + faint type watermark */}
       <Box
