@@ -33,11 +33,19 @@ function Initialize-CIPPAuth {
         Write-Information "[Auth-Init] Credential source available (KV=$($AuthState.HasKeyVault), DevStorage=$IsDevStorage) — attempting SAM load"
         try {
             $Auth = Get-CIPPAuthentication
-            if ($Auth -and $env:ApplicationID -and $env:TenantID) {
+            # Fresh deployments carry the deployment template's placeholder secrets
+            # until the setup wizard writes real ones — treat those as "no
+            # credentials" or the EasyAuth issuer reconciliation below rewrites a
+            # correctly configured issuer to .../tenantId/v2.0 and breaks sign-in.
+            $PlaceholderPattern = '^(LongApplicationId|AppSecret|RefreshToken|tenantId)$'
+            $HasPlaceholders = ($env:ApplicationID -match $PlaceholderPattern) -or ($env:TenantID -match $PlaceholderPattern)
+            if ($Auth -and $env:ApplicationID -and $env:TenantID -and -not $HasPlaceholders) {
                 $AuthState.HasSAMCredentials = $true
                 $AuthState.NeedsSetup = $false
                 $AuthState.IsConfigured = $true
                 Write-Information "[Auth-Init] SAM credentials loaded (AppID: $($env:ApplicationID), TenantID: $($env:TenantID))"
+            } elseif ($HasPlaceholders) {
+                Write-Information '[Auth-Init] SAM secrets still hold deployment placeholder values — setup wizard has not been completed yet, treating as unconfigured'
             } else {
                 Write-Information '[Auth-Init] SAM credential load returned but env vars not populated — credentials not available yet (expected on fresh deployment)'
             }
