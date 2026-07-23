@@ -345,7 +345,7 @@ const SiteTemplateCard = ({ formControl, name, index, onRemove, onConfigurePermi
             <ListItemIcon>
               <VpnKey fontSize="small" />
             </ListItemIcon>
-            <ListItemText>{permCount > 0 ? "Edit Permission Object" : "Add Permission Object"}</ListItemText>
+            <ListItemText>{permCount > 0 ? "Edit Site Permissions" : "Add Site Permissions"}</ListItemText>
           </MenuItem>
           <MenuItem
             disabled={overrideActive}

@@ -117,6 +117,20 @@ function Invoke-CIPPSharePointTemplateDeploy {
                 $Results.Add("[$TenantFilter] Created site '$($SiteTemplate.displayName)' at $SiteUrl")
             }
 
+            # Track template-defined sub-steps (site perms, libraries, library perms). A failure
+            # here must mark this site step failed — do not report succeeded after swallowing errors.
+            $StepFailures = [System.Collections.Generic.List[string]]::new()
+
+            # Set-CIPPSharePointObjectPermission only throws when nothing was granted. Partial
+            # outcomes (some Failed / Not found) still return a message — treat those as failures.
+            $TestPermissionOutcome = {
+                param([string]$Outcome, [string]$Context)
+                if ($Outcome -match 'Failed for|Not found by display name') {
+                    $StepFailures.Add("${Context}: $Outcome")
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "SharePoint template site '$($SiteTemplate.displayName)': ${Context}: $Outcome" -sev Error
+                }
+            }
+
             # Root-level permissions, grouped per permission level.
             Update-DeployStep -Index $SiteIndex -Status 'running' -Message "Step 3 of ${TotalSteps}: Applying site permissions"
             $RootPermGroups = @($SiteTemplate.permissions) | Group-Object -Property permissionLevel
@@ -125,8 +139,12 @@ function Invoke-CIPPSharePointTemplateDeploy {
                 try {
                     $PermResult = Set-CIPPSharePointObjectPermission -SiteUrl $SiteUrl -PermissionLevel $PermGroup.Name -GroupNames $GroupNames -CreateMissingGroups:$CreateMissingGroups -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
                     $Results.Add("[$TenantFilter] $($SiteTemplate.displayName): $PermResult")
+                    & $TestPermissionOutcome $PermResult "Root permissions ($($PermGroup.Name))"
                 } catch {
-                    $Results.Add("[$TenantFilter] $($SiteTemplate.displayName): root permissions failed - $($_.Exception.Message)")
+                    $FailMsg = "Root permissions ($($PermGroup.Name)) failed: $($_.Exception.Message)"
+                    $StepFailures.Add($FailMsg)
+                    $Results.Add("[$TenantFilter] $($SiteTemplate.displayName): $FailMsg")
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "SharePoint template site '$($SiteTemplate.displayName)': $FailMsg" -sev Error
                 }
             }
 
@@ -145,17 +163,33 @@ function Invoke-CIPPSharePointTemplateDeploy {
                         try {
                             $PermResult = Set-CIPPSharePointObjectPermission -SiteUrl $SiteUrl -ListId $NewLibrary.ListId -PermissionLevel $PermGroup.Name -GroupNames $GroupNames -CreateMissingGroups:$CreateMissingGroups -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
                             $Results.Add("[$TenantFilter] $($SiteTemplate.displayName)/$($Library.name): $PermResult")
+                            & $TestPermissionOutcome $PermResult "Library '$($Library.name)' permissions ($($PermGroup.Name))"
                         } catch {
-                            $Results.Add("[$TenantFilter] $($SiteTemplate.displayName)/$($Library.name): permissions failed - $($_.Exception.Message)")
+                            $FailMsg = "Library '$($Library.name)' permissions ($($PermGroup.Name)) failed: $($_.Exception.Message)"
+                            $StepFailures.Add($FailMsg)
+                            $Results.Add("[$TenantFilter] $($SiteTemplate.displayName)/$($Library.name): $FailMsg")
+                            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "SharePoint template site '$($SiteTemplate.displayName)': $FailMsg" -sev Error
                         }
                     }
                 } catch {
-                    $Results.Add("[$TenantFilter] $($SiteTemplate.displayName): library '$($Library.name)' failed - $($_.Exception.Message)")
+                    $FailMsg = "Library '$($Library.name)' failed: $($_.Exception.Message)"
+                    $StepFailures.Add($FailMsg)
+                    $Results.Add("[$TenantFilter] $($SiteTemplate.displayName): $FailMsg")
+                    Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "SharePoint template site '$($SiteTemplate.displayName)': $FailMsg" -sev Error
                 }
             }
-            Update-DeployStep -Index $SiteIndex -Status 'succeeded' -Message "Completed all $TotalSteps steps. Deployed at $SiteUrl"
+
+            if ($StepFailures.Count -gt 0) {
+                $FailureSummary = $StepFailures -join '; '
+                $Results.Add("[$TenantFilter] Site '$($SiteTemplate.displayName)' completed with failures at $SiteUrl")
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "SharePoint template site '$($SiteTemplate.displayName)' deployed with failures: $FailureSummary" -sev Error
+                Update-DeployStep -Index $SiteIndex -Status 'failed' -Message $FailureSummary
+            } else {
+                Update-DeployStep -Index $SiteIndex -Status 'succeeded' -Message "Completed all $TotalSteps steps. Deployed at $SiteUrl"
+            }
         } catch {
             $Results.Add("[$TenantFilter] Failed to deploy '$($SiteTemplate.displayName)': $($_.Exception.Message)")
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed to deploy SharePoint template site '$($SiteTemplate.displayName)': $($_.Exception.Message)" -sev Error
             Update-DeployStep -Index $SiteIndex -Status 'failed' -Message $_.Exception.Message
         }
     }
