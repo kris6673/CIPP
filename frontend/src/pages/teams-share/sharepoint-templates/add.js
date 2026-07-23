@@ -16,6 +16,7 @@ import {
   CippSharePointTemplateQuickStats,
   CippSharePointTemplateQuickStatsSkeleton,
   getSiteTemplateSaveIssues,
+  getSiteLanguageOption,
   siteTemplateBlocksSave,
 } from "../../../components/CippComponents/CippSharePointTemplateBuilder";
 
@@ -78,6 +79,7 @@ const Page = () => {
       siteTemplates: (result.siteTemplates || []).map((site) => ({
         ...site,
         siteType: normalizeSiteType(site.siteType),
+        language: getSiteLanguageOption(site.language),
       })),
     });
     formControl.trigger();

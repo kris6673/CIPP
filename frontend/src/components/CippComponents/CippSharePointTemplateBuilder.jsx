@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useFieldArray, useWatch, Controller } from "react-hook-form";
 import {
   Box,
@@ -28,6 +28,7 @@ import {
   Label,
   Lock,
   MoreVert,
+  Translate,
   VpnKey,
   ViewColumn,
 } from "@mui/icons-material";
@@ -41,6 +42,58 @@ export const SITE_TYPE_OPTIONS = [
   { label: "Microsoft Teams", value: "teams" },
 ];
 
+// SharePoint Online site-creation language LCIDs (UI language picker), plus tenant default.
+// Regional variants such as en-GB are not supported by SPO site creation.
+// Keep numeric values in sync with $AllowedSiteLcids in New-CIPPSharepointSite.ps1.
+export const SITE_LANGUAGE_DEFAULT = "default";
+export const SITE_LANGUAGE_OPTIONS = [
+  { label: "Tenant default", value: SITE_LANGUAGE_DEFAULT },
+  { label: "Arabic", value: "1025" },
+  { label: "Basque", value: "1069" },
+  { label: "Bulgarian", value: "1026" },
+  { label: "Catalan", value: "1027" },
+  { label: "Chinese (Simplified)", value: "2052" },
+  { label: "Chinese (Traditional)", value: "1028" },
+  { label: "Croatian", value: "1050" },
+  { label: "Czech", value: "1029" },
+  { label: "Danish", value: "1030" },
+  { label: "Dutch", value: "1043" },
+  { label: "English", value: "1033" },
+  { label: "Estonian", value: "1061" },
+  { label: "Finnish", value: "1035" },
+  { label: "French", value: "1036" },
+  { label: "Galician", value: "1110" },
+  { label: "German", value: "1031" },
+  { label: "Greek", value: "1032" },
+  { label: "Hebrew", value: "1037" },
+  { label: "Hindi", value: "1081" },
+  { label: "Hungarian", value: "1038" },
+  { label: "Indonesian", value: "1057" },
+  { label: "Italian", value: "1040" },
+  { label: "Japanese", value: "1041" },
+  { label: "Kazakh", value: "1087" },
+  { label: "Korean", value: "1042" },
+  { label: "Latvian", value: "1062" },
+  { label: "Lithuanian", value: "1063" },
+  { label: "Malay", value: "1086" },
+  { label: "Norwegian (Bokmål)", value: "1044" },
+  { label: "Polish", value: "1045" },
+  { label: "Portuguese (Brazil)", value: "1046" },
+  { label: "Portuguese (Portugal)", value: "2070" },
+  { label: "Romanian", value: "1048" },
+  { label: "Russian", value: "1049" },
+  { label: "Serbian (Latin)", value: "2074" },
+  { label: "Slovak", value: "1051" },
+  { label: "Slovenian", value: "1060" },
+  { label: "Spanish", value: "3082" },
+  { label: "Swedish", value: "1053" },
+  { label: "Thai", value: "1054" },
+  { label: "Turkish", value: "1055" },
+  { label: "Ukrainian", value: "1058" },
+  { label: "Vietnamese", value: "1066" },
+  { label: "Welsh", value: "1106" },
+];
+
 const siteTypeIcon = (siteType) => (siteType === "teams" ? TeamsIcon : SharePointIcon);
 
 // Faint grayscale watermark only; header product marks stay in color.
@@ -48,11 +101,30 @@ const watermarkTypeIconSx = { filter: "grayscale(1)" };
 
 const resolveSiteType = (value) => (value === "teams" ? "teams" : "sharePoint");
 
+const resolveSiteLanguage = (value) => {
+  const raw = value?.value ?? value;
+  if (raw === undefined || raw === null || raw === "" || raw === SITE_LANGUAGE_DEFAULT) {
+    return SITE_LANGUAGE_DEFAULT;
+  }
+  return String(raw);
+};
+
+/** Option object for the language autocomplete (so the dialog shows "Tenant default", not "default"). */
+export const getSiteLanguageOption = (value) => {
+  const resolved = resolveSiteLanguage(value);
+  return (
+    SITE_LANGUAGE_OPTIONS.find((option) => option.value === resolved) ?? SITE_LANGUAGE_OPTIONS[0]
+  );
+};
+
+export { resolveSiteLanguage };
+
 const newLibrary = () => ({ name: "", description: "", permissions: [] });
 const newSiteTemplate = (siteType = "sharePoint") => ({
   displayName: "",
   alias: "",
   siteType: resolveSiteType(siteType),
+  language: getSiteLanguageOption(SITE_LANGUAGE_DEFAULT),
   permissions: [],
   libraries: [],
 });
@@ -221,11 +293,57 @@ const SiteTypeDialog = ({ formControl, name, overrideActive, onClose }) => (
   </Dialog>
 );
 
+// Site language editor shown from the site card "..." menu.
+const SiteLanguageDialog = ({ formControl, name, onClose }) => {
+  // Ensure the field always has a real option object when the dialog opens so the
+  // autocomplete shows "Tenant default" (or the saved language) instead of blank/raw values.
+  useEffect(() => {
+    if (!name) return;
+    const fieldName = `${name}.language`;
+    formControl.setValue(fieldName, getSiteLanguageOption(formControl.getValues(fieldName)), {
+      shouldDirty: false,
+      shouldTouch: false,
+      shouldValidate: false,
+    });
+  }, [name, formControl]);
+
+  return (
+    <Dialog open={Boolean(name)} onClose={onClose} fullWidth maxWidth="xs">
+      <DialogTitle>Site language</DialogTitle>
+      <DialogContent dividers>
+        {name && (
+          <Stack spacing={1}>
+            <CippFormComponent
+              type="autoComplete"
+              label="Site language"
+              name={`${name}.language`}
+              formControl={formControl}
+              options={SITE_LANGUAGE_OPTIONS}
+              multiple={false}
+              creatable={false}
+              disableClearable={true}
+            />
+            <Typography variant="body2" color="text.secondary">
+              Tenant default follows each target tenant&apos;s SharePoint root site language
+              (the SPO default for new sites) at deploy. A specific language is applied when
+              the SharePoint site is created.
+            </Typography>
+          </Stack>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Done</Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
 // A single site template card: coloured header, libraries, and "..." menu for permissions,
 // site type, and remove. Header icon + watermark reflect the effective site type.
 const SiteTemplateCard = ({ formControl, name, index, onRemove, onConfigurePermissions }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [siteTypeOpen, setSiteTypeOpen] = useState(false);
+  const [siteLanguageOpen, setSiteLanguageOpen] = useState(false);
   const permissions = useWatch({ control: formControl.control, name: `${name}.permissions` });
   const displayName = useWatch({ control: formControl.control, name: `${name}.displayName` });
   const libraries = useWatch({ control: formControl.control, name: `${name}.libraries` });
@@ -363,6 +481,19 @@ const SiteTemplateCard = ({ formControl, name, index, onRemove, onConfigurePermi
               secondary={overrideActive ? "Clear the site type override first" : undefined}
             />
           </MenuItem>
+          {effectiveSiteType === "sharePoint" && (
+            <MenuItem
+              onClick={() => {
+                setAnchorEl(null);
+                setSiteLanguageOpen(true);
+              }}
+            >
+              <ListItemIcon>
+                <Translate fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="Site Language" />
+            </MenuItem>
+          )}
           <Divider />
           <MenuItem
             onClick={() => {
@@ -451,6 +582,11 @@ const SiteTemplateCard = ({ formControl, name, index, onRemove, onConfigurePermi
         name={siteTypeOpen ? name : null}
         overrideActive={overrideActive}
         onClose={() => setSiteTypeOpen(false)}
+      />
+      <SiteLanguageDialog
+        formControl={formControl}
+        name={siteLanguageOpen ? name : null}
+        onClose={() => setSiteLanguageOpen(false)}
       />
     </Card>
   );
