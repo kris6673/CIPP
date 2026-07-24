@@ -81,6 +81,18 @@ function Initialize-CIPPAuth {
     if ($EasyAuthEnabled) {
         Write-Information '[Auth-Init] EasyAuth is already configured'
 
+        # A pending SSO reset flag with EasyAuth back up means setup completed (the
+        # Craft setup wizard configures EasyAuth itself and doesn't know about this
+        # flag) - clean it up so a future EasyAuth outage doesn't re-trigger setup.
+        if ($env:CIPP_SSO_RESET -eq 'true') {
+            Write-Information '[Auth-Init] EasyAuth is active but CIPP_SSO_RESET still set — reset completed, cleaning up'
+            try {
+                $null = Remove-CIPPMigrationAppSetting -SettingName 'CIPP_SSO_RESET'
+            } catch {
+                Write-Information "[Auth-Init] CIPP_SSO_RESET cleanup failed (non-fatal): $_"
+            }
+        }
+
         # 3a. If CIPP_SSO_MIGRATION_APPID is set, check if migration is complete
         if ($env:CIPP_SSO_MIGRATION_APPID) {
             Write-Information '[Auth-Init] EasyAuth is active but CIPP_SSO_MIGRATION_APPID still set — checking if migration is complete...'
@@ -230,6 +242,17 @@ function Initialize-CIPPAuth {
     } elseif ($AuthState.HasSAMCredentials) {
         # EasyAuth NOT configured but we DO have SAM credentials — try to auto-configure
         Write-Information '[Auth-Init] EasyAuth not configured but SAM credentials available — attempting auto-configuration'
+
+        # SSO reset requested from the management portal (it has no access to this
+        # instance's Key Vault, so it can't clear the stored credentials itself).
+        # Skip every auto-configure path and serve the setup wizard; completing the
+        # wizard rewrites the stored credentials and removes this flag.
+        if ($env:CIPP_SSO_RESET -eq 'true') {
+            Write-Information '[Auth-Init] CIPP_SSO_RESET is set — skipping SSO auto-configuration and requesting setup wizard'
+            [Craft.Services.AppLifecycleBridge]::RequestSetupMode('SSO reset requested — setup wizard needed to reconfigure sign-in')
+            $AuthState.NeedsSetup = $true
+            return $AuthState
+        }
 
         if ($env:CIPP_SSO_MIGRATION_APPID) {
             Write-Information "[Auth-Init] CIPP_SSO_MIGRATION_APPID is set ($($env:CIPP_SSO_MIGRATION_APPID)) — configuring implicit auth EasyAuth"
