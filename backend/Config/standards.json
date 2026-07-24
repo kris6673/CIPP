@@ -51,8 +51,12 @@
         "name": "standards.CopilotSettings.allowWebSearch",
         "options": [
           { "label": "Do not configure", "value": "donotconfigure" },
-          { "label": "Enabled", "value": "1" },
-          { "label": "Disabled", "value": "0" }
+          { "label": "Enabled in Microsoft 365 Copilot and Microsoft 365 Copilot Chat", "value": "2" },
+          { "label": "Disabled in Microsoft 365 Copilot and Microsoft 365 Copilot Chat", "value": "1" },
+          {
+            "label": "Disabled in Microsoft 365 Copilot Work mode, Enabled in Microsoft 365 Copilot Chat",
+            "value": "0"
+          }
         ]
       },
       {
