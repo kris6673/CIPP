@@ -293,6 +293,21 @@ $swaUsers = ($aadUsersResponse.Content | ConvertFrom-Json).value
 
 $tableCtx = New-AzDataTableContext -ConnectionString $storageConnString -TableName 'allowedUsers'
 
+# Valid roles = CIPP built-ins + this instance's custom roles (CustomRoles table,
+# canonical casing from RowKey — custom role lookups are case-sensitive). SWA
+# invites often carry display-name variants ('full editor') or roles that no
+# longer exist; migrating those pollutes the permission checks.
+$roleMap = @{}
+foreach ($r in @('superadmin', 'admin', 'editor', 'readonly')) { $roleMap[$r] = $r }
+try {
+    $customRolesCtx = New-AzDataTableContext -ConnectionString $storageConnString -TableName 'CustomRoles'
+    foreach ($row in @(Get-AzDataTableEntity -Context $customRolesCtx -ErrorAction Stop)) {
+        if ($row.RowKey) { $roleMap[$row.RowKey] = $row.RowKey }
+    }
+} catch {
+    Write-Information 'No CustomRoles table found — validating roles against CIPP built-ins only.'
+}
+
 if ($swaUsers.Count -gt 0) {
     $migrated = 0
     $skipped = 0
@@ -304,6 +319,30 @@ if ($swaUsers.Count -gt 0) {
             $roles = @($rawRoles -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -notin 'authenticated', 'anonymous' })
         } else {
             $roles = @($rawRoles | Where-Object { $_ -notin 'authenticated', 'anonymous' })
+        }
+
+        # Keep only roles that actually exist, mapping display-name variants with
+        # spaces ('full editor') onto their real role name; drop the rest.
+        $resolved = [System.Collections.Generic.List[string]]::new()
+        $dropped = [System.Collections.Generic.List[string]]::new()
+        foreach ($role in $roles) {
+            $canonical = $roleMap[$role] ?? $roleMap[($role -replace '\s', '')]
+            if ($canonical) {
+                if ($resolved -notcontains $canonical) { $resolved.Add($canonical) }
+            } else {
+                $dropped.Add($role)
+            }
+        }
+        if ($dropped.Count -gt 0) {
+            Write-Information "  Dropped non-existent role(s) for ${email}: $($dropped -join ', ')"
+        }
+        $roles = @($resolved)
+
+        # superadmin supersedes everything — carrying additional roles alongside it
+        # interferes with the high-privilege permission checks, so migrate
+        # superadmins with that role only
+        if ($roles -contains 'superadmin') {
+            $roles = @('superadmin')
         }
 
         if (-not $email -or $roles.Count -eq 0) {
