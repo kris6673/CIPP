@@ -1,5 +1,9 @@
+import { useRef, useState } from 'react'
 import { Layout as DashboardLayout } from '../../../layouts/index.js'
 import { CippInfoBar } from '../../../components/CippCards/CippInfoBar'
+import { CippMultiQueueTracker } from '../../../components/CippComponents/CippMultiQueueTracker'
+import { CippQueryRefreshButton } from '../../../components/CippComponents/CippQueryRefreshButton'
+import { SharingReportButton } from '../../../components/CippPdf/SharingReportButton'
 import { CippChartCard } from '../../../components/CippCards/CippChartCard'
 import { CippImageCard } from '../../../components/CippCards/CippImageCard'
 import { CippDataTable } from '../../../components/CippTable/CippDataTable'
@@ -20,16 +24,20 @@ import {
 } from '@mui/material'
 import { Grid } from '@mui/system'
 import {
-  ArrowPathIcon,
   BuildingOfficeIcon,
   ChatBubbleLeftRightIcon,
+  ClockIcon,
+  CloudArrowDownIcon,
   CloudIcon,
   DocumentTextIcon,
+  FolderOpenIcon,
   GlobeAltIcon,
   LinkIcon,
   LinkSlashIcon,
+  PencilSquareIcon,
   ShieldCheckIcon,
   UserPlusIcon,
+  UsersIcon,
 } from '@heroicons/react/24/outline'
 
 const classificationChipColor = (classification) => {
@@ -129,16 +137,25 @@ const SharingLinkDetail = ({ row }) => {
   )
 }
 
-// Datasets in the CIPP reporting database this report is compiled from.
+// Datasets in the CIPP reporting database this report is compiled from. Site and library
+// permissions are a separate access path with their own cache and report page.
 const syncRows = [
   { Name: 'SharePointSharingLinks' },
   { Name: 'SharePointSiteUsage' },
   { Name: 'OneDriveUsage' },
 ]
 
+// Stable empty fallback: CippDataTable syncs its `data` prop by reference, so a fresh [] on every
+// render would re-trigger that sync in a loop.
+const EMPTY_ROWS = []
+
 const Page = () => {
   const currentTenant = useSettings().currentTenant
   const syncDialog = useDialog()
+  // Each sync starts one queue per cache and returns its id in the response metadata, so the
+  // ids are collected as the four responses arrive and handed to the tracker.
+  const [syncQueueIds, setSyncQueueIds] = useState([])
+  const newSyncRunRef = useRef(false)
   const queryKey = `ListSharePointSharing-${currentTenant}`
 
   const sharing = ApiGetCall({
@@ -153,6 +170,8 @@ const Page = () => {
   const byScope = data.byScope ?? []
   const byLinkType = data.byLinkType ?? []
   const topSites = data.topSites ?? []
+  const topLibraries = data.topLibraries ?? []
+  const topRecipients = data.topRecipients ?? []
   const needsSync = sharing.isSuccess && !summary.linksSynced
   const showLinkCharts = sharing.isFetching || byScope.length > 0
 
@@ -197,6 +216,21 @@ const Page = () => {
     {
       filterName: 'Anonymous',
       value: [{ id: 'classification', value: 'Anonymous' }],
+      type: 'column',
+    },
+    {
+      // Anyone with the link can change the content: the combination worth acting on first.
+      filterName: 'Anonymous + Editable',
+      value: [
+        { id: 'classification', value: 'Anonymous' },
+        { id: 'roles', value: 'write' },
+      ],
+      type: 'column',
+    },
+    {
+      // A share on a folder carries everything below it, so one link can expose a whole tree.
+      filterName: 'Folder Shares',
+      value: [{ id: 'itemType', value: 'Folder' }],
       type: 'column',
     },
     {
@@ -251,18 +285,33 @@ const Page = () => {
                     ? `Last data refresh: ${new Date(summary.lastDataRefresh.UtcDateTime).toLocaleString()}`
                     : ''}
                 </Typography>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={syncDialog.handleOpen}
-                  startIcon={
-                    <SvgIcon fontSize="small">
-                      <ArrowPathIcon />
-                    </SvgIcon>
-                  }
-                >
-                  Sync data
-                </Button>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <CippQueryRefreshButton
+                    queryKeys={[queryKey, `${queryKey}-table`]}
+                    isFetching={sharing.isFetching}
+                  />
+                  <CippMultiQueueTracker
+                    queueIds={syncQueueIds}
+                    relatedQueryKeys={[queryKey]}
+                    label="Sharing sync"
+                  />
+                  <SharingReportButton sharingData={data} tenantName={currentTenant} />
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => {
+                      newSyncRunRef.current = true
+                      syncDialog.handleOpen()
+                    }}
+                    startIcon={
+                      <SvgIcon fontSize="small">
+                        <CloudArrowDownIcon />
+                      </SvgIcon>
+                    }
+                  >
+                    Sync data
+                  </Button>
+                </Stack>
               </Stack>
               {needsSync && (
                 <Alert severity="info" sx={{ mb: 1 }}>
@@ -298,6 +347,37 @@ const Page = () => {
                     name: 'Internal Links',
                     data: `${summary.internalLinks ?? 0}`,
                     color: 'success',
+                  },
+                ]}
+              />
+            </Grid>
+            <Grid size={{ md: 12, xs: 12 }}>
+              <CippInfoBar
+                isFetching={sharing.isFetching}
+                data={[
+                  {
+                    icon: <PencilSquareIcon />,
+                    name: 'Anonymous & Editable',
+                    data: `${summary.anonymousEditLinks ?? 0}`,
+                    color: 'error',
+                  },
+                  {
+                    icon: <ClockIcon />,
+                    name: 'Anonymous, No Expiry',
+                    data: `${summary.neverExpiringAnonymous ?? 0}`,
+                    color: 'error',
+                  },
+                  {
+                    icon: <FolderOpenIcon />,
+                    name: 'Shared Folders',
+                    data: `${summary.folderShares ?? 0}`,
+                    color: 'warning',
+                  },
+                  {
+                    icon: <UsersIcon />,
+                    name: 'External Recipients',
+                    data: `${summary.externalRecipients ?? 0}`,
+                    color: 'warning',
                   },
                 ]}
               />
@@ -362,6 +442,26 @@ const Page = () => {
                     totalLabel="Links"
                   />
                 </Grid>
+                <Grid size={{ md: 6, xs: 12 }}>
+                  <CippChartCard
+                    title="Top Libraries by Sharing Links"
+                    isFetching={sharing.isFetching}
+                    chartType="bar"
+                    labels={topLibraries.map((item) => item.library)}
+                    chartSeries={topLibraries.map((item) => item.links)}
+                    totalLabel="Links"
+                  />
+                </Grid>
+                <Grid size={{ md: 6, xs: 12 }}>
+                  <CippChartCard
+                    title="Top External Recipients"
+                    isFetching={sharing.isFetching}
+                    chartType="bar"
+                    labels={topRecipients.map((item) => item.recipient)}
+                    chartSeries={topRecipients.map((item) => item.links)}
+                    totalLabel="Shares"
+                  />
+                </Grid>
               </>
             )}
 
@@ -401,8 +501,10 @@ const Page = () => {
             <Grid size={{ md: 12, xs: 12 }}>
               <CippDataTable
                 title="Sharing Links & External Shares"
+                queryKey={`${queryKey}-table`}
                 isFetching={sharing.isFetching}
-                data={data.links ?? []}
+                data={data.links ?? EMPTY_ROWS}
+                refreshFunction={sharing}
                 actions={linkActions}
                 filters={linkFilters}
                 offCanvas={linkDetailOffCanvas}
@@ -412,10 +514,13 @@ const Page = () => {
                   'itemType',
                   'workload',
                   'siteName',
+                  'driveName',
                   'classification',
                   'linkType',
+                  'linkScope',
                   'roles',
                   'sharedWith',
+                  'hasPassword',
                   'expirationDateTime',
                   'lastModifiedDateTime',
                 ]}
@@ -430,8 +535,24 @@ const Page = () => {
                 url: '/api/ExecCIPPDBCache',
                 data: { Name: 'Name' },
                 confirmText:
-                  'Queue a refresh of the cached sharing links and SharePoint/OneDrive usage data for this tenant? Scanning all drives for sharing links can take a while on large tenants; the report updates once the sync completes.',
+                  'Queue a refresh of the cached sharing links and SharePoint/OneDrive usage data for this tenant? Scanning every drive for sharing links can take a while on large tenants. Progress is shown next to the Sync button and the report refreshes itself once the syncs finish.',
                 relatedQueryKeys: [queryKey],
+                // One response per cache, each carrying the queue it started, so the ids arrive
+                // one at a time and accumulate. The first response of a new run replaces the
+                // previous run's ids instead of stacking on them — the flag is only cleared once
+                // a sync actually starts, so cancelling the dialog leaves a running tracker alone.
+                onSuccess: (result) => {
+                  const queueId = result?.Metadata?.QueueId
+                  if (!queueId) return
+                  if (newSyncRunRef.current) {
+                    newSyncRunRef.current = false
+                    setSyncQueueIds([queueId])
+                    return
+                  }
+                  setSyncQueueIds((previous) =>
+                    previous.includes(queueId) ? previous : [...previous, queueId]
+                  )
+                },
               }}
               row={syncRows}
             />
