@@ -69,6 +69,16 @@ COPY backend/Shared/CIPPSharp/ ./
 RUN dotnet build CIPPSharp.csproj -c Release --no-restore -o /out && \
     test -f /out/CIPPSharp.dll
 
+# ── Function parameter cache ──
+# Pregenerated help cache served by Invoke-ListFunctionParameters, extracted
+# from the CIPPCore source via AST parse. Without it the endpoint runs
+# Get-Help across every CIPPCore public function per request (minutes ->
+# gateway timeout).
+FROM ps-base AS build-functionparams
+COPY build/tools/build-function-parameters.ps1 /build/build-function-parameters.ps1
+COPY backend/Modules/CIPPCore /gen/CIPPCore
+RUN pwsh -File /build/build-function-parameters.ps1 -ModulePath /gen/CIPPCore -OutputPath /gen/function-parameters.json
+
 # ── Frontend build ──
 FROM node:22-slim AS frontend-deps
 WORKDIR /build
@@ -148,6 +158,8 @@ COPY --from=build-cipptests            /src/CIPPTests/            /app/API/Modul
 COPY --from=build-cippstandards        /src/CIPPStandards/        /app/API/Modules/CIPPStandards/
 COPY --from=build-cipphttp             /src/CIPPHTTP/             /app/API/Modules/CIPPHTTP/
 COPY --from=build-cippcore             /src/CIPPCore/             /app/API/Modules/CIPPCore/
+# generated from CIPPCore, changes whenever it does — keep adjacent in the layer order
+COPY --chown=app:app --from=build-functionparams /gen/function-parameters.json /app/API/Config/function-parameters.json
 
 # Frontend — changes most frequently, placed last
 COPY --from=frontend-build /build/out/ /app/Frontend/
