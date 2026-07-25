@@ -134,7 +134,6 @@ ENV BUILD_DATE=$BUILD_DATE
 COPY backend/Modules/AzBobbyTables  /app/API/Modules/AzBobbyTables/
 COPY backend/Modules/DNSHealth      /app/API/Modules/DNSHealth/
 COPY backend/Modules/HuduAPI        /app/API/Modules/HuduAPI/
-COPY backend/Modules/MicrosoftTeams /app/API/Modules/MicrosoftTeams/
 COPY backend/Modules/PassPushPosh   /app/API/Modules/PassPushPosh/
 
 # Backend support directories
