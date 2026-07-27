@@ -38,6 +38,12 @@ If you receive an error during migration rest assured that the helpdesk has been
 
 If you haven't already completed the SSO set up steps you will be prompted to complete that setup when you first open CIPP again. See [roles.md](../setting-up-cipp/roles.md "mention")
 {% endstep %}
+
+{% step %}
+### Custom Domain
+
+If you had a custom domain on your old version of CIPP, you'll need to migrate it too. To migrate a domain to the new generation of CIPP, point its existing CNAME record at CIPPXXXX.azurewebsites.net, create the asuid TXT record shown under Add Domain, then add the domain here. It will move over automatically.
+{% endstep %}
 {% endstepper %}
 
 {% @storylane/embed subdomain="app" linkValue="d3kcpzf2efuj" url="https://app.storylane.io/share/d3kcpzf2efuj" %}
