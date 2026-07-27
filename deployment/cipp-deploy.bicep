@@ -144,6 +144,7 @@ resource webApp 'Microsoft.Web/sites@2024-11-01' = {
       alwaysOn: true
       http20Enabled: true
       use32BitWorkerProcess: false
+      healthCheckPath: '/api/setup/health'
       appSettings: [
         {
           name: 'AzureWebJobsStorage'

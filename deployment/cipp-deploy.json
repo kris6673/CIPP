@@ -159,6 +159,7 @@
           "alwaysOn": true,
           "http20Enabled": true,
           "use32BitWorkerProcess": false,
+          "healthCheckPath": "/api/setup/health",
           "appSettings": [
             {
               "name": "AzureWebJobsStorage",

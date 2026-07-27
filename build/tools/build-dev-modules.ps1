@@ -92,4 +92,18 @@ foreach ($mod in $Modules) {
     Pop-Location
 }
 
+# help cache for ListFunctionParameters, AST-extracted from CIPPCore source,
+# cheap enough to regenerate on every CIPPCore build (watcher passes -Modules
+# per save, skip when CIPPCore didn't change). the one write into the source
+# tree this script does; the file is gitignored so the working tree stays clean
+if ($Modules -contains 'CIPPCore') {
+    $paramCachePath = Join-Path (Split-Path -Parent $sourceModulesPath) 'Config' 'function-parameters.json'
+    try {
+        & (Join-Path $PSScriptRoot 'build-function-parameters.ps1') `
+            -ModulePath (Join-Path $sourceModulesPath 'CIPPCore') -OutputPath $paramCachePath
+    } catch {
+        Write-Host "function-parameters.json generation FAILED ($_); missing cache is slow, stale cache hides new functions from the scheduler" -ForegroundColor Red
+    }
+}
+
 Write-Host "Done." -ForegroundColor Cyan

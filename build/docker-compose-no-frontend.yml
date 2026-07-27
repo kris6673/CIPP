@@ -111,6 +111,10 @@ services:
           ignore:
             # container writes this back at startup, would cause a restart loop
             - function-permissions.json
+            # build-dev-modules regenerates this on CIPPCore rebuilds; the watcher
+            # already restarts the container, ignoring avoids a racing double restart
+            # (glob also covers the transient .tmp the atomic write creates)
+            - function-parameters.json*
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
