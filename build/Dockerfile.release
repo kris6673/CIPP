@@ -163,6 +163,9 @@ COPY --chown=app:app --from=build-functionparams /gen/function-parameters.json /
 # Frontend — changes most frequently, placed last
 COPY --from=frontend-build /build/out/ /app/Frontend/
 
+# Memory tuning 2.35GB
+ENV DOTNET_GCHeapHardLimit=0x95E00000
+
 # Runtime environment — CIPP-NG-specific only. .NET GC tuning, mimalloc preload
 # and PowerShell telemetry opt-outs are inherited from the CRAFT base image.
 ENV WEBSITES_ENABLE_APP_SERVICE_STORAGE=true
