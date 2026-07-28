@@ -1,5 +1,5 @@
 ---
-description: Centralized Tenant Management and Oversight
+description: Centralised Tenant Management and Oversight
 ---
 
 # Tenants
