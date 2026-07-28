@@ -8,15 +8,20 @@ function Get-CIPPJITAdminAllowedRoles {
     CIPP custom role (via the AllowedRolesTemplate property on the CustomRoles row). This function
     resolves the calling user's roles and returns the effective allow-list.
 
-    Default-open semantics (so existing configurations are not disturbed):
-      - Base roles (superadmin/admin/editor/readonly) and users with no custom role are unrestricted.
-      - A custom role with NO JIT Role Template assigned grants access to all roles. Because access is
-        a union across the caller's roles, holding any such role makes the caller unrestricted.
-      - Only when EVERY one of the caller's custom roles carries a template is the caller restricted,
-        in which case the allow-list is the union of those templates' role IDs.
+    Restrictive semantics, matching how CIPP combines multiple custom roles everywhere else
+    ("assigning multiple custom roles is restrictive and not additive"):
+      - Base roles (superadmin/admin/editor/readonly) do not carry templates. admin/superadmin are
+        unaffected by custom roles and are always unrestricted.
+      - A custom role with NO template contributes "all roles" (the universal set), so it never
+        loosens the result - but on its own it does not restrict.
+      - If the caller holds AT LEAST ONE templated custom role they are restricted, and the allow-list
+        is the INTERSECTION of the templated roles' sets. An untemplated custom role therefore cannot
+        be used to bypass a template held alongside it.
+      - If NO custom role carries a template, the caller is unrestricted, so deployments with no
+        templates assigned anywhere are undisturbed.
 
-    Fails closed for restricted callers: if a template reference cannot be read, that role contributes
-    no allowed IDs (rather than opening access), so a lookup failure cannot be used to escalate.
+    Fails closed for restricted callers: a template (or role row) that cannot be read contributes an
+    empty set to the intersection rather than opening access, so a lookup failure cannot escalate.
 
     .PARAMETER Headers
     The request headers (containing x-ms-client-principal) used to resolve the caller.
@@ -46,6 +51,11 @@ function Get-CIPPJITAdminAllowedRoles {
         $CallingUser = Test-CIPPAccessUserRole -User $CallingUser
     }
 
+    # admin/superadmin are unaffected by custom roles (CIPP convention) -> never restricted.
+    if ($CallingUser.userRoles -contains 'admin' -or $CallingUser.userRoles -contains 'superadmin') {
+        return $Unrestricted
+    }
+
     $DefaultRoles = @('superadmin', 'admin', 'editor', 'readonly', 'anonymous', 'authenticated')
     $CustomRoleNames = @($CallingUser.userRoles | Where-Object { $DefaultRoles -notcontains $_ })
 
@@ -56,7 +66,10 @@ function Get-CIPPJITAdminAllowedRoles {
 
     $Table = Get-CIPPTable -tablename 'CustomRoles'
     $TemplateTable = Get-CIPPTable -tablename 'templates'
-    $AllowedRoleIds = [System.Collections.Generic.HashSet[string]]::new()
+
+    # Each templated custom role contributes one set of allowed role IDs. Untemplated custom roles
+    # contribute nothing (they represent the universal set and never tighten the intersection).
+    $TemplatedSets = [System.Collections.Generic.List[object]]::new()
 
     foreach ($RoleName in $CustomRoleNames) {
         try {
@@ -64,13 +77,14 @@ function Get-CIPPJITAdminAllowedRoles {
             $RoleRow = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'CustomRoles' and RowKey eq '$SafeRole'"
         } catch {
             Write-Warning "JIT allowed-roles: failed to read custom role '$RoleName': $($_.Exception.Message)"
-            # Cannot confirm a template for this role -> treat as restricted-but-empty (fail closed).
+            # Cannot confirm whether this role is templated -> fail closed: contribute an empty set.
+            $TemplatedSets.Add([string[]]@())
             continue
         }
 
-        # A role with no template assigned grants all roles -> the caller is unrestricted.
+        # A role with no template assigned represents the universal set - skip it (it never restricts).
         if (-not $RoleRow -or [string]::IsNullOrWhiteSpace($RoleRow.AllowedRolesTemplate)) {
-            return $Unrestricted
+            continue
         }
 
         try {
@@ -80,9 +94,9 @@ function Get-CIPPJITAdminAllowedRoles {
         }
         $TemplateGuid = if ($TemplateRef -is [string]) { $TemplateRef } else { $TemplateRef.value ?? $TemplateRef.GUID }
 
-        # An empty/blank template reference is equivalent to no template -> unrestricted.
+        # A blank template reference is equivalent to no template -> universal set, skip it.
         if ([string]::IsNullOrWhiteSpace($TemplateGuid)) {
-            return $Unrestricted
+            continue
         }
 
         try {
@@ -93,26 +107,42 @@ function Get-CIPPJITAdminAllowedRoles {
             $TemplateRow = $null
         }
 
-        # Unresolved template contributes no allowed IDs (fail closed) but keeps the caller restricted.
+        # A templated role whose template cannot be resolved contributes an empty set (fail closed).
         if (-not $TemplateRow) {
+            $TemplatedSets.Add([string[]]@())
             continue
         }
 
         try {
             $TemplateData = $TemplateRow.JSON | ConvertFrom-Json -Depth 10 -ErrorAction Stop
         } catch {
+            $TemplatedSets.Add([string[]]@())
             continue
         }
-        foreach ($Role in @($TemplateData.roles)) {
+        $Ids = foreach ($Role in @($TemplateData.roles)) {
             $Id = if ($Role -is [string]) { $Role } else { $Role.value ?? $Role.ObjectId }
-            if (-not [string]::IsNullOrWhiteSpace($Id)) {
-                [void]$AllowedRoleIds.Add([string]$Id)
-            }
+            if (-not [string]::IsNullOrWhiteSpace($Id)) { [string]$Id }
+        }
+        $TemplatedSets.Add([string[]]@($Ids))
+    }
+
+    # No templated custom role -> nothing restricts the caller.
+    if ($TemplatedSets.Count -eq 0) {
+        return $Unrestricted
+    }
+
+    # Restricted: the allow-list is the intersection of every templated role's set (most restrictive wins).
+    $Intersection = $null
+    foreach ($Set in $TemplatedSets) {
+        if ($null -eq $Intersection) {
+            $Intersection = [System.Collections.Generic.HashSet[string]]::new([string[]]@($Set))
+        } else {
+            $Intersection.IntersectWith([string[]]@($Set))
         }
     }
 
     return [PSCustomObject]@{
         Restricted     = $true
-        AllowedRoleIds = @($AllowedRoleIds)
+        AllowedRoleIds = @($Intersection)
     }
 }
