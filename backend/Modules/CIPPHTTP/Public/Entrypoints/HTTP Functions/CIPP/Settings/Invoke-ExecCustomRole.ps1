@@ -47,12 +47,13 @@ function Invoke-ExecCustomRole {
 
                 if ($Request.Body.RoleName -notin $DefaultRoles.PSObject.Properties.Name) {
                     $Role = @{
-                        'PartitionKey'     = 'CustomRoles'
-                        'RowKey'           = "$($Request.Body.RoleName.ToLower())"
-                        'Permissions'      = "$($Request.Body.Permissions | ConvertTo-Json -Compress)"
-                        'AllowedTenants'   = "$($Request.Body.AllowedTenants | ConvertTo-Json -Compress)"
-                        'BlockedTenants'   = "$($Request.Body.BlockedTenants | ConvertTo-Json -Compress)"
-                        'BlockedEndpoints' = "$($Request.Body.BlockedEndpoints | ConvertTo-Json -Compress)"
+                        'PartitionKey'         = 'CustomRoles'
+                        'RowKey'               = "$($Request.Body.RoleName.ToLower())"
+                        'Permissions'          = "$($Request.Body.Permissions | ConvertTo-Json -Compress)"
+                        'AllowedTenants'       = "$($Request.Body.AllowedTenants | ConvertTo-Json -Compress)"
+                        'BlockedTenants'       = "$($Request.Body.BlockedTenants | ConvertTo-Json -Compress)"
+                        'BlockedEndpoints'     = "$($Request.Body.BlockedEndpoints | ConvertTo-Json -Compress)"
+                        'AllowedRolesTemplate' = "$($Request.Body.AllowedRolesTemplate | ConvertTo-Json -Compress)"
                     }
                     Add-CIPPAzDataTableEntity @Table -Entity $Role -Force | Out-Null
                     $Results.Add("Custom role $($Request.Body.RoleName) saved")
@@ -124,12 +125,13 @@ function Invoke-ExecCustomRole {
                 }
 
                 $NewRole = @{
-                    'PartitionKey'     = 'CustomRoles'
-                    'RowKey'           = "$($Request.Body.NewRoleName.ToLower())"
-                    'Permissions'      = $ExistingRole.Permissions
-                    'AllowedTenants'   = $ExistingRole.AllowedTenants
-                    'BlockedTenants'   = $ExistingRole.BlockedTenants
-                    'BlockedEndpoints' = $ExistingRole.BlockedEndpoints
+                    'PartitionKey'         = 'CustomRoles'
+                    'RowKey'               = "$($Request.Body.NewRoleName.ToLower())"
+                    'Permissions'          = $ExistingRole.Permissions
+                    'AllowedTenants'       = $ExistingRole.AllowedTenants
+                    'BlockedTenants'       = $ExistingRole.BlockedTenants
+                    'BlockedEndpoints'     = $ExistingRole.BlockedEndpoints
+                    'AllowedRolesTemplate' = $ExistingRole.AllowedRolesTemplate
                 }
                 Add-CIPPAzDataTableEntity @Table -Entity $NewRole -Force | Out-Null
                 # Clone IP ranges if they exist
@@ -217,6 +219,15 @@ function Invoke-ExecCustomRole {
                         }
                     } else {
                         $Role | Add-Member -NotePropertyName BlockedEndpoints -NotePropertyValue @() -Force
+                    }
+                    if ($Role.AllowedRolesTemplate) {
+                        try {
+                            $Role.AllowedRolesTemplate = $Role.AllowedRolesTemplate | ConvertFrom-Json
+                        } catch {
+                            $Role.AllowedRolesTemplate = $null
+                        }
+                    } else {
+                        $Role | Add-Member -NotePropertyName AllowedRolesTemplate -NotePropertyValue $null -Force
                     }
                     $EntraRoleGroup = $EntraRoleGroups | Where-Object -Property RowKey -EQ $Role.RowKey
                     if ($EntraRoleGroup) {

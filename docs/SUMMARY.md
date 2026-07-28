@@ -122,6 +122,8 @@
       * [Add JIT Admin](../user-documentation/identity/administration/jit-admin/add.md)
     * [JIT Admin Templates](../user-documentation/identity/administration/jit-admin-templates/README.md)
       * [Add JIT Admin Template](../user-documentation/identity/administration/jit-admin-templates/add-jit-admin-template.md)
+    * [JIT Role Templates](../user-documentation/identity/administration/jit-role-templates/README.md)
+      * [Add JIT Role Template](../user-documentation/identity/administration/jit-role-templates/add-jit-role-template.md)
     * [Vacation Mode](../user-documentation/identity/administration/vacation-mode/README.md)
       * [Add Vacation Schedule](../user-documentation/identity/administration/vacation-mode/add-vacation-schedule.md)
     * [Offboarding Wizard](../user-documentation/identity/administration/offboarding-wizard.md)
