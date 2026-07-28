@@ -47,8 +47,11 @@ const CippIntegrationSettings = ({ children }) => {
     defaultValues: mappings?.data,
   });
 
+  // Server-side automap writes the mappings itself, so the list has to be refetched or the
+  // table keeps showing the pre-automap rows and the new mappings look like they failed.
   const automapPostCall = ApiPostCall({
     datafromUrl: true,
+    relatedQueryKeys: [`IntegrationTenantMapping-${router.query.id}`],
   });
 
   const postCall = ApiPostCall({
@@ -169,11 +172,13 @@ const CippIntegrationSettings = ({ children }) => {
     return Array.isArray(tableData) ? tableData.map((item) => item.TenantId) : [];
   }, [tableData]);
 
+  // isSuccess only goes false -> true once, so depending on it alone meant a refetch never
+  // reached the table and server-side automap results stayed hidden until a page reload.
   useEffect(() => {
     if (mappings.isSuccess) {
       setTableData(mappings.data.Mappings ?? []);
     }
-  }, [mappings.isSuccess]);
+  }, [mappings.isSuccess, mappings.data]);
 
   return (
     <>
