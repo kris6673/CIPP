@@ -26,7 +26,12 @@ jobs:
       - name: Run PSScriptAnalyzer
         shell: pwsh
         run: |
-          $results = Invoke-ScriptAnalyzer -Path ./backend -Recurse -Severity Error,Warning -ExcludeRule PSAvoidUsingWriteHost
+          # Analyze the backend, excluding the Pester test tree (backend/Tests/**)
+          $targets = Get-ChildItem -Path ./backend -Recurse -File -Include '*.ps1', '*.psm1' |
+            Where-Object { $_.FullName -notmatch '[\\/]backend[\\/]Tests[\\/]' }
+          $results = foreach ($file in $targets) {
+            Invoke-ScriptAnalyzer -Path $file.FullName -Severity Error,Warning -ExcludeRule PSAvoidUsingWriteHost
+          }
           if ($results) {
             $results | Format-Table -AutoSize
             $errors = $results | Where-Object { $_.Severity -eq 'Error' }
