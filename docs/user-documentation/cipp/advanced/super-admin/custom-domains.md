@@ -1,5 +1,11 @@
 # Custom Domains
 
+{% hint style="info" %}
+## CyberDrain Hosted Next Generation Migration
+
+For those who have just migrated to the next generation of CIPP infrastructure, you must use the [management portal](https://management.cipp.app/) to readd your custom domain as CIPP itself is missing some of the permissions to manage the move of the domain from your old instance.
+{% endhint %}
+
 The Custom Domains page maps custom domains onto the Azure App Service that hosts this CIPP instance, so you can reach CIPP on your own hostname instead of the default `*.azurewebsites.net` address. Setting up a domain involves a DNS ownership record and an alias record, a hostname binding on the App Service, and an optional free managed TLS certificate. A wizard walks through all three and can be reopened at any time to finish or fix a domain. The default `*.azurewebsites.net` hostname always remains available.
 
 ## App Service Details
