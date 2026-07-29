@@ -469,35 +469,50 @@ function Test-CIPPAuditLogRules {
                     # Write-Information 'Checking RootProperties for GUIDs to map to users, groups, devices, or service principals'
                     Add-CIPPGuidMappings -DataObject $RootProperties -UserLookup $UserLookup -GroupLookup $GroupLookup -DeviceLookup $DeviceLookup -ServicePrincipalLookup $ServicePrincipalLookup -PartnerUserLookup $PartnerUserLookup
 
+                    # Flattened onto $Data so rules can match the property names directly. One
+                    # Add-Member per sub-object: per-property calls rebuild the property bag each time.
                     if ($Data.ExtendedProperties) {
                         $Data.CIPPExtendedProperties = ($Data.ExtendedProperties | ConvertTo-Json -Compress -Depth 10)
-                        $Data.ExtendedProperties | ForEach-Object {
-                            if ($_.Value -in $ExtendedPropertiesIgnoreList) {
-                                #write-warning "No need to process this operation as its in our ignore list. Some extended information: $($data.operation):$($_.Value) - $($TenantFilter)"
-                                continue
-                            }
-                            $Data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue
+                        $Flattened = @{}
+                        foreach ($Prop in $Data.ExtendedProperties) {
+                            # Must be a real loop: `continue` inside ForEach-Object unwinds to the
+                            # enclosing foreach and drops the whole record.
+                            if ($Prop.Value -in $ExtendedPropertiesIgnoreList) { continue }
+                            if ([string]::IsNullOrEmpty($Prop.Name)) { continue }
+                            $Flattened[$Prop.Name] = $Prop.Value
                         }
+                        if ($Flattened.Count -gt 0) { $Data | Add-Member -NotePropertyMembers $Flattened -Force -ErrorAction SilentlyContinue }
                     }
                     if ($Data.DeviceProperties) {
                         $Data.CIPPDeviceProperties = ($Data.DeviceProperties | ConvertTo-Json -Compress -Depth 10)
-                        $Data.DeviceProperties | ForEach-Object { $Data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue }
+                        $Flattened = @{}
+                        foreach ($Prop in $Data.DeviceProperties) {
+                            if ([string]::IsNullOrEmpty($Prop.Name)) { continue }
+                            $Flattened[$Prop.Name] = $Prop.Value
+                        }
+                        if ($Flattened.Count -gt 0) { $Data | Add-Member -NotePropertyMembers $Flattened -Force -ErrorAction SilentlyContinue }
                     }
                     if ($Data.parameters) {
                         $Data.CIPPParameters = ($Data.parameters | ConvertTo-Json -Compress -Depth 10)
-                        $Data.parameters | ForEach-Object { $Data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue }
+                        $Flattened = @{}
+                        foreach ($Prop in $Data.parameters) {
+                            if ([string]::IsNullOrEmpty($Prop.Name)) { continue }
+                            $Flattened[$Prop.Name] = $Prop.Value
+                        }
+                        if ($Flattened.Count -gt 0) { $Data | Add-Member -NotePropertyMembers $Flattened -Force -ErrorAction SilentlyContinue }
                     }
                     if ($Data.ModifiedProperties) {
                         $Data.CIPPModifiedProperties = ($Data.ModifiedProperties | ConvertTo-Json -Compress -Depth 10)
                         try {
-                            $Data.ModifiedProperties | ForEach-Object { $Data | Add-Member -NotePropertyName "$($_.Name)" -NotePropertyValue "$($_.NewValue)" -Force -ErrorAction SilentlyContinue }
+                            $Flattened = @{}
+                            foreach ($Prop in $Data.ModifiedProperties) {
+                                if ([string]::IsNullOrEmpty($Prop.Name)) { continue }
+                                $Flattened["$($Prop.Name)"] = "$($Prop.NewValue)"
+                                $Flattened["Previous_Value_$($Prop.Name)"] = "$($Prop.OldValue)"
+                            }
+                            if ($Flattened.Count -gt 0) { $Data | Add-Member -NotePropertyMembers $Flattened -Force -ErrorAction SilentlyContinue }
                         } catch {
-                            ##write-warning ($Data.ModifiedProperties | ConvertTo-Json -Depth 10)
-                        }
-                        try {
-                            $Data.ModifiedProperties | ForEach-Object { $Data | Add-Member -NotePropertyName $("Previous_Value_$($_.Name)") -NotePropertyValue "$($_.OldValue)" -Force -ErrorAction SilentlyContinue }
-                        } catch {
-                            ##write-warning ($Data.ModifiedProperties | ConvertTo-Json -Depth 10)
+                            Write-Information "Error flattening ModifiedProperties for $($AuditRecord.id): $($_.Exception.Message)"
                         }
                     }
 
@@ -690,8 +705,24 @@ function Test-CIPPAuditLogRules {
         try {
             $RowIds = [System.Collections.Generic.HashSet[string]]::new([string[]]@($Rows.id | Where-Object { $_ }))
             if ($RowIds.Count -gt 0) {
-                $CachedRows = Get-CIPPAzDataTableEntity @CacheWebhooksTable -Filter "PartitionKey eq '$TenantFilter'"
-                $RowsToRemove = @($CachedRows | Where-Object { $RowIds.Contains([string]$_.RowKey) })
+                # Only the rows being deleted, not a partition scan - this runs once per chunk.
+                # Raw cmdlet and OriginalEntityId: the wrapper reports a split record's logical
+                # RowKey, so deleting that left X-part1 / X-part2 orphaned.
+                $IdList = @($RowIds)
+                $FilterBatch = 50
+                $RowsToRemove = [System.Collections.Generic.List[object]]::new()
+
+                for ($Start = 0; $Start -lt $IdList.Count; $Start += $FilterBatch) {
+                    $Slice = @($IdList[$Start..([Math]::Min($Start + $FilterBatch - 1, $IdList.Count - 1))])
+                    $Predicate = ($Slice | ForEach-Object { "RowKey eq '$_' or OriginalEntityId eq '$_'" }) -join ' or '
+                    $Found = @(Get-AzDataTableEntity @CacheWebhooksTable `
+                            -Filter "PartitionKey eq '$TenantFilter' and ($Predicate)" `
+                            -Property 'PartitionKey', 'RowKey')
+                    foreach ($Row in $Found) {
+                        $RowsToRemove.Add([PSCustomObject]@{ PartitionKey = $Row.PartitionKey; RowKey = $Row.RowKey })
+                    }
+                }
+
                 if ($RowsToRemove.Count -gt 0) {
                     Remove-AzDataTableEntity @CacheWebhooksTable -Entity $RowsToRemove -Force
                     Write-Information "Removed $($RowsToRemove.Count) processed rows from cache"
