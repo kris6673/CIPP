@@ -56,5 +56,5 @@ For each policy listed. Add an exclusion to "Users and Groups" with the followin
 {% hint style="warning" %}
 Optional: If you are running in Direct Tenant mode, exclude the CIPP service account for this tenant instead of the tenant exclusion.
 
-Optional: If you have already onboarded the tenant and see access issues, you can use the action "Add service provider exception to policy" on [list-policies](../../../user-documentation/tenant/conditional/list-policies/ "mention").
+Optional: If you have already onboarded the tenant and see access issues, you can use the action "Add service provider exception to policy" on [list-policies](../../user-documentation/tenant/conditional/list-policies/ "mention").
 {% endhint %}
