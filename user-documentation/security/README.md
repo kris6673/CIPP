@@ -1,6 +1,0 @@
----
-icon: shield
----
-
-# Security & Compliance
-

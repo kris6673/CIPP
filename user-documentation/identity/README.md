@@ -1,6 +1,0 @@
----
-icon: user
----
-
-# Identity Management
-

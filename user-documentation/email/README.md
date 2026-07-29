@@ -1,6 +1,0 @@
----
-icon: envelope
----
-
-# Email & Exchange
-

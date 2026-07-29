@@ -1,6 +1,0 @@
----
-icon: toolbox
----
-
-# Tools
-
