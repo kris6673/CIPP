@@ -4,7 +4,7 @@
 
 The current release is the only supported version and shouldn't have any security bugs. However if you find a security issue in an older release feel free to also report this in case of regression.
 
-It's important that to know about past mistakes to help avoid repetition in the future.
+It is important to understand past mistakes to help avoid repeating them in the future.
 
 ## Reporting a Vulnerability
 

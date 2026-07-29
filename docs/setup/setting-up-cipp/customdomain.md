@@ -34,7 +34,7 @@ Go to [management.cipp.app](https://management.cipp.app/)
 {% step %}
 ### Add DNS Records
 
-The screen will give you an A and TXT record that you need to add to your DNS provider.
+The screen will give you an A record and a TXT record that you need to add to your DNS provider.
 
 {% hint style="info" %}
 Adding a subdomain? Create the records on the subdomain instead: an A record named and a TXT record named asuid.
@@ -50,7 +50,7 @@ Enter your desired domain into the management portal. Click Add Domain
 {% step %}
 ### Wait
 
-The system will now validate the DNS record exists and provision a certificate. The new custom domain will not be available for use until the certificate is available. When it's available the status will change to Ready when it's available for use.
+The system will validate that the DNS record exists and provision a certificate. The custom domain will become available when certificate provisioning is complete and its status changes to Ready.
 {% endstep %}
 {% endstepper %}
 

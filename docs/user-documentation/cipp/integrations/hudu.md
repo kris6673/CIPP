@@ -16,7 +16,7 @@ For User and Device information a Rich Text field called "Microsoft 365" is used
 
 ### Step 1 - Obtain API Credentials
 
-1. First login to your Hudu instance as an Administrator.
+1. First, log in to your Hudu instance as an Administrator.
 2. Browse to **Admin -> Account Administration -> API Keys**
 3. Select **+ New API Key** at the top right.
 4. Fill out the details for the API Application:

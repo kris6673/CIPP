@@ -70,4 +70,4 @@ To stop: `Ctrl+C`, or `docker compose -f docker-compose-all.yml down`.
 
 * **All your data lives in Azurite**, in the `cipp-ng_azurite-data` Docker volume, and survives restarts. Delete the volume for a factory-reset dev environment.
 * **Ports**: `5196` is the app + API (use this one for local development), `3000` is the raw Next.js dev server, `10000-10002` are Azurite.
-* **Pull requests** go to the `dev` branch of [CyberDrain/CIPP](https://github.com/CyberDrain/CIPP) and must apply convential commits.
+* **Pull requests** go to the `dev` branch of [CyberDrain/CIPP](https://github.com/CyberDrain/CIPP) and must use conventional commits.

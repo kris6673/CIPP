@@ -4,7 +4,7 @@ description: Installing Your CIPP
 
 # Installation
 
-Whether you opt to be hostedby CyberDrain or self-host, we've made installation of your instance a breeze. See below for instructions.
+Whether you opt to be hosted by CyberDrain or self-host, we've made installation of your instance a breeze. See below for instructions.
 
 ## CyberDrain Hosted Deployment
 

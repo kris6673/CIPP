@@ -29,7 +29,7 @@ CyberDrain hosted clients do not need to manually complete this step. It is gene
 ### Choose which type of logon you want to allow to CIPP
 
 * Single tenant is the most secure, and the logons will be limited to the tenant you sign in with
-* Multi-tenant is required if you have a seperation between GDAP and normal usage tenant.
+* Multi-tenant is required if you have a separation between GDAP and normal usage tenant.
 {% endstep %}
 
 {% step %}

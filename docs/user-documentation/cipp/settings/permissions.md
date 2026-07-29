@@ -20,7 +20,7 @@ While an imported report is being viewed, each affected check is marked with an 
 Checks the permissions granted to CIPP's application registration and reports anything missing. Select **Refresh** to run the check again without using cached results, or **Details** to open a flyout with the full breakdown. The time of the last run is shown beside the buttons.
 
 {% hint style="info" %}
-When this check flags missing permissions or CPV refreshes required, opening the Details flyout will have buttons to easiy handle these tasks.
+When this check flags missing permissions or required CPV refreshes, the Details flyout provides buttons to handle these tasks easily.
 {% endhint %}
 
 ## GDAP Check

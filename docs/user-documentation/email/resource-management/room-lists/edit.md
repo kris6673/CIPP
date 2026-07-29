@@ -28,7 +28,7 @@ Opened from the per-row actions on the List Room Lists page, this page will allo
 
 |                                                         |                                                                           |
 | ------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Let people outside the organization email the room list | When toggled on, this will allow externals senders to reach the room list |
+| Let people outside the organization email the room list | When toggled on, this will allow external senders to reach the room list |
 
 ***
 
