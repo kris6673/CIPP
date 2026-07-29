@@ -1,0 +1,52 @@
+# TODO: This script predates the Docker monorepo dev setup and expects a local.settings.json
+# that no longer exists in the repo (there is no host.json either). Local dev now runs through
+# ..\dev.ps1, configured by build\config\appsettings.*.json and .env. Rework this to read that
+# configuration instead of local.settings.json.
+
+Write-Host 'Initializing development environment...' -ForegroundColor Green
+# Backend root - the old CIPP-API repo now lives under backend\ in the monorepo
+$CippRoot = Join-Path (Get-Item $PSScriptRoot).Parent.FullName 'backend'
+$env:CIPPRootPath = $CippRoot
+### Read the local.settings.json file and convert to a PowerShell object.
+$CIPPSettings = Get-Content (Join-Path $CippRoot 'local.settings.json') | ConvertFrom-Json | Select-Object -ExpandProperty Values
+### Loop through the settings and set environment variables for each.
+$ValidKeys = @('AzureWebJobsStorage', 'PartnerTenantAvailable', 'SetFromProfile')
+foreach ($Key in $CIPPSettings.PSObject.Properties.Name) {
+    if ($ValidKeys -contains $Key) {
+        [Environment]::SetEnvironmentVariable($Key, $CippSettings.$Key)
+    }
+}
+
+# if windows
+if ($IsWindows) {
+    $PowerShellWorkerRoot = Join-Path $env:ProgramFiles 'Microsoft\Azure Functions Core Tools\workers\powershell\7.4\Microsoft.Azure.Functions.PowerShellWorker.dll'
+    if ((Test-Path $PowerShellWorkerRoot) -and !('Microsoft.Azure.Functions.PowerShellWorker' -as [type])) {
+        Write-Information "Loading PowerShell Worker from $PowerShellWorkerRoot"
+        Add-Type -Path $PowerShellWorkerRoot
+    }
+}
+
+$CIPPSharpDllPath = Join-Path $CippRoot 'Shared\CIPPSharp\bin\CIPPSharp.dll'
+if ((Test-Path $CIPPSharpDllPath) -and !('CIPP.CIPPRestClient' -as [type])) {
+    [Reflection.Assembly]::LoadFile($CIPPSharpDllPath) | Out-Null
+}
+
+# Remove previously loaded modules to force reloading if new code changes were made
+$LoadedModules = Get-Module | Select-Object -ExpandProperty Name
+switch ($LoadedModules) {
+    'CIPPCore' { Remove-Module CIPPCore -Force }
+    'CippExtensions' { Remove-Module CippExtensions -Force }
+    'MicrosoftTeams' { Remove-Module MicrosoftTeams -Force }
+}
+
+Import-Module ( Join-Path $CippRoot 'Modules\AzBobbyTables' )
+Import-Module ( Join-Path $CippRoot 'Modules\DNSHealth' )
+Import-Module ( Join-Path $CippRoot 'Modules\CIPPCore' )
+Import-Module ( Join-Path $CippRoot 'Modules\CippExtensions' )
+
+$Auth = Get-CIPPAuthentication
+if ($Auth) {
+    Write-Host 'Development environment initialized successfully!' -ForegroundColor Green
+} else {
+    Write-Host 'Failed to initialize development environment. Please check the error messages above.' -ForegroundColor Red
+}
