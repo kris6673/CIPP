@@ -7,7 +7,7 @@ description: >-
 # Prerequisites
 
 {% hint style="warning" %}
-If you choose to sponsor and use the CyberDrain hosted version, you can skip over these steps and jump over to [sponsor-quick-start.md](../../../setup/resources/sponsor-quick-start.md "mention") guide for further direction.
+If you choose to sponsor and use the CyberDrain hosted version, you can skip over these steps and jump over to [sponsor-quick-start.md](../../setup/resources/sponsor-quick-start.md "mention") guide for further direction.
 {% endhint %}
 
 To get started you must follow or have the following ready. Click on the links for instructions on how to perform some of these tasks, or for more information on the functionality in question.

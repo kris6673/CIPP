@@ -74,5 +74,5 @@ This script can be run in Azure Cloud Shell. Click the link to be taken to the A
 ***
 
 {% hint style="success" %}
-Once configured, head over to the [cipp-api.md](../../../user-documentation/cipp/integrations/cipp-api.md "mention") Integration page in your CIPP UI.
+Once configured, head over to the [cipp-api.md](../../user-documentation/cipp/integrations/cipp-api.md "mention") Integration page in your CIPP UI.
 {% endhint %}

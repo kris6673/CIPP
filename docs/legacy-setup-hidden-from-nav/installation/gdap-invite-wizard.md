@@ -27,7 +27,7 @@ Select "Add GDAP Tenant" and click "Next Step"
 Select the GDAP Role Template you would like to use for this onboarding. This will automatically map your GDAP security groups with the GDAP roles.
 
 {% hint style="info" %}
-If this is your first GDAP tenant, you will be prompted to optionally add the CIPP Default role template. This role template will automatically create the 15 GDAP groups matching the [recommended-roles.md](../../../setup/maintaining-cipp/recommended-roles.md "mention").
+If this is your first GDAP tenant, you will be prompted to optionally add the CIPP Default role template. This role template will automatically create the 15 GDAP groups matching the [recommended-roles.md](../../setup/maintaining-cipp/recommended-roles.md "mention").
 {% endhint %}
 {% endstep %}
 
@@ -72,7 +72,7 @@ Select "Add Direct Tenant" and click "Next Step"
 {% step %}
 ### Click "Connect to Tenant"
 
-Click the "Connect to Tenant" button. Use a service account with equivalent permissions as the partner tenant. More information on these roles can be found under [recommended-roles.md](../../../setup/maintaining-cipp/recommended-roles.md "mention").
+Click the "Connect to Tenant" button. Use a service account with equivalent permissions as the partner tenant. More information on these roles can be found under [recommended-roles.md](../../setup/maintaining-cipp/recommended-roles.md "mention").
 
 {% hint style="info" %}
 Be sure to Consent on behalf of the organisation to prevent any prompting for future users that may log into CIPP, such as a comanaged client technician.
@@ -87,7 +87,7 @@ The final page is a confirmation that shows you what you've completed.
 {% endstepper %}
 
 {% hint style="warning" %}
-Do not attempt to add your partner tenant as a direct tenant. This will result in a permission error. To add your partner tenant, please see [tenant-mode.md](../../../user-documentation/cipp/advanced/super-admin/tenant-mode.md "mention") and select "Multi Tenant - Add Partner Tenant" or "Single Tenant - Own Tenant Mode".
+Do not attempt to add your partner tenant as a direct tenant. This will result in a permission error. To add your partner tenant, please see [tenant-mode.md](../../user-documentation/cipp/advanced/super-admin/tenant-mode.md "mention") and select "Multi Tenant - Add Partner Tenant" or "Single Tenant - Own Tenant Mode".
 {% endhint %}
 
 ### Limitations of Direct Tenants
