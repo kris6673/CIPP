@@ -1,7 +1,7 @@
 # Configuring Automatic API Updates
 
 {% hint style="warning" %}
-If you choose to sponsor and use the CyberDrain hosted version, you can skip over these steps and jump over to our [sponsor-quick-start.md](../../../setup/resources/sponsor-quick-start.md "mention") guide for further direction.
+If you choose to sponsor and use the CyberDrain hosted version, you can skip over these steps and jump over to our [sponsor-quick-start.md](../../setup/resources/sponsor-quick-start.md "mention") guide for further direction.
 {% endhint %}
 
 ### Connect to GitHub for Continuous Deployment
@@ -38,7 +38,7 @@ Click **Add a workflow**, then **Save.**
 {% endstep %}
 
 {% step %}
-Repeat this for any additional function apps you may have deployed for [function-offloading.md](../../../user-documentation/cipp/advanced/super-admin/function-offloading.md "mention").
+Repeat this for any additional function apps you may have deployed for [function-offloading.md](../../user-documentation/cipp/advanced/super-admin/function-offloading.md "mention").
 {% endstep %}
 {% endstepper %}
 

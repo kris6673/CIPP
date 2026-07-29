@@ -5,7 +5,7 @@ description: Installing Your Self-Hosted CIPP
 # Installation
 
 {% hint style="info" %}
-If you choose to sponsor and use the CyberDrain hosted version, you can skip over these steps and jump over to our [sponsor-quick-start.md](../../../setup/resources/sponsor-quick-start.md "mention") guide for further direction.
+If you choose to sponsor and use the CyberDrain hosted version, you can skip over these steps and jump over to our [sponsor-quick-start.md](../../setup/resources/sponsor-quick-start.md "mention") guide for further direction.
 {% endhint %}
 
 This guide walks you through deploying your **self-hosted** instance of CIPP using our Azure Resource Manager (ARM) templates. Once completed, you’ll have a fully functioning CIPP installation, ready to configure.
