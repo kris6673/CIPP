@@ -455,6 +455,14 @@ function Test-CIPPAuditLogRules {
                 }
             }
 
+            # Deletes are flushed in small batches, not per record. The point is forward
+            # progress on a poison batch - a crash re-runs at most $DeleteFlushSize records,
+            # so the run always converges instead of looping on the same rows - and a batch
+            # takes minutes, so that window is real. Per-record calls cost ~13x more, since
+            # AzBobbyTables wraps each one in its own $batch transaction.
+            $DeleteFlushSize = 25
+            $PendingDeletes = [System.Collections.Generic.List[object]]::new()
+
             $ProcessedData = foreach ($AuditRecord in $SearchResults) {
                 $RecordStartTime = Get-Date
                 Write-Information "Processing RowKey $($AuditRecord.id) - $($TenantFilter)."
@@ -560,17 +568,30 @@ function Test-CIPPAuditLogRules {
                     Write-LogMessage -API 'Webhooks' -message 'Error Processing Audit Log Data' -LogData (Get-CippException -Exception $_) -sev Error -tenant $TenantFilter
                 }
 
-                try {
-                    $null = Remove-AzDataTableEntity -Force @CacheWebhooksTable -Entity ([pscustomobject]@{
-                            PartitionKey = $TenantFilter
-                            RowKey       = [string]$AuditRecord.id
-                        })
-                } catch {
-                    Write-Information "Error removing row $($AuditRecord.id) from cache: $($_.Exception.Message)"
+                $PendingDeletes.Add([PSCustomObject]@{
+                        PartitionKey = $TenantFilter
+                        RowKey       = [string]$AuditRecord.id
+                    })
+                if ($PendingDeletes.Count -ge $DeleteFlushSize) {
+                    try {
+                        $null = Remove-AzDataTableEntity -Force @CacheWebhooksTable -Entity $PendingDeletes.ToArray()
+                    } catch {
+                        Write-Information "Error removing $($PendingDeletes.Count) processed row(s) from cache: $($_.Exception.Message)"
+                    }
+                    $PendingDeletes.Clear()
                 }
                 $RecordEndTime = Get-Date
                 $RecordSeconds = ($RecordEndTime - $RecordStartTime).TotalSeconds
                 Write-Warning "Task took $RecordSeconds seconds for RowKey $($AuditRecord.id)"
+            }
+
+            if ($PendingDeletes.Count -gt 0) {
+                try {
+                    $null = Remove-AzDataTableEntity -Force @CacheWebhooksTable -Entity $PendingDeletes.ToArray()
+                } catch {
+                    Write-Information "Error removing $($PendingDeletes.Count) processed row(s) from cache: $($_.Exception.Message)"
+                }
+                $PendingDeletes.Clear()
             }
             #write-warning "Processed Data: $(($ProcessedData | Measure-Object).Count) - This should be higher than 0 in many cases, because the where object has not run yet."
             #write-warning "Creating filters - $(($ProcessedData.operation | Sort-Object -Unique) -join ',') - $($TenantFilter)"

@@ -304,21 +304,33 @@ Describe 'Test-CIPPAuditLogRules record shaping' {
             $removed | Should -Not -Contain 'other'
         }
 
-        It 'deletes each record as it is processed, not in one batch at the end' {
-            # Intentional, and worth protecting: removing a record from the cache the moment
-            # it is processed means a failure part-way through a batch cannot cause
-            # already-processed records to be picked up again and re-alerted. Batching these
-            # would save round trips but give that up, so this asserts the per-record shape.
+        It 'flushes deletes in batches rather than one call per record' {
             $rows = @(1..5 | ForEach-Object { New-AuditRow -Id "rec-$_" })
             $script:PhysicalCacheRows = @(
                 1..5 | ForEach-Object { [pscustomobject]@{ PartitionKey = 'contoso.com'; RowKey = "rec-$_"; OriginalEntityId = $null } }
             )
             $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows $rows
 
-            # 5 per-record deletes, plus the end-of-run sweep.
-            Should -Invoke Remove-AzDataTableEntity -Times 6 -Exactly
+            # Under the flush size, so one flush after the loop plus the end-of-run sweep.
+            Should -Invoke Remove-AzDataTableEntity -Times 2 -Exactly
             @($script:RemovedRows).RowKey | Should -Contain 'rec-1'
             @($script:RemovedRows).RowKey | Should -Contain 'rec-5'
+        }
+
+        It 'flushes mid-loop so a poison batch still makes forward progress' {
+            # The reason deletes are not deferred to the end: if a record kills the worker,
+            # everything already flushed is gone from the cache, so the retry starts further
+            # in and the run converges instead of looping on the same rows forever.
+            $rows = @(1..60 | ForEach-Object { New-AuditRow -Id "rec-$_" })
+            $script:PhysicalCacheRows = @(
+                1..60 | ForEach-Object { [pscustomobject]@{ PartitionKey = 'contoso.com'; RowKey = "rec-$_"; OriginalEntityId = $null } }
+            )
+            $null = Test-CIPPAuditLogRules -TenantFilter 'contoso.com' -Rows $rows
+
+            # 60 records at a flush size of 25: two mid-loop flushes, a remainder flush,
+            # and the sweep - not 60 individual calls.
+            Should -Invoke Remove-AzDataTableEntity -Times 4 -Exactly
+            @($script:RemovedRows).RowKey.Count | Should -Be 120  # 60 flushed + 60 swept
         }
 
         It 'never removes a cached row belonging to another record' {
