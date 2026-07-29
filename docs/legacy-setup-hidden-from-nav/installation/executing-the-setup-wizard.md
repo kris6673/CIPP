@@ -4,7 +4,7 @@ This guide walks you through the process of executing the Setup Wizard inside CI
 
 ## Getting Started with the CIPP Setup Wizard
 
-{% @storylane/embed subdomain="app" linkValue="vxdbaztterzq" url="https://app.storylane.io/share/vxdbaztterzq" %}
+{% @storylane/embed subdomain="app" url="https://app.storylane.io/share/vxdbaztterzq" linkValue="vxdbaztterzq" %}
 
 {% stepper %}
 {% step %}
@@ -32,7 +32,7 @@ If authentication fails, assign Global Administrator to the service account temp
 Choose how you want to connect your tenants. Even if you’re not a Microsoft Partner, we strongly recommend selecting **"Connect to Partner Tenant"** first. This allows CIPP to manage credentials and application permissions effectively.
 
 * You can also add tenants individually, outside your partner relationship.
-* For these separate tenants, use a service account with equivalent permissions as the partner tenant. More information on these roles can be found under [recommended-roles.md](../../../setup/maintaining-cipp/recommended-roles.md "mention")
+* For these separate tenants, use a service account with equivalent permissions as the partner tenant. More information on these roles can be found under [recommended-roles.md](../../setup/maintaining-cipp/recommended-roles.md "mention")
 {% endstep %}
 
 {% step %}
@@ -40,7 +40,7 @@ Choose how you want to connect your tenants. Even if you’re not a Microsoft Pa
 
 Choose from a list of available configuration baselines. These presets help you quickly apply best practices and policies.
 
-* We recommend selecting the **CyberDrain Templates** for the most optimized standard configurations and receiving templates and examples on how to utilize standards.
+* We recommend selecting the **CyberDrain Templates** for the most optimised standard configurations and receiving templates and examples on how to utilise standards.
 {% endstep %}
 
 {% step %}
@@ -55,7 +55,7 @@ Set up email notifications on the next page.
 {% step %}
 ### Optional Features
 
-The final step presents a list of optional features you can enable to further enhance CIPP’s functionality. Review and configure these as needed. Many of these features are quite powerful and CIPP users often find they greatly enhance their experience and ease the burden of tenant administration.&#x20;
+The final step presents a list of optional features you can enable to further enhance CIPP’s functionality. Review and configure these as needed. Many of these features are quite powerful and CIPP users often find they greatly enhance their experience and ease the burden of tenant administration.
 {% endstep %}
 {% endstepper %}
 

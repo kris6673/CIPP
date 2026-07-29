@@ -1,7 +1,7 @@
 # Configuring Automatic GitHub Updates
 
 {% hint style="warning" %}
-If you choose to sponsor and use the CyberDrain hosted version, you can skip over these steps and jump over to our [sponsor-quick-start.md](../../../setup/resources/sponsor-quick-start.md "mention") guide for further direction.
+If you choose to sponsor and use the CyberDrain hosted version, you can skip over these steps and jump over to our [sponsor-quick-start.md](../../setup/resources/sponsor-quick-start.md "mention") guide for further direction.
 {% endhint %}
 
 ### Overview

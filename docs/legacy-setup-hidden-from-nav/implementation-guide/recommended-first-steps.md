@@ -11,28 +11,28 @@ This guide is not meant to be exhaustive but rather point you towards other page
 {% endhint %}
 
 {% hint style="success" %}
-Select [sam-setup-wizard.md](../../../user-documentation/cipp/sam-setup-wizard.md "mention") from CIPP settings for easy set up of several of the basics needed to operate CIPP.
+Select [sam-setup-wizard.md](../../user-documentation/cipp/sam-setup-wizard.md "mention") from CIPP settings for easy set up of several of the basics needed to operate CIPP.
 {% endhint %}
 
 ## Tenant Navigation
 
-Using the [tenant-select.md](../../../user-documentation/shared-features/menu-bar/tenant-select.md "mention") at the top you can switch tenants at any time. This allows you to dynamically choose what you're working on. You can also use the Tenant Selector to select "All Tenants" which allows you to see all your tenants in one swoop.
+Using the [tenant-select.md](../../user-documentation/shared-features/menu-bar/tenant-select.md "mention") at the top you can switch tenants at any time. This allows you to dynamically choose what you're working on. You can also use the Tenant Selector to select "All Tenants" which allows you to see all your tenants in one swoop.
 
-## Personalization
+## Personalisation
 
-Let's set up some personal things first. The [user-settings.md](../../../user-documentation/shared-features/menu-bar/user-settings.md "mention") section has your personal preferences and profile information. Let's start by setting up CIPP the way you like it.
+Let's set up some personal things first. The [user-settings.md](../../user-documentation/shared-features/menu-bar/user-settings.md "mention") section has your personal preferences and profile information. Let's start by setting up CIPP the way you like it.
 
 ### Change How CIPP Looks to You
 
-Click the [display-mode.md](../../../user-documentation/shared-features/menu-bar/display-mode.md "mention") toggle to switch to your preferred mode to display CIPP.
+Click the [display-mode.md](../../user-documentation/shared-features/menu-bar/display-mode.md "mention") toggle to switch to your preferred mode to display CIPP.
 
 ### Application Settings
 
-Let's go check out some of the [settings](../../../user-documentation/cipp/settings/ "mention") next.
+Let's go check out some of the [settings](../../user-documentation/cipp/settings/ "mention") next.
 
 ### Password Styles
 
-We have two style of passwords we can generate when creating a new user, or resetting a password, the classic password with capitalization, numbers, and symbols. You can also choose the modern passphrase style password. This is a more readable and often stronger password than randomly generated characters
+We have two style of passwords we can generate when creating a new user, or resetting a password, the classic password with capitalisation, numbers, and symbols. You can also choose the modern passphrase style password. This is a more readable and often stronger password than randomly generated characters
 
 Let's select the "Correct-Battery-Horse" option, which are passphrases.
 
@@ -42,23 +42,23 @@ You can choose the DNS resolver CIPP uses. By default, the resolver is Google.
 
 ### Access Checks
 
-CIPP can help you figure out why you can't access a tenant by executing an access check. These checks can help you detect issues with GDAP, access rights, or general M365 issues. These checks are done on the [permissions.md](../../../user-documentation/cipp/settings/permissions.md "mention") tab of CIPP Application Settings.
+CIPP can help you figure out why you can't access a tenant by executing an access check. These checks can help you detect issues with GDAP, access rights, or general M365 issues. These checks are done on the [permissions.md](../../user-documentation/cipp/settings/permissions.md "mention") tab of CIPP Application Settings.
 
 ### Tenants Tab
 
-Talking about tenants, let's go check out our internal tenant list. We see all our tenants on the [tenants.md](../../../user-documentation/cipp/settings/tenants.md "mention") tab of CIPP Application Settings.
+Talking about tenants, let's go check out our internal tenant list. We see all our tenants on the [tenants.md](../../user-documentation/cipp/settings/tenants.md "mention") tab of CIPP Application Settings.
 
 We can exclude a tenant from CIPP. This means the tenant will not be connected to CIPP, and we will not be able to make any changes to this tenant. This is done from the Actions column for individual tenants or the Bulk Actions button when multiple tenants are checked.
 
 ### Notifications Tab
 
-Navigate to the [notifications.md](../../../user-documentation/cipp/settings/notifications.md "mention") tab.
+Navigate to the [notifications.md](../../user-documentation/cipp/settings/notifications.md "mention") tab.
 
 CIPP can send many types of notifications, in this screen we can do some of the basic setup of these notifications to filter them or select where they need to go.
 
 ## User Administration
 
-Let's see how CIPP works in action. We'll navigate to the Identity Management > Administration > [users](../../../user-documentation/identity/administration/users/ "mention") section to start managing users.
+Let's see how CIPP works in action. We'll navigate to the Identity Management > Administration > [users](../../user-documentation/identity/administration/users/ "mention") section to start managing users.
 
 ## Bulk Actions
 
@@ -74,11 +74,11 @@ For users, we have a lot of actions we can take. We could reset passwords or eve
 
 ## Tools
 
-Navigate to the [tools](../../../user-documentation/tools/ "mention") section.
+Navigate to the [tools](../../user-documentation/tools/ "mention") section.
 
 ### Graph Explorer
 
-Select Tools > Tenant Tools > [graph-explorer.md](../../../user-documentation/tools/tenant-tools/graph-explorer.md "mention").
+Select Tools > Tenant Tools > [graph-explorer.md](../../user-documentation/tools/tenant-tools/graph-explorer.md "mention").
 
 CIPP has the option to report on anything inside of the Graph API. even when there is not a direct page created for it. You can use the Graph Explorer option to craft your own report. Let's try using the All User with Email Addresses report.
 
@@ -88,19 +88,19 @@ The report allows you to check this data as raw as it comes back from the API. y
 
 ## Standards
 
-Let's go check out the standards next by navigating to Tenant Administration > [standards](../../../user-documentation/tenant/standards/ "mention").
+Let's go check out the standards next by navigating to Tenant Administration > [standards](../../user-documentation/tenant/standards/ "mention").
 
-Standards allow you to create a baseline for a tenant. This means you can easily deploy your wanted settings to any tenant. With how important Standards are to the function and power of CIPP, we'll take a deeper dive in [standards-setup.md](../../../setup/implementation-guide/standards-setup.md "mention"), or you can review the full [standards](../../../user-documentation/tenant/standards/ "mention") documentation.
+Standards allow you to create a baseline for a tenant. This means you can easily deploy your wanted settings to any tenant. With how important Standards are to the function and power of CIPP, we'll take a deeper dive in [standards-setup.md](../../setup/implementation-guide/standards-setup.md "mention"), or you can review the full [standards](../../user-documentation/tenant/standards/ "mention") documentation.
 
 ## Report Builder
 
-Let's go check out some reporting. Click on Tools > [report-builder](../../../user-documentation/tools/report-builder/ "mention") next.
+Let's go check out some reporting. Click on Tools > [report-builder](../../user-documentation/tools/report-builder/ "mention") next.
 
-The Report Builder gives you the ability to zoom in on your tenants and their current state. You can use custom built reports or import catalog examples to tell your clients what actions they need to take to become more secure.
+The Report Builder gives you the ability to zoom in on your tenants and their current state. You can use custom built reports or import catalogue examples to tell your clients what actions they need to take to become more secure.
 
 ## Alerts
 
-Talking about best practices. You want to be notified when something goes wrong, so let's look at some of the alert options available in Tenant Administration > Administration > [alert-configuration](../../../user-documentation/tenant/administration/alert-configuration/ "mention").
+Talking about best practices. You want to be notified when something goes wrong, so let's look at some of the alert options available in Tenant Administration > Administration > [alert-configuration](../../user-documentation/tenant/administration/alert-configuration/ "mention").
 
 The documentation linked above has lots of information on the two types of alerts you can configure in CIPP:
 
@@ -109,7 +109,7 @@ The documentation linked above has lots of information on the two types of alert
 
 ## Tenant Administration
 
-Let's try managing our tenants next. Click on Tenant Administration > Administration > [tenants](../../../user-documentation/tenant/administration/tenants/ "mention").
+Let's try managing our tenants next. Click on Tenant Administration > Administration > [tenants](../../user-documentation/tenant/administration/tenants/ "mention").
 
 ### Tenant Overview
 

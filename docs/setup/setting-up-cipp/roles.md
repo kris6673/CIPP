@@ -39,7 +39,7 @@ Sign in with a user that has Application Administrator permissions or higher, ad
 {% endstep %}
 {% endstepper %}
 
-{% @storylane/embed subdomain="app" linkValue="admss49amlvr" url="https://app.storylane.io/share/admss49amlvr" %}
+{% @storylane/embed subdomain="app" url="https://app.storylane.io/share/admss49amlvr" linkValue="admss49amlvr" %}
 
 ## Additional User Setup
 
@@ -47,21 +47,21 @@ Once you have your initial user added, this user can add more users through the 
 
 ## Built-In Roles
 
-CIPP features a role management system which utilizes the [Roles feature of Azure Static Web Apps](https://learn.microsoft.com/en-us/azure/static-web-apps/authentication-authorization?tabs=invitations#roles). The roles available in CIPP are as follows:
+CIPP features a role management system which utilises the [Roles feature of Azure Static Web Apps](https://learn.microsoft.com/en-us/azure/static-web-apps/authentication-authorization?tabs=invitations#roles). The roles available in CIPP are as follows:
 
-| Role Name  | Description                                                                                                                                                                                       |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| readonly   | Only allowed to read and list items and send push messages to users.                                                                                                                              |
-| editor     | Allowed to perform everything, except change system settings and manage Standards.                                                                                                                |
-| admin      | Allowed to perform everything.                                                                                                                                                                    |
-| superadmin | A role that is only allowed to access the settings menu for specific high-privilege settings, such as setting up the [owntenant.md](../../../setup/installation/owntenant.md "mention") settings. |
+| Role Name  | Description                                                                                                                                                                           |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| readonly   | Only allowed to read and list items and send push messages to users.                                                                                                                  |
+| editor     | Allowed to perform everything, except change system settings and manage Standards.                                                                                                    |
+| admin      | Allowed to perform everything.                                                                                                                                                        |
+| superadmin | A role that is only allowed to access the settings menu for specific high-privilege settings, such as setting up the [owntenant.md](../installation/owntenant.md "mention") settings. |
 
-You can assign these roles to Entra groups or users using the [custom-roles](../../../user-documentation/cipp/advanced/super-admin/custom-roles/ "mention") page, so you no longer have to add users manually.
+You can assign these roles to Entra groups or users using the [custom-roles](../../user-documentation/cipp/advanced/super-admin/custom-roles/ "mention") page, so you no longer have to add users manually.
 
 ## Custom Roles
 
 {% hint style="info" %}
-Not sure how built-in and custom roles combine when a user is in multiple Entra groups? See [how-cipp-evaluates-roles.md](../../../setup/resources/how-cipp-evaluates-roles.md "mention") for the precedence for rules.
+Not sure how built-in and custom roles combine when a user is in multiple Entra groups? See [how-cipp-evaluates-roles.md](../resources/how-cipp-evaluates-roles.md "mention") for the precedence for rules.
 {% endhint %}
 
 While CIPP only supplies the above roles by default, you can create your own custom roles and apply them to your users with `editor` or `readonly` rights, admin users are unaffected by custom roles.
@@ -78,7 +78,7 @@ Set up Custom Roles by following these steps:
 {% step %}
 ### Open the CIPP Roles Page
 
-Go to CIPP -> Advanced -> Super Admin -> [custom-roles](../../../user-documentation/cipp/advanced/super-admin/custom-roles/ "mention").
+Go to CIPP -> Advanced -> Super Admin -> [custom-roles](../../user-documentation/cipp/advanced/super-admin/custom-roles/ "mention").
 {% endstep %}
 
 {% step %}

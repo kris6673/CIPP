@@ -59,9 +59,9 @@ services:
       - App__Worker__BgPoolSize=8
       - App__StatsHistory__SampleIntervalSeconds=10
       # GC overrides for the pulled craft:dev image (the rebuilt image bakes these):
-      # Workstation GC + 2 GiB absolute heap cap.
+      # Workstation GC + 2.35 GiB absolute heap cap - same as production images
       - DOTNET_gcServer=0
-      - DOTNET_GCHeapHardLimit=0x80000000
+      - DOTNET_GCHeapHardLimit=0x95E00000
       # The Next.js dev server runs on the HOST when using for windows dev as bind mounts are too slow for node_modules
       - CRAFT_DEV_FRONTEND_URL=http://host.docker.internal:3000
     volumes:
