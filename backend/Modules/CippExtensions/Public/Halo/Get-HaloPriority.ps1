@@ -10,20 +10,27 @@ function Get-HaloPriority {
         admins pick one that doesn't apply to the chosen Ticket Type, producing tickets that
         either reject the priority outright or fall back to the SLA default with no warning.
 
-        Pattern mirrors Get-HaloTicketOutcome: requires Ticket Type to be saved first, then
-        looks up the ticket type's sla_id, then returns the priorities tied to that SLA.
+        Looks up the ticket type's sla_id, then returns the priorities tied to that SLA.
+    .PARAMETER TicketType
+        Ticket type to scope the priorities to. The settings page passes the value currently
+        selected in the form so the list follows the dropdown without needing a save first.
+        Falls back to the saved ticket type when not supplied.
     #>
     [CmdletBinding()]
-    param ()
+    param (
+        $TicketType
+    )
     $Table = Get-CIPPTable -TableName Extensionsconfig
     try {
         $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -ea stop).HaloPSA
         $Token = Get-HaloToken -configuration $Configuration
-        $TicketType = $Configuration.TicketType.value ?? $Configuration.TicketType
+        if (-not $TicketType) {
+            $TicketType = $Configuration.TicketType.value ?? $Configuration.TicketType
+        }
 
         if (-not $TicketType) {
             return @(@{
-                    name  = 'Select and save a Ticket Type first to see available priorities'
+                    name  = 'Select a Ticket Type first to see available priorities'
                     priorityid = -1
                 })
         }
@@ -44,10 +51,8 @@ function Get-HaloPriority {
         }
 
         if (-not $SlaId) {
-            $InspectedFields = ($TicketTypeRecord.PSObject.Properties.Name | Where-Object { $_ -match 'sla' }) -join ', '
-            $Hint = if ($InspectedFields) { "Inspected SLA-shaped fields: $InspectedFields" } else { 'No SLA-shaped fields present on the ticket type response' }
             return @(@{
-                    name  = "The selected Ticket Type has no SLA attached, so no priorities are restricted to it. $Hint"
+                    name       = 'The selected Ticket Type has no SLA attached, so there are no priorities to pick from. Attach an SLA to the ticket type in HaloPSA, or leave this blank.'
                     priorityid = -1
                 })
         }

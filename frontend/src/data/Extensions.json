@@ -353,7 +353,7 @@
         "name": "HaloPSA.TicketType",
         "label": "HaloPSA Ticket Type",
         "placeholder": "Select your HaloPSA Ticket Type, leave blank for default",
-        "helperText": "The ticket type used for CIPP alert tickets. Sets the workflow and the Outcomes available below. Save after changing so the Outcome list refreshes.",
+        "helperText": "The ticket type used for CIPP alert tickets. Sets the workflow, and the priorities and outcomes available below.",
         "fullRow": true,
         "multiple": false,
         "api": {
@@ -377,6 +377,7 @@
       {
         "type": "autoComplete",
         "name": "HaloPSA.DefaultPriority",
+        "dependsOn": "HaloPSA.TicketType",
         "label": "HaloPSA Default Priority",
         "placeholder": "Select a priority, leave blank for default",
         "helperText": "Optional. Sets the priority on every CIPP-generated ticket. Restricted to priorities on the Ticket Type's SLA. Leave blank to use the SLA default.",
@@ -413,9 +414,10 @@
       {
         "type": "autoComplete",
         "name": "HaloPSA.Outcome",
+        "dependsOn": "HaloPSA.TicketType",
         "label": "HaloPSA Outcome",
         "placeholder": "Select your HaloPSA Outcome, leave blank for default",
-        "helperText": "The action applied when a duplicate alert is added to an existing ticket. Use a private note action your HaloPSA API user can run. Set the Ticket Type first and save - the list only shows outcomes from that type's workflow.",
+        "helperText": "The action applied when a duplicate alert is added to an existing ticket. Use a private note action your HaloPSA API user can run. Only outcomes from the selected Ticket Type's workflow are listed. Leave blank to use Halo's built-in Internal Note action.",
         "fullRow": true,
         "multiple": false,
         "api": {
