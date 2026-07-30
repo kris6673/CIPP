@@ -49,16 +49,25 @@ This button will take you to the [#report-builder](./#report-builder "mention") 
 
 <summary>Test Suite Control</summary>
 
-This dropdown controls the test suite used in displaying the test information on the dashboard [#assessment-overview](./#assessment-overview "mention") and the [#identity-tab](./#identity-tab "mention") and [#devices-tab](./#devices-tab "mention"). Select a test suite from the dropdown to change the display.
+This dropdown controls the test suite used in displaying the test information on the dashboard [#assessment-overview](./#assessment-overview "mention") and the [#identity-tab](./#identity-tab "mention") and [#devices-tab](./#devices-tab "mention"). Select a test suite from the dropdown to change the display. Any custom test suites you have created are listed alongside the built-in suites below.
 
-**Available Built-In Test Suites:**
+Available Built-In Test Suites:
 
-* CISA ScubaGear Tests for Exchange Online: Security configuration assessment tests based on CISA's Secure Cloud Business Applications (SCubaGear) project for Microsoft Exchange Online. These tests validate compliance with federal security baselines.
-* Microsoft 365 Copilot Readiness Tests: Assess tenant readiness for Microsoft 365 Copilot deployment. Tests cover prerequisite licensing, Copilot licence assignment, and active M365 app usage that determines which users would benefit most from Copilot.
-* Entra ID Security Configuration Analyzer (EIDSCA) Tests: Comprehensive security assessment for Microsoft Entra ID (formerly Azure AD) covering authorisation policies, authentication methods, consent policies, password policies, and group settings. Based on Microsoft's EIDSCA framework for identity security best practices.
-* Generic Tenant Tests: Executive-level informational reports covering licensing, MFA posture, secure score trends, and tenant capabilities. These tests provide a clear snapshot of your tenant's current state without pass/fail criteria.
-* ORCA (Office 365 Recommended Configuration Analyzer) Tests: Comprehensive security assessment for Microsoft Exchange Online and Office 365 security configurations. Tests cover anti-spam, anti-phish, anti-malware, safe links, safe attachments, DKIM, transport rules, and other Exchange Online security settings.
-* Zero Trust Network Access Tests: Microsoft's Comprehensive security assessment covering identity and device compliance, conditional access policies, authentication methods, and endpoint protection aligned with Zero Trust principles.
+* **ACSC Essential Eight**: Australian Cyber Security Centre (ACSC) Essential Eight Maturity Model — eight mitigation strategies for adversary defence, covering MFA, restricting administrative privileges, application control, patching applications and operating systems, Microsoft Office macro settings, user application hardening, and regular backups. CIPP tests cover what the Microsoft 365, Entra, Intune, and Defender APIs expose; lower-level enforcement controls that cannot be validated from cloud telemetry are flagged as manual.
+* **CIS Microsoft 365 Foundations Benchmark v7.0.0**: Center for Internet Security (CIS) Microsoft 365 Foundations Benchmark v7.0.0 — a prescriptive technical baseline for securely configuring a Microsoft 365 tenant across the M365 admin centre, Defender, Purview, Intune, Entra, Exchange Online, SharePoint, and Teams.
+* **CISA ScubaGear Tests for Exchange Online**: Security configuration assessment tests based on CISA's Secure Cloud Business Applications (ScubaGear) project for Microsoft Exchange Online. These tests validate compliance with federal security baselines.
+* **EIDSCA (Entra ID Security Configuration Analyzer) Tests**: Comprehensive security assessment for Microsoft Entra ID (formerly Azure AD) covering authorisation policies, authentication methods, consent policies, password policies, and group settings. Based on Microsoft's EIDSCA framework for identity security best practices.
+* **Generic Tenant Tests**: Executive-level informational reports covering licensing, MFA posture, secure score trends, and tenant capabilities. These tests provide a clear snapshot of your tenant's current state without pass/fail criteria.
+* **Microsoft 365 Copilot Readiness Tests**: Assess tenant readiness for Microsoft 365 Copilot deployment. Tests cover prerequisite licensing, Copilot licence assignment, and active M365 app usage that determines which users would benefit most from Copilot.
+* **ORCA (Office 365 Recommended Configuration Analyzer) Tests**: Comprehensive security assessment for Microsoft Exchange Online and Office 365 security configurations. Tests cover anti-spam, anti-phish, anti-malware, safe links, safe attachments, DKIM, transport rules, and other Exchange Online security settings.
+* **SMB1001:2026 Cybersecurity Standard**: Dynamic Standards International (DSI) SMB1001:2026 — a multi-tiered cybersecurity certification for small and medium-sized businesses, prescribing a five-level pathway across Technology Management, Access Management, Backup and Recovery, Policies/Processes/Plans, and Education and Training. CIPP tests cover the technical controls implementable against a Microsoft 365 tenant (Identity) and via Intune-managed workstations (Devices).
+* **Zero Trust Network Access Tests**: Microsoft's Comprehensive security assessment covering identity and device compliance, conditional access policies, authentication methods, and endpoint protection aligned with Zero Trust principles.
+
+{% hint style="info" %}
+The dashboard opens on your preferred test suite, falling back to the instance-wide preference and then to Zero Trust Network Access if neither has been set.
+
+To choose your preferred starting suite, set **Default test suite on the Home page** on the [user-settings.md](../shared-features/menu-bar/user-settings.md "mention") page.
+{% endhint %}
 
 </details>
 
@@ -176,7 +185,7 @@ To exclude a licence from this and all other reports in CIPP, add the licence in
 
 ## Identity Tab
 
-This tab will display information about the Identity tests, including links to remediation steps for any failed tests. To review the information on any specific test, click the three dots Action and select "More Info". Once you've selected a test you can use the up and down arrows in the top right to page through the tests or the X to close the window.
+This tab will display information about the Identity tests, including links to remediation steps for any failed tests. To review the information on any specific test, click the three dots Action and select "More Info". Once you've selected a test you can use the up and down arrows in the top right to page through the tests or the X to close the window. This tab will automatically load the test suite selected on the main dashboard tab.
 
 ### Test Result Data
 
