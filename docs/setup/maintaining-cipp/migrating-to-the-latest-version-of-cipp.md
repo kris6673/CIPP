@@ -42,7 +42,7 @@ If you haven't already completed the SSO set up steps you will be prompted to co
 {% step %}
 ### Custom Domain
 
-If you had a custom domain on your old version of CIPP, you'll need to migrate it too. To migrate a domain to the new generation of CIPP, point its existing CNAME record at CIPPXXXX.azurewebsites.net, create the asuid TXT record shown under Add Domain, then add the domain here. It will move over automatically.
+If you had a custom domain on your old version of CIPP, you'll need to migrate it too. To migrate a domain to the new generation of CIPP, point its existing CNAME record at CIPPXXXX.azurewebsites.net, create the asuid TXT record shown under Add Domain, then add the domain here. It will move over automatically. This step must be performed in the [management portal](https://management.cipp.app/).
 {% endstep %}
 {% endstepper %}
 
