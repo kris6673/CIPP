@@ -4,7 +4,7 @@ This page will list CIPP alerts that you have snoozed to allow you to easily rev
 
 ## Snoozing Alerts
 
-Included in eligible alerts will be a link to open CIPP to a page to set a snooze on the alert. Select the duration of the snooze (7 days, 14 days, 30 days, or 90 days). The page will display the user you are setting a snooze on. Click `Snooze` to set the selected snooze duration.
+Included in eligible alerts will be a link to open CIPP to a page to set a snooze on the alert. Select the duration of the snooze (7 days, 14 days, 30 days, or 90 days) and optionally set a reason. The page will display the user you are setting a snooze on. Click `Snooze` to set the selected snooze duration.
 
 ## Table Details
 
