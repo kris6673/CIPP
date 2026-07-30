@@ -573,13 +573,24 @@ if ($domainsToPoint.Count -gt 0) {
     foreach ($domain in $domainsToPoint) {
         $source = if ($swaCustomDomains.DomainName -contains $domain) { ' (was on SWA)' } else { '' }
         Write-Information "Domain: $domain$source"
-        Write-Information '  A record'
-        Write-Information "    Name  : $domain"
-        Write-Information "    Value : $NewInboundIp"
-        if ($NewDomainVerificationId) {
-            Write-Information '  TXT record (domain verification)'
-            Write-Information "    Name  : asuid.$domain"
-            Write-Information "    Value : $NewDomainVerificationId"
+        # Subdomains verify via the CNAME alone — no asuid TXT needed (and a stale one from a
+        # previous setup blocks validation; it should be removed). Apex domains map via an A
+        # record, which can't prove ownership, so those still need the verification TXT.
+        $isApex = @($domain.Split('.')).Count -le 2
+        if ($isApex) {
+            Write-Information '  A record'
+            Write-Information "    Name  : $domain"
+            Write-Information "    Value : $NewInboundIp"
+            if ($NewDomainVerificationId) {
+                Write-Information '  TXT record (domain verification — required for apex/A records)'
+                Write-Information "    Name  : asuid.$domain"
+                Write-Information "    Value : $NewDomainVerificationId"
+            }
+        } else {
+            Write-Information '  CNAME record'
+            Write-Information "    Name  : $domain"
+            Write-Information "    Value : $NewHostname"
+            Write-Information "  NOTE: if a TXT record named 'asuid.$domain' exists from a previous setup, REMOVE it — a stale verification record blocks validation. (Only proxied/orange-cloud aliases need it, set to: $NewDomainVerificationId)"
         }
         Write-Information ''
     }

@@ -34,10 +34,10 @@ Go to [management.cipp.app](https://management.cipp.app/)
 {% step %}
 ### Add DNS Records
 
-The screen will give you an A and TXT record that you need to add to your DNS provider.
+The screen will give you the DNS record you need to add at your DNS provider: a CNAME for a subdomain, or an A record for an apex (root) domain.
 
-{% hint style="info" %}
-Adding a subdomain? Create the records on the subdomain instead: an A record named and a TXT record named asuid.
+{% hint style="warning" %}
+If a TXT record named `asuid.<your domain>` exists from a previous setup, remove it — a stale domain-verification record blocks validation. These records are no longer used.
 {% endhint %}
 {% endstep %}
 
