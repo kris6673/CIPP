@@ -181,7 +181,7 @@ function Get-LicenseCheckCapabilities {
 }
 
 # Find the paths to the standards.json file based on the current script path
-$RepoRoot = Split-Path $PSScriptRoot
+$RepoRoot = Split-Path (Split-Path $PSScriptRoot)
 $BackendRoot = Join-Path $RepoRoot 'backend'
 $CapabilityPresets = Get-CIPPCapabilityPresets -Path (Join-Path $BackendRoot 'Modules\CIPPCore\Public\Functions\Test-CIPPStandardLicense.ps1')
 
