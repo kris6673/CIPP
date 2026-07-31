@@ -13,6 +13,7 @@ Thumbs.db
 
 # Local settings (contains secrets)
 .env
+build/tools/local.settings.json
 
 # Runtime-generated files
 _startup.ps1
