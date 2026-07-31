@@ -499,7 +499,6 @@ Write-Information "Key Vault        : $NewKvName"
 
 # ── Retrieve DNS record values from the new web app ──────────────────────────
 $NewInboundIp = ''
-$NewDomainVerificationId = ''
 if ($NewWebAppName) {
     Write-Information "Retrieving DNS record values from '$NewWebAppName'..."
     $siteResponse = Invoke-AzRestMethod `
@@ -507,9 +506,7 @@ if ($NewWebAppName) {
         -Uri "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Web/sites/$NewWebAppName`?api-version=2024-11-01"
     $siteProperties = ($siteResponse.Content | ConvertFrom-Json).properties
     $NewInboundIp = $siteProperties.inboundIpAddress
-    $NewDomainVerificationId = $siteProperties.customDomainVerificationId
     Write-Information "  Inbound IP (A record)        : $NewInboundIp"
-    Write-Information "  Domain verification ID (TXT) : $NewDomainVerificationId"
 }
 
 # ── Remove custom domains from SWA before deletion ───────────────────────────
@@ -573,25 +570,19 @@ if ($domainsToPoint.Count -gt 0) {
     foreach ($domain in $domainsToPoint) {
         $source = if ($swaCustomDomains.DomainName -contains $domain) { ' (was on SWA)' } else { '' }
         Write-Information "Domain: $domain$source"
-        # Subdomains verify via the CNAME alone — no asuid TXT needed (and a stale one from a
-        # previous setup blocks validation; it should be removed). Apex domains map via an A
-        # record, which can't prove ownership, so those still need the verification TXT.
+        # The alias record is all that's needed — domain-verification TXT records are no longer
+        # used. Apex domains map via an A record, everything else via a CNAME.
         $isApex = @($domain.Split('.')).Count -le 2
         if ($isApex) {
             Write-Information '  A record'
             Write-Information "    Name  : $domain"
             Write-Information "    Value : $NewInboundIp"
-            if ($NewDomainVerificationId) {
-                Write-Information '  TXT record (domain verification — required for apex/A records)'
-                Write-Information "    Name  : asuid.$domain"
-                Write-Information "    Value : $NewDomainVerificationId"
-            }
         } else {
             Write-Information '  CNAME record'
             Write-Information "    Name  : $domain"
             Write-Information "    Value : $NewHostname"
-            Write-Information "  NOTE: if a TXT record named 'asuid.$domain' exists from a previous setup, REMOVE it — a stale verification record blocks validation. (Only proxied/orange-cloud aliases need it, set to: $NewDomainVerificationId)"
         }
+        Write-Information "  NOTE: if a TXT record named 'asuid.$domain' exists from a previous setup, REMOVE it — these records are no longer used and a leftover one blocks validation."
         Write-Information ''
     }
 }
