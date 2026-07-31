@@ -27,6 +27,7 @@ backend/Config/function-parameters.json*
 localfiles/
 
 graphify-out/
+graphify/
 .claude/
 CLAUDE.md
 AGENTS.md
