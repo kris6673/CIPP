@@ -52,7 +52,7 @@ Toggle on the "Add this standard to the template" for each desired template. Onc
 
 For each standard:
 
-* Set the desired Action(s). For assistance on selecting which action, review [#actions](./#actions "mention"). Drift configuration standards will instead have an optional toggle to allow you to automatically remediate when drift is detected.
+* Set the desired Action(s). For assistance on selecting which action, review [#actions](./#actions "mention"). Drift configuration standards will instead have an optional toggle to allow you to automatically remediate when drift is detected. To set the same action(s) on every standard in the template at once, use the "Set All Actions" button in the toolbar above the standards list: tick the desired action(s) and choose "Apply to all standards". This replaces each standard's current action selection; actions a standard does not support are skipped for that standard.
 * Each standard will then have the potential for additional fields that need to be set. Please review those fields and configure as desired.
 
 {% hint style="info" %}
