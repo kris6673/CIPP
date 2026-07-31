@@ -20,7 +20,7 @@ For Tenant and Device information custom fields are used. For detailed Users and
 {% step %}
 ### Obtain API Credentials
 
-* First login to your NinjaOne instance as a System Administrator user.
+* First, log in to your NinjaOne instance as a System Administrator user.
 * Browse to **Administration -> Apps -> API** (/#/administration/apps/api)
 * Select Add in the top right.
 * Under Application Platform select API Services (machine-to-machine)\\
@@ -46,7 +46,7 @@ The fields that you can configure are:
 | ---------------------------- | ------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | Microsoft 365 Tenant Links   | WYSIWYG | Organization     | Provides quick links from NinjaOne to M365 and the CIPP Portals.                                                                         |
 | Microsoft 365 Tenant Summary | WYSIWYG | Organization     | Provides a summary overview of the Microsoft 365 Tenant inside NinjaOne.                                                                 |
-| Microsoft 365 User Summary   | WYSIWYG | Organization     | Provides a table listing the first 100 users in a tenant with details such as OneDrive and Exchange usage and their associated devices . |
+| Microsoft 365 User Summary   | WYSIWYG | Organization     | Provides a table listing the first 100 users in a tenant with details such as OneDrive and Exchange usage and their associated devices. |
 | Microsoft 365 Device Links   | WYSIWYG | Device           | Provides links from devices in NinjaOne to the Microsoft and CIPP portals.                                                               |
 | Microsoft 365 Device Summary | WYSIWYG | Device           | Provides an overview of a device such as compliance status and group membership.                                                         |
 | Intune Device Compliance     | TEXT    | Device           | Sets a TEXT field inside NinjaOne with the current device compliance state, that can be monitored using custom field conditions.         |

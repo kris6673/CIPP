@@ -16,7 +16,7 @@ Select [sam-setup-wizard.md](../../user-documentation/cipp/sam-setup-wizard.md "
 
 ## Tenant Navigation
 
-Using the [tenant-select.md](../../user-documentation/shared-features/menu-bar/tenant-select.md "mention") at the top you can switch tenants at any time. This allows you to dynamically choose what you're working on. You can also use the Tenant Selector to select "All Tenants" which allows you to see all your tenants in one swoop.
+Using the [tenant-select.md](../../user-documentation/shared-features/menu-bar/tenant-select.md "mention") at the top you can switch tenants at any time. This allows you to dynamically choose what you're working on. You can also use the Tenant Selector to select "All Tenants", which allows you to see all your tenants at once.
 
 ## Personalisation
 
@@ -32,9 +32,9 @@ Let's go check out some of the [settings](../../user-documentation/cipp/settings
 
 ### Password Styles
 
-We have two style of passwords we can generate when creating a new user, or resetting a password, the classic password with capitalisation, numbers, and symbols. You can also choose the modern passphrase style password. This is a more readable and often stronger password than randomly generated characters
+We can generate two password styles when creating a new user or resetting a password: the classic password, with capitalisation, numbers, and symbols; or the modern passphrase-style password. A passphrase is more readable and often stronger than randomly generated characters.
 
-Let's select the "Correct-Battery-Horse" option, which are passphrases.
+Let's select the "Correct-Battery-Horse" option, which uses passphrases.
 
 ### DNS Resolver
 

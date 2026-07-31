@@ -25,7 +25,7 @@ For the latest version of this documentation, you can check out Gradient's docum
 {% step %}
 ### **Connect the Integration**
 
-* Login to CIPP and navigate to **CIPP** -> **Integrations**.
+* Log in to CIPP and navigate to **CIPP** -> **Integrations**.
 * Select **Gradient**.
 * Enter the Gradient Vendor and Partner API Keys. Set the checkbox for "Enable Integration".
 * Click on "Test Connection" to see if you've entered the keys correctly.

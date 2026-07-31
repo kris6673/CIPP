@@ -50,7 +50,7 @@ Enter your desired domain into the management portal. Click Add Domain
 {% step %}
 ### Wait
 
-The system will now validate the DNS record exists and provision a certificate. The new custom domain will not be available for use until the certificate is available. When it's available the status will change to Ready when it's available for use.
+The system will validate that the DNS record exists and provision a certificate. The custom domain will become available when certificate provisioning is complete and its status changes to Ready.
 {% endstep %}
 {% endstepper %}
 

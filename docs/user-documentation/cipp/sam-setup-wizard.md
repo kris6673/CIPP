@@ -1,6 +1,6 @@
 # Setup Wizard
 
-The Setup Wizard is the keys to the engine that allows CIPP to manage your client tenants. It handles creating and managing the **Secure Application Model (SAM)** app registration that CIPP uses to authenticate to your tenants via Microsoft Graph, Exchange Online, and Partner Center APIs.
+The Setup Wizard is the key component that allows CIPP to manage your client tenants. It handles creating and managing the **Secure Application Model (SAM)** app registration that CIPP uses to authenticate to your tenants via Microsoft Graph, Exchange Online, and Partner Center APIs.
 
 You can access it from the sidebar under **CIPP > Setup Wizard**, or via the "Start Wizard" banner that appears when setup has not been completed.
 
