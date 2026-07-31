@@ -1,5 +1,6 @@
 ---
 hidden: true
+noIndex: true
 ---
 
 # Your route to a secure tenant
