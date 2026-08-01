@@ -24,9 +24,31 @@ function Initialize-CIPPTimezone {
 
     try {
         $ConfigTable = Get-CIPPTable -tablename Config
+        $Filter = "PartitionKey eq 'TimeSettings' and RowKey eq 'TimeSettings'"
+
+        # Warmup can run before the storage layer is fully up, and in that window the query
+        # returns EMPTY rather than throwing - indistinguishable from "no timezone configured".
+        # Acting on that would derive a timezone and overwrite whatever the operator had
+        # explicitly chosen, so an empty result has to be corroborated before it is trusted.
+        #
+        # The corroboration: if ANY row in the Config table is readable then storage is up and
+        # the TimeSettings row is genuinely absent. A completely empty Config table means either
+        # a brand-new instance (safe - there is no choice to overwrite) or storage that is not
+        # ready yet, so retry briefly before concluding. Observed live: this read came back empty
+        # on one restart while the row existed, and a retry moments later returned it.
+        #
         # No -Property projection: it is a server-side $select, and TimezoneSource /
         # DetectedRegion are read below.
-        $TimeSettings = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'TimeSettings' and RowKey eq 'TimeSettings'" -First 1
+        $TimeSettings = $null
+        for ($Attempt = 1; $Attempt -le 4; $Attempt++) {
+            $TimeSettings = Get-CIPPAzDataTableEntity @ConfigTable -Filter $Filter -First 1
+            if ($TimeSettings.Timezone) { break }
+            if (Get-CIPPAzDataTableEntity @ConfigTable -First 1) { break }
+            if ($Attempt -lt 4) {
+                Write-Information "[Timezone-Init] Config table returned no rows (attempt $Attempt/4) - storage may still be starting, retrying before assuming no timezone is set"
+                Start-Sleep -Milliseconds 750
+            }
+        }
 
         if ($TimeSettings.Timezone) {
             $null = [TimeZoneInfo]::FindSystemTimeZoneById($TimeSettings.Timezone)
