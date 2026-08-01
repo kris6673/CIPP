@@ -46,12 +46,9 @@ Choose a channel and select **Update Channel** to apply it. The change takes eff
 
 ### Branch builds
 
-Below the standard channels the list may also show **Branch builds** — one-off images built from a branch that has not been merged yet, so a change can be tested on a real instance before it ships. They are named after the branch they came from, such as `fix-sso-multi-domain` or `feat-new-report`, and are grouped into:
+Below the standard channels the list may also show **Branch builds** — images built from a branch that has not been merged yet, so a change can be tested on a real instance before it ships. They are named after the branch they came from, such as `fix-sso-multi-domain` or `feat-new-report`.
 
-| Group                   | Description                                                                                  |
-| ----------------------- | -------------------------------------------------------------------------------------------- |
-| Branch builds (latest)  | Follows the branch — picks up the newest build each time the container restarts.               |
-| Branch builds (pinned)  | A specific build, identified by a short commit hash. Never changes.                            |
+A branch build tag follows its branch, in the same way `dev` and `nightly` do: if the branch is built again, the container picks up the newer image on its next restart. To hold one exact build instead, set the container image to its digest rather than its tag — the build summary in the GitHub Actions run prints the full reference to use.
 
 Only builds that currently exist are listed, and the tag is checked before the change is saved, so a build that has already been removed cannot be selected by mistake.
 
