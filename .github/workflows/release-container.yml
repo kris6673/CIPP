@@ -11,6 +11,16 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # `release: [published]` also fires for PRE-releases, and this job moves :latest — the tag
+    # every stable customer follows. Without this guard, ticking "set as a pre-release" in the
+    # GitHub UI would ship that build to the entire estate. Negation form (not `== false`) so a
+    # missing or blank value cannot evaluate truthy.
+    #
+    # Consequence: publishing a pre-release now produces NO image at all. The run still shows in
+    # the Actions tab as *skipped* - that is the signal that nothing shipped. If a release
+    # candidate channel is ever wanted, this is the hook point: build on prerelease, push
+    # :<version> plus a moving :prerelease, and keep :latest behind this same condition.
+    if: ${{ !github.event.release.prerelease }}
     permissions:
       contents: read
       packages: write
@@ -81,6 +91,8 @@ jobs:
             IMAGE_TAG=latest
             BUILD_DATE=${{ steps.version.outputs.build_date }}
             DOTNET_REGISTRY=${{ vars.DOTNET_REGISTRY || 'ghcr.io/cyberdrain' }}
+          # :latest is the stable channel every customer follows. Nothing conditional or
+          # experimental should ever be added here - gate it at the job `if` instead.
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}:${{ steps.version.outputs.app_version }}
