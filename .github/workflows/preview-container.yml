@@ -1,0 +1,207 @@
+name: "Build: Preview Container"
+
+# Builds a throwaway image from an unmerged branch so it can be tested on a real instance
+# without merging to dev first. Two ways in:
+#   - push to a preview/** branch (opt-in by naming, rebuilds on every push)
+#   - workflow_dispatch against ANY ref, for one-off fix/** and feat/** branches
+# Unlike dev-container.yml / nightly-container.yml this does NOT hardcode `ref: dev`, which is
+# what made those unusable for testing a feature branch.
+#
+# Images are cleaned up by preview-cleanup.yml when the branch is deleted (and by its weekly
+# age sweep), so preview tags are not expected to be long-lived.
+
+on:
+  push:
+    branches: ['preview/**']
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - 'build/**'
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or SHA to build
+        required: true
+      config:
+        description: Runtime appsettings baked into the image
+        type: choice
+        options:
+          - development
+          - production
+        default: development
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+# Cancel an in-flight build when a newer commit is pushed to the same branch. Keyed per-ref so
+# two different preview branches can build concurrently.
+concurrency:
+  group: preview-container-${{ github.event.inputs.ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      # Docker tags allow [a-zA-Z0-9_][a-zA-Z0-9._-]* — a branch name generally does not, so
+      # slugify. The part before the first / becomes the tag prefix when it is a known branch
+      # type, so the tag says what kind of change it is: fix/sso-thing -> fix-sso-thing,
+      # feat/foo -> feat-foo, preview/sso-multi-domain -> preview-sso-multi-domain.
+      #
+      # The type list is the subset of conventional-commit types (Conventional_Commits.yml) that
+      # actually change what runs in the container, plus `preview` for branches named purely to
+      # trigger a build. docs/style/test/ci are deliberately absent - they do not alter the
+      # image, so they fall through to the preview- fallback rather than earning their own tag.
+      # This list doubles as the allowlist that Invoke-ExecContainerManagement.ps1 and
+      # preview-cleanup.yml use to recognise a throwaway image, so KEEP THE THREE IN SYNC.
+      # Anything else (no slash, or an unknown prefix) falls back to preview-<whole-ref>, which
+      # guarantees a build image can never collide with latest/dev/nightly or a bare semver.
+      - name: Derive slug and version
+        id: version
+        run: |
+          REF_NAME="${{ github.event.inputs.ref || github.ref_name }}"
+          RAW=$(echo "$REF_NAME" | tr '[:upper:]' '[:lower:]')
+          RAW="${RAW#refs/heads/}"
+
+          TYPE="${RAW%%/*}"
+          case "$TYPE" in
+            preview|feat|fix|refactor|perf|chore|build|revert)
+              # A branch literally named e.g. "fix" with no / has TYPE == RAW; treat as unknown.
+              if [ "$TYPE" = "$RAW" ]; then PREFIX="preview"; NAME="$RAW"; else PREFIX="$TYPE"; NAME="${RAW#*/}"; fi
+              ;;
+            *)
+              PREFIX="preview"; NAME="$RAW"
+              ;;
+          esac
+
+          NAME=$(echo "$NAME" \
+            | sed -E 's/[^a-z0-9._-]+/-/g; s/-{2,}/-/g; s/^[-.]+//; s/[-.]+$//' \
+            | cut -c1-45)
+          NAME="${NAME%-}"
+          if [ -z "$NAME" ]; then
+            echo "::error::Could not derive a usable tag slug from ref '$REF_NAME'"
+            exit 1
+          fi
+          SLUG="${PREFIX}-${NAME}"
+
+          # Same tag-derived scheme as dev/nightly so the version format stays consistent.
+          TAG=$(git tag --sort=-v:refname | head -1)
+          TAG=${TAG:-v0.0.0}
+          BASE="${TAG#v}"
+          FULL_SHA=$(git rev-parse HEAD)
+          SHORT_SHA=$(git rev-parse --short=7 HEAD)
+
+          echo "slug=${SLUG}" >> $GITHUB_OUTPUT
+          echo "image_tag=${SLUG}" >> $GITHUB_OUTPUT
+          # Keep the "preview." marker in the version regardless of tag prefix, so a build image
+          # is identifiable as one at runtime the same way +dev./+nightly. builds are.
+          echo "app_version=${BASE}+preview.${SLUG}.${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "full_sha=${FULL_SHA}" >> $GITHUB_OUTPUT
+          echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "build_date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+
+          # build/Dockerfile ships the Development appsettings (what the dev channel uses and
+          # what runs on real instances today); Dockerfile.release ships Production.
+          if [ "${{ github.event.inputs.config }}" = "production" ]; then
+            echo "dockerfile=build/Dockerfile.release" >> $GITHUB_OUTPUT
+          else
+            echo "dockerfile=build/Dockerfile" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set lower case image name
+        run: echo "IMAGE_NAME_LC=${REPO,,}" >> $GITHUB_ENV
+        env:
+          REPO: ${{ github.repository }}
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Own key prefix so preview builds do not churn the dev/release frontend caches.
+      - name: Restore frontend build caches
+        id: build-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            yarn-cache
+            next-cache
+          key: cipp-frontend-cache-preview-${{ github.run_id }}
+          restore-keys: |
+            cipp-frontend-cache-preview-
+            cipp-frontend-cache-dev-
+
+      - name: Inject build caches into BuildKit
+        uses: reproducible-containers/buildkit-cache-dance@v3.4.0
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          cache-map: |
+            {
+              "yarn-cache": "/usr/local/share/.cache/yarn",
+              "next-cache": "/build/.next/cache"
+            }
+          skip-extraction: ${{ steps.build-cache.outputs.cache-hit }}
+
+      # The Actions cache is 10 GB per REPOSITORY, shared across scopes and evicted LRU. A
+      # per-branch scope would evict the dev/release caches those builds depend on, so every
+      # preview shares ONE scope and writes mode=min (final-stage layers only) rather than the
+      # mode=max dev/release use. scope=dev is read-only here, for a warm start on a new branch.
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ steps.version.outputs.dockerfile }}
+          push: true
+          cache-from: |
+            type=gha,scope=preview
+            type=gha,scope=dev
+          cache-to: type=gha,mode=min,scope=preview
+          build-args: |
+            APP_VERSION=${{ steps.version.outputs.app_version }}
+            COMMIT_SHA=${{ steps.version.outputs.full_sha }}
+            IMAGE_TAG=${{ steps.version.outputs.image_tag }}
+            BUILD_DATE=${{ steps.version.outputs.build_date }}
+            DOTNET_REGISTRY=${{ vars.DOTNET_REGISTRY || 'ghcr.io/cyberdrain' }}
+          # Moving tag is what the Release Channel points at; the -<sha> tag is immutable so a
+          # specific build can be pinned or rolled back to.
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}:${{ steps.version.outputs.image_tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}:${{ steps.version.outputs.image_tag }}-${{ steps.version.outputs.short_sha }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.description=CIPP - Preview Build (${{ steps.version.outputs.slug }})
+            org.opencontainers.image.revision=${{ steps.version.outputs.full_sha }}
+            org.opencontainers.image.version=${{ steps.version.outputs.app_version }}
+            org.opencontainers.image.created=${{ steps.version.outputs.build_date }}
+
+      - name: Summary
+        run: |
+          {
+            echo "### Preview image built"
+            echo
+            echo '```'
+            echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}:${{ steps.version.outputs.image_tag }}"
+            echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}:${{ steps.version.outputs.image_tag }}-${{ steps.version.outputs.short_sha }}"
+            echo '```'
+            echo
+            echo "Select **${{ steps.version.outputs.image_tag }}** under Settings → Container Management → Release Channel to run it."
+            echo
+            echo "> Preview images are unsupported and are deleted when the branch is deleted."
+          } >> $GITHUB_STEP_SUMMARY

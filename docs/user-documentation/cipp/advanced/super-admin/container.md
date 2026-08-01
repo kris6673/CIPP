@@ -44,6 +44,24 @@ This card selects which release channel the container follows. Changing the chan
 
 Choose a channel and select **Update Channel** to apply it. The change takes effect on the next container restart. Switching to Dev or Nightly may introduce unstable or untested changes.
 
+### Branch builds
+
+Below the standard channels the list may also show **Branch builds** — one-off images built from a branch that has not been merged yet, so a change can be tested on a real instance before it ships. They are named after the branch they came from, such as `fix-sso-multi-domain` or `feat-new-report`, and are grouped into:
+
+| Group                   | Description                                                                                  |
+| ----------------------- | -------------------------------------------------------------------------------------------- |
+| Branch builds (latest)  | Follows the branch — picks up the newest build each time the container restarts.               |
+| Branch builds (pinned)  | A specific build, identified by a short commit hash. Never changes.                            |
+
+Only builds that currently exist are listed, and the tag is checked before the change is saved, so a build that has already been removed cannot be selected by mistake.
+
+Branch builds are **not supported** and are intended for testing only:
+
+- They receive no updates, and the automatic update check does not apply to them.
+- They are deleted when their branch is deleted, and swept after 30 days. Once the image is gone the container cannot start until you switch back to a standard channel — so move off a branch build as soon as you have finished testing.
+
+Unless you have been asked to test a specific build, stay on Latest (Stable).
+
 ## Restart Application
 
 This card restarts the application container. Select **Restart Container** to restart; this causes a brief period of downtime while the container comes back up. If you have changed the release channel or an update is pending, the new image is pulled as part of the restart.

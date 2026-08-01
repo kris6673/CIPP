@@ -445,7 +445,8 @@ const HistoryChart = ({ data, rangeMinutes, title, icon, children }) => {
       <CardHeader title={title} titleTypographyProps={{ variant: "h6" }} avatar={icon} />
       <CardContent sx={{ pt: 0 }}>
         <Box sx={{ height: 250 }}>
-          <ResponsiveContainer width="100%" height="100%">
+          {/* numeric height, recharts warns before its first measure when both sizes are percentages */}
+          <ResponsiveContainer width="100%" height={250}>
             {children(data, theme)}
           </ResponsiveContainer>
         </Box>
@@ -735,14 +736,20 @@ const Page = () => {
                   </Typography>
                 )}
                 <Tooltip title={effectivePaused ? "Resume auto-refresh" : "Pause auto-refresh"}>
-                  <IconButton
-                    size="small"
-                    onClick={() => setPaused((p) => !p)}
-                    color={effectivePaused ? "warning" : "default"}
-                    disabled={isImported}
-                  >
-                    {effectivePaused ? <PlayArrow fontSize="small" /> : <Pause fontSize="small" />}
-                  </IconButton>
+                  <span>
+                    <IconButton
+                      size="small"
+                      onClick={() => setPaused((p) => !p)}
+                      color={effectivePaused ? "warning" : "default"}
+                      disabled={isImported}
+                    >
+                      {effectivePaused ? (
+                        <PlayArrow fontSize="small" />
+                      ) : (
+                        <Pause fontSize="small" />
+                      )}
+                    </IconButton>
+                  </span>
                 </Tooltip>
                 <Tooltip title="Export page data as JSON">
                   <IconButton size="small" onClick={handleExport}>
