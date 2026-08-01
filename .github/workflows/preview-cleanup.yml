@@ -1,0 +1,146 @@
+name: "Cleanup: Preview Containers"
+
+# Deletes the throwaway container versions built by preview-container.yml (tags prefixed with a
+# branch type: preview-, fix-, feat-, chore- ...):
+#   - when the branch that produced them is deleted
+#   - weekly, for anything older than RETENTION_DAYS (covers one-off workflow_dispatch builds
+#     from branches that were never deleted)
+#
+# NOTE: `on: delete` only fires for workflow files present on the DEFAULT branch, so this has
+# to reach main before branch-deletion cleanup starts working. The scheduled sweep is the
+# backstop either way.
+
+on:
+  delete:
+  schedule:
+    - cron: '0 4 * * 0' # Sundays 04:00 UTC
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: List what would be deleted without deleting it
+        type: boolean
+        default: true
+
+env:
+  PACKAGE_NAME: cipp
+  RETENTION_DAYS: 30
+  # Recognises a throwaway build image by its branch-type prefix. Must match the type list in
+  # preview-container.yml and $PreviewChannelPattern in Invoke-ExecContainerManagement.ps1.
+  # Nothing in this set can match latest / dev / nightly / a bare semver, which is what makes
+  # the sweep safe to run unattended.
+  BUILD_TAG_PATTERN: '^(preview|feat|fix|refactor|perf|chore|build|revert)-'
+
+jobs:
+  cleanup:
+    # Any branch delete is worth a look now that fix/**, feat/** etc. also produce images via
+    # workflow_dispatch - a branch that never had one simply matches nothing. Tag deletions are
+    # skipped: they never produce build images.
+    if: ${{ github.event_name != 'delete' || github.event.ref_type == 'branch' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Delete preview image versions
+        env:
+          # GITHUB_TOKEN can delete versions of a package that inherits access from this repo.
+          # If ghcr.io/cyberdrain/cipp is org-owned without that link, set a GHCR_CLEANUP_TOKEN
+          # repo secret (PAT with delete:packages) and it will be preferred automatically.
+          GH_TOKEN: ${{ secrets.GHCR_CLEANUP_TOKEN || secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          DELETED_REF: ${{ github.event.ref }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+
+          # Dry run defaults to false for automatic triggers, true for manual dispatch.
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$DRY_RUN" != "false" ]; then
+            DRY=1
+          else
+            DRY=0
+          fi
+
+          if [ "$EVENT_NAME" = "delete" ]; then
+            # Must reproduce the slug rule in preview-container.yml exactly, including the
+            # branch-type prefix list - a mismatch here silently orphans images.
+            RAW=$(echo "$DELETED_REF" | tr '[:upper:]' '[:lower:]')
+            RAW="${RAW#refs/heads/}"
+            TYPE="${RAW%%/*}"
+            case "$TYPE" in
+              preview|feat|fix|refactor|perf|chore|build|revert)
+                if [ "$TYPE" = "$RAW" ]; then PREFIX="preview"; NAME="$RAW"; else PREFIX="$TYPE"; NAME="${RAW#*/}"; fi
+                ;;
+              *)
+                PREFIX="preview"; NAME="$RAW"
+                ;;
+            esac
+            NAME=$(echo "$NAME" \
+              | sed -E 's/[^a-z0-9._-]+/-/g; s/-{2,}/-/g; s/^[-.]+//; s/[-.]+$//' \
+              | cut -c1-45)
+            NAME="${NAME%-}"
+            if [ -z "$NAME" ]; then
+              echo "Could not derive a slug from '$DELETED_REF' - nothing to do."
+              exit 0
+            fi
+            SLUG="${PREFIX}-${NAME}"
+            echo "Branch '$DELETED_REF' deleted - removing $SLUG and its pinned builds."
+            # Exact moving tag, or that tag plus a -<shortsha> suffix.
+            MATCH="^${SLUG}(-[0-9a-f]{7})?$"
+            CUTOFF=""
+          else
+            echo "Sweeping build images older than ${RETENTION_DAYS} days."
+            MATCH="$BUILD_TAG_PATTERN"
+            CUTOFF=$(date -u -d "${RETENTION_DAYS} days ago" +%s)
+          fi
+
+          # Org-owned package. Falls back to the user endpoint if the org one 404s.
+          LIST_PATH="/orgs/${OWNER}/packages/container/${PACKAGE_NAME}/versions"
+          if ! gh api "$LIST_PATH?per_page=1" >/dev/null 2>&1; then
+            LIST_PATH="/users/${OWNER}/packages/container/${PACKAGE_NAME}/versions"
+            echo "Org package endpoint unavailable, using $LIST_PATH"
+          fi
+
+          gh api --paginate "$LIST_PATH" > versions.json
+
+          # Safety: a version can carry several tags. Delete only when EVERY tag on it matches
+          # both the requested match AND the build-tag pattern, so a version that also carries
+          # latest / dev / nightly / a bare semver can never be caught here even if $MATCH were
+          # wrong. Untagged versions are left alone (GHCR prunes those itself).
+          jq -r --arg match "$MATCH" --arg guard "$BUILD_TAG_PATTERN" --arg cutoff "${CUTOFF:-0}" '
+            .[]
+            | . as $v
+            | ($v.metadata.container.tags // []) as $tags
+            | select(($tags | length) > 0)
+            | select($tags | all(test($match)))
+            | select($tags | all(test($guard)))
+            | select(($cutoff | tonumber) == 0 or (($v.created_at | fromdateiso8601) < ($cutoff | tonumber)))
+            | "\($v.id)\t\($tags | join(","))"
+          ' versions.json > targets.tsv
+
+          if [ ! -s targets.tsv ]; then
+            echo "Nothing to delete."
+            echo "Nothing to delete." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          {
+            echo "### Preview images ${DRY:+(dry run) }removed"
+            echo
+            echo '| Version | Tags |'
+            echo '|---|---|'
+          } >> $GITHUB_STEP_SUMMARY
+
+          while IFS=$'\t' read -r ID TAGS; do
+            echo "| \`$ID\` | $TAGS |" >> $GITHUB_STEP_SUMMARY
+            if [ "$DRY" = "1" ]; then
+              echo "[dry run] would delete $ID ($TAGS)"
+              continue
+            fi
+            echo "Deleting $ID ($TAGS)"
+            # Non-fatal: a version can vanish between listing and delete, and one failure
+            # should not abandon the rest of the sweep.
+            gh api -X DELETE "${LIST_PATH}/${ID}" \
+              || echo "::warning::Could not delete package version $ID ($TAGS)"
+          done < targets.tsv
