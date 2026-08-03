@@ -1,6 +1,6 @@
 # Project Structure
 
-this page looks at what's in the f`rontend` folder so you know where to look when you start coding.
+this page looks at what's in the `frontend` folder so you know where to look when you start coding.
 
 ### The Root
 
@@ -10,6 +10,7 @@ In the `frontend` directory itself there are a number of files and folders, the 
 | -------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `public`             | Holds static files used when compiling CIPP (building) for use. Mostly images and a little `HTML` scaffolding. |
 | `src`                | Holds the code that powers CIPP, this is where most CIPP development takes place.                              |
+| `tests`              | Holds storybook tests and jsdom test files.                                                                    |
 | `package.json`       | An npm package file - this tells npm what other libraries/resources to use when building CIPP.                 |
 | `package-lock.json`  | An npm package file - this tells npm exact version numbers/packages to use for repeatable builds.              |
 | `version_latest.txt` | Our version file. This gets incremented just before `dev` gets merged into `main` for a new release.           |

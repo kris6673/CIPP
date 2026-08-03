@@ -469,6 +469,7 @@
 * [CIPP Dev Guide](dev-documentation/cipp-dev-guide/README.md)
   * [Setting Up for Local Development](dev-documentation/cipp-dev-guide/setting-up-for-local-development.md)
   * [Project Structure](dev-documentation/cipp-dev-guide/project-structure.md)
+  * [Frontend Testing](dev-documentation/cipp-dev-guide/frontend-testing.md)
 * [Contributing to the Code](dev-documentation/contributing-to-the-code.md)
 * [Contributing to the Documentation](dev-documentation/contributing-to-the-documentation.md)
 
