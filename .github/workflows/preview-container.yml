@@ -105,8 +105,10 @@ jobs:
           echo "slug=${SLUG}" >> $GITHUB_OUTPUT
           echo "image_tag=${SLUG}" >> $GITHUB_OUTPUT
           # Keep the "preview." marker in the version regardless of tag prefix, so a build image
-          # is identifiable as one at runtime the same way +dev./+nightly. builds are.
-          echo "app_version=${BASE}+preview.${SLUG}.${SHORT_SHA}" >> $GITHUB_OUTPUT
+          # is identifiable as one at runtime the same way +dev./+nightly. builds are. The slug
+          # already starts with "preview-" for preview/** branches, so strip that to avoid
+          # "+preview.preview-foo"; other prefixes (fix-, feat-, ...) are kept as-is.
+          echo "app_version=${BASE}+preview.${SLUG#preview-}.${SHORT_SHA}" >> $GITHUB_OUTPUT
           echo "full_sha=${FULL_SHA}" >> $GITHUB_OUTPUT
           echo "build_date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
 
