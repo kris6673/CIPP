@@ -31,7 +31,7 @@ The buttons on the card change depending on the current status. The available ac
 
 ## Manual Configuration
 
-The Manual configuration (advanced) section lets you store an existing Application (client) ID and client secret directly in Key Vault; for example, to rotate the secret by hand or to point SSO at a different app registration. Enter the App ID (a GUID) and client secret, optionally set multi-tenant mode, and select **Save Manual Configuration**. This overwrites the stored values, so an incorrect App ID or secret will break single sign-on. The instance must then be restarted (from the Container Management page on a self-hosted instance) for the change to take effect.
+The Manual configuration (advanced) section lets you store an existing Application (client) ID and client secret directly in Key Vault; for example, to rotate the secret by hand or to point SSO at a different app registration. Enter the App ID (a GUID) and client secret, optionally set multi-tenant mode, and select **Save Manual Configuration**. This overwrites the stored values, so an incorrect App ID or secret will break single sign-on. The instance must then be restarted (from Container Management > Status & Updates on a self-hosted instance) for the change to take effect.
 
 ## Single-Tenant vs Multi-Tenant Login
 

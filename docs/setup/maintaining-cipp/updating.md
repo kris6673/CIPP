@@ -24,7 +24,7 @@ Log in to CIPP as a superadmin account
 {% step %}
 ### Open Container Management
 
-Go to CIPP -> Advanced -> SuperAdmin -> [container.md](../../user-documentation/cipp/advanced/super-admin/container.md "mention")
+Go to CIPP -> Advanced -> Container Management -> [status.md](../../user-documentation/cipp/advanced/container-management/status.md "mention")
 {% endstep %}
 
 {% step %}

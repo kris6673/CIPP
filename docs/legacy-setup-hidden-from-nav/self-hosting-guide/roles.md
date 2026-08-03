@@ -11,7 +11,7 @@ When you first set up CIPP, you will need to create your first user in one of tw
 {% hint style="info" %}
 This user should be at minimum given the role of `admin` . This user will be used to configure the remaining settings within CIPP. Certain features like role management are restricted to `superadmin` only so the `superadmin` role should only be assigned as needed for those very specific tasks.
 
-We recommend that all remaining users get invited via [custom-roles](../../user-documentation/cipp/advanced/super-admin/custom-roles/ "mention").
+We recommend that all remaining users get invited via [cipp-roles](../../user-documentation/cipp/advanced/authentication/cipp-roles/ "mention").
 {% endhint %}
 
 * For **hosted clients,** invites and roles can be managed by logging into the management portal [here](https://management.cipp.app/)
@@ -29,7 +29,7 @@ After the invite link is sent to the user, they must click on it to accept the i
 
 ### Additional User Setup
 
-Once you have your initial `admin` user added, you are now ready to finish the first setup. After completing the setup, you can return here to set up additional users using the built-in roles or custom CIPP roles via [custom-roles](../../user-documentation/cipp/advanced/super-admin/custom-roles/ "mention"). Recall that this requires your user to have `superadmin` to manage CIPP Roles. Assign that role to the user in the management portal (hosted) or Azure (self-hosted) and then wait for permissions to replicate. This can take quite some time. We've seen this take up to 24 hours on the extreme end.
+Once you have your initial `admin` user added, you are now ready to finish the first setup. After completing the setup, you can return here to set up additional users using the built-in roles or custom CIPP roles via [cipp-roles](../../user-documentation/cipp/advanced/authentication/cipp-roles/ "mention"). Recall that this requires your user to have `superadmin` to manage CIPP Roles. Assign that role to the user in the management portal (hosted) or Azure (self-hosted) and then wait for permissions to replicate. This can take quite some time. We've seen this take up to 24 hours on the extreme end.
 
 {% hint style="danger" %}
 Given the extreme delays in permissions syncing if using the management portal (hosted) or Azure role management (self-hosted), we strongly recommend using Entra ID mapped CIPP Roles to manage user permissions. These permission changes are nearly instant. See below on how to map CIPP Roles to Entra ID groups.
@@ -46,7 +46,7 @@ CIPP features a role management system which utilises the [Roles feature of Azur
 | admin      | Allowed to perform everything.                                                                                                                                                                 |
 | superadmin | A role that is only allowed to access the settings menu for specific high-privilege settings, such as setting up the [owntenant.md](../../setup/installation/owntenant.md "mention") settings. |
 
-You can assign these roles to users using the [custom-roles](../../user-documentation/cipp/advanced/super-admin/custom-roles/ "mention") page.
+You can assign these roles to users using the [cipp-roles](../../user-documentation/cipp/advanced/authentication/cipp-roles/ "mention") page.
 
 {% hint style="info" %}
 You can assign built-in roles using Entra groups. Select Edit from the Action column next to the role in the CIPP Roles table and select an Entra group from the drop down. Don't forget to hit `Save` at the bottom!
@@ -68,7 +68,7 @@ In the same way, assigning multiple custom roles is restrictive and not additive
 
 Set up Custom Roles by following these steps:
 
-* Go to CIPP -> Advanced -> Super Admin -> CIPP Roles.
+* Go to CIPP -> Advanced -> Authentication -> CIPP Roles.
 * Select a Custom Role from the list or start typing to create a new one if you do not yet have any.
   * Please ensure that your custom role is entirely in lowercase and does not contain spaces or special characters.
 * Optionally select a Entra group this role will be mapped to. Adding an Entra group removes the requirement to add the user to either the SWA or inviting via the Management Portal.

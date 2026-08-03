@@ -1,6 +1,6 @@
 # Worker Health
 
-The Worker Health page is a real-time monitoring dashboard for the CIPP API container. It surfaces the state of the container's worker pools, the background job queue, resource usage, historical performance trends, the internal test-data cache, and the timing of the container's most recent startup. It is intended for diagnosing performance and capacity issues on a self-hosted CIPP instance, and lives under the CIPP Advanced area. While the page is open it refreshes automatically: the live snapshot every few seconds, with historical trends and cache diagnostics on their own longer intervals.
+The Worker Health page is a real-time monitoring dashboard for the CIPP API container. It surfaces the state of the container's worker pools, the background job queue, resource usage, historical performance trends, the internal test-data cache, and the timing of the container's most recent startup. It is intended for diagnosing performance and capacity issues on a self-hosted CIPP instance, and lives under CIPP > Advanced > Container Management. While the page is open it refreshes automatically: the live snapshot every few seconds, with historical trends and cache diagnostics on their own longer intervals.
 
 ## Page Controls
 
@@ -116,4 +116,4 @@ At the bottom of the page, a stacked bar shows how long each phase of the contai
 
 ***
 
-{% include "../../../../.gitbook/includes/feature-request.md" %}
+{% include "../../../../../.gitbook/includes/feature-request.md" %}

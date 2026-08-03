@@ -43,7 +43,7 @@ Sign in with a user that has Application Administrator permissions or higher, ad
 
 ## Additional User Setup
 
-Once you have your initial user added, this user can add more users through the CIPP interface under CIPP -> Advanced -> Super Admin -> [cipp-users.md](../../user-documentation/cipp/advanced/super-admin/cipp-users.md "mention").
+Once you have your initial user added, this user can add more users through the CIPP interface under CIPP -> Advanced -> Authentication -> [cipp-users.md](../../user-documentation/cipp/advanced/authentication/cipp-users.md "mention").
 
 ## Built-In Roles
 
@@ -56,7 +56,7 @@ CIPP features a role management system which utilises the [Roles feature of Azur
 | admin      | Allowed to perform everything.                                                                                                                                                        |
 | superadmin | A role that is only allowed to access the settings menu for specific high-privilege settings, such as setting up the [owntenant.md](../installation/owntenant.md "mention") settings. |
 
-You can assign these roles to Entra groups or users using the [custom-roles](../../user-documentation/cipp/advanced/super-admin/custom-roles/ "mention") page, so you no longer have to add users manually.
+You can assign these roles to Entra groups or users using the [cipp-roles](../../user-documentation/cipp/advanced/authentication/cipp-roles/ "mention") page, so you no longer have to add users manually.
 
 ## Custom Roles
 
@@ -78,7 +78,7 @@ Set up Custom Roles by following these steps:
 {% step %}
 ### Open the CIPP Roles Page
 
-Go to CIPP -> Advanced -> Super Admin -> [custom-roles](../../user-documentation/cipp/advanced/super-admin/custom-roles/ "mention").
+Go to CIPP -> Advanced -> Authentication -> [cipp-roles](../../user-documentation/cipp/advanced/authentication/cipp-roles/ "mention").
 {% endstep %}
 
 {% step %}

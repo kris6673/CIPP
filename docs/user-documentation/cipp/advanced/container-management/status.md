@@ -1,6 +1,6 @@
-# Container Management
+# Status & Updates
 
-The Container Management page lets you view and manage the CIPP application container on a self-hosted instance. From here you can see which image and version are running, control the release channel, configure automatic update checks, and restart the container. It sits under the CIPP Super Admin area and is arranged as four cards.
+The Status & Updates page lets you view and manage the CIPP application container on a self-hosted instance. From here you can see which image and version are running, control the release channel, configure automatic update checks, and restart the container. It sits under CIPP > Advanced > Container Management and is arranged as four cards.
 
 ## Container Status
 
