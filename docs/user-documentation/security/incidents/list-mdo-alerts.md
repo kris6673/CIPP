@@ -8,7 +8,7 @@ The properties returned are for the Graph resource type `alert` with a filter of
 
 ## Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Assign to self</td><td>Opens a modal to confirm you want to assign the alert to yourself</td><td>true</td></tr><tr><td>Set status to active</td><td>Opens a modal to confirm you want to set the alert status to active</td><td>true</td></tr><tr><td>Set status to in progress</td><td>Opens a modal to confirm you want to set the alert status to in progress</td><td>true</td></tr><tr><td>Set status to resolved</td><td>Opens a modal to confirm you want to set the alert status to resolved</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Assign to self</td><td>Opens a modal to confirm you want to assign the alert to yourself</td><td>true</td></tr><tr><td>Set status to active</td><td>Opens a modal to confirm you want to set the alert status to active</td><td>true</td></tr><tr><td>Set status to in progress</td><td>Opens a modal to confirm you want to set the alert status to in progress</td><td>true</td></tr><tr><td>Set status to resolved</td><td>Opens a modal to confirm you want to set the alert status to resolved</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 ***
 

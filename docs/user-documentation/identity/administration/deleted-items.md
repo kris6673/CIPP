@@ -24,7 +24,7 @@ The table will show some basic default information regarding the deleted object.
 
 ## Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Restore Object</td><td>Restores the selected item(s)</td><td>true</td></tr><tr><td>Permanently Delete Object</td><td>Permanently deletes the selected item(s)</td><td>true</td></tr><tr><td>More Info</td><td>Displays the Extended Info flyout</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Restore Object</td><td>Restores the selected item(s)</td><td>true</td></tr><tr><td>Permanently Delete Object</td><td>Permanently deletes the selected item(s)</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 ***
 

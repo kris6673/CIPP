@@ -8,7 +8,7 @@ The properties returned are for the Graph resource type `device`. For more infor
 
 ## Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Enable Device</td><td>Enables the device to be logged in with tenant credentials</td><td>true</td></tr><tr><td>Disable Device</td><td>Disables the device from being logged in with tenant credentials</td><td>true</td></tr><tr><td>Retrieve BitLocker Keys</td><td>Pulls BitLocker keys stored in Entra ID</td><td>true</td></tr><tr><td>Delete Device</td><td>Deletes the device from Entra ID</td><td>true</td></tr><tr><td>More Info</td><td>Opens the "Extended Info" flyout</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Enable Device</td><td>Enables the device to be logged in with tenant credentials</td><td>true</td></tr><tr><td>Disable Device</td><td>Disables the device from being logged in with tenant credentials</td><td>true</td></tr><tr><td>Retrieve BitLocker Keys</td><td>Pulls BitLocker keys stored in Entra ID</td><td>true</td></tr><tr><td>Delete Device</td><td>Deletes the device from Entra ID</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 ***
 

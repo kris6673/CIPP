@@ -30,7 +30,7 @@ The table will display any templates that you have previously created.
 
 ## Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Save to GitHub</td><td>Saves the selected template(s) to your GitHub repository of choice.</td><td>true</td></tr><tr><td>Delete Template</td><td>Deletes the selected template(s).</td><td>true</td></tr><tr><td>More Info</td><td>Opens the extended info flyout</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Save to GitHub</td><td>Saves the selected template(s) to your GitHub repository of choice.</td><td>true</td></tr><tr><td>Delete Template</td><td>Deletes the selected template(s).</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 ***
 

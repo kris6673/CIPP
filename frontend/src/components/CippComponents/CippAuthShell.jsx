@@ -29,7 +29,44 @@ const CippBrandLockup = () => (
     component="img"
     src="/logo.png"
     alt="CIPP"
-    sx={{ display: 'block', width: 'auto', height: { xs: 58, md: 96 } }}
+    sx={{ display: 'block', width: 'auto', height: { xs: 46, md: 96 } }}
+  />
+)
+
+// public/cippy-auth.png is the source artwork with its flat background flood-filled away
+// from the corners — the mug body, the eyes and the little icon interiors are all
+// legitimately white and had to survive, so a plain white-to-alpha knockout was not
+// an option. Decorative only: aria-hidden, and never a link or control.
+const Cippy = () => (
+  <Box
+    component="img"
+    src="/cippy-auth.png"
+    alt=""
+    aria-hidden="true"
+    sx={{
+      position: 'absolute',
+      // Sits on the panel's own content box rather than bleeding off the corner: these
+      // track the panel's px/py, so his right edge lines up with the logo and tagline
+      // above him. Cropping him only lopped off his feet, which reads as a mistake
+      // rather than a peek.
+      right: { xs: 20, md: 48, lg: 64 },
+      // md+: anchored to the bottom corner. Stacked: centred in the header strip, which
+      // is only as tall as its content — bottom-anchoring there pushed his head out
+      // through the top of the panel.
+      top: { xs: '50%', md: 'auto' },
+      bottom: { xs: 'auto', md: 48, lg: 64 },
+      transform: { xs: 'translateY(-50%)', md: 'none' },
+      // Constrained by height on the stacked layout, not width: the strip is sized by
+      // the logo and the tagline's wrap, so a fixed width lets him outgrow it at some
+      // viewports. Capping the height keeps him inside whatever the strip turns out
+      // to be, and auto width preserves his aspect.
+      height: { xs: 46, sm: 60, md: 'auto' },
+      width: { xs: 'auto', md: 132, lg: 168 },
+      zIndex: 0,
+      opacity: 0.95,
+      pointerEvents: 'none',
+      userSelect: 'none',
+    }}
   />
 )
 
@@ -39,6 +76,7 @@ export const CippAuthShell = ({
   description,
   actionText,
   actionHref,
+  actionIcon,
   onActionClick,
   actionDisabled = false,
   secondaryText,
@@ -46,7 +84,6 @@ export const CippAuthShell = ({
   onSecondaryClick,
   busy = false,
   children,
-  version,
   tagline = 'CyberDrain Improved Partner Portal',
 }) => {
   // href wins over onClick so a caller passing both gets one control, not two
@@ -55,20 +92,36 @@ export const CippAuthShell = ({
 
   return (
     <Box sx={{ ...fullHeight, bgcolor: 'background.default' }}>
-      <Grid container sx={{ ...fullHeight, alignItems: 'stretch' }}>
+      {/* alignItems stretch is what makes the two halves equal on the split layout. Once
+          they stack it also hands the navy panel an equal share of the viewport, which on
+          a phone is half the screen of empty brand colour above the sign-in card — so on
+          xs the panel sizes to its own content instead. The gap below it is the same
+          background.default the right half sits on, so the seam is invisible. */}
+      <Grid container sx={{ ...fullHeight, alignItems: { xs: 'flex-start', md: 'stretch' } }}>
         <Grid
           size={{ xs: 12, md: 6 }}
           sx={{
             position: 'relative',
             overflow: 'hidden',
             display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            gap: { xs: 2.5, md: 4 },
+            // On the stacked layout the panel turns into a row: the logo and tagline sit
+            // side by side as one lockup. The mark is only ~70px wide at 46px tall, so
+            // the tagline still gets ~168px even with Cippy's corner reserved.
+            //
+            // md+ centres the tagline on the panel's own vertical midpoint, which lines it
+            // up with the sign-in card opposite: both halves have symmetric padding, so
+            // their content boxes share a centre line. The mark and Cippy are both out of
+            // the flow, so the tagline is the only thing being centred.
+            flexDirection: { xs: 'row', md: 'column' },
+            flexWrap: { xs: 'wrap', md: 'nowrap' },
+            alignItems: { xs: 'center', md: 'stretch' },
+            justifyContent: { xs: 'flex-start', md: 'center' },
+            columnGap: { xs: 2, md: 0 },
+            rowGap: { xs: 1, md: 4 },
             bgcolor: blue.main,
             color: 'common.white',
             px: { xs: 3, md: 8 },
-            py: { xs: 3.5, md: 8 },
+            py: { xs: 2.5, md: 8 },
             '&::before': {
               content: '""',
               position: 'absolute',
@@ -87,33 +140,61 @@ export const CippAuthShell = ({
             },
           }}
         >
-          <Box sx={{ position: 'relative', zIndex: 1 }}>
+          {/* On md+ the mark leaves the flow and pins to the panel's top-left corner, so
+              the tagline can centre against the panel's full height rather than against
+              the leftover space beneath the mark — the latter left it sitting half the
+              mark's height below the sign-in card opposite. Offsets equal the panel's
+              own px/py. In the stacked row it stays in flow beside the tagline. */}
+          <Box
+            sx={{
+              position: { xs: 'relative', md: 'absolute' },
+              top: { md: 64 },
+              left: { md: 64 },
+              zIndex: 1,
+              flexShrink: 0,
+            }}
+          >
             <CippBrandLockup />
           </Box>
 
-          {/* hidden on the stacked layout, where the panel is just a header strip */}
           <Box
             sx={{
               position: 'relative',
               zIndex: 1,
-              display: { xs: 'none', sm: 'block' },
+              // xs: takes the rest of the first line next to the mark; minWidth 0 lets it
+              // actually wrap instead of forcing the row wider than the panel.
+              // md+: the panel centres it, and the mark is out of the flow, so this is
+              // the panel's true vertical centre — level with the sign-in card.
+              flex: { xs: '1 1 0', md: '0 1 auto' },
+              minWidth: 0,
             }}
           >
-            <Typography variant="h3" sx={{ color: 'common.white', maxWidth: 520 }}>
+            <Typography
+              variant="h3"
+              sx={{
+                color: 'common.white',
+                maxWidth: 520,
+                // h3 is 32px, which swallows the header strip on a phone — scale it
+                // down rather than dropping the tagline entirely. 16px keeps it to two
+                // lines in the ~168px left beside the mark.
+                fontSize: { xs: 16, sm: 24, md: 32 },
+                // 1.5 leaves the wrapped lines floating apart at phone sizes; tighten
+                // them so the tagline reads as one block beside the mark
+                lineHeight: { xs: 1.25, md: 1.5 },
+                // keep the text clear of Cippy, who shares the strip on the stacked
+                // layout; on md+ he sits in the bottom corner and never collides.
+                // ~50px wide at xs and ~65px at sm, plus his 20px offset.
+                pr: { xs: 9, sm: 11, md: 0 },
+                textWrap: 'balance',
+              }}
+            >
               {tagline}
             </Typography>
           </Box>
 
-          <Typography
-            variant="caption"
-            sx={{
-              position: 'relative',
-              zIndex: 1,
-              color: alpha('#FFFFFF', 0.72),
-            }}
-          >
-            {version ? `v${version}` : ' '}
-          </Typography>
+          {/* absolute, so he never enters the panel's flow, and sits at zIndex 0
+              beneath the logo and tagline */}
+          <Cippy />
         </Grid>
 
         <Grid
@@ -161,6 +242,7 @@ export const CippAuthShell = ({
                           href={actionHref}
                           variant="contained"
                           size="large"
+                          startIcon={actionIcon}
                           disabled={actionDisabled}
                         >
                           {actionText}
@@ -170,6 +252,7 @@ export const CippAuthShell = ({
                           onClick={onActionClick}
                           variant="contained"
                           size="large"
+                          startIcon={actionIcon}
                           disabled={actionDisabled}
                         >
                           {actionText}
@@ -210,6 +293,7 @@ CippAuthShell.propTypes = {
   description: PropTypes.node,
   actionText: PropTypes.string,
   actionHref: PropTypes.string,
+  actionIcon: PropTypes.node,
   onActionClick: PropTypes.func,
   actionDisabled: PropTypes.bool,
   secondaryText: PropTypes.string,
@@ -217,6 +301,5 @@ CippAuthShell.propTypes = {
   onSecondaryClick: PropTypes.func,
   busy: PropTypes.bool,
   children: PropTypes.node,
-  version: PropTypes.string,
   tagline: PropTypes.string,
 }
