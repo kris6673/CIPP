@@ -26,7 +26,7 @@ The properties returned are for the Graph resource type `mobileApp`. For more in
 
 ## Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Assign to All Users</td><td>Assigns the application to all users in the tenant</td><td>true</td></tr><tr><td>Assign to All Devices</td><td>Assigns the application to all devices in the tenant</td><td>true</td></tr><tr><td>Assign Globally (All Users / All Devices)</td><td>Assigns to all user and all devices in the tenant</td><td>true</td></tr><tr><td>Delete Application</td><td>Opens a modal to confirm you want to delete the application from the tenant</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Assign to All Users</td><td>Assigns the application to all users in the tenant</td><td>true</td></tr><tr><td>Assign to All Devices</td><td>Assigns the application to all devices in the tenant</td><td>true</td></tr><tr><td>Assign Globally (All Users / All Devices)</td><td>Assigns to all user and all devices in the tenant</td><td>true</td></tr><tr><td>Delete Application</td><td>Opens a modal to confirm you want to delete the application from the tenant</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 ***
 

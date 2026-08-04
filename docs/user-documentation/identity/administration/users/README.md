@@ -160,7 +160,7 @@ The properties returned are for the Graph resource type `user`. For more informa
 
 ### Information Access
 
-<table><thead><tr><th>Action</th><th>Description</th><th>Requirements/Implications</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>More info</td><td>Opens Extended Info panel showing:<br>- Common profile fields<br>- Additional actions</td><td>- Quick access to key information<br>- Alternative action access point</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th>Requirements/Implications</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>More Info</td><td>Opens Extended Info panel showing:<br>- Common profile fields<br>- Additional actions</td><td>- Quick access to key information<br>- Alternative action access point</td><td>false</td></tr></tbody></table>
 
 {% hint style="info" %}
 Note that clicking one of these actions will present a confirmation modal dialog.

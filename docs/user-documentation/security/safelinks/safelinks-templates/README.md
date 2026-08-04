@@ -20,7 +20,7 @@
 
 ## Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Edit Template</td><td>Opens <a data-mention href="edit.md">edit.md</a>for the selected template</td><td>false</td></tr><tr><td>Save to GitHub</td><td>Saves the selected template(s) to your chosen GitHub repository</td><td>true</td></tr><tr><td>Delete Template</td><td>Deletes the selected template(s)</td><td>true</td></tr><tr><td>More Info</td><td>Opens Extended Info flyout</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Edit Template</td><td>Opens <a data-mention href="edit.md">edit.md</a>for the selected template</td><td>false</td></tr><tr><td>Save to GitHub</td><td>Saves the selected template(s) to your chosen GitHub repository</td><td>true</td></tr><tr><td>Delete Template</td><td>Deletes the selected template(s)</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 ***
 

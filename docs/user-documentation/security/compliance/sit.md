@@ -18,7 +18,7 @@ The properties returned are for the Exchange PowerShell command `Get-DlpSensitiv
 
 ## Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Create template based on SIT</td><td>Creates a template based on the selected SIT</td><td>false</td></tr><tr><td>Delete Label</td><td>This will delete the selected SIT(s).</td><td>true</td></tr><tr><td>More Info</td><td>Opens the extended info flyout</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Create template based on SIT</td><td>Creates a template based on the selected SIT</td><td>false</td></tr><tr><td>Delete Label</td><td>This will delete the selected SIT(s).</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 ***
 

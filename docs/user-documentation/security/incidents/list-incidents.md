@@ -16,7 +16,7 @@ The top section will allow you to filter for specific dates that you want to rev
 
 ## Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Assign to self</td><td>Assigns the incident in Entra to yourself</td><td>true</td></tr><tr><td>Set status to active</td><td>Sets the status to active from the current status</td><td>true</td></tr><tr><td>Set status to in progress</td><td>Sets the status to in progress from the current status</td><td>true</td></tr><tr><td>Set status to resolved</td><td>Set the status to resolved from the current status</td><td>true</td></tr><tr><td>Set severity</td><td>Sets the severity for the selected incident(s)</td><td>true</td></tr><tr><td>More info</td><td>Opens the Extended Info flyout</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Assign to self</td><td>Assigns the incident in Entra to yourself</td><td>true</td></tr><tr><td>Set status to active</td><td>Sets the status to active from the current status</td><td>true</td></tr><tr><td>Set status to in progress</td><td>Sets the status to in progress from the current status</td><td>true</td></tr><tr><td>Set status to resolved</td><td>Set the status to resolved from the current status</td><td>true</td></tr><tr><td>Set severity</td><td>Sets the severity for the selected incident(s)</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 ***
 
