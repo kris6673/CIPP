@@ -1602,7 +1602,7 @@ const Page = () => {
 
   // Historic view: the tenant's run events on an activity timeline (same pattern as the
   // manage-tenant history page). Each event carries its run GUID; View Logs opens the
-  // Baselines log drawer, where pasting a Run ID isolates that run's log lines.
+  // Baselines log drawer filtered to exactly that run's entries.
   if (viewMode === 'history') {
     const historyEvents = historyApi.data?.events ?? []
     return (
