@@ -373,6 +373,7 @@
     * [Message Trace](user-documentation/tools/email-tools/message-trace.md)
     * [Message Viewer](user-documentation/tools/email-tools/message-viewer.md)
     * [Mailbox Restores](user-documentation/tools/email-tools/mailbox-restores.md)
+    * [Message Encryption](user-documentation/tools/email-tools/message-encryption.md)
   * [Intune Tools](user-documentation/tools/intune-tools/README.md)
     * [Compare Policies](user-documentation/tools/intune-tools/compare-policies.md)
   * [Dark Web Tools](user-documentation/tools/dark-web-tools/README.md)
