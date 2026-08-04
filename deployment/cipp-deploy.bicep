@@ -76,7 +76,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2024-01-01' = {
           keyType: 'Account'
         }
         table: {
-          enabled: true
+          enabled: false
           keyType: 'Account'
         }
       }

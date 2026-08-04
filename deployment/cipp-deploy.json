@@ -91,7 +91,7 @@
               "keyType": "Account"
             },
             "table": {
-              "enabled": true,
+              "enabled": false,
               "keyType": "Account"
             }
           }
