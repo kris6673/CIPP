@@ -8,7 +8,7 @@ The properties returned are for the Exchange Online PowerShell command `Get-Quar
 
 ## Table Actions
 
-<table><thead><tr><th></th><th></th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>View Message</td><td>Opens modal to display the message contents</td><td>true</td></tr><tr><td>View Message Trace</td><td>Opens a modal with a table of the message's trace history</td><td>true</td></tr><tr><td>Release</td><td>Opens modal to confirm you want to release the message</td><td>true</td></tr><tr><td>Deny</td><td>Opens modal to confirm you want to deny release of the message</td><td>true</td></tr><tr><td>Release &#x26; Allow Sender</td><td>Opens modal to confirm you want to release the message and add the sender to the allowed sender list</td><td>true</td></tr><tr><td>More Info</td><td>Opens Extended Info flyout</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th></th><th></th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>View Message</td><td>Opens modal to display the message contents</td><td>true</td></tr><tr><td>View Message Trace</td><td>Opens a modal with a table of the message's trace history</td><td>true</td></tr><tr><td>Release</td><td>Opens modal to confirm you want to release the message</td><td>true</td></tr><tr><td>Deny</td><td>Opens modal to confirm you want to deny release of the message</td><td>true</td></tr><tr><td>Release &#x26; Allow Sender</td><td>Opens modal to confirm you want to release the message and add the sender to the allowed sender list</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 ***
 

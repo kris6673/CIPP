@@ -66,6 +66,19 @@ When the [sherweb.md](../../../cipp/integrations/sherweb.md "mention") integrati
 * Changes to Preferences affect all new user creation forms
 {% endhint %}
 
+**Shared Mailboxes and Calendars**
+
+1. **Shared Mailboxes:** Select the shared mailboxes the new user should get access to. Pre-filled from the tenant's [user-defaults.md](../../../tenant/manage/user-defaults.md "mention") template and editable per user.
+2. **Shared Mailbox Permissions:** Any combination of `Full Access`, `Send As` and `Send on Behalf` — granting Full Access and Send As together is common. Defaults to `Full Access`, which also automaps the mailbox so Outlook adds it on its own.
+3. **Shared Calendars:** Select the shared mailboxes whose calendar the user should get access to.
+4. **Shared Calendar Permission:** The access level granted on those calendars. Defaults to `Editor`.
+
+{% hint style="info" %}
+Exchange cannot add a calendar to someone's Outlook directly, so CIPP grants calendar access with a sharing invitation, which the user accepts by clicking the link in the email they receive. Mailbox access needs no invitation: with Full Access, automapping adds the mailbox to Outlook by itself.
+
+Because a newly created user is not a usable Exchange recipient for the first few minutes, both grants are queued as scheduled tasks that run **15 minutes after creation**. You can follow them (and see any failure) under **CIPP > Scheduler**. Only shared mailboxes of the tenant can be selected, and for calendars only the `Editor`, `Reviewer`, `Limited Details` and `Availability Only` levels are offered, as those are the ones Exchange sends an invitation for.
+{% endhint %}
+
 **Additional Details**
 
 * Licence assignment requires valid usage location
@@ -147,7 +160,7 @@ The properties returned are for the Graph resource type `user`. For more informa
 
 ### Information Access
 
-<table><thead><tr><th>Action</th><th>Description</th><th>Requirements/Implications</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>More info</td><td>Opens Extended Info panel showing:<br>- Common profile fields<br>- Additional actions</td><td>- Quick access to key information<br>- Alternative action access point</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th>Requirements/Implications</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>More Info</td><td>Opens Extended Info panel showing:<br>- Common profile fields<br>- Additional actions</td><td>- Quick access to key information<br>- Alternative action access point</td><td>false</td></tr></tbody></table>
 
 {% hint style="info" %}
 Note that clicking one of these actions will present a confirmation modal dialog.

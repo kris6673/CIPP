@@ -14,7 +14,7 @@ A page for super admins to manage the custom roles deployed to their CIPP instan
 
 ## Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Edit</td><td>Allows you to edit the custom role.</td><td>false</td></tr><tr><td>Clone</td><td>Allows you to use an existing custom role to use as a starting point for a new role</td><td>true</td></tr><tr><td>Delete</td><td>Deletes the selected role(s)</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Edit</td><td>Allows you to edit the custom role.</td><td>false</td></tr><tr><td>Clone</td><td>Allows you to use an existing custom role to use as a starting point for a new role</td><td>true</td></tr><tr><td>Delete</td><td>Deletes the selected role(s)</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 ***
 

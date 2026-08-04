@@ -19,7 +19,7 @@ The properties returned are for the combination of the following Exchange PowerS
 
 ## Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Create template based on connector</td><td>Creates a template based on the selected connector(s)</td><td>true</td></tr><tr><td>Enable Connector</td><td>Enables the selected connector(s). This will be greyed out if the connector is enabled</td><td>true</td></tr><tr><td>Disable Connector</td><td>Disables the selected connector(s). This will be greyed out if the connector is disabled</td><td>true</td></tr><tr><td>Delete Connector</td><td>Deletes the selected connector(s)</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Create template based on connector</td><td>Creates a template based on the selected connector(s)</td><td>true</td></tr><tr><td>Enable Connector</td><td>Enables the selected connector(s). This will be greyed out if the connector is enabled</td><td>true</td></tr><tr><td>Disable Connector</td><td>Disables the selected connector(s). This will be greyed out if the connector is disabled</td><td>true</td></tr><tr><td>Delete Connector</td><td>Deletes the selected connector(s)</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 
 

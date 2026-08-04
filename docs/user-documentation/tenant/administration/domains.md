@@ -18,7 +18,7 @@ The properties returned are for the Graph resource type `domain`. For more infor
 
 ## Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Verify Domain</td><td>This will commence the verification process on the selected domain(s)</td><td>true</td></tr><tr><td>Set as Default</td><td>This will set the selected domain as the default domain</td><td>true</td></tr><tr><td>Delete Domain</td><td>Deletes the selected domain(s) from the tenant</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Verify Domain</td><td>This will commence the verification process on the selected domain(s)</td><td>true</td></tr><tr><td>Set as Default</td><td>This will set the selected domain as the default domain</td><td>true</td></tr><tr><td>Delete Domain</td><td>Deletes the selected domain(s) from the tenant</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 ***
 
