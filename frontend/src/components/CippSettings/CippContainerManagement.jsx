@@ -534,7 +534,8 @@ export const CippContainerManagement = () => {
                 {checksDisabled && (
                   <Typography variant="caption" color="text.secondary">
                     Checks are off, so the preferred time and auto-restart have
-                    no effect. You can still check manually from Maintenance.
+                    no effect. You can still check manually with Check for
+                    Updates.
                   </Typography>
                 )}
 
