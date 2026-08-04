@@ -4,7 +4,9 @@ The SSO App Registration page manages the Entra ID app registration that backs C
 
 ## What CIPP-SSO Is and Why It Exists
 
-CIPP signs users in with OpenID Connect against an app registration named **CIPP-SSO** in your own partner tenant. Older instances signed in through an app registration owned by CyberDrain; a dedicated app in your tenant replaces that, which means your Conditional Access policies, MFA requirements, sign-in risk policies and session lifetimes apply to CIPP the same way they apply to any other application you own.
+CIPP signs users in with OpenID Connect against an app registration named **CIPP-SSO** in your own partner tenant.
+
+Older CIPP instances ran on Azure Static Web Apps, where sign-in was handled by the platform's built-in Entra ID provider. Microsoft managed that registration, so there was no app registration of your own involved — and nothing in your tenant to scope a Conditional Access policy, MFA requirement or session control to. CIPP now runs on Azure App Service, and this is why an instance that has been upgraded prompts you to complete authentication setup: it needs its own app registration to sign in against. Once CIPP-SSO exists, CIPP sign-in behaves like any other application you own in Entra ID — it appears in your sign-in logs and your Conditional Access policies, MFA requirements, sign-in risk policies and session lifetimes apply to it.
 
 The CIPP-SSO app **only proves who you are**. It has no access to any data in your tenant. Everything CIPP actually does against Microsoft 365 continues to run through the existing CIPP-SAM app registration and your GDAP relationships — the sign-on app is not involved in it.
 
@@ -166,6 +168,7 @@ Tenant-wide admin consent can only be written in your own partner tenant. In mul
 | Users see a consent prompt they cannot accept                                                  | Your tenant disables user consent to applications.                                                                                                         | An Entra administrator grants admin consent once on the `CIPP-SSO` enterprise app — Entra admin center > Enterprise applications > CIPP-SSO > Permissions > **Grant admin consent**.                                    |
 | `AADSTS50011: The redirect URI ... does not match`                                              | A hostname is bound to the instance but has no matching redirect URI on the app registration — typically after adding a custom domain.                       | Select **Refresh Sign-in URLs**. If the card warns that the domain list could not be read, add the callback URI manually as described below.                                                                            |
 | Sign-in stopped working with an invalid client secret error                                    | The client secret expired, or a tenant `passwordLifetime` restriction shortened it.                                                                        | Select **Rotate Secret**, then restart the instance. See [#recovering-login-credentials](sso.md#recovering-login-credentials "mention") if you can no longer sign in at all.                                             |
+| You cannot sign in to CIPP at all, or the authentication setup prompt keeps failing and cannot be dismissed | Sign-in is broken, so none of the actions on this page are reachable.                                                                                      | Reset SSO from the management portal to return the instance to its setup wizard — see [#resetting-sso-when-you-cannot-sign-in](sso.md#resetting-sso-when-you-cannot-sign-in "mention").                                   |
 
 ## Creating the App Registration Manually
 
@@ -223,13 +226,27 @@ Restart CIPP so it reads the new credentials. Self-hosted instances restart from
 
 The Manual configuration (advanced) section lets you store an existing Application (client) ID and client secret directly in Key Vault; for example, to rotate the secret by hand or to point SSO at a different app registration. Enter the App ID (a GUID) and client secret, optionally set multi-tenant mode, and select **Save Manual Configuration**. This overwrites the stored values, so an incorrect App ID or secret will break single sign-on. The instance must then be restarted (from the Container Management page on a self-hosted instance) for the change to take effect.
 
+## Resetting SSO When You Cannot Sign In
+
+Everything above assumes you can still reach the CIPP interface. If SSO is broken badly enough that you cannot sign in at all — an expired or incorrect client secret, a deleted app registration, or a setup attempt that failed and left the instance unusable — you do not need to reach this page to fix it.
+
+For CyberDrain-hosted instances, the [management portal](https://management.cipp.app/) has a **Reset SSO** page. Resetting tells the instance to disregard its stored sign-in configuration and restart into its setup wizard, which is reachable without signing in. From there you walk back through SSO setup and either let CIPP create a fresh CIPP-SSO app registration, or supply an Application (client) ID and client secret that an Entra administrator created for you. Once new credentials are stored, the reset clears itself automatically and normal sign-in resumes.
+
+A reset only affects sign-in. Your CIPP-SAM app registration, GDAP relationships, tenants, standards and all other CIPP data are untouched.
+
+{% hint style="info" %}
+This is also the way out of a forced authentication setup prompt you cannot get past. If the **Complete Authentication Setup** dialog keeps failing — because a tenant policy blocks the client secret, for example — reset SSO from the management portal to return the instance to its setup wizard, then complete setup with an app registration created by hand as described in [#creating-the-app-registration-manually](sso.md#creating-the-app-registration-manually "mention").
+{% endhint %}
+
+**Self-hosted instances** achieve the same thing by adding the application setting `CIPP_SSO_RESET` with a value of `true` to the App Service hosting CIPP, then restarting it. CIPP removes the setting itself once new sign-in credentials have been stored.
+
 ## Recovering Login Credentials
 
-If the SSO client secret expires, single sign-on stops working and users may be unable to log in. How you recover depends on how CIPP is hosted.
+If the SSO client secret expires, single sign-on stops working and users may be unable to log in.
 
-**Self-hosted:** the SSO app's Application ID and client secret are stored in your instance's Key Vault. If you can still reach this page, use **Rotate Secret** to issue and store a new secret, or use **Manual Configuration** to write a known-good App ID and secret and then restart the instance. If the interface itself is inaccessible, an administrator with access to the underlying Azure resources can retrieve or replace the stored SSO values directly in the instance's Key Vault and then restart the container to restore access.
+If you can still reach this page, use **Rotate Secret** to issue and store a new secret, or use **Manual Configuration** to write a known-good App ID and secret, then restart the instance.
 
-**Hosted:** for CIPP-hosted instances, credential recovery will be handled through a "recover your login" flow in the management portal. This flow is planned; this section will be updated once it is available.
+If you cannot sign in at all, use the reset described in [#resetting-sso-when-you-cannot-sign-in](sso.md#resetting-sso-when-you-cannot-sign-in "mention"). On a self-hosted instance, an administrator with access to the underlying Azure resources can alternatively retrieve or replace the stored SSO values directly in the instance's Key Vault and restart the container to restore access.
 
 ***
 
