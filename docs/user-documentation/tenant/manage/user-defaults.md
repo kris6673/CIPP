@@ -12,6 +12,16 @@ Opens a modal to allow you to create a new template. Enter the Template Name and
 
 </details>
 
+### Shared Mailboxes and Calendars
+
+A template can list the tenant's shared mailboxes that every new user should get access to, and separately the shared mailboxes whose **calendar** they should get access to, each with the level to grant (`Shared Mailbox Permissions`, one or more of Full Access, Send As and Send on Behalf, defaults to `Full Access`; `Shared Calendar Permission`, defaults to `Editor`). Both lists are pre-filled on the **Add User** form and can still be changed per user.
+
+{% hint style="info" %}
+Mailbox access with Full Access is automapped, so Outlook adds the mailbox on its own. Calendar access cannot work that way: it is granted with a sharing invitation, and the user adds the calendar by clicking the link in the email they receive.
+
+Since a brand-new user is not a usable Exchange recipient right away, both grants are queued as scheduled tasks that run **15 minutes after the user is created**, visible under **CIPP > Scheduler**. For calendars, only the access levels Exchange sends an invitation for are offered: `Editor`, `Reviewer`, `Limited Details` and `Availability Only`.
+{% endhint %}
+
 ## Table Details
 
 Your existing templates will be displayed in this table along with the attributes that you have set.
