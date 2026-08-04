@@ -96,12 +96,12 @@ $collection = $allSettings | Sort-Object -Property id | ForEach-Object {
 $json = $collection | ConvertTo-Json -Depth 5 -Compress
 
 # Backend Config (used by Compare-CIPPIntuneObject.ps1 at runtime)
-$apiPath = Join-Path $PSScriptRoot '..\backend\Config\intuneCollection.json'
+$apiPath = Join-Path $PSScriptRoot '..\..\backend\Config\intuneCollection.json'
 $json | Set-Content -Path $apiPath -Encoding utf8NoBOM
 Write-Host "Written: $(Resolve-Path $apiPath)" -ForegroundColor Green
 
 # Frontend public/ (served as a static asset, fetched on demand by the React UI)
-$frontendPath = Join-Path $PSScriptRoot '..\frontend\public\intuneCollection.json'
+$frontendPath = Join-Path $PSScriptRoot '..\..\frontend\public\intuneCollection.json'
 if (Test-Path (Split-Path $frontendPath)) {
     $json | Set-Content -Path $frontendPath -Encoding utf8NoBOM
     Write-Host "Written: $(Resolve-Path $frontendPath)" -ForegroundColor Green
