@@ -6,6 +6,10 @@ on:
 jobs:
   volunteer:
     runs-on: ubuntu-slim
+    # The action only calls the issues API (assign/unassign, add/remove labels,
+    # create comment), so issues:write is all it needs.
+    permissions:
+      issues: write
     steps:
       - uses: kris6673/issue-volunteer@v0.2.0
         with:
