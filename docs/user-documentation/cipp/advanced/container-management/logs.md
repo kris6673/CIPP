@@ -1,6 +1,6 @@
-# Container Logs
+# Logs
 
-The Container Logs page lets you view and search the application logs produced by the CIPP API container. Logs are read directly from the container's local log files, which are rotated by size and retained on disk, so you can investigate recent activity, warnings, or errors from within CIPP itself. Because it reads the logs of the running instance, this is a diagnostic tool and lives under the CIPP Advanced area.
+The Logs page lets you view and search the application logs produced by the CIPP API container. Logs are read directly from the container's local log files, which are rotated by size and retained on disk, so you can investigate recent activity, warnings, or errors from within CIPP itself. Because it reads the logs of the running instance, this is a diagnostic tool and lives under CIPP > Advanced > Container Management.
 
 Logs can be queried in two ways, selected by the tabs at the top of the Log Query panel: a free-form **Query Editor** for writing filter expressions directly, and a **Guided Filter** for building a search from labelled fields. Each mode has its own Clear button, which resets the form and empties the results. The panel collapses automatically once a query runs so the results have room, and can be expanded again from its header.
 
@@ -80,4 +80,4 @@ Log entries are categorised by severity level:
 
 ***
 
-{% include "../../../../.gitbook/includes/feature-request.md" %}
+{% include "../../../../../.gitbook/includes/feature-request.md" %}

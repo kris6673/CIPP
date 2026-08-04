@@ -71,7 +71,7 @@ An Entra administrator is only needed when a tenant-level policy in your own ten
 {% step %}
 ### Open the SSO page
 
-Sign in to CIPP as a user with the superadmin or admin role and go to **CIPP** > **Advanced** > **Super Admin** > **SSO**. If your instance is prompting you to complete authentication setup, the dialog it shows runs the same process and you can complete it from there instead.
+Sign in to CIPP as a user with the superadmin or admin role and go to **CIPP** > **Advanced** > **Authentication** > **SSO**. If your instance is prompting you to complete authentication setup, the dialog it shows runs the same process and you can complete it from there instead.
 {% endstep %}
 
 {% step %}
@@ -212,7 +212,7 @@ Under **Certificates & secrets** > **Client secrets** > **New client secret**, c
 {% step %}
 ### Store the credentials in CIPP
 
-Copy the **Application (client) ID** from the app's Overview page. In CIPP, open **Advanced** > **Super Admin** > **SSO**, expand **Manual configuration (advanced)**, paste the App ID and secret, set multi-tenant mode if needed, and select **Save Manual Configuration**.
+Copy the **Application (client) ID** from the app's Overview page. In CIPP, open **Advanced** > **Authentication** > **SSO**, expand **Manual configuration (advanced)**, paste the App ID and secret, set multi-tenant mode if needed, and select **Save Manual Configuration**.
 {% endstep %}
 
 {% step %}
@@ -224,7 +224,7 @@ Restart CIPP so it reads the new credentials. Self-hosted instances restart from
 
 ## Manual Configuration
 
-The Manual configuration (advanced) section lets you store an existing Application (client) ID and client secret directly in Key Vault; for example, to rotate the secret by hand or to point SSO at a different app registration. Enter the App ID (a GUID) and client secret, optionally set multi-tenant mode, and select **Save Manual Configuration**. This overwrites the stored values, so an incorrect App ID or secret will break single sign-on. The instance must then be restarted (from the Container Management page on a self-hosted instance) for the change to take effect.
+The Manual configuration (advanced) section lets you store an existing Application (client) ID and client secret directly in Key Vault; for example, to rotate the secret by hand or to point SSO at a different app registration. Enter the App ID (a GUID) and client secret, optionally set multi-tenant mode, and select **Save Manual Configuration**. This overwrites the stored values, so an incorrect App ID or secret will break single sign-on. The instance must then be restarted (from Container Management > Status & Updates on a self-hosted instance) for the change to take effect.
 
 ## Resetting SSO When You Cannot Sign In
 

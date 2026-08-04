@@ -25,7 +25,7 @@ Hosted CIPP includes the following:
 
 <summary>I updated, but CIPP still says I am out of date. How do I fix this?</summary>
 
-Use a superadmin admin account browse to CIPP -> Advanced -> Super Admin -> Container Management to arrange auto-update settings.
+Use a superadmin admin account browse to CIPP -> Advanced -> Container Management -> Status & Updates to arrange auto-update settings.
 
 </details>
 
