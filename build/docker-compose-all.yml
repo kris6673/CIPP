@@ -1,3 +1,16 @@
+# macOS/Linux dev loop (frontend runs in a container too — see docker-compose-no-frontend.yml
+# for the Windows loop, where node_modules over a bind mount is too slow).
+#
+# START WITH:
+#   docker compose -p cipp -f docker-compose-all.yml up --pull always --watch
+#
+# The --watch flag is REQUIRED. The `develop: watch:` blocks below are what restart cipp-api on
+# a backend source edit, and they are inert under a plain `up`/`up -d` — edit a .ps1, nothing
+# happens. Windows gets this via Start-Cipp-Dev-Windows-docker.ps1, which runs `up --watch` in
+# its own terminal; here it has to be on the command line. Watch runs in the foreground, so
+# leave it in a dedicated terminal (Ctrl-C stops the stack).
+#
+# -p cipp keeps the project name stable regardless of the directory the command is run from.
 services:
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite:latest
@@ -21,6 +34,31 @@ services:
       - NODE_OPTIONS=--max-old-space-size=8192
     volumes:
       - cipp-ng_azurite-data:/workspace
+    networks:
+      - cipp-network
+
+  cipp-manifests:
+    # DEV ONLY seed step, runs to completion before cipp-api starts.
+    #
+    # Craft's DevExpandModuleExports (below) rewrites FunctionsToExport = '*' to the explicit
+    # Public/*.ps1 list with a plain in-place write. Pointed at the bind-mounted source that
+    # dirties backend/Modules/*.psd1 on every run. Instead, copy those manifests into the
+    # gitignored .devmanifests/ and mount the copies over the source (see cipp-api volumes) —
+    # the rewrite lands on the copy and the working tree stays clean. Production is unaffected:
+    # the image build bakes explicit exports via ModuleBuilder and never runs this path.
+    #
+    # Copies are refreshed from source on every `up`, so genuine manifest edits (version bumps,
+    # RequiredModules, ...) still flow through. The module list must match App__Worker__
+    # DevExpandModules__N and the mount list in cipp-api.
+    image: busybox:latest
+    container_name: cipp-manifests
+    command: >
+      sh -c 'set -e; mkdir -p /out;
+      for m in CIPPStandards CIPPAlerts CIPPTests CIPPDB CippExtensions CIPPActivityTriggers; do
+      cp -f "/src/$$m/$$m.psd1" "/out/$$m.psd1"; done'
+    volumes:
+      - ../backend/Modules:/src:ro
+      - ./.devmanifests:/out
     networks:
       - cipp-network
 
@@ -69,11 +107,25 @@ services:
       # The Next.js dev server runs in a container, if using windows bind mounts are too slow for node_modules
       # you should use the other docker compose file without the frontend container and run the frontend dev server on the host using the start script
       - CRAFT_DEV_FRONTEND_URL=http://cipp-frontend:3000
+      # DEV ONLY: Azure App Service injects REGION_NAME (normalised form, e.g. 'eastus').
+      # Set it here so the region-derived timezone default can be exercised locally -
+      # without it Initialize-CIPPTimezone correctly falls back to UTC. eastus -> America/New_York.
+      #- REGION_NAME=eastus
     volumes:
       - ./config/appsettings.Local.Development.json:/app/appsettings.Development.json:ro
       # Live backend source. rw because runtime permission extraction writes
       # Config/function-permissions.json back into the repo (gitignored).
       - ../backend:/app/API
+      # Writable manifest shims, seeded by cipp-manifests. Each mount shadows a single
+      # .psd1 so DevExpandModuleExports rewrites the copy under .devmanifests/ instead of
+      # the tracked file in backend/Modules. Everything else in the module dir (Public/,
+      # the .psm1 stub) still comes from the bind mount above, so PS edits stay live.
+      - ./.devmanifests/CIPPStandards.psd1:/app/API/Modules/CIPPStandards/CIPPStandards.psd1
+      - ./.devmanifests/CIPPAlerts.psd1:/app/API/Modules/CIPPAlerts/CIPPAlerts.psd1
+      - ./.devmanifests/CIPPTests.psd1:/app/API/Modules/CIPPTests/CIPPTests.psd1
+      - ./.devmanifests/CIPPDB.psd1:/app/API/Modules/CIPPDB/CIPPDB.psd1
+      - ./.devmanifests/CippExtensions.psd1:/app/API/Modules/CippExtensions/CippExtensions.psd1
+      - ./.devmanifests/CIPPActivityTriggers.psd1:/app/API/Modules/CIPPActivityTriggers/CIPPActivityTriggers.psd1
     develop:
       watch:
         - action: restart
@@ -89,7 +141,12 @@ services:
             # container writes this back at startup, would cause a restart loop
             - function-permissions.json
     depends_on:
-      - azurite
+      azurite:
+        condition: service_started
+      # must finish first: without the seeded files Docker would create .devmanifests/*.psd1
+      # as empty directories and every shadowed module would fail to import
+      cipp-manifests:
+        condition: service_completed_successfully
     networks:
       - cipp-network
 

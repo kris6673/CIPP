@@ -10,6 +10,10 @@
 build/docker-compose*.yml
 build/.dockerignore
 
+# Local dev overlays (compiled modules / writable manifest copies) - never ship these
+build/.devmodules/
+build/.devmanifests/
+
 # Build artifacts
 backend/Output/
 

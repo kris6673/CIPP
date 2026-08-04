@@ -22,6 +22,8 @@ _cache/
 
 # Local dev: ModuleBuilder-compiled CIPP modules overlaid into the dev container
 build/.devmodules/
+# Local dev: writable .psd1 copies the container rewrites instead of the tracked manifests
+build/.devmanifests/
 # Build-generated Get-Help cache (build-function-parameters.ps1)
 backend/Config/function-parameters.json*
 localfiles/
