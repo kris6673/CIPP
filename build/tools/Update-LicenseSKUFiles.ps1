@@ -18,18 +18,25 @@ Version: 1.0 - Initial script
 #>
 
 
-# TODO: Convert this to a GitHub Action
+# Runs daily in CI via .github/workflows/update-license-skus.yml, which opens a PR when the
+# generated files change. Keep this script cross-platform - CI runs it on Linux.
+
+# This script lives in build/tools/, so the repo root is two levels up.
+$RepoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 
 # Download the latest license SKU CSV file from Microsoft. Saved to the TEMP folder to circumvent a bug where "???" is added to the first property name.
 $licenseCsvURL = 'https://download.microsoft.com/download/e/3/e/e3e9faf2-f28b-490a-9ada-c6089a1fc5b0/Product%20names%20and%20service%20plan%20identifiers%20for%20licensing.csv'
-$TempLicenseDataFile = "$env:TEMP\LicenseSKUs.csv"
+$TempLicenseDataFile = Join-Path ([System.IO.Path]::GetTempPath()) 'LicenseSKUs.csv'
 Invoke-WebRequest -Uri $licenseCsvURL -OutFile $TempLicenseDataFile
 $LicenseDataFile = Get-Item -Path $TempLicenseDataFile
 $LicenseData = Import-Csv -Path $LicenseDataFile.FullName -Encoding utf8BOM -Delimiter ','
 # Update ConversionTable.csv with the latest license SKU data.
 # Scoped to backend\ - recursing the whole monorepo would walk frontend\node_modules and frontend\out.
-$BackendRoot = Join-Path $PSScriptRoot '..\backend'
+$BackendRoot = Join-Path $RepoRoot 'backend'
 $ConversionTableFiles = Get-ChildItem -Path $BackendRoot -Filter *ConversionTable.csv -Recurse -File
+if ($ConversionTableFiles.Count -eq 0) {
+    throw "No ConversionTable.csv files found under $BackendRoot."
+}
 Write-Host "Updating $($ConversionTableFiles.Count) ConversionTable.csv files with the latest license SKU data..." -ForegroundColor Yellow
 
 foreach ($File in $ConversionTableFiles) {
@@ -40,7 +47,10 @@ foreach ($File in $ConversionTableFiles) {
 
 # Update the license SKU data in the frontend JSON files.
 # The wildcard matches M365Licenses.json only, not M365Licenses-additional.json.
-$LicenseJSONFiles = Get-ChildItem -Path (Join-Path $PSScriptRoot '..\frontend\src\data\*M365Licenses.json') -File
+$LicenseJSONFiles = Get-ChildItem -Path (Join-Path $RepoRoot 'frontend/src/data/*M365Licenses.json') -File
+if ($LicenseJSONFiles.Count -eq 0) {
+    throw "No M365Licenses.json files found under $RepoRoot/frontend/src/data."
+}
 
 Write-Host "Updating $($LicenseJSONFiles.Count) M365 license JSON files with the latest license SKU data..." -ForegroundColor Yellow
 
@@ -50,7 +60,7 @@ foreach ($File in $LicenseJSONFiles) {
 }
 
 # Sync ExcludeSkuList.JSON names with the authoritative license data
-$ExcludeSkuListPath = Join-Path $PSScriptRoot '..\backend\Config\ExcludeSkuList.JSON'
+$ExcludeSkuListPath = Join-Path $RepoRoot 'backend/Config/ExcludeSkuList.JSON'
 if (Test-Path $ExcludeSkuListPath) {
     Write-Host 'Syncing ExcludeSkuList.JSON product names...' -ForegroundColor Yellow
     $GuidToName = @{}
