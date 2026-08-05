@@ -7,6 +7,10 @@ function New-HaloPSATicket {
     [string]$UserUPN,
     [string]$AzureOID,
     [string]$DisplayName,
+    # Per-alert priority override. Left untyped so callers can hand over either a raw Halo
+    # priority id or the {label, value} shape the alert form stores, matching how the
+    # integration-wide DefaultPriority is read below.
+    $TicketPriority,
     [int]$TicketId
   )
   #Get HaloPSA Token based on the config we have.
@@ -160,16 +164,29 @@ function New-HaloPSATicket {
     $TicketType = $Configuration.TicketType.value ?? $Configuration.TicketType
     $object | Add-Member -MemberType NoteProperty -Name 'tickettype_id' -Value $TicketType -Force
   }
-  if ($Configuration.DefaultPriority) {
-    $Priority = $Configuration.DefaultPriority.value ?? $Configuration.DefaultPriority
-    $PriorityInt = $Priority -as [int]
+  # Priority sources in precedence order: the per-alert override configured on the alert, then the
+  # integration-wide default. Both can be stored as a {label, value} autocomplete object or as a
+  # raw id depending on where they were saved, so unwrap .value first. A value that isn't a usable
+  # Halo priority id falls through to the next source rather than failing the ticket - Halo applies
+  # the SLA default when priority_id is absent.
+  #
+  # This only runs on the create path. The ConsolidateTickets note path above returns before here,
+  # so appending a note to an existing ticket deliberately leaves its priority alone - the same way
+  # tickettype_id is not re-applied to an existing ticket.
+  $PrioritySources = @(
+    @{ Label = 'alert'; Value = ($TicketPriority.value ?? $TicketPriority) }
+    @{ Label = 'HaloPSA.DefaultPriority'; Value = ($Configuration.DefaultPriority.value ?? $Configuration.DefaultPriority) }
+  )
+  foreach ($Source in $PrioritySources) {
+    if ([string]::IsNullOrWhiteSpace([string]$Source.Value)) { continue }
+    $PriorityInt = $Source.Value -as [int]
     if ($PriorityInt -and $PriorityInt -gt 0) {
       $object | Add-Member -MemberType NoteProperty -Name 'priority_id' -Value $PriorityInt -Force
-    } else {
-      # Stored value isn't a valid Halo priority id (legacy data, hint-row selection, etc.).
-      # Skip priority_id rather than crashing the cast - Halo will fall back to its default.
-      Write-LogMessage -message "HaloPSA.DefaultPriority value '$Priority' is not a valid integer - omitting priority_id from ticket payload" -API 'HaloPSATicket' -sev Warning
+      break
     }
+    # Value isn't a valid Halo priority id (legacy data, hint-row selection, etc.). Skip it rather
+    # than crashing the cast and try the next source.
+    Write-LogMessage -message "HaloPSA priority value '$($Source.Value)' from $($Source.Label) is not a valid priority id - falling back" -API 'HaloPSATicket' -sev Warning
   }
   # Halo records tickets created over the API as 'Manual' unless the payload carries a source, so
   # MSPs who want CIPP's tickets identifiable create their own source in Halo and select it here.
