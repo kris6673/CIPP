@@ -26,10 +26,13 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v4
-      - name: Use Node.js 22.13.0
+      # 22.x, not the 22.13.0 the other workflows pin: jsdom@30 declares
+      # engines.node ^22.22.2, so yarn refuses to install on exactly 22.13.0.
+      # The floating 22.x still satisfies this repo's own engines ^22.13.0.
+      - name: Use Node.js 22.x
         uses: actions/setup-node@v4
         with:
-          node-version: "22.13.0"
+          node-version: '22.x'
           cache: 'yarn'
           cache-dependency-path: frontend/yarn.lock
       - name: Install dependencies
@@ -49,10 +52,11 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v4
-      - name: Use Node.js 22.13.0
+      # See the note on the unit job: jsdom@30 rules out an exact 22.13.0 pin.
+      - name: Use Node.js 22.x
         uses: actions/setup-node@v4
         with:
-          node-version: "22.13.0"
+          node-version: '22.x'
           cache: 'yarn'
           cache-dependency-path: frontend/yarn.lock
       - name: Install dependencies
