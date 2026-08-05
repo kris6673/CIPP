@@ -45,6 +45,73 @@ jobs:
       - name: Run the Pester suite
         shell: pwsh
         run: ./backend/Tests/Invoke-CippTests.ps1 -CI
+      # Renders the NUnit file into the run's summary page so a failure is readable
+      # without opening the log. Runs on failure too - that is the case it exists for.
+      - name: Publish results to the job summary
+        if: always()
+        shell: pwsh
+        run: |
+          $Path = 'backend/Tests/TestResults.xml'
+          $Out = $env:GITHUB_STEP_SUMMARY
+          if (-not (Test-Path $Path)) {
+              "## Backend Pester`n`n> No result file was produced - the suite failed before Pester could report." |
+                  Out-File -FilePath $Out -Append -Encoding utf8
+              exit 0
+          }
+
+          [xml]$Xml = Get-Content -LiteralPath $Path -Raw
+          $Root = $Xml.'test-results'
+          $Total = [int]$Root.total
+          $Failed = [int]$Root.failures + [int]$Root.errors
+          $Skipped = [int]$Root.skipped + [int]$Root.ignored + [int]$Root.'not-run' + [int]$Root.inconclusive
+          $Passed = $Total - $Failed - $Skipped
+          $Duration = [math]::Round([double]$Root.'test-suite'.time, 2)
+
+          # Direct children of the top-level 'Pester' suite are one per *.Tests.ps1 file.
+          $Files = $Xml.SelectNodes('/test-results/test-suite/results/test-suite')
+          # Skipped cases are also success="False" (result="Ignored"), so match on result.
+          $FailedCase = ".//test-case[@result='Failure' or @result='Error']"
+          $FailedFiles = @($Files | Where-Object { $_.SelectNodes($FailedCase).Count -gt 0 })
+          $FilesFailed = $FailedFiles.Count
+          $FilesPassed = $Files.Count - $FilesFailed
+
+          $Icon = if ($Failed -gt 0) { ':x:' } else { ':white_check_mark:' }
+          $Headline = if ($Failed -gt 0) { "**$Failed of $Total tests failed**" } else { "**All $Total tests passed**" }
+
+          $Lines = @(
+              '## :test_tube: Backend Pester'
+              ''
+              "$Icon $Headline"
+              ''
+              '| | Passed | Failed | Skipped | Total |'
+              '| :-- | --: | --: | --: | --: |'
+              "| **Test Files** | $FilesPassed | $FilesFailed | - | $($Files.Count) |"
+              "| **Tests** | $Passed | $Failed | $Skipped | $Total |"
+              ''
+              "Duration ``${Duration}s``"
+          )
+
+          if ($Failed -gt 0) {
+              $Lines += @('', '<details open><summary>Failed tests</summary>', '')
+              $Shown = 0
+              foreach ($File in $FailedFiles) {
+                  $Lines += "**$(Split-Path $File.name -Leaf)**"
+                  $Lines += ''
+                  foreach ($Case in $File.SelectNodes($FailedCase)) {
+                      if ($Shown -ge 50) { break }
+                      $Shown++
+                      $Lines += "- ``$($Case.name)``"
+                      $Message = ($Case.failure.message -split "`n" | Where-Object { $_.Trim() } | Select-Object -First 1)
+                      if ($Message) { $Lines += "  - $($Message.Trim())" }
+                  }
+                  $Lines += ''
+                  if ($Shown -ge 50) { $Lines += '_Truncated at 50 failures - see the run log for the rest._'; break }
+              }
+              $Lines += '</details>'
+          }
+
+          $Lines -join "`n" | Out-File -FilePath $Out -Append -Encoding utf8
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
