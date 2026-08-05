@@ -1,0 +1,65 @@
+---
+name: Frontend Vitest
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend_vitest.yml'
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
+  cancel-in-progress: true
+jobs:
+  # Split from the storybook project deliberately: this one needs no browser, so it is the
+  # fast signal, and a flaky browser run can never mask a failing unit test.
+  unit:
+    if: github.repository_owner == 'CyberDrain'
+    name: vitest (unit)
+    runs-on: ubuntu-latest
+    # Checkout and test only; nothing is written back to the repo.
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 22.13.0
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.13.0"
+          cache: 'yarn'
+          cache-dependency-path: frontend/yarn.lock
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+      - name: Run unit tests
+        run: yarn test:unit
+
+  storybook:
+    if: github.repository_owner == 'CyberDrain'
+    name: vitest (storybook)
+    runs-on: ubuntu-latest
+    # Checkout and test only; nothing is written back to the repo.
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 22.13.0
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.13.0"
+          cache: 'yarn'
+          cache-dependency-path: frontend/yarn.lock
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+      # The storybook project renders in a real browser (@vitest/browser-playwright,
+      # headless chromium per vitest.config.mjs), which the runner image does not provide.
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run storybook tests
+        run: yarn test:storybook

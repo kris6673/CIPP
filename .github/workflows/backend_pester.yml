@@ -1,0 +1,43 @@
+---
+name: Backend Pester
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend_pester.yml'
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
+  cancel-in-progress: true
+jobs:
+  pester:
+    if: github.repository_owner == 'CyberDrain'
+    name: Pester
+    runs-on: ubuntu-latest
+    # Checkout and artifact upload only; nothing is written back to the repo.
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      # The runner image ships a Pester, but not necessarily 5.x, and the suite uses the
+      # Pester 5 Should -Invoke / -ParameterFilter syntax throughout.
+      - name: Install Pester 5
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name Pester -MinimumVersion 5.0 -Force -Scope CurrentUser -SkipPublisherCheck
+      # The tests dot-source the function under test and stub its dependencies, so nothing
+      # has to be built or hosted first - no ModuleBuilder, no Azurite, no Craft.
+      # -CI adds the NUnit result file; the exit code is the failed-test count regardless.
+      - name: Run the Pester suite
+        shell: pwsh
+        run: ./backend/Tests/Invoke-CippTests.ps1 -CI
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pester-results
+          path: backend/Tests/TestResults.xml
+          if-no-files-found: warn
