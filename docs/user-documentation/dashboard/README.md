@@ -15,6 +15,39 @@ The data CIPP uses to display the dashboard is cached in a database that gets up
 
 {% @storylane/embed subdomain="app" url="https://app.storylane.io/share/zt4porabti6d" linkValue="zt4porabti6d" %}
 
+## All Tenants View
+
+When the tenant selector is set to **All Tenants**, the dashboard swaps its per-tenant cards for an estate-wide view built entirely from CIPP's cached data — no live Graph calls. Every number on this view links to the page where you can dig into it.
+
+<details>
+
+<summary>Portfolio</summary>
+
+Totals for tenants, users, mailboxes, and managed devices under management. Each tile links to the corresponding list page (tenant list, user list, mailbox list, device list) scoped to all tenants.
+
+</details>
+
+<details>
+
+<summary>Security Posture</summary>
+
+* **Secure score**: the portfolio average and trend with the best and worst scoring tenants. The View button opens the [securescore](../tenant/administration/securescore/ "mention") page, which shows a full estate view under All Tenants.
+* **Identity posture**: how many tenants are failing an identity check and which checks are most widespread. The View button opens the [#identity-tab](./#identity-tab "mention"), which lists every tenant's results under All Tenants.
+* **Mail hygiene**: SPF / DKIM / DMARC / DNSSEC coverage across analysed domains, linking to the [domains-analyser](../tenant/standards/domains-analyser/ "mention").
+* **Standards alignment**: tenants bucketed by combined alignment score, linking to the Tenant Alignment page.
+
+</details>
+
+<details>
+
+<summary>Operations & Triage</summary>
+
+Tiles counting tenants logging errors today (links to the Logbook), GDAP delegations expiring within 30 days (links to GDAP Relationships), high-risk checks failing (links to the [#identity-tab](./#identity-tab "mention")), and standards deviations awaiting approval (links to Tenant Alignment). Below the tiles, cards surface the tenants behind those numbers.
+
+</details>
+
+Under All Tenants, the [#identity-tab](./#identity-tab "mention"), [#devices-tab](./#devices-tab "mention"), and [#custom-tab](./#custom-tab "mention") each show the corresponding test results for **every** tenant: summary tiles for tenants affected, failed checks, high-risk failures, and pass rate, followed by a table with tenant, test, suite, status, and risk columns. Clicking a row opens the same test detail view as the per-tenant dashboard, and the row's action menu can jump to that tenant's own dashboard.
+
 ## Overview Tab
 
 <details>
