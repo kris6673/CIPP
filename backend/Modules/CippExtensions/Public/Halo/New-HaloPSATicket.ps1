@@ -170,23 +170,40 @@ function New-HaloPSATicket {
   # Halo priority id falls through to the next source rather than failing the ticket - Halo applies
   # the SLA default when priority_id is absent.
   #
-  # This only runs on the create path. The ConsolidateTickets note path above returns before here,
-  # so appending a note to an existing ticket deliberately leaves its priority alone - the same way
-  # tickettype_id is not re-applied to an existing ticket.
+  # This only runs on the create path. The note path above (a caller-supplied TicketId or a
+  # ConsolidateTickets match) returns before here, so appending a note to an existing ticket
+  # deliberately leaves its priority alone - the same way tickettype_id is not re-applied.
   $PrioritySources = @(
     @{ Label = 'alert'; Value = ($TicketPriority.value ?? $TicketPriority) }
     @{ Label = 'HaloPSA.DefaultPriority'; Value = ($Configuration.DefaultPriority.value ?? $Configuration.DefaultPriority) }
   )
+  $ResolvedPriority = $null
+  $PrioritySource = $null
   foreach ($Source in $PrioritySources) {
     if ([string]::IsNullOrWhiteSpace([string]$Source.Value)) { continue }
     $PriorityInt = $Source.Value -as [int]
     if ($PriorityInt -and $PriorityInt -gt 0) {
-      $object | Add-Member -MemberType NoteProperty -Name 'priority_id' -Value $PriorityInt -Force
+      $ResolvedPriority = $PriorityInt
+      $PrioritySource = $Source.Label
       break
     }
     # Value isn't a valid Halo priority id (legacy data, hint-row selection, etc.). Skip it rather
     # than crashing the cast and try the next source.
     Write-LogMessage -message "HaloPSA priority value '$($Source.Value)' from $($Source.Label) is not a valid priority id - falling back" -API 'HaloPSATicket' -sev Warning
+  }
+
+  # A priority id only means something within an SLA - the same id maps to a different priority
+  # under a different SLA. When the ticket type has no SLA there is nothing for it to resolve
+  # against, so send no priority and let Halo apply its own rather than gambling on whichever SLA
+  # it happens to pick. This is the same test Get-HaloPriority uses to decide it has nothing to
+  # offer, so a priority can never be sent that the settings page would not have let you choose.
+  # Only checked when there is a priority to send, so the common path costs no extra API call.
+  if ($ResolvedPriority) {
+    if (Get-HaloTicketTypeSlaId -TicketType ($Configuration.TicketType.value ?? $Configuration.TicketType) -Configuration $Configuration -Token $token) {
+      $object | Add-Member -MemberType NoteProperty -Name 'priority_id' -Value $ResolvedPriority -Force
+    } else {
+      Write-Information "Ticket type has no SLA attached - omitting priority_id ($ResolvedPriority from $PrioritySource) so HaloPSA applies its own priority"
+    }
   }
   # Halo records tickets created over the API as 'Manual' unless the payload carries a source, so
   # MSPs who want CIPP's tickets identifiable create their own source in Halo and select it here.

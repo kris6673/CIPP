@@ -5,6 +5,7 @@ BeforeAll {
     function Get-CIPPAzDataTableEntity { param($Filter, $Property) }
     function Add-CIPPAzDataTableEntity { param($Entity, [switch]$Force) }
     function Get-HaloToken { param($configuration) }
+    function Get-HaloTicketTypeSlaId { param($TicketType, $Configuration, $Token) }
     function Get-HaloUser { param($AzureOID, $Email, $ClientId, $Configuration, $Token) }
     function Get-StringHash { param($String) }
     function Get-NormalizedError { param($Message) }
@@ -39,6 +40,9 @@ Describe 'New-HaloPSATicket priority resolution' {
 
         Mock Get-CIPPTable { @{} }
         Mock Get-HaloToken { @{ access_token = 'token' } }
+        # Ticket type has an SLA unless a test says otherwise - priority is only sent when one is
+        # attached, because a priority id is meaningless outside the SLA that defines it.
+        Mock Get-HaloTicketTypeSlaId { 1 }
         Mock Get-StringHash { 'hash' }
         Mock Add-CIPPAzDataTableEntity {}
         Mock Write-LogMessage {}
@@ -86,6 +90,35 @@ Describe 'New-HaloPSATicket priority resolution' {
             Should -Invoke Write-LogMessage -Times 1 -ParameterFilter {
                 $sev -eq 'Warning' -and $message -like "*from alert is not a valid priority id*"
             }
+        }
+    }
+
+    Context 'when the ticket type has no SLA' {
+        BeforeEach {
+            Mock Get-CIPPAzDataTableEntity { New-HaloConfigRow -DefaultPriority 3 }
+            Mock Get-HaloTicketTypeSlaId { $null }
+        }
+
+        It 'omits priority_id even when the alert asks for one' {
+            # A priority id resolves against an SLA, so with none attached there is nothing for it
+            # to mean. Halo applies its own priority instead of us gambling on the SLA it picks.
+            $null = New-HaloPSATicket -title 'Alert' -description 'Body' -client 1 -TicketPriority 5
+
+            (Get-SentTicket -Body $script:SentBody).PSObject.Properties.Name | Should -Not -Contain 'priority_id'
+        }
+
+        It 'omits priority_id when only the integration default is set' {
+            $null = New-HaloPSATicket -title 'Alert' -description 'Body' -client 1
+
+            (Get-SentTicket -Body $script:SentBody).PSObject.Properties.Name | Should -Not -Contain 'priority_id'
+        }
+
+        It 'does not look up the SLA when there is no priority to send' {
+            Mock Get-CIPPAzDataTableEntity { New-HaloConfigRow }
+
+            $null = New-HaloPSATicket -title 'Alert' -description 'Body' -client 1
+
+            Should -Invoke Get-HaloTicketTypeSlaId -Times 0
         }
     }
 

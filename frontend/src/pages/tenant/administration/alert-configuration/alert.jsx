@@ -91,13 +91,14 @@ const AlertWizard = () => {
   // level means the list is ready before the field is revealed rather than on first render of it.
   // No TicketType param - Get-HaloPriority falls back to the integration's saved ticket type, which
   // is the one these tickets will use anyway.
+  // Default refetch-on-mount is kept (unlike the integrations config above): nothing invalidates
+  // this query key when the integration's Ticket Type changes, so remounting the page is the only
+  // moment stale priorities can catch up with the integration settings.
   const haloPriorityRequest = ApiGetCall({
     url: '/api/ExecExtensionMapping',
     data: { List: 'HaloPSAFields' },
     queryKey: 'HaloPriorities-AlertConfig',
     waiting: haloEnabled,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
   })
   // Get-HaloPriority answers with explanatory rows instead of priorities when it has nothing real
   // to offer - a hint row carries priorityid -1, the error row carries no priorityid at all. Those
@@ -116,12 +117,11 @@ const AlertWizard = () => {
     !haloPriorityRequest.isFetching &&
     psaPriorityOptions.length === 0
   // Prefer Halo's own explanation ("no SLA attached", "select a Ticket Type first") over a generic
-  // one - it names the thing an admin has to go and fix.
+  // one - it names the thing an admin has to go and fix, and already states what happens to the
+  // tickets. The generic fallback only shows when the request itself failed and no rows came back.
   const psaPriorityHelperText = psaPriorityUnavailable
-    ? `${
-        haloPriorityRows.find((priority) => priority?.name)?.name ??
-        'The configured HaloPSA Ticket Type has no priorities to pick from.'
-      } Tickets from this alert will use the HaloPSA integration default.`
+    ? (haloPriorityRows.find((priority) => priority?.name)?.name ??
+      'Could not load HaloPSA priorities, so none can be chosen here. Tickets from this alert will be created without a per-alert priority.')
     : "Optional. Overrides the HaloPSA Default Priority for tickets raised by this alert. Restricted to the priorities on the integration Ticket Type's SLA. Leave blank to use the integration default."
   // Stored as a bare id string on the alert row. Seed the form with {value: <number>} so
   // CippAutoComplete's resolvedDefaultValue can swap in the real priority name once the options
