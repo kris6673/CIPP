@@ -37,8 +37,12 @@ jobs:
           cache-dependency-path: frontend/yarn.lock
       - name: Install dependencies
         run: yarn install --frozen-lockfile
+      # --testTimeout matches the existing test:coverage script. Several of these tests
+      # drive userEvent through MUI autocompletes and comfortably exceed vitest's 5s
+      # default on a loaded machine - at 5s they fail intermittently, and a different
+      # handful each run. They pass consistently at 30s.
       - name: Run unit tests
-        run: yarn test:unit
+        run: yarn test:unit --testTimeout=30000
 
   storybook:
     if: github.repository_owner == 'CyberDrain'
