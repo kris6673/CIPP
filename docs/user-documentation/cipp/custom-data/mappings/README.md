@@ -1,6 +1,8 @@
 # Mappings
 
-Custom data mappings are used to synchronise custom data to directory objects.
+Custom data mappings connect a source of information to a custom data attribute on a directory object, for one or more tenants. A mapping either populates the attribute automatically from CIPP's reporting database on a daily schedule, or exposes it as a field your technicians complete on the user forms.
+
+You need at least one directory extension or schema extension before a mapping can be created, because the mapping needs somewhere to write the value.
 
 ## Action Buttons
 
@@ -10,19 +12,22 @@ Custom data mappings are used to synchronise custom data to directory objects.
 
 ## Table Details
 
-| Column                | Description                            |
-| --------------------- | -------------------------------------- |
-| ID                    |                                        |
-| Tenant                | The selected tenant(s) for the mapping |
-| Dataset               |                                        |
-| Source Type           |                                        |
-| Directory Object      |                                        |
-| Sync Property         |                                        |
-| Custom Data Attribute |                                        |
+| Column                | Description                                                                                                                                                   |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tenant                | The tenants the mapping applies to. All Tenants applies the mapping everywhere.                                                                               |
+| Source Type           | Where the value comes from: Reporting DB for automatic synchronisation, or Manual Entry for a technician-completed field.                                     |
+| Dataset               | For Reporting DB mappings, the cached dataset the value is read from. Shows N/A for Manual Entry mappings.                                                    |
+| Sync Property         | The property within the dataset that is copied. For array datasets this lists the fields captured in each entry instead. Shows N/A for Manual Entry mappings. |
+| Directory Object      | The directory object type the value is written to.                                                                                                            |
+| Custom Data Attribute | The directory extension or schema extension property the value is written to.                                                                                 |
 
 ## Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td><a href="edit.md">Edit Mapping</a></td><td>Opens the page to edit the mapping</td><td>false</td></tr><tr><td>Delete Mapping</td><td>Opens a modal to confirm you want to delete the mapping(s)</td><td>true</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Edit Mapping</td><td>Opens the page to change the mapping's tenants, source, or destination.</td><td>false</td></tr><tr><td>Delete Mapping</td><td>Removes the mapping after confirmation. Values already written to directory objects are left in place.</td><td>true</td></tr></tbody></table>
+
+{% hint style="info" %}
+Adding or deleting a Reporting DB mapping re-registers the scheduled synchronisation tasks, so no further action is needed to start or stop the daily sync.
+{% endhint %}
 
 ***
 

@@ -4,101 +4,117 @@ description: View and amend the settings for your CIPP instance.
 
 # Application Settings
 
-From the Settings section of the menu, you can find the Settings page where you can:
+The General tab of the application settings brings together the instance-wide controls for your CIPP deployment: version information, password generation, DNS resolution, caching, backups, retention periods, and JIT admin limits. Each card operates independently and saves on its own, so there is no single submit action for the page.
 
-* Access diagnostic info
-* Find helpful links to administrative tools
-* Run access or permission checks
-* Change configurable settings and more
+## Version
 
-<details>
+Shows the versions currently running, with the frontend and backend reported separately.
 
-<summary>Version</summary>
+| Field    | Description                                               |
+| -------- | --------------------------------------------------------- |
+| Frontend | The version of the CIPP web interface currently deployed. |
+| Backend  | The version of the CIPP API currently deployed.           |
 
-This will display the currently running Frontend and Backend versions of CIPP for your instance.
+Each version displays a tick when it is current, or a warning icon together with the newer version number when an update is available. Selecting **Check For Updates** re-queries both, which is worth doing after an upgrade rather than relying on a cached result.
 
-Click `Check For Updates` to check and see if there is a newer version of CIPP available with more features, standards, etc. for you to implement.
-
-</details>
-
-<details>
-
-<summary>Cache</summary>
-
-You can clear the cached information used by the tenant selector, best practices analyser, and domain analyser features.
-
-{% hint style="warning" %}
-Clearing this cache can severely impact performance of your CIPP instance and will also remove any personal settings such as the selected theme.
+{% hint style="info" %}
+The frontend and backend are versioned and deployed separately, so it is normal to see one flagged as out of date while the other is current during an upgrade. Both should match once the upgrade completes.
 {% endhint %}
 
-</details>
+## Password Style
 
-<details>
+Shows the password generation settings currently in effect, displayed as a chip summarising the type and length.
 
-<summary>Log Retention</summary>
+| Type       | Description                                                                                                                                                   |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Classic    | A randomised string of letters, numbers and symbols, sized by character count. The default is 14 characters.                                                  |
+| Passphrase | Several random words joined by a separator, sized by word count. The default is 4 words. Passphrases are usually easier for end users to read out and retype. |
 
-Configure how long to keep CIPP log entries. Logs will be automatically deleted after this\
-period. Minimum retention is 7 days, maximum is 365 days, default is 90 days.
+Selecting **Configure** opens the [password-config.md](password-config.md "mention") page, where the type, length, character sets and separator are set.
 
-</details>
+{% hint style="warning" %}
+If the card shows an error instead of the current setting, CIPP could not read the stored configuration. Open the configuration page and save the settings again to restore it.
+{% endhint %}
 
-<details>
+## DNS Resolver
 
-<summary>Password Style</summary>
+Selects which public resolver CIPP uses, with Google and Cloudflare available. The active choice is shown as the filled button.
 
-Configure password generation settings including type, length, character sets, and passphrase options.
+{% hint style="info" %}
+This resolver is used by the [domains-analyser](../../tenant/standards/domains-analyser/ "mention") and the [individual-domains.md](../../tools/tenant-tools/individual-domains.md "mention") only. It has no effect on any other DNS resolution CIPP performs, so changing it will not alter behaviour elsewhere in the application.
+{% endhint %}
 
-* **Classic:** This is the usual combination of letters and symbols to meet outdated complexity requirements
-* **Correct-Battery-Horse:** This sets a passphrase of four random words connected by hyphens. These can often be easier to remember and type for users.
+## Cache
 
-Click `Configure` to go to the Password Style page to change to your desired settings.
+Clears the cached data CIPP holds, including the tenant list and analyser results.
 
-</details>
+Selecting **Clear Cache** opens a confirmation dialog with one option.
 
-<details>
+| Setting                     | Description                                                                                                     |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Only Clear the Tenant Cache | Limits the operation to the tenant cache, leaving other cached data intact. Leave this off to clear everything. |
 
-<summary>Backup</summary>
+{% hint style="danger" %}
+A full cache clear removes every cache table, including audit log entries that are queued but not yet processed. Those entries are lost, not reprocessed. Performance is also degraded until the caches rebuild, and personal preferences such as the selected theme are reset. Only clear the cache when support asks you to.
+{% endhint %}
 
-Click `Manage Backups` to launch the [backup.md](backup.md "mention") settings page.
+## Backup
 
-</details>
+Covers the system configuration backups for your CIPP instance. Selecting **Manage Backups** opens the CIPP Backup page, where backups are taken, restored, and put on an automated daily schedule.
 
-<details>
+{% hint style="info" %}
+System backups exclude authentication information and extension configuration, so a restored instance still needs its SAM credentials and integration settings entered again.
+{% endhint %}
 
-<summary>Branding Settings</summary>
+## Backup Retention
 
-Customise your organisation's branding for reports and documents. Changes will be applied to all generated reports.
+Sets how long backup files are kept before automatic deletion. The value applies to both CIPP system backups and tenant backups.
 
-Set your preferred:
+| Field | Description                                                                                        |
+| ----- | -------------------------------------------------------------------------------------------------- |
+| Days  | The retention period in days. The minimum is 7 and the default is 30. Values below 7 are rejected. |
 
-* **Logo:** Recommended format is PNG. Max file size is 2MB. Optimal size is 200x100px.
-* **Brand Color:** This colour will be used for accents and highlights in reports
+Enter the number of days and select **Save**. Cleanup runs daily at 2:00 AM.
 
-</details>
+## Log Retention
 
-<details>
+Sets how long CIPP log entries are kept before automatic deletion.
 
-<summary>DNS Resolver</summary>
+| Field | Description                                                                                                                        |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Days  | The retention period in days. The minimum is 7, the maximum is 365, and the default is 90. Values outside that range are rejected. |
 
-You can switch providers to either Google or Cloudflare for your domain analyser results.
+Enter the number of days and select **Save**.
 
-</details>
+## JIT Admin Settings
 
-<details>
+Caps how long a Just-In-Time admin account created through CIPP may remain active, which stops technicians from provisioning long-lived privileged accounts.
 
-<summary>Backup Retention</summary>
+| Field                       | Description                                                                                                                                                                                             |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Maximum Duration (ISO 8601) | The longest duration a JIT admin account may be granted. Presets range from 1 hour to 30 days, and a custom ISO 8601 duration such as `PT6H` or `P21D` can be typed directly. Leave empty for no limit. |
 
-Configure how long to keep backup files. Both CIPP system backups and tenant backups will be automatically deleted after this period. Minimum retention is 7 days; default is 30 days. Cleanup runs daily at 2:00 AM.
+Select **Save Settings** to apply. The limit applies globally across all tenants, and any attempt to create a JIT admin account exceeding it is rejected.
 
-</details>
+{% hint style="info" %}
+Custom values must be valid ISO 8601 durations, so use forms such as `PT1H`, `P1D` or `P28D`. An invalid value prevents the card from saving.
+{% endhint %}
 
-<details>
+## Other Settings Tabs
 
-<summary>JIT Admin Settings</summary>
+The remaining application settings are grouped on their own tabs.
 
-This allows you to set the maximum duration allowed for a JIT admin created through CIPP. Any attempt to create a JIT admin longer than the allowed time will return an error.
-
-</details>
+| Tab                                                  | Description                                                                      |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------- |
+| [branding.md](branding.md "mention")                 | Customises the logo and brand colour applied to generated reports and documents. |
+| [permissions.md](permissions.md "mention")           | Reviews and repairs the permissions held by the CIPP service principal.          |
+| [tenants.md](tenants.md "mention")                   | Manages which tenants CIPP sees, including exclusions and refresh.               |
+| [backend.md](backend.md "mention")                   | Provides direct links into the underlying Azure resources for your instance.     |
+| [notifications.md](notifications.md "mention")       | Configures where CIPP sends alerts, including email and webhook destinations.    |
+| [partner-webhooks.md](partner-webhooks.md "mention") | Sets up partner webhooks so new tenants are onboarded automatically.             |
+| [licenses.md](licenses.md "mention")                 | Manages licence exclusions used across reporting and alerting.                   |
+| [features.md](features.md "mention")                 | Enables and disables optional CIPP features.                                     |
+| [siem.md](siem.md "mention")                         | Configures log forwarding to an external SIEM.                                   |
 
 ***
 

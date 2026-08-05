@@ -1,71 +1,151 @@
 # Hudu
 
+The Hudu integration writes Microsoft 365 tenant, user, device and domain information from CIPP into Hudu. Tenant-level information is published as a Magic Dash card on the Hudu company, while user and device detail is written into a rich text field on the asset layouts you nominate. You control which parts are populated, so it is reasonable to sync only what you need.
+
 {% hint style="danger" %}
-If you have Hudu behind Cloudflare Zero Trust Tunnel, please also set up the [cloudflare.md](cloudflare.md "mention") integration and enable the `Connect to HUDU through CloudFlare Tunnel with the Service Account credentials.` toggle.
+If Hudu sits behind a Cloudflare Zero Trust tunnel, set up the [cloudflare.md](cloudflare.md "mention") integration as well and enable **Connect to HUDU through CloudFlare Tunnel with the Service Account credentials.** That toggle only appears on this page once the Cloudflare integration is enabled.
 {% endhint %}
-
-The Hudu integration provides several different options to give you control over what is synchronised from CIPP to Hudu.
-
-Data is synchronised automatically once every 24 hours from Microsoft 365 / CIPP to Hudu. This is scheduled once you save the extension and map your tenants.
 
 {% hint style="info" %}
-For User and Device information a Rich Text field called "Microsoft 365" is used. This field is created after the first sync once you've set your Field Mappings to the appropriate asset layout.
+User and device information is written to a rich text field named **Microsoft 365**. CIPP adds this field to the asset layouts you map, so it appears after the first synchronisation rather than needing to be created by hand. The layout mapped for users also gains an **Email Address** text field, positioned first and shown in list views.
 {% endhint %}
 
-## Configuring the integration
+## Settings
 
-### Step 1 - Obtain API Credentials
+| Setting                                                                         | Description                                                                                                                                                                                       |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Enable Integration                                                              | Turns the integration on. Every other setting, the **Test** and **Force Sync** buttons, and the **Tenant Mapping** and **Field Mapping** tabs remain unavailable until this is enabled and saved. |
+| Please enter your Hudu URL                                                      | The full URL of your Hudu instance, such as `https://yourcompany.huducloud.com`, or your self-hosted address.                                                                                     |
+| Hudu API Key                                                                    | The API key generated in Hudu. Stored securely and masked once saved.                                                                                                                             |
+| Create missing users in Hudu                                                    | Creates an asset for any Microsoft 365 user without a matching record in the mapped user layout. Without this, CIPP only updates users that already exist in Hudu.                                |
+| Create missing devices in Hudu                                                  | Creates an asset for any Intune device without a matching record in the mapped device layout.                                                                                                     |
+| Exclude device serials (comma separated)                                        | Additional serial numbers to skip when matching and creating devices. A set of common placeholder serials is always excluded regardless of this setting.                                          |
+| Import domains from M365                                                        | Creates a Hudu website record for each domain in the tenant that does not already exist.                                                                                                          |
+| Monitor domains in Hudu                                                         | Enables DNS, SSL and WHOIS monitoring on the website records created by the previous setting. Without it, records are created paused with monitoring disabled.                                    |
+| Hide Empty Roles in Magic Dash                                                  | Omits directory roles with no members from the assigned roles table, which keeps the Magic Dash considerably shorter.                                                                             |
+| Include link to Partner Center Service management page (partner.microsoft.com)  | Adds a Partner Center link to the tenant's portal links.                                                                                                                                          |
+| Include link to Defender Portal (security.microsoft.com)                        | Adds a Defender portal link to the tenant's portal links.                                                                                                                                         |
+| Include link to Compliance Portal (compliance.microsoft.com)                    | Adds a Purview compliance portal link to the tenant's portal links.                                                                                                                               |
+| Connect to HUDU through CloudFlare Tunnel with the Service Account credentials. | Sends the Cloudflare Access service token with every request to Hudu. Only appears when the Cloudflare integration is enabled.                                                                    |
+| Reschedule next sync date                                                       | Sets a future date to delay the next scheduled synchronisation, which is useful for keeping the first run outside business hours. Leave blank to sync at the next scheduled time.                 |
 
-1. First, log in to your Hudu instance as an Administrator.
-2. Browse to **Admin -> Account Administration -> API Keys**
-3. Select **+ New API Key** at the top right.
-4. Fill out the details for the API Application:
-   * **Name:** Enter a Name such as '**CIPP Integration**'.
-   * **Limit scope to:** Full Access
-   * **Company:** Leave blank
-   * **Allowed IP Addresses** (Optional): Get a list of potential IP addresses from your function app to limit the API scope to just the function app. CyberDrain hosted clients can find these on [https://management.cipp.app](https://management.cipp.app/).
-   * **Key can perform the following actions:** None of these are necessary
-5. Click **Create New Key**.
-6. Copy the API key to a secure place.
+{% hint style="info" %}
+The Microsoft 365 and Entra portal links are always included. The Partner Center, Defender and Compliance links are optional because not every technician has access to them.
+{% endhint %}
 
-### Step 2 - CIPP Settings
+## Obtaining an API Key in Hudu
 
-You should now be ready to configure settings inside CIPP
+{% stepper %}
+{% step %}
+### Create the key
 
-1. Inside CIPP browse to **CIPP** -> **Integrations**
-2. Select **Hudu**.
-3. Please enter the FQDN you use to connect to Hudu:
-   * https://yoursubdomain.huducloud.com or a self hosted address
-4. Enter the API Key you created in Hudu.
-5. Set the configuration to enabled to enable automatic synchronisation once every 24 hours. You can optionally reschedule next sync date if you want to ensure the sync only runs outside of business hours.
-6. Choose which assets you want to sync, including device serials you want to exclude from sync.
-7. Click the Submit button.
-8. Once the settings are saved click the '**Test Extension**' you should see a message at the top of the page saying '**Successfully Connected to Hudu Version: current version**', if you do not see this please check your API Key and FQDN.
+Sign in to Hudu as an Administrator, go to **Admin** > **Account Administration** > **API Keys**, and select **+ New API Key**.
+{% endstep %}
 
-### Step 4 - Mapping CIPP to Hudu
+{% step %}
+### Configure the key
 
-After the API settings are set you can now map Hudu Assets to Microsoft 365 / CIPP Items.
+Give it a name such as _CIPP Integration_, set **Limit scope to** to _Full Access_, and leave **Company** blank. None of the options under **Key can perform the following actions** are required.
 
-#### **Organization Mapping**
+Optionally restrict **Allowed IP Addresses** to your function app's outbound addresses. CyberDrain-hosted clients can find these at [management.cipp.app](https://management.cipp.app/).
+{% endstep %}
 
-1. Go to the **Tenant Mapping Table.**
-2. You have two options for mapping organisations
-   * Manually pick the Hudu Company from the dropdown lists and match them to the Microsoft 365 tenants. Then click the Set Mappings button.
-   * Select the **Automap Hudu Organizations** button.
-     * This will try to match Microsoft 365 tenants where the name exactly matches in both.
-3. Click Save Mappings.
+{% step %}
+### Store the key
 
-#### **Field Mapping**
+Select **Create New Key** and copy the key somewhere secure. It is not retrievable afterwards.
+{% endstep %}
+{% endstepper %}
 
-1. Scroll down to the **Field Mapping Table.**
-2. For each field you wish to populate in Hudu select the asset layout from the dropdown menu. For users it is recommended to use the "People" template to prevent synchronisation issues.
-3. Click Save Mappings
+## Configuring the Integration in CIPP
+
+{% stepper %}
+{% step %}
+### Enable the integration
+
+Turn on **Enable Integration**. The remaining fields stay disabled until it is on.
+{% endstep %}
+
+{% step %}
+### Enter the connection details
+
+Enter your Hudu URL and the **Hudu API Key** you created.
+{% endstep %}
+
+{% step %}
+### Choose what to synchronise
+
+Work through the remaining toggles to decide whether missing users and devices are created, whether domains are imported and monitored, and which portal links appear. Add any device serials you want ignored.
+{% endstep %}
+
+{% step %}
+### Save and test
+
+Select **Submit**, then select **Test**. A message confirming the connection and reporting your Hudu version means the URL and API key are correct.
+{% endstep %}
+
+{% step %}
+### Map companies and layouts
+
+Work through the **Tenant Mapping** and **Field Mapping** tabs described below. Scheduled synchronisation is only set up once tenants are mapped.
+{% endstep %}
+{% endstepper %}
+
+## Organisation Mapping
+
+The **Tenant Mapping** tab pairs each CIPP tenant with a Hudu company. Only mapped tenants are synchronised, and mapping a tenant is what causes CIPP to schedule its daily synchronisation.
+
+To map manually, choose a tenant, choose the matching entry under **Select Hudu Company**, and select the add button. **Automap Companies** fills in matches automatically, and the refresh button reloads the company list from Hudu. Mappings are only written when you select **Submit**.
+
+| Column          | Description                                           |
+| --------------- | ----------------------------------------------------- |
+| IntegrationName | The name of the Hudu company the tenant is mapped to. |
+| Tenant          | The display name of the mapped Microsoft 365 tenant.  |
+| TenantDomain    | The default domain name of the mapped tenant.         |
+| TenantId        | The tenant's Microsoft customer ID.                   |
+
+Individual mappings can be removed with the **Delete Mapping** row action.
+
+{% hint style="info" %}
+Automapping compares the tenant's display name with the Hudu company name, ignoring case, punctuation and trailing legal suffixes such as Ltd, Limited, LLC, Inc, GmbH or BV. Where more than one company normalises to the same name the match is ambiguous and is left for you to map manually. Review the proposed matches before saving.
+{% endhint %}
+
+{% hint style="warning" %}
+Archived Hudu companies are skipped during synchronisation, and this is recorded in the sync log rather than raised as an error. If a mapped tenant never seems to update, check whether its Hudu company has been archived.
+{% endhint %}
+
+## Field Mapping
+
+The **Field Mapping** tab nominates which Hudu asset layouts receive Microsoft 365 user and device data.
+
+| Field                         | Description                                                                                                                                                  |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Asset Layout for M365 Users   | The layout used for user assets. The built-in People layout is recommended, as using a layout with an unexpected structure tends to cause matching problems. |
+| Asset Layout for M365 Devices | The layout used for device assets.                                                                                                                           |
+
+Leave either set to `--- Do not synchronize ---` to skip that data type entirely. Select **Submit** to save, and use the refresh button after creating new layouts in Hudu.
+
+{% hint style="info" %}
+CIPP adds the fields it needs to whichever layouts you map, so no preparation is required in Hudu beyond having the layouts exist. Leaving a layout unmapped disables creation of that asset type as well, regardless of the **Create missing users** and **Create missing devices** settings.
+{% endhint %}
+
+## What Gets Synchronised
+
+Once a tenant is mapped, CIPP schedules a daily synchronisation for it. Each run publishes a Magic Dash card on the Hudu company titled **Microsoft 365 -&#x20;**_**tenant name**_, showing the licensed user count and containing tenant detail, portal links and the assigned roles table. User and device assets are then created or updated in the mapped layouts, and domains are imported as website records where enabled.
+
+Use **Reschedule next sync date** to push the next run to a specific date, which is the cleanest way to keep the initial full synchronisation out of business hours.
+
+{% hint style="warning" %}
+**Force Sync** on this page reschedules the synchronisation tasks rather than running them immediately. The message confirms that tasks will start within fifteen minutes.
+{% endhint %}
+
+The Integration Sync page shows per-tenant synchronisation status and is the first place to look when a tenant's data appears stale.
 
 ## Custom CSS
 
-In some cases the information provided in the M365 Rich Text Field is cut off or formatted incorrectly, use this custom CSS code in your Hudu settings to help format it:
+The Microsoft 365 rich text field can render with cut-off tables or cramped formatting depending on your Hudu theme. Adding the following custom CSS in your Hudu settings improves the layout of the tables, licence tiles and link buttons CIPP generates.
 
-```
+```css
 .card__item table {
   border-collapse: collapse;
   margin: 5px 0;
@@ -199,69 +279,10 @@ In some cases the information provided in the M365 Rich Text Field is cut off or
   padding-bottom: 5px;
   padding-left: 2px;
   border-bottom: 1px solid rgba(21, 112, 239, 0.3);
-}.card__item table{
-	border-collapse: collapse;
-	margin: 5px 0;
-	font-size: 0.8em;
-	font-family: sans-serif;
-	min-width: 400px;
-	box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
-}
-.card__item h2, .card__item p{
-	font-size: 0.8em;
-	font-family: sans-serif;
-}
-.card__item th, .card__item td {
-	padding: 5px 5px;
-	width:auto;
-}
-.card__item thead tr {
-	text-align: left;
-}
-.card__item tr {
-	border-bottom: 1px solid #dddddd;
-}
-
-.custom-fast-fact.custom-fast-fact--warning {
-    background: #f5c086;
-}
- .custom-fast-fact.custom-fast-fact--datto-low {
-     background: #2C81C8;
-}
- .custom-fast-fact.custom-fast-fact--datto-moderate {
-     background: #F7C210;
-}
-
- .custom-fast-fact.custom-fast-fact--datto-high {
-     background: #F68218;
-}
-
- .custom-fast-fact.custom-fast-fact--datto-critical {
-     background: #EC422E;
-}
-
-.nasa__block {
-   height:auto;
-}
-
-.nasa__block td {
-   white-space: normal;
-   word-wrap: break-word;
-   word-break: break-word;
-}
-
-.mce-content-body {
-    max-height: 600px !important;
-    overflow-y: scroll !important;
-}
-
-.writer-wrap { 
-    max-height: 2000px; 
-    overflow: scroll; 
 }
 ```
 
-#### Special Thanks
+## Special Thanks
 
 Special thanks to Luke Whitelock and his [HuduM365Automation](https://github.com/lwhitelock/HuduM365Automation) function app code.
 

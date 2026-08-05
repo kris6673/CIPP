@@ -1,6 +1,6 @@
 # Status & Updates
 
-The Status & Updates page lets you view and manage the CIPP application container on a self-hosted instance. From here you can see which image and version are running, control the release channel, configure automatic update checks, and restart the container. It sits under CIPP > Advanced > Container Management.
+The Status & Updates page lets you view and manage the CIPP application container on a self-hosted instance. From here you can see which image and version are running, control the release channel, configure automatic update checks, and restart the container.
 
 The page is laid out top to bottom: a status strip summarising the running container, any notices that need action, a row of action buttons, and two settings cards.
 
@@ -8,12 +8,12 @@ The page is laid out top to bottom: a status strip summarising the running conta
 
 The strip across the top of the page summarises the state of the running container in four tiles.
 
-| Tile            | Description                                                                                                                                                       |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Release Channel | The channel the running container was built from. Hover to see the running image tag. A branch build shows its own tag here, in red, rather than a channel name.  |
-| App Version     | The version of CIPP currently running, followed by the short commit it was built from. Select the tile to open **Build Details**.                                 |
-| Update Status   | **Never checked**, **Update available**, or **Up to date**. Select the tile to open **Latest on this channel**.                                                    |
-| Last Checked    | How long ago the last update check ran, such as `3h ago`. Hover for the exact date and time, in your local time zone.                                             |
+| Tile            | Description                                                                                                                                                      |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Release Channel | The channel the running container was built from. Hover to see the running image tag. A branch build shows its own tag here, in red, rather than a channel name. |
+| App Version     | The version of CIPP currently running, followed by the short commit it was built from. Select the tile to open **Build Details**.                                |
+| Update Status   | **Never checked**, **Update available**, or **Up to date**. Select the tile to open **Latest on this channel**.                                                  |
+| Last Checked    | How long ago the last update check ran, such as `3h ago`. Hover for the exact date and time, in your local time zone.                                            |
 
 Selecting the App Version tile opens a **Build Details** panel:
 
@@ -40,11 +40,11 @@ Two notices can appear directly below the status strip, and only when there is s
 
 Three buttons sit between the status strip and the settings cards.
 
-| Action            | Description                                                                                                                                                              |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Refresh Status    | Re-reads the status of the running container. This does not contact the container registry, so it can never trigger a restart.                                          |
-| Check for Updates | Asks the container registry whether a newer image has been published on your channel. Opens a confirmation dialog first.                                                 |
-| Restart Container | Restarts the application container. Opens a confirmation dialog first.                                                                                                    |
+| Action            | Description                                                                                                                    |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Refresh Status    | Re-reads the status of the running container. This does not contact the container registry, so it can never trigger a restart. |
+| Check for Updates | Asks the container registry whether a newer image has been published on your channel. Opens a confirmation dialog first.       |
+| Restart Container | Restarts the application container. Opens a confirmation dialog first.                                                         |
 
 ### Check for Updates
 
@@ -82,8 +82,8 @@ Only builds that currently exist are listed, and the tag is checked before the c
 
 Branch builds are **not supported** and are intended for testing only:
 
-- They receive no updates, and the automatic update check does not apply to them.
-- They are deleted when their branch is deleted, and swept after 30 days. Once the image is gone the container cannot start until you switch back to a standard channel — so move off a branch build as soon as you have finished testing.
+* They receive no updates, and the automatic update check does not apply to them.
+* They are deleted when their branch is deleted, and swept after 30 days. Once the image is gone the container cannot start until you switch back to a standard channel — so move off a branch build as soon as you have finished testing.
 
 Selecting a branch build shows a warning in the card before you save it, and the Release Channel tile turns red once one is running.
 

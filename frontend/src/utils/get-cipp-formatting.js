@@ -623,6 +623,7 @@ export const getCippFormatting = (
     const baselineStatusColors = {
       compliant: 'success',
       drift: 'error',
+      conflict: 'error',
       accepted: 'info',
       'partially accepted': 'warning',
       'denied - remediate pending': 'warning',
@@ -633,13 +634,29 @@ export const getCippFormatting = (
     const baselineColor = baselineStatusColors[String(data).toLowerCase()]
     if (baselineColor) {
       if (isText) return data
-      return (
+      // Pending states answer the "when does something happen?" question inline.
+      const baselineStatusTooltips = {
+        'no data': 'Not collected yet - happens automatically on the next run.',
+        conflict:
+          'Two baselines configure this at the same level with different settings. Nothing runs until you edit one of them - see the standard details for both sources.',
+        'denied - remediate pending':
+          'Fixed automatically on the next run (within 12 hours), or use Remediate Now.',
+        'denied - delete pending':
+          'Removed automatically on the next run (within 12 hours).',
+      }
+      const statusTooltip = baselineStatusTooltips[String(data).toLowerCase()]
+      const chip = (
         <Chip
           variant="outlined"
           label={data}
           size="small"
           color={baselineColor}
         />
+      )
+      return statusTooltip ? (
+        <Tooltip title={statusTooltip}>{chip}</Tooltip>
+      ) : (
+        chip
       )
     }
   }
@@ -656,7 +673,13 @@ export const getCippFormatting = (
       'skipped-license': 'default',
     }
     const color = outcomeColors[String(data).toLowerCase()] ?? 'default'
-    return <Chip variant="outlined" label={data} size="small" color={color} />
+    // Humanize the engine's internal outcome codes.
+    const outcomeLabels = {
+      'skipped-nocache': 'Skipped - No Data',
+      'skipped-license': 'Skipped - No License',
+    }
+    const label = outcomeLabels[String(data).toLowerCase()] ?? data
+    return <Chip variant="outlined" label={label} size="small" color={color} />
   }
 
   if (cellName === 'feedEvent') {

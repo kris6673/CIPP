@@ -22,17 +22,26 @@ function Convert-CIPPBaselineResolvedEntity {
     $StandardName = $Entity.StandardName ?? ($Entity.RowKey -split '-')[0]
     $BaseName = ($StandardName -split '#')[0]
     $Definition = $Definitions | Where-Object { $_.name -eq $BaseName } | Select-Object -First 1
+    # Multi-instance standards all share one definition label - the row label carries the
+    # instance's identity so ten instances are ten distinguishable rows: the task name for
+    # manual tasks, the deployed template's displayName for identity-carrying standards
+    # (CA/Intune templates - their normalized ExpectedValue is the full policy).
+    $Manual = & $ParseJson $Entity.Manual
+    $ExpectedParsed = & $ParseJson $Entity.ExpectedValue
+    $IdentitySuffix = if ($Manual.taskName) { $Manual.taskName }
+    elseif ($Definition.instanceIdentity) { $ExpectedParsed.displayName ?? $ExpectedParsed.$($Definition.instanceIdentity) }
+    $Label = if ($IdentitySuffix) { '{0} - {1}' -f ($Definition.label ?? $BaseName), $IdentitySuffix } else { $Definition.label ?? $StandardName }
 
     [PSCustomObject]@{
         tenantFilter        = $Entity.PartitionKey
         tenantName          = $Entity.TenantName ?? $Entity.PartitionKey
         standardName        = $StandardName
-        standardLabel       = $Definition.label ?? $StandardName
+        standardLabel       = $Label
         category            = $Definition.cat ?? 'Uncategorized'
         impact              = $Definition.impact
         secureScoreImpact   = $Definition.secureScoreImpact ?? 0
         templateId          = $Entity.TemplateId
-        expectedValue       = & $ParseJson $Entity.ExpectedValue
+        expectedValue       = $ExpectedParsed
         currentValue        = & $ParseJson $Entity.CurrentValue
         compliant           = [bool]$Entity.Compliant
         pendingVerification = [bool]$Entity.PendingVerification
@@ -42,6 +51,8 @@ function Convert-CIPPBaselineResolvedEntity {
         stage               = $(if ($Entity.StageName) { $Entity.StageName } elseif ($Entity.Stage) { "Stage $($Entity.Stage)" } else { $null })
         inheritance         = @(& $ParseJson $Entity.Inheritance)
         acceptedPaths       = (& $ParseJson $Entity.AcceptedPaths) ?? [PSCustomObject]@{}
+        diff                = @(& $ParseJson $Entity.Diff)
+        manual              = $Manual
         status              = $Entity.Status
         deviationReason     = $Entity.DeviationReason
         deviationBy         = $Entity.DeviationBy

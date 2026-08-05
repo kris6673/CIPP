@@ -26,6 +26,7 @@ import {
 } from '@mui/lab'
 import { Grid } from '@mui/system'
 import { useState } from 'react'
+import { useRouter } from 'next/router'
 import {
   BuildingOfficeIcon,
   CheckBadgeIcon,
@@ -58,6 +59,7 @@ import { TabbedLayout } from '../../../../layouts/TabbedLayout'
 import tabOptions from '../tabOptions.json'
 import { CippTablePage } from '../../../../components/CippComponents/CippTablePage.jsx'
 import { CippDataTable } from '../../../../components/CippTable/CippDataTable'
+import { CippQueueTracker } from '../../../../components/CippTable/CippQueueTracker'
 import { CippHead } from '../../../../components/CippComponents/CippHead'
 import { CippInfoBar } from '../../../../components/CippCards/CippInfoBar'
 import CippButtonCard from '../../../../components/CippCards/CippButtonCard'
@@ -81,6 +83,7 @@ const deviationColors = {
   Accepted: 'info',
   'Partially Accepted': 'warning',
   Drift: 'error',
+  Conflict: 'error',
   'Denied - Remediate Pending': 'warning',
   'Denied - Delete Pending': 'warning',
   'Skipped - No License': 'default',
@@ -158,11 +161,13 @@ const outcomeTimeline = {
     color: 'grey',
     chipColor: 'default',
     icon: <InfoOutlined />,
+    label: 'Skipped - No Data',
   },
   'Skipped-License': {
     color: 'grey',
     chipColor: 'default',
     icon: <InfoOutlined />,
+    label: 'Skipped - No License',
   },
 }
 
@@ -248,6 +253,7 @@ const jsonBox = (value, isCompliant) => (
 
 const Page = () => {
   const pageTitle = 'Baseline Alignment'
+  const router = useRouter()
   const currentTenant = useSettings().currentTenant
   const [viewMode, setViewMode] = useState('tenant')
   const [advanceTarget, setAdvanceTarget] = useState(null)
@@ -277,8 +283,26 @@ const Page = () => {
 
   // Refetch everything baseline-related after any triage/run/override action:
   // the wildcard invalidates every ListBaseline* query, including the '-table'
-  // keys the table instances register.
-  const relatedQueryKeys = ['ListBaseline*']
+  // keys the table instances register. The queue key re-discovers the run a
+  // Compare/Remediate/Run action just started, so the progress tracker appears.
+  const relatedQueryKeys = ['ListBaseline*', 'ListCippQueue-BaselineRun']
+
+  // Live run progress: baseline runs tag their queue entry with this reference;
+  // the newest one drives the tracker chip next to the view toggle.
+  const baselineQueues = ApiGetCall({
+    url: '/api/ListCippQueue',
+    data: { Reference: 'BaselineRun' },
+    queryKey: 'ListCippQueue-BaselineRun',
+  })
+  const latestBaselineQueueId = Array.isArray(baselineQueues.data)
+    ? baselineQueues.data[0]?.RowKey
+    : baselineQueues.data?.RowKey
+
+  // Deep link support: /tenant/baselines/alignment?status=Drift lands with the
+  // table pre-filtered (the Fleet Overview tiles link here).
+  const initialStatusFilter = router.query.status
+    ? [{ id: 'status', value: router.query.status }]
+    : []
 
   const resolvedApi = ApiGetCall({
     url: '/api/ListBaselineAlignment',
@@ -356,28 +380,6 @@ const Page = () => {
 
   const tenantActions = [
     {
-      label: 'Remediate Now',
-      type: 'POST',
-      url: '/api/ExecBaselineRun',
-      icon: <PlayArrow />,
-      color: 'success',
-      data: {
-        mode: '!oneoff',
-        tenantFilter: 'tenantFilter',
-        standard: 'standardName',
-      },
-      confirmText:
-        'Deploy the expected value of [standardLabel] to [tenantFilter]? This runs a one-off remediation from the configured expected value.',
-      multiPost: false,
-      relatedQueryKeys,
-      // Running remediation by hand is always possible - the engine deploys the expected
-      // value regardless of the current state, and a license bought after the last run
-      // should not block trying. Manual tasks have nothing to deploy.
-      condition: (row) => !row.standardName.startsWith('ManualTask'),
-      hideCondition: (row) => row.standardName.startsWith('ManualTask'),
-      bulkFilterEligible: true,
-    },
-    {
       label: 'Compare Now',
       type: 'POST',
       url: '/api/ExecBaselineRun',
@@ -392,7 +394,33 @@ const Page = () => {
         'Run a compare-only pass of [standardLabel] against [tenantFilter]? No changes will be made.',
       multiPost: false,
       relatedQueryKeys,
-      condition: (row) => !row.standardName.startsWith('ManualTask'),
+      // Compare applies to manual tasks too: it re-evaluates the completion recurrence,
+      // flipping a task back to Drift once its reopen window has elapsed. A Conflict
+      // cannot even compare - the expected value itself is ambiguous.
+      condition: (row) => row.status !== 'Conflict',
+      bulkFilterEligible: true,
+    },
+    {
+      label: 'Remediate Now',
+      type: 'POST',
+      url: '/api/ExecBaselineRun',
+      icon: <PlayArrow />,
+      color: 'success',
+      data: {
+        mode: '!oneoff',
+        tenantFilter: 'tenantFilter',
+        standard: 'standardName',
+      },
+      confirmText:
+        'Fix [standardLabel] on [tenantFilter] now? CIPP immediately applies the configured expected value.',
+      multiPost: false,
+      relatedQueryKeys,
+      // Running remediation by hand is always possible - the engine deploys the expected
+      // value regardless of the current state, and a license bought after the last run
+      // should not block trying. Manual tasks have nothing to deploy; a Conflict has no
+      // unambiguous expected value to deploy.
+      condition: (row) =>
+        !row.standardName.startsWith('ManualTask') && row.status !== 'Conflict',
       hideCondition: (row) => row.standardName.startsWith('ManualTask'),
       bulkFilterEligible: true,
     },
@@ -420,7 +448,7 @@ const Page = () => {
       bulkFilterEligible: true,
     },
     {
-      label: 'Deny Deviation',
+      label: 'Deny & Fix Deviation',
       type: 'POST',
       url: '/api/ExecUpdateBaselineDeviation',
       icon: <Cancel />,
@@ -442,7 +470,7 @@ const Page = () => {
         </Stack>
       ),
       confirmText:
-        'Deny the deviation on [standardLabel]? The engine remediates it back to the baseline on the next run, regardless of the configured posture.',
+        'Deny the deviation on [standardLabel]? CIPP fixes it back to the baseline on the next run (within 12 hours), regardless of the configured posture.',
       multiPost: false,
       relatedQueryKeys,
       condition: (row) =>
@@ -452,7 +480,7 @@ const Page = () => {
       bulkFilterEligible: true,
     },
     {
-      label: 'Clear Triage Status',
+      label: 'Undo Accept/Deny',
       type: 'POST',
       url: '/api/ExecUpdateBaselineDeviation',
       icon: <RemoveCircle />,
@@ -620,13 +648,52 @@ const Page = () => {
     children: (row) => {
       // The offcanvas renders with an empty row until one is selected. Rows without
       // collected data (No Data) have nothing to diff against.
-      const differences = row.currentValue
-        ? Object.keys(row.expectedValue ?? {}).filter(
-            (key) =>
-              JSON.stringify(row.expectedValue[key]) !==
-              JSON.stringify(row.currentValue?.[key])
+      // Per-property drift comes from the ENGINE's persisted diff - the frontend never
+      // re-derives compares, so $anyOf/hard-compare/acceptance semantics live in exactly
+      // one place. A diff Property may be a nested dot-path under a card's path.
+      const diffEntries = Array.isArray(row.diff)
+        ? row.diff
+        : row.diff
+          ? [row.diff]
+          : []
+      const hasDiffAt = (path) =>
+        diffEntries.some(
+          (entry) =>
+            entry?.Property === path || entry?.Property?.startsWith(`${path}.`)
+        )
+      // Display flattening only (never comparison): big policies like CA render each
+      // sub-object as its own card (conditions.users, conditions.applications, ...)
+      // instead of one unreadable JSON blob. Empty-vs-empty cards are skipped unless
+      // the engine flagged drift there.
+      const getPath = (source, path) =>
+        path
+          .split('.')
+          .reduce((acc, key) => (acc == null ? acc : acc[key]), source)
+      const isPlainObject = (value) =>
+        value && typeof value === 'object' && !Array.isArray(value)
+      const isEmptyish = (value) =>
+        value == null ||
+        (Array.isArray(value) && value.length === 0) ||
+        (isPlainObject(value) && Object.keys(value).length === 0)
+      // Expand every sub-object down to its leaves (scalars/arrays), so acceptance is
+      // exactly one setting: accepting conditions.users.excludeUsers never tolerates a
+      // change to includeUsers. Empty-vs-empty leaves are hidden below, keeping the
+      // card list compact despite the depth.
+      const buildCardPaths = (value, prefix = '') =>
+        Object.keys(value ?? {}).flatMap((key) => {
+          const child = value[key]
+          const path = prefix ? `${prefix}.${key}` : key
+          return isPlainObject(child) ? buildCardPaths(child, path) : [path]
+        })
+      const cardPaths = buildCardPaths(row.expectedValue).filter(
+        (path) =>
+          hasDiffAt(path) ||
+          !(
+            isEmptyish(getPath(row.expectedValue, path)) &&
+            isEmptyish(getPath(row.currentValue, path))
           )
-        : []
+      )
+      const differences = cardPaths.filter(hasDiffAt)
       const properties = [
         { label: 'Standard', value: row.standardLabel },
         {
@@ -745,6 +812,73 @@ const Page = () => {
               When multiple baselines configure the same standard, the baseline
               with the most specific assignment wins.
             </Typography>
+            {row.status === 'Conflict' && (
+              <Alert severity="error">
+                Two baselines configure this standard at the same assignment
+                level with different settings, so CIPP cannot know which one is
+                intended - nothing is compared or fixed until you edit one of
+                the baselines below.
+              </Alert>
+            )}
+            {(row.manual?.taskName || row.manual?.instructions) && (
+              <>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontWeight: 600,
+                    color: 'text.secondary',
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  Manual Task
+                </Typography>
+                <Box
+                  sx={{
+                    p: 1.5,
+                    borderRadius: '12px',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    bgcolor: 'background.paper',
+                  }}
+                >
+                  {row.manual.taskName && (
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                      {row.manual.taskName}
+                    </Typography>
+                  )}
+                  {row.manual.instructions && (
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}
+                    >
+                      {row.manual.instructions}
+                    </Typography>
+                  )}
+                  {row.manual.documentationUrl && (
+                    <Link
+                      href={row.manual.documentationUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      variant="caption"
+                      sx={{ display: 'inline-block', mt: 1 }}
+                    >
+                      Open documentation
+                    </Link>
+                  )}
+                  {row.manual.reopen && row.manual.reopen !== 'once' && (
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: 'block', mt: 1 }}
+                    >
+                      Reopens {row.manual.reopen} after completion.
+                    </Typography>
+                  )}
+                </Box>
+              </>
+            )}
             <Typography
               variant="caption"
               sx={{
@@ -758,7 +892,7 @@ const Page = () => {
             </Typography>
             {row.currentValue ? (
               <>
-                {Object.keys(row.expectedValue ?? {}).map((key) => {
+                {cardPaths.map((key) => {
                   const drifted = differences.includes(key)
                   const acceptedPath = row.acceptedPaths?.[key]
                   return (
@@ -822,7 +956,8 @@ const Page = () => {
                           wordBreak: 'break-word',
                         }}
                       >
-                        Expected: {JSON.stringify(row.expectedValue[key])}
+                        Expected:{' '}
+                        {JSON.stringify(getPath(row.expectedValue, key))}
                       </Typography>
                       <Typography
                         variant="caption"
@@ -833,7 +968,8 @@ const Page = () => {
                           color: drifted ? 'error.main' : 'text.secondary',
                         }}
                       >
-                        Current: {JSON.stringify(row.currentValue?.[key])}
+                        Current:{' '}
+                        {JSON.stringify(getPath(row.currentValue, key))}
                       </Typography>
                       {drifted && !acceptedPath && (
                         <Button
@@ -1343,7 +1479,7 @@ const Page = () => {
   )
 
   const rolloutCard = (
-    <CippButtonCard title={`Assigned Templates - ${tenant.displayName}`}>
+    <CippButtonCard title={`Assigned Baselines - ${tenant.displayName}`}>
       {stageStates.length === 0 && (
         <Typography variant="body2" color="text.secondary">
           No baselines are assigned to this tenant.
@@ -1759,7 +1895,7 @@ const Page = () => {
                                 flexWrap="wrap"
                               >
                                 <Chip
-                                  label={event.outcome}
+                                  label={timelineConfig.label ?? event.outcome}
                                   color={timelineConfig.chipColor}
                                   size="small"
                                   variant="outlined"
@@ -1892,12 +2028,19 @@ const Page = () => {
               justifyContent="space-between"
             >
               {modeToggle}
-              <CippBaselineWhatIfReport
-                tenant={tenant}
-                stageStates={stageStates}
-                baselines={baselines}
-                catalog={catalog}
-              />
+              <Stack direction="row" spacing={1} alignItems="center">
+                <CippQueueTracker
+                  queueId={latestBaselineQueueId}
+                  queryKey={`ListBaselineAlignment-${currentTenant}`}
+                  title="Baseline Run"
+                />
+                <CippBaselineWhatIfReport
+                  tenant={tenant}
+                  stageStates={stageStates}
+                  baselines={baselines}
+                  catalog={catalog}
+                />
+              </Stack>
             </Stack>
             {tenantScoreBar}
             {rolloutCard}
@@ -1909,7 +2052,7 @@ const Page = () => {
               actions={tenantActions}
               offCanvas={tenantOffCanvas}
               offCanvasOnRowClick={true}
-              filters={tenantFilterList}
+              filters={[...initialStatusFilter, ...tenantFilterList]}
               simpleColumns={[
                 'standardLabel',
                 'category',

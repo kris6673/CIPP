@@ -26,6 +26,7 @@ import {
   ContentCopy,
   Delete,
   ExpandMore,
+  PlayArrow,
   RadioButtonUnchecked,
   SaveRounded,
 } from '@mui/icons-material'
@@ -532,6 +533,11 @@ const Page = () => {
   const saveBaseline = ApiPostCall({
     relatedQueryKeys: ['ListBaseline*'],
   })
+  // After a save, the natural next step is seeing where the tenants stand - offer a
+  // no-changes check right away instead of ending the setup flow in silence.
+  const runAfterSave = ApiPostCall({
+    relatedQueryKeys: ['ListBaseline*'],
+  })
   const customVariablesApi = ApiGetCall({
     url: '/api/ListCustomVariables',
     queryKey: 'ListCustomVariables',
@@ -699,15 +705,16 @@ const Page = () => {
         if (index !== dialogStageIndex) return stage
         const isMultiple = catalogByName[standardName]?.multiple === true
         if (isMultiple) {
-          // Multi-instance standards: every click adds another instance ('Name#n').
-          const instanceCount = stage.standards.filter(
-            (key) => key.split('#')[0] === standardName
-          ).length
-          const newKey =
-            instanceCount === 0
-              ? standardName
-              : `${standardName}#${instanceCount}`
-          return { ...stage, standards: [...stage.standards, newKey] }
+          // Multi-instance standards: every instance gets a unique id ('Name#<id>') so
+          // instances from different baselines never collide by accident - conflict
+          // detection compares real identities, not positional counters.
+          const instanceId =
+            globalThis.crypto?.randomUUID?.().slice(0, 8) ??
+            Math.random().toString(36).slice(2, 10)
+          return {
+            ...stage,
+            standards: [...stage.standards, `${standardName}#${instanceId}`],
+          }
         }
         return stage.standards.includes(standardName)
           ? {
@@ -887,6 +894,37 @@ const Page = () => {
         </Stack>
 
         <CippApiResults apiObject={saveBaseline} />
+        {saveBaseline.isSuccess && !runAfterSave.isSuccess && (
+          <Alert
+            severity="success"
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                startIcon={<PlayArrow />}
+                disabled={runAfterSave.isPending}
+                onClick={() =>
+                  runAfterSave.mutate({
+                    url: '/api/ExecBaselineRun',
+                    data: {
+                      mode: 'compare',
+                      templateId:
+                        saveBaseline.data?.data?.Metadata?.id ??
+                        loadedTemplateId,
+                    },
+                  })
+                }
+              >
+                Check tenants now
+              </Button>
+            }
+          >
+            Baseline saved. Want to see where the assigned tenants stand? A
+            check makes no changes - results appear on the Alignment page.
+            Otherwise the schedule picks it up within 12 hours.
+          </Alert>
+        )}
+        <CippApiResults apiObject={runAfterSave} />
 
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, lg: 4 }}>

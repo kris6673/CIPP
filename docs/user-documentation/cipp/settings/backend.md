@@ -4,31 +4,51 @@ description: Get information on and access to the backend services powering CIPP
 
 # Backend
 
-You can gain access to the Azure backend by browsing to your Azure Portal.
-
-CIPP also includes a quicker way to jump to the correct locations via the Settings -> Backend.
+The Backend tab provides direct links into the Azure resources that run your CIPP instance. Each card opens the relevant blade in the Azure portal in a new tab, with the subscription, resource group and resource names already resolved for your deployment, which saves hunting through the portal for them.
 
 {% hint style="info" %}
-Hosted clients can use the backend management system at [management.cipp.app](https://management.cipp.app)
+Hosted clients do not own the underlying Azure resources, so these links will not resolve for them. Use the backend management system at [management.cipp.app](https://management.cipp.app) instead.
 {% endhint %}
 
-## Details
+## Available Links
 
-### Resource group
+Every card carries a **Launch** button that opens the corresponding Azure portal blade.
 
-Takes you to the container which holds all your resources.
+| Card                             | Description                                                                                                                                                   |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Resource Group                   | The container holding all CIPP resources in your tenant, with the exception of the SAM application, which lives outside it.                                   |
+| Key Vault                        | The secrets store holding saved authentication details, including the SAM application credentials and integration API keys. Access is not granted by default. |
+| Static Web App (Role Management) | Where users are invited to CIPP and their roles assigned.                                                                                                     |
+| Function App (Deployment Center) | Deployment history and the GitHub connection used for continuous deployment, which is where the API is updated to a newer version.                            |
+| Function App (Configuration)     | The application settings for the API, including the environment variables that control instance behaviour.                                                    |
+| Function App (Overview)          | Performance and usage information for the API, and the controls to stop and start it.                                                                         |
+| Cloud Shell                      | Opens an Azure Cloud Shell session in a new window, preset to PowerShell.                                                                                     |
 
-### Key vault
+{% hint style="warning" %}
+Stopping the Function App halts all CIPP background processing, including scheduled tasks, alerts and standards runs. Restarting it is usually the safer option when troubleshooting.
+{% endhint %}
 
-Takes you to the password / token storage, if you want to change your keys manually you can do so here. CIPP rotates these keys automatically each Sunday.
+{% hint style="info" %}
+To set the time zone used by the API, change the relevant application setting on the Function App Configuration page. Microsoft's [general settings documentation](https://learn.microsoft.com/en-us/azure/app-service/configure-common?tabs=portal#configure-general-settings) covers how application settings are edited.
+{% endhint %}
 
-### Function application
+## Cloud Shell
 
-The overview page is where you can stop the API, or restart it. The configuration page is where you can change settings. If you want to set the time zone, check out [this Microsoft FAQ](https://learn.microsoft.com/en-us/azure/app-service/configure-common?tabs=portal#configure-general-settings). The deployment center is where you can sync the API to the latest version from your GitHub fork.
+The Cloud Shell card behaves slightly differently from the others. **Launch** opens a PowerShell Cloud Shell in a separate browser window rather than a tab, and a second button, **Command Reference**, opens a flyout containing ready-made commands for your instance.
 
-### Static Web App
+The commands in the flyout are generated with your own resource group, function app and static web app names already substituted, so they can be copied straight into the shell.
 
-Custom domains brings you to the location where you can change the custom domain. Role management is where you can invite users, and set the roles for users.
+| Command                 | Purpose                                                                                                                                      |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Function App Config     | Returns the function app's name, status, location, runtime and application settings.                                                         |
+| Function App Deployment | Returns the deployment source, showing the repository URL, branch, and whether deployment runs through GitHub Actions or manual integration. |
+| Watch Function Logs     | Streams the function app log tail live, which is the quickest way to watch what the API is doing during a reproduction.                      |
+| Static Web App Config   | Returns the static web app's name, custom domain, default hostname and repository URLs.                                                      |
+| List CIPP Users         | Lists the users invited to CIPP together with their assigned roles, across all authentication providers.                                     |
+
+{% hint style="info" %}
+The **Command Reference** button is unavailable on hosted instances, since the commands operate on Azure resources a hosted client does not own.
+{% endhint %}
 
 ***
 

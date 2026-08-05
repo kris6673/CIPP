@@ -2,6 +2,10 @@
 
 An alternative way to display the [.](./ "mention") page.
 
+{% hint style="info" %}
+Under **All Tenants**, this tab instead lists every tenant's latest cached score — percentage, points, and when it was captured — with a row action to open that tenant's own Secure Score page. The sections below describe the per-tenant view.
+{% endhint %}
+
 ## Information Box
 
 * Current Score

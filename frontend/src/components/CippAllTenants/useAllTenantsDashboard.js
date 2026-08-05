@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { ApiGetCall } from '../../api/ApiCall.jsx'
 
 // Some CIPP endpoints return a bare array, others wrap in { Results: [...] }. Normalise both.
-const asArray = (payload) => {
+export const asArray = (payload) => {
   if (Array.isArray(payload)) return payload
   if (Array.isArray(payload?.Results)) return payload.Results
   return []
@@ -22,12 +22,81 @@ const hoursSince = (value) => {
   return (Date.now() - then.getTime()) / 3600000
 }
 
-const percent = (part, total) =>
-  total > 0 ? Math.round((part / total) * 100) : 0
+const percent = (part, total) => (total > 0 ? Math.round((part / total) * 100) : 0)
+
+/**
+ * Latest-score summary plus portfolio trend from ListSecureScoreReport rows. Pure so the dashboard
+ * card and the full-page All Tenants secure score view derive identical numbers from one shape.
+ * `displayNameByDomain` is only a fallback — the endpoint already resolves TenantName for tenants
+ * it still knows about.
+ */
+export const deriveSecureScoreSummary = (rows, displayNameByDomain = new Map()) => {
+  const empty = {
+    average: 0,
+    best: null,
+    worst: null,
+    scored: 0,
+    trend: [],
+    delta: null,
+    ranked: [],
+  }
+  if (!rows.length) return empty
+
+  const scored = rows.filter((row) => Number(row?.MaxScore) > 0)
+  if (!scored.length) return empty
+
+  const withNames = scored.map((row) => ({
+    tenant: row.Tenant,
+    name: row.TenantName || displayNameByDomain.get(row.Tenant) || row.Tenant,
+    percent: Number(row.PercentageScore ?? 0),
+    current: Number(row.CurrentScore ?? 0),
+    max: Number(row.MaxScore ?? 0),
+  }))
+
+  const sorted = [...withNames].sort((a, b) => a.percent - b.percent)
+
+  // Portfolio trend: average the per-tenant percentage for each captured day. Each day is averaged
+  // only over the tenants that actually reported it, so a tenant that started reporting mid-window
+  // does not drag the earlier points down.
+  const byDate = new Map()
+  scored.forEach((row) => {
+    ;(row.History ?? []).forEach((point) => {
+      const date = String(point?.Date ?? '').slice(0, 10)
+      if (!date) return
+      const entry = byDate.get(date) ?? { total: 0, count: 0 }
+      entry.total += Number(point?.PercentageScore ?? 0)
+      entry.count += 1
+      byDate.set(date, entry)
+    })
+  })
+
+  const trend = [...byDate.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([date, value]) => ({
+      date,
+      percent: value.count ? Math.round((value.total / value.count) * 10) / 10 : 0,
+    }))
+
+  const delta =
+    trend.length > 1
+      ? Math.round((trend[trend.length - 1].percent - trend[0].percent) * 10) / 10
+      : null
+
+  return {
+    average: Math.round(withNames.reduce((sum, row) => sum + row.percent, 0) / withNames.length),
+    worst: sorted[0],
+    best: sorted[sorted.length - 1],
+    scored: withNames.length,
+    trend,
+    delta,
+    // Every scored tenant, worst first — the full-page view's leaderboards slice this.
+    ranked: sorted,
+  }
+}
 
 // Headline collections for the Portfolio info bar. Three, so that with the tenant count they fill
-// CippInfoBar's four-across grid exactly — its divider rules assume four items. Everything else the
-// cache holds is still reachable through the bar's off-canvas.
+// CippInfoBar's four-across grid exactly — its divider rules assume four items. Each tile links
+// through to the corresponding list page.
 const SCALE_TYPES = [
   { type: 'Users', label: 'Users' },
   { type: 'Mailboxes', label: 'Mailboxes' },
@@ -41,27 +110,34 @@ const SCALE_TYPES = [
  * data that was reduced to a number before the request arrived (test results, alignment scores,
  * cache count rows). Nothing here hydrates per-user or per-device records across the estate.
  */
+
 export const useAllTenantsDashboard = () => {
   const tenantsApi = ApiGetCall({
     url: '/api/ListTenants',
     queryKey: 'AllTenantsDashboard-Tenants',
+    waiting: true,
   })
 
   const alignmentApi = ApiGetCall({
     url: '/api/ListTenantAlignment',
     queryKey: 'AllTenantsDashboard-Alignment',
+    waiting: true,
   })
 
+  // summaryOnly projects away ResultMarkdown/ResultDataJson server-side — this card only counts
+  // rows, and those two columns are unbounded blobs that otherwise dominate the payload.
   const failedTestsApi = ApiGetCall({
     url: '/api/ListTestResultsTenants',
-    data: { status: 'Failed' },
+    data: { status: 'Failed', summaryOnly: 'true' },
     queryKey: 'AllTenantsDashboard-FailedTests',
+    waiting: true,
   })
 
   const domainsApi = ApiGetCall({
     url: '/api/ListDomainAnalyser',
     data: { tenantFilter: 'AllTenants' },
     queryKey: 'AllTenantsDashboard-Domains',
+    waiting: true,
   })
 
   // countsOnly reads the pre-computed '<Type>-Count' rows, so this stays a single table query
@@ -70,6 +146,7 @@ export const useAllTenantsDashboard = () => {
     url: '/api/ListDBCache',
     data: { tenantFilter: 'AllTenants', countsOnly: 'true' },
     queryKey: 'AllTenantsDashboard-Counts',
+    waiting: true,
   })
 
   // ListLogs defaults to today's partition when no date is supplied, which keeps this cheap.
@@ -77,6 +154,7 @@ export const useAllTenantsDashboard = () => {
     url: '/api/ListLogs',
     data: { Filter: 'True', Severity: 'Error,Critical' },
     queryKey: 'AllTenantsDashboard-Logs',
+    waiting: true,
   })
 
   // Score fields only — the endpoint projects away controlScores, which is ~15 KB per cached record.
@@ -86,13 +164,11 @@ export const useAllTenantsDashboard = () => {
     url: '/api/ListSecureScoreReport',
     data: { tenantFilter: 'AllTenants', includeHistory: 'true' },
     queryKey: 'AllTenantsDashboard-SecureScore',
+    waiting: true,
   })
 
   const tenants = useMemo(
-    () =>
-      asArray(tenantsApi.data).filter(
-        (tenant) => tenant?.customerId !== 'AllTenants'
-      ),
+    () => asArray(tenantsApi.data).filter((tenant) => tenant?.customerId !== 'AllTenants'),
     [tenantsApi.data]
   )
 
@@ -102,10 +178,7 @@ export const useAllTenantsDashboard = () => {
     const map = new Map()
     tenants.forEach((tenant) => {
       if (tenant?.defaultDomainName) {
-        map.set(
-          tenant.defaultDomainName,
-          tenant.displayName || tenant.defaultDomainName
-        )
+        map.set(tenant.defaultDomainName, tenant.displayName || tenant.defaultDomainName)
       }
     })
     return map
@@ -176,9 +249,7 @@ export const useAllTenantsDashboard = () => {
         count: existing.count + 1,
       })
 
-      const pending = Number(
-        row?.pendingDeviationsCount ?? row?.PendingDeviationsCount ?? 0
-      )
+      const pending = Number(row?.pendingDeviationsCount ?? row?.PendingDeviationsCount ?? 0)
       if (pending > 0) {
         pendingDeviations += pending
         pendingByTenant.set(key, (pendingByTenant.get(key) ?? 0) + pending)
@@ -203,9 +274,7 @@ export const useAllTenantsDashboard = () => {
     })
 
     const average = scores.length
-      ? Math.round(
-          scores.reduce((sum, item) => sum + item.score, 0) / scores.length
-        )
+      ? Math.round(scores.reduce((sum, item) => sum + item.score, 0) / scores.length)
       : 0
 
     return {
@@ -232,10 +301,7 @@ export const useAllTenantsDashboard = () => {
         if (row?.Tenant) highRiskTenants.add(row.Tenant)
       }
 
-      if (
-        String(row?.TestType ?? '').toLowerCase() === 'identity' &&
-        row?.Name
-      ) {
+      if (String(row?.TestType ?? '').toLowerCase() === 'identity' && row?.Name) {
         const tenantSet = identityChecks.get(row.Name) ?? new Set()
         if (row?.Tenant) tenantSet.add(row.Tenant)
         identityChecks.set(row.Name, tenantSet)
@@ -249,11 +315,7 @@ export const useAllTenantsDashboard = () => {
 
     const identityTenantCount = new Set(
       rows
-        .filter(
-          (row) =>
-            String(row?.TestType ?? '').toLowerCase() === 'identity' &&
-            row?.Tenant
-        )
+        .filter((row) => String(row?.TestType ?? '').toLowerCase() === 'identity' && row?.Tenant)
         .map((row) => row.Tenant)
     ).size
 
@@ -275,9 +337,7 @@ export const useAllTenantsDashboard = () => {
     const spf = rows.filter((row) => row?.SPFPassAll).length
     const dkim = rows.filter((row) => row?.DKIMEnabled).length
     const dmarc = rows.filter((row) =>
-      ['quarantine', 'reject'].includes(
-        String(row?.DMARCActionPolicy ?? '').toLowerCase()
-      )
+      ['quarantine', 'reject'].includes(String(row?.DMARCActionPolicy ?? '').toLowerCase())
     ).length
     const dnssec = rows.filter((row) => row?.DNSSECPresent).length
 
@@ -318,17 +378,14 @@ export const useAllTenantsDashboard = () => {
       const age = hoursSince(row?.LastRefresh)
       if (row?.Tenant && age !== null) {
         const current = tenantOldest.get(row.Tenant)
-        if (current === undefined || age > current)
-          tenantOldest.set(row.Tenant, age)
+        if (current === undefined || age > current) tenantOldest.set(row.Tenant, age)
       }
     })
 
     const scale = SCALE_TYPES.map(({ type, label }) => ({
       label,
       value: totals.get(type) ?? 0,
-      average: tenantCount
-        ? Math.round((totals.get(type) ?? 0) / tenantCount)
-        : 0,
+      average: tenantCount ? Math.round((totals.get(type) ?? 0) / tenantCount) : 0,
     }))
 
     let fresh = 0
@@ -368,16 +425,8 @@ export const useAllTenantsDashboard = () => {
       }
     })
 
-    // Every cached collection, biggest first — shown in the Portfolio info bar's off-canvas so the
-    // headline four don't have to be the whole story.
-    const allTotals = [...totals.entries()]
-      .filter(([, value]) => value > 0)
-      .sort((a, b) => b[1] - a[1])
-      .map(([type, value]) => ({ type, value }))
-
     return {
       scale,
-      allTotals,
       hasData: rows.length > 0,
       freshness: { fresh, stale, missing },
       staleTenants: staleTenants.slice(0, 5),
@@ -386,66 +435,10 @@ export const useAllTenantsDashboard = () => {
 
   /* ------------------------------------------------------------ secure score */
 
-  const secureScore = useMemo(() => {
-    const rows = asArray(secureScoreApi.data)
-    if (!rows.length) return { average: 0, best: null, worst: null, scored: 0 }
-
-    const scored = rows.filter((row) => Number(row?.MaxScore) > 0)
-    if (!scored.length)
-      return { average: 0, best: null, worst: null, scored: 0 }
-
-    const withNames = scored.map((row) => ({
-      tenant: row.Tenant,
-      name: row.TenantName || displayNameByDomain.get(row.Tenant) || row.Tenant,
-      percent: Number(row.PercentageScore ?? 0),
-      current: Number(row.CurrentScore ?? 0),
-      max: Number(row.MaxScore ?? 0),
-    }))
-
-    const sorted = [...withNames].sort((a, b) => a.percent - b.percent)
-
-    // Portfolio trend: average the per-tenant percentage for each captured day. Each day is averaged
-    // only over the tenants that actually reported it, so a tenant that started reporting mid-window
-    // does not drag the earlier points down.
-    const byDate = new Map()
-    scored.forEach((row) => {
-      ;(row.History ?? []).forEach((point) => {
-        const date = String(point?.Date ?? '').slice(0, 10)
-        if (!date) return
-        const entry = byDate.get(date) ?? { total: 0, count: 0 }
-        entry.total += Number(point?.PercentageScore ?? 0)
-        entry.count += 1
-        byDate.set(date, entry)
-      })
-    })
-
-    const trend = [...byDate.entries()]
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([date, value]) => ({
-        date,
-        percent: value.count
-          ? Math.round((value.total / value.count) * 10) / 10
-          : 0,
-      }))
-
-    const delta =
-      trend.length > 1
-        ? Math.round(
-            (trend[trend.length - 1].percent - trend[0].percent) * 10
-          ) / 10
-        : null
-
-    return {
-      average: Math.round(
-        withNames.reduce((sum, row) => sum + row.percent, 0) / withNames.length
-      ),
-      worst: sorted[0],
-      best: sorted[sorted.length - 1],
-      scored: withNames.length,
-      trend,
-      delta,
-    }
-  }, [secureScoreApi.data, displayNameByDomain])
+  const secureScore = useMemo(
+    () => deriveSecureScoreSummary(asArray(secureScoreApi.data), displayNameByDomain),
+    [secureScoreApi.data, displayNameByDomain]
+  )
 
   /* -------------------------------------------------------------------- logs */
 
@@ -483,9 +476,7 @@ export const useAllTenantsDashboard = () => {
 
     tenants.forEach((tenant) => {
       const name = tenant?.displayName || tenant?.defaultDomainName
-      const status = String(
-        tenant?.delegatedPrivilegeStatus ?? ''
-      ).toLowerCase()
+      const status = String(tenant?.delegatedPrivilegeStatus ?? '').toLowerCase()
       if (status && !status.includes('delegatedadminprivileges')) {
         rows.push({
           key: `${tenant.customerId}-delegation`,
