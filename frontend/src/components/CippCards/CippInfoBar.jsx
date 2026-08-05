@@ -1,19 +1,13 @@
 import React, { useState, Fragment } from 'react'
-import {
-  Box,
-  Card,
-  Stack,
-  SvgIcon,
-  Typography,
-  Skeleton,
-  Tooltip,
-} from '@mui/material'
+import { useRouter } from 'next/router'
+import { Box, Card, Stack, SvgIcon, Typography, Skeleton, Tooltip } from '@mui/material'
 import { Grid } from '@mui/system'
 import { CippOffCanvas } from '../CippComponents/CippOffCanvas'
 import { CippPropertyListCard } from './CippPropertyListCard'
 
 export const CippInfoBar = ({ data, isFetching }) => {
   const [visibleIndex, setVisibleIndex] = useState(null)
+  const router = useRouter()
 
   return (
     <Card>
@@ -23,10 +17,18 @@ export const CippInfoBar = ({ data, isFetching }) => {
             <Grid
               size={{ md: 3, sm: 6, xs: 12 }}
               onClick={
-                item.offcanvas ? () => setVisibleIndex(index) : item.onClick
+                item.offcanvas
+                  ? () => setVisibleIndex(index)
+                  : item.link
+                    ? () => router.push(item.link)
+                    : undefined
               }
               sx={{
-                cursor: item.offcanvas || item.onClick ? 'pointer' : 'default',
+                cursor: item.offcanvas || item.link ? 'pointer' : 'default',
+                '&:hover':
+                  item.offcanvas || item.link
+                    ? { backgroundColor: (theme) => theme.palette.action.hover }
+                    : undefined,
                 borderBottom: (theme) => ({
                   xs: `1px solid ${theme.palette.divider}`,
                   md: 'none',
