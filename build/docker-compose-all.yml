@@ -199,10 +199,18 @@ services:
     container_name: cipp-storybook
     restart: unless-stopped
     working_dir: /app
-    # No install step here — cipp-frontend owns yarn install for the shared node_modules
-    # volume, and depends_on/service_healthy below guarantees it has finished. --host 0.0.0.0
-    # for the same reason as next dev: the default bind is unreachable from outside the container.
-    command: sh -c "npx storybook dev -p 6006 --host 0.0.0.0 --no-open"
+    # No yarn install here — cipp-frontend owns that for the shared node_modules volume, and
+    # depends_on/service_healthy below guarantees it has finished. --host 0.0.0.0 for the same
+    # reason as next dev: the default bind is unreachable from outside the container.
+    #
+    # The playwright install is for @storybook/addon-vitest, which boots vitest in browser mode
+    # inside the dev server — without a browser it throws "Executable doesn't exist" and the
+    # component-test widget is dead. npx resolves the version pinned in package.json, so this
+    # stays correct across playwright bumps. Browsers land in the cached volume below (first run
+    # only); --with-deps installs the apt libs into the container fs, so it re-runs on recreate.
+    command: >
+      sh -c "npx playwright install --with-deps chromium &&
+      npx storybook dev -p 6006 --host 0.0.0.0 --no-open"
     ports:
       - "6006:6006"
     environment:
@@ -211,6 +219,7 @@ services:
     volumes:
       - ../frontend:/app
       - cipp-frontend_node_modules:/app/node_modules
+      - cipp-storybook_playwright:/root/.cache/ms-playwright
     depends_on:
       cipp-frontend:
         condition: service_healthy
@@ -224,6 +233,8 @@ volumes:
     external: true
   cipp-frontend_out_dev:
     external: true
+  # not external: compose creates this one, it's a throwaway browser cache
+  cipp-storybook_playwright:
 
 networks:
   cipp-network:

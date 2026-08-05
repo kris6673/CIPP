@@ -22,7 +22,7 @@ The frontend test suite exists to catch regressions, whether they come from an u
 
 ### Storybook as a Component Workbench
 
-`yarn storybook` serves the story catalog at `http://localhost:6006` with no backend, auth, or tenant required. Every story renders inside the full provider stack (MUI theme with a light/dark toggle, Redux, React Query, and a mock settings context pinned to `testdomain.com`), and `/api/*` requests are answered by the MSW handlers in `tests/mocks/handlers.js`. That makes a story the fastest way to develop or debug a component outside the app.
+`yarn storybook` serves the story catalog at `http://localhost:6006` with no backend, auth, or tenant required. On the Linux/macOS Docker loop you don't need to run anything — the `cipp-storybook` container serves the same URL as part of `docker-compose-all.yml`. Every story renders inside the full provider stack (MUI theme with a light/dark toggle, Redux, React Query, and a mock settings context pinned to `testdomain.com`), and `/api/*` requests are answered by the MSW handlers in `tests/mocks/handlers.js`. That makes a story the fastest way to develop or debug a component outside the app.
 
 To reproduce a state the live API rarely produces (an error response, an empty tenant, a half-populated report), give the story its own handler:
 
