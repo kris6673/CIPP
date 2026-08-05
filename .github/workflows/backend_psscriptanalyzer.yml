@@ -37,6 +37,7 @@ jobs:
           }
           if ($results) {
             $results | Format-Table -AutoSize
+            $results | Format-List | Out-File -FilePath psscriptanalyzer-results.txt
             $errors = $results | Where-Object { $_.Severity -eq 'Error' }
             if ($errors) {
               Write-Error "PSScriptAnalyzer found $($errors.Count) error(s). Please fix before merging."
