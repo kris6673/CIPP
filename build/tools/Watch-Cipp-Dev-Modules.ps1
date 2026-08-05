@@ -16,7 +16,12 @@
 param(
     [string]   $SourceModules   = "$PSScriptRoot\..\..\backend\Modules",
     [string]   $OutputModules   = "$PSScriptRoot\..\.devmodules",
-    [string[]] $Modules         = @('CIPPCore','CIPPHTTP','CIPPStandards','CIPPDB','CIPPAlerts','CIPPActivityTriggers','CippExtensions'),
+    # Keep in sync with build-dev-modules.ps1's default list and the .devmodules
+    # overlays in docker-compose-no-frontend.yml. CIPPTests is included: the initial
+    # compile built it, so leaving it out here meant test edits never went live.
+    # build-dev-modules.ps1 handles its special case (source tree shipped alongside
+    # the compiled module) so nothing extra is needed on this side.
+    [string[]] $Modules         = @('CIPPCore','CIPPHTTP','CIPPStandards','CIPPDB','CIPPAlerts','CIPPActivityTriggers','CippExtensions','CIPPTests'),
     [string]   $Container       = 'cipp-api',
     [int]      $DebounceMs      = 750,
     [switch]   $SkipInitialBuild

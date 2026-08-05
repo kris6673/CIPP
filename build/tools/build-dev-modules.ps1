@@ -60,12 +60,26 @@ foreach ($mod in $Modules) {
     $tmpOut = Join-Path ([System.IO.Path]::GetTempPath()) "cipp-devbuild-$mod"
     Remove-Item $tmpOut -Recurse -Force -ErrorAction SilentlyContinue
     try {
+        Build-Module -SourcePath $buildManifest -OutputDirectory $tmpOut -ErrorAction Stop | Out-Null
+
         if ($mod -eq 'CIPPTests') {
-            # Build the tests module but keep the source files as well as the compiled module in the dev environment.
-            Build-Module -SourcePath $buildManifest -OutputDirectory $tmpOut -ErrorAction Stop | Out-Null
-            Copy-Item (Join-Path $sourceModulesPath $mod) (Join-Path $outputModulesPath $mod) -Recurse -Force
-        } else {
-            Build-Module -SourcePath $buildManifest -OutputDirectory $tmpOut -ErrorAction Stop | Out-Null
+            # cipp-api enumerates the test source at runtime to discover tests, so for this
+            # module the source tree ships alongside the compiled module instead of being
+            # replaced by it.
+            #
+            # Copy the *contents*, not the directory: Copy-Item of a directory onto a
+            # destination that already exists puts it inside, giving
+            # .devmodules/CIPPTests/CIPPTests. The watcher recompiles on every save, so the
+            # directory form nests one level deeper each time a test file is touched.
+            $srcTree = Join-Path $sourceModulesPath $mod
+            $dstTree = Join-Path $outputModulesPath $mod
+            New-Item -ItemType Directory -Path $dstTree -Force | Out-Null
+            # heal nesting left behind by earlier runs. only the nested copy is removed --
+            # $dstTree itself is bind-mounted into the running container, and deleting a
+            # mount root out from under Docker breaks the mount
+            $stale = Join-Path $dstTree $mod
+            if (Test-Path $stale) { Remove-Item $stale -Recurse -Force }
+            Copy-Item (Join-Path $srcTree '*') $dstTree -Recurse -Force
         }
     } catch {
         Write-Host " FAILED: $_" -ForegroundColor Red
