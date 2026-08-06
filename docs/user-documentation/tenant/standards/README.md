@@ -5,103 +5,117 @@ description: Standards ensure consistent configuration across your Microsoft 365
 # Standards & Drift
 
 {% hint style="warning" %}
-### Page Purpose
+#### Page Purpose
 
 This page serves as an overview of CIPP Standards. For the technical components of each page and details on the actions you can take, please see the respective docs page under this menu item to the left.
 {% endhint %}
 
-## **Standards Overview**
+## Standards Overview
 
-Standards in CIPP ensure consistent configurations across your Microsoft 365 tenants by reapplying baseline settings **every twelve hours** or evaluating drift **every twelve hours**. This automatic enforcement and drift detection prevents unauthorised changes and helps maintain security. There are two kinds of standards:
+Standards keep your Microsoft 365 tenants configured the way you intend, by checking their settings on a schedule and acting when they do not match. This catches configuration that has been changed by hand, inherited from a tenant you took over, or never set correctly in the first place.
 
-* Standards: These are the traditional standards that you've known and loved in CIPP for quite a while now. These standards are automatically enforced every twelve hours. Options for these standards are Report, Alert, and Remediate from [#actions](./#actions "mention").
-* Drift Management: New in v 8.3, Drift Management allows for you to manage client environments with a much finer touch. These templates evaluate every twelve hours and allow for granular handling of anything that is out of alignment with the template. As such, Drift Management settings are automatically set to Report and Alert from the [#actions](./#actions "mention") below. To learn more about what you can do with Drift Management, see [drift.md](../manage/drift.md "mention").
+CIPP offers two ways of doing this, and they suit different jobs.
+
+### Standards
+
+The traditional approach. You build a template describing how tenants should be configured, apply it, and CIPP enforces it **every twelve hours**. Each standard in the template is set to Report, Alert, or Remediate, so a single template can quietly gather data on some settings while actively correcting others.
+
+Use standards when you want a configuration applied and kept that way without asking.
+
+### Drift
+
+Drift takes the opposite stance: instead of silently correcting a tenant, it tells you what changed and lets you decide. A drift template is evaluated **every twelve hours** and any setting that no longer matches is raised as a deviation for review, which you can then accept or deny.
+
+Use drift when a client's configuration needs a lighter touch, when you want visibility before anything is changed, or when you need an audit trail of what moved and who signed it off.
+
+| Constraint              | Detail                                                                                                           |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| One template per tenant | A tenant can have only one drift template applied at a time, unlike standards templates which merge.             |
+| Actions                 | Drift standards are set to Report. Enabling automatic remediation on a standard makes it Report and Remediate.   |
+| Alerting                | Configured on the template itself, through the drift alert webhook and email settings, rather than per standard. |
+| Scheduling              | Drift templates always run on the schedule. The "Do not run on schedule" option is unavailable.                  |
 
 {% hint style="info" %}
-For a deeper dive on the differences between the two types of standards and considerations for when you want to use each, see [standards-v-drift.md](../../../troubleshooting/frequently-asked-questions/standards-v-drift.md "mention")
+For a deeper dive on the differences between the two and considerations for when to use each, see [standards-v-drift.md](../../../troubleshooting/frequently-asked-questions/standards-v-drift.md "mention"). To learn more about what you can do with drift, see [drift.md](../manage/drift.md "mention").
 {% endhint %}
 
-### Actions
+## Actions
 
-CIPP allows you to set standards in three different settings. Some standards can only be set to specific items, such as Intune standards which can only be "Remediated".
+Each standard in a template is set to one or more of the following.
 
-| Action    | Description                                                                                                                                                                                                     |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Report    | Logs the current configuration and stores this inside of the CIPP database for your standards reports or BPA reports.                                                                                           |
-| Alert     | Sends you a notification via the configured method in CIPP -> Application Settings -> Notifications                                                                                                             |
-| Remediate | Changes the configuration of the tenant and enables Report settings in the backend. You can optionally enable Report in addition to Remediate for visual clarity, but all Remediate Standards will also Report. |
+| Action    | Description                                                                                                                                                                   |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Report    | Logs the current configuration and stores it in the CIPP database for your standards reports or BPA reports.                                                                  |
+| Alert     | Sends a notification via the method configured under CIPP, Application Settings, Notifications.                                                                               |
+| Remediate | Changes the tenant's configuration, and reports in the backend. All Remediate standards also Report, so enabling Report alongside it is optional and only for visual clarity. |
 
-For example, when you wish to create a report for Audit log state across all your tenants, you can create an "All Tenants" standard that has the Audit Log standard set to "Report" - This fills the CIPP database with the current setting without editing the client's settings.
+Take the Audit Log standard as an example. Set to **Report** across an All Tenants template, it fills the CIPP database with each tenant's current setting without changing anything. Set to **Alert**, it also notifies you through your email or ticketing system. Set to **Remediate**, it enables the audit log wherever it is off.
 
-Setting this same standard to "Alert" allows you to receive an alert inside of your e-mail or ticketing system.
+{% hint style="info" %}
+A small number of standards do not offer all three actions. Template-deployment standards, such as transport rule and Exchange connector templates, are Remediate only, because there is no existing configuration to report on. A few others are Report and Alert only where CIPP cannot safely make the change itself. Where an action is unavailable, it will not be offered when you configure the standard.
+{% endhint %}
 
-Setting this same standard to "Remediate" changes the client's configuration, and in this case would enable the audit log for the client.
+## Precedence of Standards
 
-### **Precedence of Standards**
+Standards templates are merged, so a tenant can be covered by several at once. Where two templates configure the same setting differently, the winner is decided first by specificity, then by which was most recently saved.
 
-Standards are merged based on their specificity and creation date:
+### Specificity
 
-#### Specificity
+A more specific template always overrides a more general one. If an All Tenants template enables external warnings but one client needs it disabled, applying a tenant-specific template disables it for that client alone.
 
-Standards applied via a more specific targeting method will always override more general standards (like those set for 'All Tenants'). For instance, if an 'All Tenants' standard enables external warnings but you need it disabled for one tenant, creating and applying a tenant-specific standard will disable external warnings for that tenant. The priority order is:
+| Priority | Scope             | Overrides                    |
+| -------- | ----------------- | ---------------------------- |
+| Highest  | Individual tenant | Tenant group and All Tenants |
+| Middle   | Tenant group      | All Tenants                  |
+| Lowest   | All Tenants       | Nothing                      |
 
-* Individual tenant, which overrides tenant group and All Tenants
-* Tenant group, which overrides All Tenants
-* All Tenants, which is the lowest priority
+### Most Recently Saved
 
-<table><thead><tr><th>Tenant</th><th data-type="checkbox">Tenant Group Membership</th><th>Standard Setting</th><th>Resultant Policy</th></tr></thead><tbody><tr><td>A</td><td>false</td><td>Disable external warnings applied to All Tenants</td><td>External warnings disabled</td></tr><tr><td>B</td><td>true</td><td>Enable external warnings applied to tenant group</td><td>External warnings enabled</td></tr></tbody></table>
-
-#### Creation Date
-
-When two standards conflict at the same specificity level (e.g., both tenant-specific), the standard created most recently takes precedence. For example, if you create a tenant-specific standard enabling external warnings and later create another tenant-specific standard disabling external warnings, the more recently created standard (disabling TOTP) will be applied.
+When two templates conflict at the same level of specificity, the one saved most recently wins.
 
 {% hint style="warning" %}
-**Note**: By default, standards aren't applied to any tenants upon setup of CIPP. You must manually configure and enable them. Apply standards with a clear understanding of their effects.
+This is based on when a template was last saved, not when it was created. Editing an older template moves it to the front of the queue, so it can start overriding a newer template that previously took precedence. If a setting stops behaving as expected after an unrelated edit, this is the first thing to check.
 {% endhint %}
 
-{% hint style="success" %}
-### CIPP v7 Standards Updates
+## Standards Categories
 
-As of the update to v7 of CIPP, standards now operate via templates. Where previously, standards were either configured via the AllTenants "Edit Standards" page or an individual tenants "Edit Standards" page, multiple templates can be created to provide you with a more granular standards experience. Templates can be assigned to "AllTenants", "AllTenants" with excluded tenants, or just specific list of tenants.
+Standards are grouped into the following categories, which match the Category label on the standard selection page.
 
-If you are upgrading to v7 from a prior version of CIPP, you'll need to complete a one-time conversion of your existing standards by clicking the "Convert Standards" button at the top of the page. These standards will still not run on a schedule until you edit each template to your choosing and then toggling off the "Do not run on schedule" option.
-{% endhint %}
+| Category                    | Description                                                                                          |
+| --------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Global Standards            | Organisation-wide configuration applied across the tenant.                                           |
+| Entra (AAD) Standards       | Identity configuration, including authentication methods and Conditional Access.                     |
+| Exchange Standards          | Email settings such as spam protection, mailbox configuration, and message handling.                 |
+| Defender Standards          | Protection against phishing, malware, and other threats.                                             |
+| Intune Standards            | Device and application management policies.                                                          |
+| Device Management Standards | Device enrolment and lifecycle configuration.                                                        |
+| SharePoint Standards        | SharePoint and OneDrive configuration, including sharing and retention.                              |
+| Teams Standards             | Collaboration settings such as meeting policies and external file sharing.                           |
+| Copilot (M365) Standards    | Microsoft 365 Copilot availability and configuration.                                                |
+| Templates                   | Deploys a saved template, such as a transport rule, Exchange connector, group, or assignment filter. |
 
-### **Standards Categories**
+## Impact Levels
 
-For ease of reference, standards are grouped within the following categories. These categories match the Category label on the standard selection page.
-
-| Category             | Description                                                                       |
-| -------------------- | --------------------------------------------------------------------------------- |
-| Global Standards     | Applied across all tenants to manage organisation-wide configurations.            |
-| Exchange Standards   | Email-related settings such as spam protection and message handling.              |
-| Defender Standards   | Security measures to protect against phishing, malware, and other threats.        |
-| Intune Standards     | Device and application management policies for a secure Intune environment.       |
-| SharePoint Standards | SharePoint and OneDrive configuration incl. sharing and retention policies.       |
-| Teams Standards      | Collaboration-related settings, i.e.: meeting policies and external file sharing. |
-
-### **Impact Levels**
-
-Each standard is labelled based on the level of change it introduces and its impact on users:
+Each standard is labelled with the level of change it introduces and its effect on users.
 
 | Impact | Description                                                                                     |
 | ------ | ----------------------------------------------------------------------------------------------- |
 | Low    | Minimal or no user-facing effects.                                                              |
 | Medium | May require some communication with users to prepare them for changes.                          |
-| High   | Significant changes that could affect daily workflows; coordinate with clients before applying. |
+| High   | Significant changes that could affect daily workflows. Coordinate with clients before applying. |
 
 {% hint style="warning" %}
-### Important Considerations
+#### Important Considerations
 
-* **Companion Policies:** Some standards rely on additional policies in tools like **Microsoft Intune** to be fully effective. Ensure all required companion policies are configured to achieve the desired results.
-* **Deselecting Standards:** Deselecting a standard prevents it from being enforced in future cycles, but it does not undo its current configuration.
-  * **Example:** If you deselect `"Enable FIDO2 capabilities`," the standard will stop enforcing this policy. However, if FIDO2 was already enabled, it will remain enabled.
-* **Application Cadence:** Standards reapply **every twelve hours** by default. If a setting changes outside of the standard, it will be overridden by the value specified in the standard during the next reapplication cycle. Drift Management are evaluated **every twelve hours**.
-* **Licence-Aware Skipping:** If a tenant is not licensed for a setting included in a template (e.g., a Conditional Access standard applied to a tenant with no Entra P1), that standard is skipped for that tenant — not failed. This is reflected in the **License Missing Percentage** and **Combined Alignment Score** columns on the [Standards & Drift Alignment](alignment/) page. This means it is safe to apply a mixed-licence template across tenants; un-licensed settings will not be attempted.
+* **Nothing runs until you set it up.** Standards are not applied to any tenant when CIPP is installed. You must create and apply templates yourself. Apply them with a clear understanding of their effects.
+* **Companion policies.** Some standards rely on additional policies in tools such as Microsoft Intune to be fully effective. Ensure any required companion policies are in place.
+* **Deselecting a standard does not undo it.** Removing a standard stops it being enforced in future cycles, but leaves the current configuration alone. Deselecting `Enable FIDO2 capabilities` stops CIPP enforcing it, but FIDO2 stays enabled where it was already turned on.
+* **Application cadence.** Standards reapply every twelve hours. A setting changed outside the standard will be overridden at the next cycle. Drift templates are evaluated on the same twelve hour cadence, shortly after the standards run.
+* **Licence-aware skipping.** If a tenant is not licensed for a setting in a template, for example a Conditional Access standard applied to a tenant without Entra P1, that standard is skipped rather than failed. This is reflected in the **License Missing Percentage** and **Combined Alignment Score** columns on the Standards & Drift Alignment page, and means it is safe to apply a mixed-licence template across tenants.
 {% endhint %}
 
 {% hint style="info" %}
-Plans exist to implement more standardised options and settings. If there's a standard that you want, see the "Feature Requests / Ideas" section below.
+Plans exist to implement more standardised options and settings. If there is a standard you want, see the Feature Requests section below.
 {% endhint %}
 
 ***

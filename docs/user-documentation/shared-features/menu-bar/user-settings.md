@@ -1,23 +1,29 @@
 # User Preferences
 
-The Preferences page holds the interface settings that control how CIPP looks and behaves for you, along with defaults used elsewhere in the application. Every setting on this page can be saved either for your own account or for all users of the instance, chosen from the Actions card before saving. Where a setting is saved for all users, an individual user's own preference takes precedence over it.
+The Preferences page holds the interface settings that control how CIPP looks and behaves for you, along with defaults used elsewhere in the application. Most settings on this page can be saved either for your own account or for all users of the instance, chosen from the Actions card before saving. Where a setting is saved for all users, an individual user's own preference takes precedence over it.
+
+The page opens on whichever scope currently applies to you: your own settings if you have saved any, and the all-users settings if you have not.
 
 ## General Settings
 
-| Setting                                   | Description                                                                                                                                                                                                  |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Default usage location for users          | The country pre-selected as the usage location when creating a new user. Required.                                                                                                                           |
-| Default Page Size                         | How many rows tables show per page by default, chosen from 25, 50, 100, or 250. Required.                                                                                                                    |
-| Default test suite on the Home page       | The test suite whose results are shown on the Home page by default, chosen from your saved test reports.                                                                                                     |
-| Added Attributes when creating a new user | Additional user attributes to make available on the new user form, such as employee ID, hire date, employee type, or office location. Anything selected here appears as an extra field when creating a user. |
-| Save last used table filter               | When enabled, the filter you last applied to a table is remembered and re-applied the next time you open it.                                                                                                 |
+| Setting                                   | Description                                                                                                                                                                                                                                                                                                                                                                                  |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Default usage location for users          | The country pre-selected as the usage location when creating a new user. Required.                                                                                                                                                                                                                                                                                                           |
+| Default Page Size                         | How many rows tables show per page by default, chosen from 25, 50, 100, or 250. Required.                                                                                                                                                                                                                                                                                                    |
+| Default test suite on the Home page       | The test suite whose results are shown on the Home page by default, chosen from your saved test reports.                                                                                                                                                                                                                                                                                     |
+| Added Attributes when creating a new user | Additional user attributes to make available on the new user form. Anything selected here appears as an extra field when creating a user. The available attributes are `consentProvidedForMinor`, `employeeId`, `employeeHireDate`, `employeeLeaveDateTime`, `employeeType`, `faxNumber`, `legalAgeGroupClassification`, `officeLocation`, `otherMails`, `showInAddressList`, and `sponsor`. |
+| Save last used table filter               | When enabled, the filter you last applied to a table is remembered and re-applied the next time you open it.                                                                                                                                                                                                                                                                                 |
+
+{% hint style="info" %}
+**Default Page Size** sets the starting value only. An individual table's own rows-per-page control offers 500 as well, and choosing it there applies for as long as you stay on that page.
+{% endhint %}
 
 ## Navigation Settings
 
 | Setting                | Description                                                           |
 | ---------------------- | --------------------------------------------------------------------- |
 | Show Sidebar Bookmarks | Shows your bookmarked pages in the sidebar.                           |
-| Show Popover Bookmarks | Shows your bookmarked pages in a popover.                             |
+| Show Popover Bookmarks | Shows your bookmarked pages in a popover opened from the menu bar.    |
 | Bookmark Reorder Mode  | How bookmarks are reordered: with Arrow Buttons, or by Drag and Drop. |
 | Compact Navigation     | Reduces the size of the navigation menu so more of it fits on screen. |
 
@@ -25,7 +31,7 @@ The Preferences page holds the interface settings that control how CIPP looks an
 
 Sets which offboarding options are pre-selected when you offboard a user, so that routine offboardings do not have to be configured each time. These are defaults only and can still be changed for an individual offboarding.
 
-A label on the card indicates which defaults are currently in effect — your own user defaults, the all-users defaults, defaults set for the tenant, or CIPP's built-in defaults where none have been saved.
+A label on the card indicates which defaults are currently in effect: **Using Tenant Defaults**, **Using User Defaults**, **Using All Users Defaults**, or **Using Default Settings** where none have been saved.
 
 | Setting                                       | Description                                                            |
 | --------------------------------------------- | ---------------------------------------------------------------------- |
@@ -52,18 +58,22 @@ A **Send results to** section chooses where the outcome of an offboarding is rep
 
 ## Portal Links Configuration
 
-Chooses which Microsoft portal shortcuts appear in CIPP. All are enabled by default; switch off any you do not use to shorten the list.
+Chooses which Microsoft portal shortcuts appear in the tenant information flyout. All are enabled by default; switch off any you do not use to shorten the list.
 
-The available portals are M365, Exchange, Entra, Teams, Azure, Intune, SharePoint, Security, Purview, Power Platform, and Power BI.
+The available portals are M365, Exchange, Entra, Teams, Azure, Intune, SharePoint, Security, Purview, Power Platform, and Power BI. The **Manage Tenant** entry is always shown and cannot be switched off. See [tenant-select.md](tenant-select.md "mention").
 
 ## Developer Options
 
-Diagnostic options intended for troubleshooting and development. Both are specific to you and are stored in the browser you are using, so they do not follow you to another device and are not saved with the rest of the page.
+Diagnostic options intended for troubleshooting and development.
 
 | Option               | Description                                                                                                                                         |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | TanStack Query Tools | Enables or disables the query developer tools, used for inspecting how data is fetched and cached.                                                  |
 | Advanced Views       | Enables or disables advanced views, which reveal diagnostic pages that are otherwise hidden from day-to-day use, such as audit-log Search Coverage. |
+
+{% hint style="info" %}
+These two take effect the moment you click them, and are not part of what the **Save Changes** button commits. They are stored in the browser you are using, so they apply only to you on this device and cannot be set for all users.
+{% endhint %}
 
 ## CIPP Roles
 
@@ -76,10 +86,8 @@ The Actions card controls who your changes apply to and commits them.
 | Control       | Description                                                                                                                                                                     |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | User selector | Chooses whether the settings are saved for Current User or for All Users. Selecting a different option reloads the page's values to show the settings that apply to that scope. |
-| Save Changes  | Saves the settings for the selected scope. The button is unavailable until any required fields are filled in, and a message confirms the save or reports an error.              |
+| Save Changes  | Saves the settings for the selected scope. The button is unavailable while any required field is empty or invalid, and a message confirms the save or reports an error.         |
 
 ***
 
-### Feature Requests / Ideas
-
-We value your feedback and ideas. Please raise any [feature requests](https://github.com/KelvinTegelaar/CIPP/issues/new?assignees=\&labels=enhancement%2Cno-priority\&projects=\&template=feature.yml\&title=%5BFeature+Request%5D%3A+) on GitHub.
+{% include "../../../../.gitbook/includes/feature-request.md" %}

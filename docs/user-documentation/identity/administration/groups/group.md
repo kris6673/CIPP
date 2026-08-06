@@ -28,3 +28,7 @@ This card will allow you to view a group's owners. This includes a "View User" a
 ## Membership
 
 This card allows you to view the groups this group is a member of.
+
+***
+
+{% include "../../../../../.gitbook/includes/feature-request.md" %}

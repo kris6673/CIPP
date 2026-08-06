@@ -1,53 +1,84 @@
 # Configuration Backup
 
+Configuration Backup takes a scheduled copy of a tenant's configuration and lets you restore it later. Backups run as a scheduled task, are stored in CIPP's own storage, and can be previewed, downloaded as JSON, or restored selectively.
+
+The page reflects the tenant selected in CIPP. With a specific tenant selected you see that tenant's backups alongside any global backups. With All Tenants selected you see every tenant's backups, and a tenant selector appears above the history list to narrow it down.
+
 ## Current Configuration
 
-This button will change what is displayed depending on if you have already configured a backup schedule or not.
+This card shows whether a backup schedule exists, and its button changes accordingly.
 
-<details>
+**Add Backup Schedule** is shown when no schedule exists and opens the scheduling flyout described below.
 
-<summary>Add Backup Schedule</summary>
+**Remove Backup Schedule** is shown when a schedule already exists. Removing it stops future automatic backups. Backup files already taken are kept and remain available to restore.
 
-Select the tenant (or All Tenants) you want to create a backup task for. Toggle on or off the settings you want backed up prior to hitting the Submit button at the bottom of the page.
+{% hint style="info" %}
+A schedule created against All Tenants covers every tenant. A tenant-specific schedule can exist alongside a global one and runs on its own schedule, so a tenant can be covered twice.
+{% endhint %}
 
-</details>
+### Add Backup Schedule
 
-<details>
+Choose the tenant the schedule applies to, then switch on the components to include. Every component is switched on by default. **Create Schedule** saves the task.
 
-<summary>Remove Backup Schedule</summary>
+Backups run daily from the time the schedule is created. There is no recurrence or start-time option in this flyout.
 
-If a backup has been scheduled, this button will display to allow you to delete the scheduled task.
-
-</details>
+| Setting                          | Description                                                                                                                 |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Tenant Selection                 | The tenant the schedule applies to, or All Tenants for every tenant.                                                        |
+| User List                        | Backs up the tenant's user accounts and their properties.                                                                   |
+| Groups                           | Backs up groups and their membership.                                                                                       |
+| Conditional Access Configuration | Backs up the tenant's Conditional Access policies.                                                                          |
+| Intune Configuration Policies    | Backs up device configuration profiles.                                                                                     |
+| Intune Compliance Policies       | Backs up device compliance policies.                                                                                        |
+| Intune Protection Policies       | Backs up app protection policies.                                                                                           |
+| Anti-Spam Policies               | Backs up the tenant's anti-spam policies.                                                                                   |
+| Anti-Phishing Policies           | Backs up the tenant's anti-phishing policies.                                                                               |
+| Webhook Alerts Configuration     | Backs up the alert webhooks configured in CIPP for the tenant.                                                              |
+| Scripted Alerts Configuration    | Backs up the scripted alerts configured in CIPP for the tenant.                                                             |
+| Custom Variables                 | Backs up the tenant's custom variables. See [global-variables.md](../administration/tenants/global-variables.md "mention"). |
 
 ## Backup Schedule Details
 
-This section will display the details of the configured backup schedule, including the recurrence, last run, and next scheduled run.
+Shown once a schedule exists. Use the refresh button in the card header to fetch the current state of the task.
+
+| Field         | Description                                                                        |
+| ------------- | ---------------------------------------------------------------------------------- |
+| Backup Name   | The name of the scheduled task, generated as CIPP Backup - followed by the tenant. |
+| Tenant        | The tenant the schedule applies to.                                                |
+| Recurrence    | How often the backup runs. Scheduled backups run daily.                            |
+| Task State    | The state of the underlying scheduled task, for example Planned or Completed.      |
+| Last Executed | How long ago the task last ran, or Never if it has not yet run.                    |
+| Next Run      | When the task is next due, or Not scheduled where no run is queued.                |
 
 ## Backup Components
 
-This will display the components configured for backup.
+Lists the components included in the current schedule as a set of tags. Where a schedule exists but no components were selected, the card shows that no components are configured.
 
 ## Backup History
 
-This table will output information for the backup history for the tenant(s) if it has been configured. Clicking the refresh button at the top of this section will pull in the latest backups from storage.
+Each backup is shown as a card, most recent first. Use the refresh button to pull the latest backups from storage. With All Tenants selected, each card also shows which tenant the backup came from, and the tenant selector filters the list.
 
-### Backup Card Information
+| Item              | Description                                                               |
+| ----------------- | ------------------------------------------------------------------------- |
+| Name              | The date and time the backup was taken, read from the backup's file name. |
+| Time Since Backup | How long ago the backup was taken.                                        |
+| Preview           | Opens a flyout showing the contents of the backup as structured JSON.     |
+| Download          | Downloads the backup as a JSON file.                                      |
+| Restore           | Opens the restore flyout for the selected backup.                         |
 
-| Item              | Description                                                                                           |
-| ----------------- | ----------------------------------------------------------------------------------------------------- |
-| Name              | The name given to the backup which is typically the date and time the backup was taken.               |
-| Time Since Backup | A relative timestamp since this backup was taken.                                                     |
-| Preview           | This will open an extended information window where you are able to preview the backed-up components. |
-| Download          | This will download the backup as a JSON file.                                                         |
-| Restore           | This will open the [#restore-wizard](backup.md#restore-wizard "mention") for the selected backup.     |
+## Restore Configuration Backup
 
-## Restore Wizard
+Restoring writes the selected components from a backup back into the tenant. The restore is queued as a task rather than run immediately, so the result appears once the task has executed.
 
-This wizard allows you to select what will be restored from backup for the tenant.
+| Setting                    | Description                                                                                                                                           |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backups for \<tenant>      | The backup to restore from. Opening the flyout from a backup card pre-selects that backup.                                                            |
+| Restore Settings           | The components to restore, matching the component list used when scheduling a backup. Switch off anything you do not want written back.               |
+| Overwrite existing entries | Replaces existing objects with the versions held in the backup. Leave this off to skip anything that already exists and restore only what is missing. |
+| Send Restore results to    | Where the outcome is reported once the restore has run: Webhook, E-mail, or PSA.                                                                      |
 
 {% hint style="warning" %}
-Note that entire categories will be replaced when you select this.
+Overwriting replaces current settings with those in the backup rather than merging them. Where users are included in the restore, every property on the account is overwritten with the backed-up values. To protect a component, switch it off in Restore Settings or leave Overwrite existing entries off.
 {% endhint %}
 
 ***
