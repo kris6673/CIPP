@@ -8,6 +8,15 @@
   "impact": "Low Impact",
   "helpText": "Signs users out of Microsoft 365 web sessions after a period of inactivity.",
   "executiveText": "Automatically signs out idle sessions on shared or unattended devices.",
+  "impactColour": "warning",
+  "addedDate": "2022-04-13",
+  "powershellEquivalent": "Portal or Graph API",
+  "appliesToTest": [
+    "CIS_1_3_2",
+    "ZTNA21813",
+    "ZTNA21814",
+    "ZTNA21815"
+  ],
   "recommendedBy": [
     "CIS"
   ],
