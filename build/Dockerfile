@@ -79,6 +79,31 @@ COPY build/tools/build-function-parameters.ps1 /build/build-function-parameters.
 COPY backend/Modules/CIPPCore /gen/CIPPCore
 RUN pwsh -File /build/build-function-parameters.ps1 -ModulePath /gen/CIPPCore -OutputPath /gen/function-parameters.json
 
+# ── OpenAPI spec ──
+# Config/openapi.json, derived from the CIPPHTTP entrypoint sources via AST parse.
+# Not documentation-only: Get-CippMcpSpec loads it at runtime and Get-CippMcpToolList
+# projects every read-only operation in it into an MCP tool, so a stale spec ships a
+# stale tool contract. Regenerated here so it can never drift from the source.
+FROM ps-base AS build-openapi
+COPY build/tools/build-openapi.ps1 /build/build-openapi.ps1
+# CIPPCore and friends are needed, not just CIPPHTTP: entrypoints hand the request
+# body to shared helpers and the generator follows those calls to recover the fields
+# they read. Without them the image would ship a thinner spec than the committed one.
+COPY backend/Modules/CIPPHTTP       /gen/Modules/CIPPHTTP
+COPY backend/Modules/CIPPCore       /gen/Modules/CIPPCore
+COPY backend/Modules/CIPPStandards  /gen/Modules/CIPPStandards
+COPY backend/Modules/CippExtensions /gen/Modules/CippExtensions
+COPY backend/Config/openapi-overrides /gen/openapi-overrides
+# The UI's simpleColumns declarations are the only static description of a list
+# response; without them every list endpoint documents an untyped object.
+COPY frontend/src /gen/frontend/src
+RUN pwsh -File /build/build-openapi.ps1 \
+    -EntrypointPath "/gen/Modules/CIPPHTTP/Public/Entrypoints/HTTP Functions" \
+    -ModulesPath /gen/Modules \
+    -FrontendPath /gen/frontend/src \
+    -OverridePath /gen/openapi-overrides \
+    -OutputPath /gen/openapi.json
+
 # ── Frontend build ──
 FROM node:22-slim AS frontend-deps
 WORKDIR /build
@@ -159,6 +184,9 @@ COPY --from=build-cipphttp             /src/CIPPHTTP/             /app/API/Modul
 COPY --from=build-cippcore             /src/CIPPCore/             /app/API/Modules/CIPPCore/
 # generated from CIPPCore, changes whenever it does — keep adjacent in the layer order
 COPY --chown=app:app --from=build-functionparams /gen/function-parameters.json /app/API/Config/function-parameters.json
+# generated from CIPPHTTP; overwrites the committed copy so the image always ships
+# a spec that matches the entrypoints beside it
+COPY --chown=app:app --from=build-openapi /gen/openapi.json /app/API/Config/openapi.json
 
 # Frontend — changes most frequently, placed last
 COPY --from=frontend-build /build/out/ /app/Frontend/

@@ -120,4 +120,23 @@ if ($Modules -contains 'CIPPCore') {
     }
 }
 
+# openapi.json, AST-extracted from the CIPPHTTP entrypoints. Regenerated on every
+# CIPPHTTP build so the local MCP tool list matches the endpoints you just edited.
+# unlike function-parameters.json this file IS committed, so a change here shows up
+# as a working-tree diff — that diff is the point, it belongs in the same commit as
+# the endpoint change
+if ($Modules -contains 'CIPPHTTP') {
+    $backendPath = Split-Path -Parent $sourceModulesPath
+    try {
+        & (Join-Path $PSScriptRoot 'build-openapi.ps1') `
+            -EntrypointPath (Join-Path $sourceModulesPath 'CIPPHTTP' 'Public' 'Entrypoints' 'HTTP Functions') `
+            -ModulesPath $sourceModulesPath `
+            -FrontendPath (Join-Path (Split-Path -Parent $backendPath) 'frontend' 'src') `
+            -OverridePath (Join-Path $backendPath 'Config' 'openapi-overrides') `
+            -OutputPath (Join-Path $backendPath 'Config' 'openapi.json')
+    } catch {
+        Write-Host "openapi.json generation FAILED ($_); a stale spec means the MCP tool list no longer matches the API" -ForegroundColor Red
+    }
+}
+
 Write-Host "Done." -ForegroundColor Cyan

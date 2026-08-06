@@ -58,6 +58,9 @@ function Get-CippMcpToolCatalog {
                 foreach ($ParamRaw in @($Op['parameters'])) {
                     if (-not $ParamRaw) { continue }
                     $Param = Resolve-CippMcpNode -Node $ParamRaw -Spec $Spec
+                    # a $ref that resolves to nothing yields $null; indexing it would throw
+                    # and take the whole catalog down over one bad parameter
+                    if ($Param -isnot [System.Collections.IDictionary]) { continue }
                     if ($Param['in'] -notin @('query', 'path')) { continue }
                     $Schema = if ($Param['schema']) { $Param['schema'] } else { @{ type = 'string' } }
                     $Properties[[string]$Param['name']] = $Schema
@@ -75,12 +78,37 @@ function Get-CippMcpToolCatalog {
                     }
                 }
 
+                # MCP property names must match ^[a-zA-Z0-9_.-]{1,64}$. CIPP endpoints read OData
+                # system query options straight off the request - $Request.Query.'$filter',
+                # '$select', '$top' - so those names arrive here with a leading $ and the client
+                # rejects the request outright. It is not contained to the offending tool: any
+                # schema carrying one is refused, which for ListGraphRequest (advertised directly
+                # by Get-CippMcpToolList) means the gateway stops working. Rename for the wire and
+                # keep a map so Invoke-CippMcpApiRequest can restore the real name on dispatch.
+                $SafeProperties = [ordered]@{}
+                $ParamAlias = @{}
+                foreach ($Entry in $Properties.GetEnumerator()) {
+                    $Safe = Get-CippMcpSafePropertyName -Name $Entry.Key -Taken $SafeProperties.Keys
+                    if (-not $Safe) {
+                        Write-Information "[MCP] $Endpoint : dropped unrepresentable parameter '$($Entry.Key)'"
+                        continue
+                    }
+                    $SafeProperties[$Safe] = $Entry.Value
+                    if ($Safe -ne $Entry.Key) { $ParamAlias[$Safe] = [string]$Entry.Key }
+                }
+
                 $InputSchema = [ordered]@{
                     type       = 'object'
-                    properties = $Properties
+                    properties = $SafeProperties
                 }
                 if ($RequiredList.Count -gt 0) {
-                    $InputSchema['required'] = @($RequiredList | Select-Object -Unique)
+                    # a renamed parameter must be required under the name the client will send
+                    $SafeRequired = foreach ($Req in ($RequiredList | Select-Object -Unique)) {
+                        $Mapped = $ParamAlias.GetEnumerator() | Where-Object { $_.Value -eq $Req } | Select-Object -First 1
+                        if ($Mapped) { $Mapped.Key } elseif ($SafeProperties.Contains($Req)) { $Req }
+                    }
+                    $SafeRequired = @($SafeRequired | Where-Object { $_ })
+                    if ($SafeRequired.Count -gt 0) { $InputSchema['required'] = $SafeRequired }
                 }
 
                 $Tag = @($Op['tags'])[0]
@@ -103,6 +131,7 @@ function Get-CippMcpToolCatalog {
                         _category   = $Category
                         _method     = $Method.ToUpper()
                         _summary    = $Summary
+                        _paramAlias = $ParamAlias
                     })
             }
         }
