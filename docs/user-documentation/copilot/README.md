@@ -1,5 +1,5 @@
 ---
-icon: user-pilot
+icon: sparkles
 ---
 
 # Copilot & AI

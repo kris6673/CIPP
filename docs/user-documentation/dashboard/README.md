@@ -1,6 +1,6 @@
 ---
 description: About the Dashboard which includes versions and quick links
-icon: chart-line
+icon: house
 ---
 
 # CIPP Dashboard
@@ -40,7 +40,7 @@ Totals for tenants, users, mailboxes, and managed devices under management. Each
 
 <details>
 
-<summary>Operations & Triage</summary>
+<summary>Operations &#x26; Triage</summary>
 
 Tiles counting tenants logging errors today (links to the Logbook), GDAP delegations expiring within 30 days (links to GDAP Relationships), high-risk checks failing (links to the [#identity-tab](./#identity-tab "mention")), and standards deviations awaiting approval (links to Tenant Alignment). Below the tiles, cards surface the tenants behind those numbers.
 
