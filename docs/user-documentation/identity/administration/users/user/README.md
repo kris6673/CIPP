@@ -47,7 +47,7 @@ Buttons below the photo change or remove it. Uploads must be JPEG or PNG and no 
 
 The most recent sign-in recorded for the user, shown as success or failure along with the address it came from and the application that was signed in to. Expanding the entry adds the client app used, the operating system or browser detected, the MFA method used and any additional detail Entra recorded against the result. When the sign-in carries location data, the expanded view also plots it on a map alongside the city, state and country or region.
 
-**More Sign-In Logs** opens a dialog with the user's last 50 sign-ins, listing the time, result, IP address, client app, target resource, error code and location for each.
+**More Sign-In Logs** opens a dialog with the user's last 50 sign-ins, listing the time, result, IP address, client app, target resource, error code and location for each. The location is a button that opens a map of where the sign-in came from.
 
 {% hint style="info" %}
 Sign-in logs require Microsoft Entra ID P1 or higher. Without it this card reports an error rather than data, and the same applies to the Applied Conditional Access Policies card, which is built from the same sign-in record.
