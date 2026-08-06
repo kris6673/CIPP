@@ -63,7 +63,7 @@ function Repair-CippApiIdentifierUri {
         if ($PSCmdlet.ShouldProcess($App.appId, "Set identifier URI to '$DesiredUri'")) {
             $PatchBody = @{
                 identifierUris = @($DesiredUri)
-            }
+            } | ConvertTo-Json -Depth 5 -Compress
 
             $Retries = 0
             $MaxRetries = 3
