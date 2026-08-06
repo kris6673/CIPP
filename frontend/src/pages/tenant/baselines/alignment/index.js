@@ -790,6 +790,11 @@ const Page = () => {
           )
       )
       const differences = cardPaths.filter(hasDiffAt)
+      // Drift first: the whole point of opening the offcanvas is seeing what's wrong -
+      // deviating cards render before compliant ones (stable within each group).
+      const orderedCardPaths = [...cardPaths].sort(
+        (a, b) => Number(hasDiffAt(b)) - Number(hasDiffAt(a))
+      )
       // Settings-catalog diffs key on friendly setting LABELS, not object paths - any
       // diff entry that maps to no expected-value path renders as its own card, valued
       // straight from the engine's diff.
@@ -998,65 +1003,6 @@ const Page = () => {
               When multiple baselines configure the same standard, the baseline
               with the most specific assignment wins.
             </Typography>
-            {(row.manual?.taskName || row.manual?.instructions) && (
-              <>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    fontWeight: 600,
-                    color: 'text.secondary',
-                    textTransform: 'uppercase',
-                    letterSpacing: 0.5,
-                  }}
-                >
-                  Manual Task
-                </Typography>
-                <Box
-                  sx={{
-                    p: 1.5,
-                    borderRadius: '12px',
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    bgcolor: 'background.paper',
-                  }}
-                >
-                  {row.manual.taskName && (
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                      {row.manual.taskName}
-                    </Typography>
-                  )}
-                  {row.manual.instructions && (
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}
-                    >
-                      {row.manual.instructions}
-                    </Typography>
-                  )}
-                  {row.manual.documentationUrl && (
-                    <Link
-                      href={row.manual.documentationUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      variant="caption"
-                      sx={{ display: 'inline-block', mt: 1 }}
-                    >
-                      Open documentation
-                    </Link>
-                  )}
-                  {row.manual.reopen && row.manual.reopen !== 'once' && (
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ display: 'block', mt: 1 }}
-                    >
-                      Reopens {row.manual.reopen} after completion.
-                    </Typography>
-                  )}
-                </Box>
-              </>
-            )}
             <Typography
               variant="caption"
               sx={{
@@ -1070,7 +1016,95 @@ const Page = () => {
             </Typography>
             {row.currentValue ? (
               <>
-                {cardPaths.map((key) => {
+                {unmatchedDiffEntries.map((entry) => {
+                  const acceptedPath = row.acceptedPaths?.[entry.Property]
+                  return (
+                    <Box
+                      key={entry.Property}
+                      sx={{
+                        p: 1.5,
+                        borderRadius: '12px',
+                        border: '1px solid',
+                        borderColor: acceptedPath ? 'divider' : 'error.main',
+                        bgcolor: 'background.paper',
+                      }}
+                    >
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
+                        justifyContent="space-between"
+                      >
+                        <Typography
+                          variant="subtitle2"
+                          sx={{ fontWeight: 600, fontFamily: 'monospace' }}
+                          noWrap
+                        >
+                          {entry.Property}
+                        </Typography>
+                        {acceptedPath ? (
+                          <Tooltip
+                            title={`${acceptedPath.reason} (${acceptedPath.by})`}
+                          >
+                            <Chip
+                              variant="outlined"
+                              size="small"
+                              color="info"
+                              label="Accepted"
+                            />
+                          </Tooltip>
+                        ) : (
+                          <Chip
+                            variant="outlined"
+                            size="small"
+                            color="error"
+                            label="Drift"
+                          />
+                        )}
+                      </Stack>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontFamily: 'monospace',
+                          display: 'block',
+                          mt: 0.5,
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        Expected: {JSON.stringify(entry.ExpectedValue)}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontFamily: 'monospace',
+                          display: 'block',
+                          wordBreak: 'break-word',
+                          color: acceptedPath ? 'text.secondary' : 'error.main',
+                        }}
+                      >
+                        Current: {JSON.stringify(entry.ReceivedValue)}
+                      </Typography>
+                      {!acceptedPath && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<CheckCircle />}
+                          sx={{ mt: 1 }}
+                          onClick={() => {
+                            setAcceptPathTarget({
+                              ...row,
+                              path: entry.Property,
+                            })
+                            acceptPathDialog.handleOpen()
+                          }}
+                        >
+                          Accept this property only
+                        </Button>
+                      )}
+                    </Box>
+                  )
+                })}
+                {orderedCardPaths.map((key) => {
                   const drifted = differences.includes(key)
                   const acceptedPath = row.acceptedPaths?.[key]
                   return (
@@ -1166,94 +1200,6 @@ const Page = () => {
                     </Box>
                   )
                 })}
-                {unmatchedDiffEntries.map((entry) => {
-                  const acceptedPath = row.acceptedPaths?.[entry.Property]
-                  return (
-                    <Box
-                      key={entry.Property}
-                      sx={{
-                        p: 1.5,
-                        borderRadius: '12px',
-                        border: '1px solid',
-                        borderColor: acceptedPath ? 'divider' : 'error.main',
-                        bgcolor: 'background.paper',
-                      }}
-                    >
-                      <Stack
-                        direction="row"
-                        spacing={1}
-                        alignItems="center"
-                        justifyContent="space-between"
-                      >
-                        <Typography
-                          variant="subtitle2"
-                          sx={{ fontWeight: 600, fontFamily: 'monospace' }}
-                          noWrap
-                        >
-                          {entry.Property}
-                        </Typography>
-                        {acceptedPath ? (
-                          <Tooltip
-                            title={`${acceptedPath.reason} (${acceptedPath.by})`}
-                          >
-                            <Chip
-                              variant="outlined"
-                              size="small"
-                              color="info"
-                              label="Accepted"
-                            />
-                          </Tooltip>
-                        ) : (
-                          <Chip
-                            variant="outlined"
-                            size="small"
-                            color="error"
-                            label="Drift"
-                          />
-                        )}
-                      </Stack>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          fontFamily: 'monospace',
-                          display: 'block',
-                          mt: 0.5,
-                          wordBreak: 'break-word',
-                        }}
-                      >
-                        Expected: {JSON.stringify(entry.ExpectedValue)}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          fontFamily: 'monospace',
-                          display: 'block',
-                          wordBreak: 'break-word',
-                          color: acceptedPath ? 'text.secondary' : 'error.main',
-                        }}
-                      >
-                        Current: {JSON.stringify(entry.ReceivedValue)}
-                      </Typography>
-                      {!acceptedPath && (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          startIcon={<CheckCircle />}
-                          sx={{ mt: 1 }}
-                          onClick={() => {
-                            setAcceptPathTarget({
-                              ...row,
-                              path: entry.Property,
-                            })
-                            acceptPathDialog.handleOpen()
-                          }}
-                        >
-                          Accept this property only
-                        </Button>
-                      )}
-                    </Box>
-                  )
-                })}
                 {(differences.length > 0 ||
                   unmatchedDiffEntries.length > 0) && (
                   <Typography variant="caption" color="text.secondary">
@@ -1269,6 +1215,65 @@ const Page = () => {
                   No data has been collected for this standard yet - this is the
                   configuration that will apply.
                 </Typography>
+              </>
+            )}
+            {(row.manual?.taskName || row.manual?.instructions) && (
+              <>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontWeight: 600,
+                    color: 'text.secondary',
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  Manual Task
+                </Typography>
+                <Box
+                  sx={{
+                    p: 1.5,
+                    borderRadius: '12px',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    bgcolor: 'background.paper',
+                  }}
+                >
+                  {row.manual.taskName && (
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                      {row.manual.taskName}
+                    </Typography>
+                  )}
+                  {row.manual.instructions && (
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}
+                    >
+                      {row.manual.instructions}
+                    </Typography>
+                  )}
+                  {row.manual.documentationUrl && (
+                    <Link
+                      href={row.manual.documentationUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      variant="caption"
+                      sx={{ display: 'inline-block', mt: 1 }}
+                    >
+                      Open documentation
+                    </Link>
+                  )}
+                  {row.manual.reopen && row.manual.reopen !== 'once' && (
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: 'block', mt: 1 }}
+                    >
+                      Reopens {row.manual.reopen} after completion.
+                    </Typography>
+                  )}
+                </Box>
               </>
             )}
             <Typography
@@ -2315,6 +2320,7 @@ const Page = () => {
               queryKey={`ListBaselineAlignment-${currentTenant}-standards-table`}
               title={`Applicable Standards - ${tenant.displayName}`}
               data={tenant.rows}
+              isFetching={resolvedApi.isFetching}
               refreshFunction={resolvedApi}
               actions={tenantActions}
               offCanvas={tenantOffCanvas}
@@ -2345,6 +2351,9 @@ const Page = () => {
       key={viewMode}
       title={pageTitle}
       data={isTemplateView ? baselines : standardAggregates}
+      isFetching={
+        isTemplateView ? baselinesApi.isFetching : aggregateApi.isFetching
+      }
       refreshFunction={isTemplateView ? baselinesApi : aggregateApi}
       tenantInTitle={false}
       tableFilter={
