@@ -12,14 +12,6 @@ This will allow you to generate an executive summary of the shadow AI in the ten
 
 </details>
 
-<details>
-
-<summary>Sync data</summary>
-
-Allows you to queue a refresh of the cached data present in the page.
-
-</details>
-
 ## Overview
 
 The overview contains several information cards that you can use to get a view of the tenant's shadow IT.

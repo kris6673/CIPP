@@ -4,7 +4,7 @@ description: Interact with Microsoft 365 users.
 
 # Users
 
-User management. Equal to and extending [Microsoft 365 admin center > Active Users](https://admin.microsoft.com/Adminportal/Home#/users).
+The Users page lists the users in the selected tenant and is the starting point for day to day account management. It covers the same ground as [Microsoft 365 admin center > Active Users](https://admin.microsoft.com/Adminportal/Home#/users), and extends it with actions that would otherwise need the Microsoft Entra admin center, Exchange Online PowerShell or the SharePoint admin center.
 
 ## Action Buttons
 
@@ -12,79 +12,80 @@ User management. Equal to and extending [Microsoft 365 admin center > Active Use
 
 <summary>Add User</summary>
 
-**Basic Information:**
+Creates a single user in the selected tenant. **Create User** submits the form, and once a user has been created the button changes to **Create Another User** so the drawer can be reused.
 
-1. **User Identity:** `First Name`, `Last Name`, `Display Name`, `Username` (before the @ symbol), `Primary Domain name` (select from dropdown)
-2. **Email Aliases:** Add multiple email aliases one per line without domain (added automatically)
+**Starting point**
 
-**Account Settings**
+| Field                             | Description                                                                                                                                                  |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Copy properties from another user | Pre-fills the form from an existing user's name, job, address and contact details. Licences and group memberships are not copied by this selector.           |
+| User Template (optional)          | Applies a saved user template, filling in the properties, licences, groups and shared access it defines. Templates are managed on the user-defaults.md page. |
 
-1. **Password Options**
-   * `Create password manually` (toggle)
-     * When `enabled`: Enter custom password
-     * When `disabled`: System generates secure password
-   * `Require password change at next logon` (toggle)
-2. **Location Settings**
-   * `Usage Location` (required for licensing)
-   * Select `country` from dropdown
+**Identity**
 
-**License Management**
+| Field               | Description                                                                                                                                  |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| First Name          | The user's given name.                                                                                                                       |
+| Last Name           | The user's surname.                                                                                                                          |
+| Display Name        | The name shown throughout Microsoft 365. Built from the first and last name until it is edited manually.                                     |
+| Username            | The part before the @ symbol. Limited to 64 characters, and may contain letters, numbers and the characters `'` `.` `-` `_` `!` `#` `^` `~`. |
+| Primary Domain name | The domain used after the @ symbol, chosen from the tenant's verified domains.                                                               |
+| Add Aliases         | Additional addresses, one per line, entered without the domain.                                                                              |
 
-1. **Licence Assignment:** Allows you to select licence(s) to assign & shows available licence count
-2. **Sherweb Integration** (if enabled): Auto-purchase option appears when licences unavailable, allows you to select licence SKU for purchase for system to handle for you along with onboarding.
+**Settings**
 
-{% hint style="info" %}
-When the [sherweb.md](../../../cipp/integrations/sherweb.md "mention") integration is enabled and a licence shows "(0 available)", you'll see an alert stating: "_This will Purchase a new Sherweb License for the user, according to the terms and conditions with Sherweb. When the license becomes available, CIPP will assign the license to this user."_
-{% endhint %}
-
-**Contact Information**
-
-1. **Professional Details:** `Job Title`, `Department`, `Company Name`
-2. **Contact Details:** `Street Address`, `City`, `State/Province`, `Postal Code`, `Mobile Phone`, `Business Phone`, `Alternate Email Address`
-3. **Management:** `Set Manager` (select from existing users), `Copy groups from another user`
-4. **Custom Attributes**
-   * Custom attributes can be configured in **Preferences > General Settings**
-   * These include specific Entra ID attributes that will be available when creating new users:
-   * **Available Attributes:** `consentProvidedForMinor`, `employeeId`, `employeeHireDate`, `employeeLeaveDateTime`, `employeeType`, `faxNumber`,`legalAgeGroupClassification`, `officeLocation`, `otherMails`, `showInAddressList`, `state`. You are also able to add any valid Graph user object attribute by manually adding it to the pre-selected list.
-   * **Configuration:**
-     * Go to **Preferences** page under your user profile.
-     * Under **General Settings**
-     * Find **Added Attributes when creating a new user**
-     * Select desired attributes from dropdown
-     * Selected attributes will appear on **Add User** form
+| Setting                               | Description                                                                                                                                   |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Create password manually              | When off, CIPP generates a password and returns it in the result. When on, a **Password** field appears for a password of your own.           |
+| Require password change at next logon | Forces the user to set a new password the first time they sign in.                                                                            |
+| Usage Location                        | The country the account is licensed in. Required before licences can be assigned, and defaults to the usage location set in your preferences. |
+| Licenses                              | The licences to assign. Each option shows how many units are currently available.                                                             |
+| Remove all licenses                   | Strips every licence from the account, which is mainly useful when a template or a copied user has brought licences in that are not wanted.   |
 
 {% hint style="info" %}
-**Notes about Custom Attributes:**
-
-* Attributes selected will appear as additional fields on the Add User form
-* Each attribute has its own text field
-* Values are saved with the user's profile in Entra ID
-* Must be configured before they appear on the form.
-* Attributes are standard Entra ID attributes
-* Values persist in Entra ID and can be queried/updated later
-* Not all attributes may be relevant for every user
-* Changes to Preferences affect all new user creation forms
+When the sherweb.md integration is enabled and a selected licence shows `(0 available)`, a **Purchase new licence?** switch appears along with a **Sherweb License** selector. Choosing this purchases a new licence under your terms with Sherweb and assigns it to the user once it becomes available.
 {% endhint %}
 
-**Shared Mailboxes and Calendars**
+**Contact and organisation**
 
-1. **Shared Mailboxes:** Select the shared mailboxes the new user should get access to. Pre-filled from the tenant's [user-defaults.md](../../../tenant/manage/user-defaults.md "mention") template and editable per user.
-2. **Shared Mailbox Permissions:** Any combination of `Full Access`, `Send As` and `Send on Behalf` — granting Full Access and Send As together is common. Defaults to `Full Access`, which also automaps the mailbox so Outlook adds it on its own.
-3. **Shared Calendars:** Select the shared mailboxes whose calendar the user should get access to.
-4. **Shared Calendar Permission:** The access level granted on those calendars. Defaults to `Editor`.
+| Field                                              | Description                                                                                                                      |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Job Title, Department, Company Name                | Organisational details written to the directory and shown in the address list.                                                   |
+| Street, City, State/Province, Postal Code, Country | The user's postal address.                                                                                                       |
+| Mobile #, Business #                               | Contact numbers.                                                                                                                 |
+| Alternate Email Addresses                          | Secondary addresses, separated by commas.                                                                                        |
+| Set Manager                                        | The user recorded as this account's manager.                                                                                     |
+| Set Sponsor                                        | The user recorded as this account's sponsor. Only shown when `sponsor` has been added to the attribute list in your preferences. |
+| Copy groups from user                              | Adds the new account to the same groups as the chosen user.                                                                      |
+| Add to Groups                                      | Adds the new account to specific groups chosen from the tenant.                                                                  |
 
 {% hint style="info" %}
-Exchange cannot add a calendar to someone's Outlook directly, so CIPP grants calendar access with a sharing invitation, which the user accepts by clicking the link in the email they receive. Mailbox access needs no invitation: with Full Access, automapping adds the mailbox to Outlook by itself.
-
-Because a newly created user is not a usable Exchange recipient for the first few minutes, both grants are queued as scheduled tasks that run **15 minutes after creation**. You can follow them (and see any failure) under **CIPP > Scheduler**. Only shared mailboxes of the tenant can be selected, and for calendars only the `Editor`, `Reviewer`, `Limited Details` and `Availability Only` levels are offered, as those are the ones Exchange sends an invitation for.
+Extra directory attributes can be added to this form under [user-settings.md](../../../shared-features/menu-bar/user-settings.md "mention"). The list offers `consentProvidedForMinor`, `employeeId`, `employeeHireDate`, `employeeLeaveDateTime`, `employeeType`, `faxNumber`, `legalAgeGroupClassification`, `officeLocation`, `otherMails`, `showInAddressList` and `sponsor`, and each selection adds its own field to the form. Every attribute except `sponsor` appears as a plain text field; `sponsor` appears as the **Set Sponsor** user selector.
 {% endhint %}
 
-**Additional Details**
+**Shared mailboxes and calendars**
 
-* Licence assignment requires valid usage location
-* Password complexity rules apply to manual passwords
-* Group copying includes all accessible groups
-* Scheduled creation can be monitored in tasks
+| Field                      | Description                                                                                                                                                 |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Shared Mailboxes           | The shared mailboxes the new user should be given access to. Only shared mailboxes in the tenant can be selected.                                           |
+| Shared Mailbox Permissions | Any combination of `Full Access`, `Send As` and `Send on Behalf`. Defaults to `Full Access`, which also automaps the mailbox so Outlook adds it on its own. |
+| Shared Calendars           | The shared mailboxes whose calendar the user should be given access to.                                                                                     |
+| Shared Calendar Permission | The access level granted on those calendars: `Editor`, `Reviewer`, `Limited Details` or `Availability Only`. Defaults to `Editor`.                          |
+
+{% hint style="info" %}
+Exchange cannot add a calendar to someone's Outlook directly, so CIPP grants calendar access with a sharing invitation, which the user accepts by clicking the link in the email they receive. Mailbox access needs no invitation: with Full Access, automapping adds the mailbox to Outlook by itself. Only the permission levels listed above are offered for calendars, as those are the ones Exchange sends an invitation for.
+
+A newly created user is not a usable Exchange recipient for the first few minutes, so both grants are queued as scheduled tasks that run 15 minutes after creation. Their progress, and any failure, can be followed on the Scheduler page.
+{% endhint %}
+
+**Scheduling and notifications**
+
+| Setting                                | Description                                                                                        |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Schedule user creation                 | Defers creation to a chosen date instead of running it immediately.                                |
+| Scheduled creation Date                | The date the creation task should run.                                                             |
+| Send results to Webhook / E-mail / PSA | Delivers the outcome of the scheduled task to the notification channels configured for the tenant. |
+| Reference                              | Free text added to the notification title so the task can be recognised later.                     |
 
 </details>
 
@@ -92,11 +93,11 @@ Because a newly created user is not a usable Exchange recipient for the first fe
 
 <summary>Bulk Add Users</summary>
 
-This wizard will allow you to bulk create new users.
+Creates several users at once from a CSV file or from rows entered by hand.
 
-1. Usage Selection - This is the usage location for the users to create
-2. User Selection - There is an example CSV on the User Selection step of the wizard that you can use to speed up larger bulk creation tasks. Alternatively, you can add individual rows one by one by pressing the "Add User Manually" action just above the table prior to moving to Step 3.
-3. Create Users - Click this button to submit your users.
+Set the **Usage Location** and any licences under **Assign License** first, as these apply to every user in the batch. **Download Example CSV** produces a file with the expected column headers: `givenName`, `surName`, `displayName`, `mailNickName`, `domain`, `JobTitle`, `streetAddress`, `PostalCode`, `City`, `State`, `Department`, `MobilePhone` and `businessPhones`, plus any extra attributes added in your preferences. Upload the completed file, or use **Add User Manually** to add rows individually.
+
+Every row appears in the **User Preview** table, where it can be checked and removed before submitting. **Create Users** submits the batch.
 
 </details>
 
@@ -104,7 +105,15 @@ This wizard will allow you to bulk create new users.
 
 <summary>Invite Guest</summary>
 
-This will allow you to add a guest user. Enter the user's "Display Name", "E-mail Address", and an optional "Redirect URL". Toggle the "Send invite via e-mail" option on if you'd like the guest user to receive a Microsoft generated invite e-mail.
+Invites a single external user as a guest in the tenant.
+
+| Field                  | Description                                                                                                                         |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Display Name           | The name the guest appears under in the directory.                                                                                  |
+| E-mail Address         | The address the invitation is sent to and the account is based on.                                                                  |
+| Redirect URL           | Where the guest lands after redeeming the invitation. Defaults to `https://myapps.microsoft.com` when left blank.                   |
+| Custom invite message  | Optional text included in the invitation email.                                                                                     |
+| Send invite via e-mail | Controls whether Microsoft sends the standard guest invitation email. When off, the guest account is created but no email goes out. |
 
 </details>
 
@@ -112,11 +121,9 @@ This will allow you to add a guest user. Enter the user's "Display Name", "E-mai
 
 <summary>Bulk Invite Guests</summary>
 
-This wizard will allow you to bulk create new guest users.
+Invites several guests at once.
 
-1. Send invite via e-mail - Toggling this controls whether the standard Microsoft guest user invite will be sent.
-2. Guest User Selection - There is an example CSV on the User Selection step of the wizard that you can use to speed up larger bulk creation tasks. Alternatively, you can add individual rows one by one by pressing the "Add User Manually" action just above the table prior to moving to Step 3.
-3. Send Invites - Click this button to submit your users.
+**Send invite via e-mail** and **Custom invite message** apply to the whole batch. **Download Example CSV** produces a file with the columns `displayName`, `mail` and `redirectUri`. Upload the completed file, or use **Add Guest Manually** to add rows individually. Rows appear in the **Guest Preview** table for checking before the invitations are sent.
 
 </details>
 
@@ -124,9 +131,19 @@ This wizard will allow you to bulk create new guest users.
 
 <summary>View Logs</summary>
 
-Will open a flyout with the logbook entries for user actions.
+Opens a flyout showing the CIPP log entries recorded for user actions in this tenant. Entries written by scheduled tasks are excluded, so this shows the actions taken from the interface.
 
 </details>
+
+## Filters
+
+The **Filters** menu offers presets that narrow the rows already loaded into the table. See table-features.md for how filters behave generally.
+
+| Filter           | Shows                                            |
+| ---------------- | ------------------------------------------------ |
+| Account Enabled  | Accounts that are able to sign in.               |
+| Account Disabled | Accounts that have been blocked from signing in. |
+| Guest Accounts   | Accounts with a user type of Guest.              |
 
 ## Table Details
 
@@ -134,82 +151,64 @@ The properties returned are for the Graph resource type `user`. For more informa
 
 ## Table Actions
 
-### Account Management Actions
-
-<table><thead><tr><th>Action</th><th>Description</th><th>Requirements/Implications</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>👁 View User</td><td>Displays comprehensive user account details in the admin interface</td><td>- Read access to user objects<br>- Shows all available user information<br>- Display advanced user account details. [<a href="user/">More information</a>]</td><td>false</td></tr><tr><td>✏️ Edit User</td><td>Modifies user account details and settings:<br>- Basic information<br>- Licence assignments<br>- Group memberships<br>- Contact details</td><td>- Write access to user objects<br>- Can copy group memberships from another user<br>- Changes apply immediately</td><td>false</td></tr><tr><td>Create Template from User</td><td>Opens a modal to allow you to create a new user template from this user. Set the name for the tenant and if this template should be the default for the tenant. Templates will copy job title, department, location, licences, and group memberships.</td><td></td><td>true</td></tr><tr><td>Delete User</td><td>Permanently removes user account</td><td>- Administrative privileges required<br>- Irreversible action<br>- Consider backup/archival first</td><td>true</td></tr><tr><td>Edit Properties</td><td>Bulk update user properties via the <a data-mention href="patch-wizard.md">patch-wizard.md</a></td><td></td><td>true</td></tr></tbody></table>
-
-### Security Actions
-
-<table><thead><tr><th>Action</th><th>Description</th><th>Requirements/Implications</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Research Compromised Account</td><td>Analyses Indicators of Compromise (IoC):<br>- Sign-in patterns<br>- Mail rules<br>- Suspicious activities</td><td>- Security admin rights<br>- Provides comprehensive security review<br>- Single pane of glass review of common indicators of compromise (IoC) [<a href="user/bec.md">More information</a>]</td><td>false</td></tr><tr><td>Create Temporary Access Pass</td><td>Creates temporary pass for passwordless enrolment</td><td>- Time-limited access<br>- Create a temporary pass to allow full passwordless enrolment. [<a href="./#create-temporary-access-password">More information</a>]</td><td>true</td></tr><tr><td>Re-require MFA registration</td><td>Forces new MFA setup by:<br>- Resetting MFA status to Enabled<br>- Requiring new registration</td><td>- User must complete new MFA setup<br>- Affects all MFA methods<br>- Authentication Methods must be migrated from legacy<br>- You will need Security Defaults or a CA policy and registration campaign to force registration again</td><td>true</td></tr><tr><td>Send MFA Push</td><td>Sends test MFA prompt to user's devices</td><td>- Verifies MFA configuration<br>- Tests user's registered devices</td><td>true</td></tr><tr><td>Set Per-User MFA</td><td>Configures MFA state:<br>- Enforced<br>- Enabled<br>- Disabled</td><td>- Overrides tenant-level settings<br>- Immediate effect on sign-ins</td><td>true</td></tr><tr><td>Set Sign In State</td><td>Allows you to set the sign in state for the selected user(s) to either Enabled or Disabled</td><td>- Immediate effect<br>- Doesn't affect existing sessions</td><td>true</td></tr><tr><td>Revoke all user sessions</td><td>Forces re-authentication on all devices</td><td>- Terminates all active sessions<br>- Requires new sign-in everywhere</td><td>true</td></tr></tbody></table>
-
-### Password Management
-
-<table><thead><tr><th>Action</th><th>Description</th><th>Requirements/Implications</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Reset Password</td><td>Sets new random password. Optionally you can set the toggle for "Must Change Password at Next Logon"</td><td>- Password immediately active<br>- No change requirement</td><td>true</td></tr><tr><td>Set Password Expiration</td><td><p>Set password expiration state for this user.</p><p>If set to Enable then if the password of the user is older than the set expiration date of the organisation, the user will be prompted to change their password at their next login.</p></td><td></td><td>true</td></tr></tbody></table>
-
-### Mail and Communication
-
-<table><thead><tr><th>Action</th><th>Description</th><th>Requirements/Implications</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Convert Mailbox</td><td>Transforms mailbox to selected type: <code>Shared</code>, <code>User</code>, <code>Room</code>, or <code>Equipment</code>.</td><td>- Requires Exchange Online licence<br>- Maintains data and access</td><td>true</td></tr><tr><td>Enable Online Archive</td><td>Activates archival mailbox</td><td>- Requires appropriate licence<br>- Additional storage space</td><td>true</td></tr><tr><td>Set Out of Office</td><td>Configures automatic replies</td><td><p>- Set the state to enabled, disabled, or scheduled</p><p>- If using scheduled, set the start and end dates<br>- WYSIWYG editor will let you click to input formatting allowed by Microsoft. No HTML</p></td><td>true</td></tr><tr><td>Disable Email Forwarding</td><td>Removes all email forwarding rules</td><td>- Clears ForwardingAddress<br>- Clears ForwardingSMTPAddress</td><td>true</td></tr></tbody></table>
-
-### OneDrive Management
-
-<table><thead><tr><th>Action</th><th>Description</th><th>Requirements/Implications</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Pre-provision OneDrive</td><td>Initialises OneDrive storage</td><td>- No user login required<br>- Speeds up first access</td><td>true</td></tr><tr><td>Set OneDrive External Sharing</td><td><p>Allows you to set the sharing level for the user's OneDrive:</p><ul><li><strong>Disabled</strong> — no external sharing</li><li><strong>ExternalUserSharingOnly</strong> — guests must sign in</li><li><strong>ExternalUserAndGuestSharing</strong> — anyone links allowed</li><li><strong>ExistingExternalUserSharingOnly</strong> — existing guests only</li></ul></td><td></td><td>true</td></tr><tr><td>Add OneDrive Shortcut</td><td>Creates SharePoint site shortcut</td><td>- Adds to OneDrive root<br>- Requires existing OneDrive</td><td>true</td></tr></tbody></table>
-
-### Group and Directory Management
-
-<table><thead><tr><th>Action</th><th>Description</th><th>Requirements/Implications</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Manage Licenses</td><td>Allows for bulk licence management of the selected user(s)</td><td></td><td>true</td></tr><tr><td>Add to Group</td><td>Assigns user to specified group(s)</td><td>- Immediate membership<br>- Inherits group permissions</td><td>true</td></tr><tr><td>Clear Immutable ID</td><td>Breaks on-premises AD sync</td><td>- Sets onPremisesImmutableId to null<br>- Stops directory synchronisation</td><td>true</td></tr><tr><td>Set Source of Authority</td><td>Allows you to select if the user should be "Cloud Managed" or "On-Premises Managed"</td><td></td><td>true</td></tr><tr><td>Reprocess License Assignments</td><td>This will force Entra to check the user's group assignments for any group-based licence(s) to add/remove</td><td></td><td>true</td></tr></tbody></table>
-
-### Information Access
-
-<table><thead><tr><th>Action</th><th>Description</th><th>Requirements/Implications</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>More Info</td><td>Opens Extended Info panel showing:<br>- Common profile fields<br>- Additional actions</td><td>- Quick access to key information<br>- Alternative action access point</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>View User</td><td>Opens the <a data-mention href="user/">user</a> page for the selected user.</td><td>false</td></tr><tr><td>Edit User</td><td>Opens the <a data-mention href="user/edit.md">edit.md</a> page, where properties, licences and group memberships can be changed.</td><td>false</td></tr><tr><td>Create Template from User</td><td>Creates a reusable user template from this account, copying its job title, department, location, licences and group memberships. Prompts for a template name and whether the template becomes the default for the tenant.</td><td>true</td></tr><tr><td>Research Compromised Account</td><td>Opens the <a data-mention href="user/bec.md">bec.md</a> view, which gathers the common indicators of compromise for the account in one place.</td><td>false</td></tr><tr><td>Create Temporary Access Pass</td><td>Issues a time limited passcode the user can sign in with, typically to enrol a passwordless method. The lifetime is validated against the tenant's policy, one-time use can be requested, and the pass can be set to become valid at a future date and time.</td><td>true</td></tr><tr><td>Re-require MFA registration</td><td>Clears the user's registered multi-factor methods so they must register again.</td><td>true</td></tr><tr><td>Send MFA Push</td><td>Sends an approval request to the user's registered devices, which is useful for confirming their setup works.</td><td>true</td></tr><tr><td>Set Per-User MFA</td><td>Sets the legacy per-user MFA state to Enforced, Enabled or Disabled, independently of any Conditional Access policy.</td><td>true</td></tr><tr><td>Convert Mailbox</td><td>Converts the mailbox to a User, Shared, Room or Equipment mailbox, keeping its existing content.</td><td>true</td></tr><tr><td>Enable Online Archive</td><td>Turns on the archive mailbox so older mail can be moved out of the primary mailbox.</td><td>true</td></tr><tr><td>Set Out of Office</td><td>Sets automatic replies to Enabled, Disabled or Scheduled, with separate internal and external messages. When scheduled, the period can also block the user's calendar, decline new invitations, and decline and cancel meetings already booked.</td><td>true</td></tr><tr><td>Add to Group</td><td>Adds the user to one or more groups in the tenant.</td><td>true</td></tr><tr><td>Manage Licenses</td><td>Adds, removes or replaces licences on the account, with the option to remove or replace everything currently assigned.</td><td>true</td></tr><tr><td>Disable Email Forwarding</td><td>Clears any forwarding set on the mailbox, both internal and external.</td><td>true</td></tr><tr><td>Pre-provision OneDrive</td><td>Creates the user's OneDrive ahead of their first sign-in, so it is ready when they need it.</td><td>true</td></tr><tr><td>Set OneDrive External Sharing</td><td>Sets how far the user's OneDrive can be shared outside the organisation: no external sharing, signed-in guests only, anyone links, or existing guests only.</td><td>true</td></tr><tr><td>Add OneDrive Shortcut</td><td>Adds a shortcut to a chosen SharePoint site into the user's OneDrive.</td><td>true</td></tr><tr><td>Set Sign In State</td><td>Blocks or restores the account's ability to sign in. The current state is pre-selected, and submitting an unchanged state is rejected.</td><td>true</td></tr><tr><td>Reset Password</td><td>Sets a new random password and returns it in the result, optionally requiring a change at the next sign-in.</td><td>true</td></tr><tr><td>Set Password Expiration</td><td>Enables or disables password expiry for the account. With expiry enabled, a password older than the organisation's expiry period prompts the user to change it at their next sign-in.</td><td>true</td></tr><tr><td>Clear Immutable ID</td><td>Clears the on-premises anchor so the account can be matched to a different directory object. Only offered for accounts that are no longer synchronised but still hold an immutable ID. Greyed out for accounts that are still synchronised, and for those with no immutable ID to clear.</td><td>true</td></tr><tr><td>Set Source of Authority</td><td>Switches the account between Cloud Managed and On-Premises Managed. Only offered for accounts that are, or once were, synchronised, and a move back to on-premises takes until the next sync cycle to appear. Greyed out for cloud-native accounts that have never been synchronised.</td><td>true</td></tr><tr><td>Reprocess License Assignments</td><td>Asks Entra to re-evaluate the group-based licences that apply to the user, adding or removing licences as the group membership dictates.</td><td>true</td></tr><tr><td>Revoke all user sessions</td><td>Invalidates the account's refresh tokens so every device has to sign in again.</td><td>true</td></tr><tr><td>Delete User</td><td>Deletes the account. Deleted accounts remain recoverable from Deleted Items for 30 days.</td><td>true</td></tr><tr><td>Edit Properties</td><td>Opens the patch-wizard.md with the selected users loaded, for changing the same properties across all of them.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 {% hint style="info" %}
-Note that clicking one of these actions will present a confirmation modal dialog.
+Most of these actions present a confirmation dialog before anything is sent, and any options the action needs are set in that dialog.
+
+Actions you do not have permission for stay in the menu but are greyed out. Convert Mailbox, Enable Online Archive, Set Out of Office and Disable Email Forwarding need Exchange mailbox write access, Add to Group needs group write access, and most of the rest need user write access. Send MFA Push, Research Compromised Account and Set Source of Authority carry no permission condition of their own.
 {% endhint %}
 
-### More Information on "Create Temporary Access Pass"
-
-Create a temporary access pass for a user to enrol in [passwordless for Entra ID](https://learn.microsoft.com/en-us/azure/active-directory/authentication/concept-authentication-passwordless).
-
-{% hint style="info" %}
-Both passwordless authentication and the temporary access pass function must be enabled on the tenant. See [Configure Temporary Access Pass to register passwordless authentication methods](https://learn.microsoft.com/en-us/azure/active-directory/authentication/howto-authentication-temporary-access-pass)
+{% hint style="warning" %}
+Temporary Access Pass must be enabled in the tenant's authentication method policy before a pass can be created, otherwise the action fails. CIPP checks the policy when the dialog opens and warns you if it is not enabled. See [Configure Temporary Access Pass to register passwordless authentication methods](https://learn.microsoft.com/en-us/entra/identity/authentication/howto-authentication-temporary-access-pass) for the tenant side of the configuration.
 {% endhint %}
 
 ## Add User Query String Support
 
-The Add User has the ability to be form filled via URL query strings. This table shows all supported query strings. For example https://yourcipp.app/identity/administration/users/add?customerId=Mydomain.onmicrosoft.com\&city=Rotterdam would automatically fill in the city for a user.
-
-| QueryString    | Field                                                     |
-| -------------- | --------------------------------------------------------- |
-| customerId     | Client Tenant ID(Only required field)                     |
-| businessPhones | Business Phone Number                                     |
-| city           | User City Location                                        |
-| companyName    | Company Name                                              |
-| country        | Country                                                   |
-| department     | Department                                                |
-| displayName    | Display Name                                              |
-| givenName      | First Name                                                |
-| jobTitle       | Job Title                                                 |
-| mailNickname   | Username before the email address part(User<@domain.com>) |
-| mobilePhone    | Mobile Phone Number                                       |
-| addedAliases   | Added Aliases, Multiple allowed via linebreak(%0A)        |
-| postalCode     | Zip or post code                                          |
-| streetAddress  | Address information                                       |
-| surname        | Last Name                                                 |
-| usageLocation  | User location for licence, can be left blank for default. |
-| primDomain     | User Primary Domain (User<@domain.com>)                   |
-| MustChangePass | Boolean, default is false.                                |
-
-## AutoTask LiveLink
-
-If you want to create your own LiveLink you can use the QueryString below.
+The Add User page at `/identity/administration/users/add` can be pre-filled from the URL, which makes it possible to launch user creation from a PSA or documentation system with the details already populated. The page is reached by URL only, as user creation from the Users page now opens the Add User drawer instead. Any query string parameter matching a form field name is applied to the form, for example:
 
 {% code overflow="wrap" %}
 ```
-?city=<CITY>&country=<COUNTRY>&customerId=<UDF-TenantId(tblCustomers)>&primDomain=<ACCOUNTWEBSITEADDRESS>&usageLocation=NL&streetAddress=<ACCOUNTADDRESS1>&companyName=<ACCOUNTNAME>&businessPhones=<ACCOUNTPHONE>&postalCode=<ACCOUNTPOSTALCODE>&givenName=<CONTACTFIRSTNAME>&surname=<CONTACTLASTNAME>
+https://yourcipp.app/identity/administration/users/add?tenantFilter=contoso.onmicrosoft.com&city=Rotterdam
 ```
 {% endcode %}
 
-***
+| Query string       | Field                                                                                                        |
+| ------------------ | ------------------------------------------------------------------------------------------------------------ |
+| tenantFilter       | Selects the tenant. Accepts the default domain name, the tenant ID or the initial `.onmicrosoft.com` domain. |
+| givenName          | First Name                                                                                                   |
+| surname            | Last Name                                                                                                    |
+| displayName        | Display Name                                                                                                 |
+| username           | Username, the part before the @ symbol                                                                       |
+| primDomain         | Primary Domain name                                                                                          |
+| addedAliases       | Aliases, one per line, separated by `%0A`                                                                    |
+| jobTitle           | Job Title                                                                                                    |
+| department         | Department                                                                                                   |
+| companyName        | Company Name                                                                                                 |
+| streetAddress      | Street                                                                                                       |
+| city               | City                                                                                                         |
+| state              | State/Province                                                                                               |
+| postalCode         | Postal Code                                                                                                  |
+| country            | Country                                                                                                      |
+| mobilePhone        | Mobile #                                                                                                     |
+| businessPhones\[0] | Business #, encoded as `businessPhones%5B0%5D`                                                               |
+| otherMails         | Alternate Email Addresses                                                                                    |
+| usageLocation      | Usage Location, as a two-letter country code                                                                 |
+| MustChangePass     | Require password change at next logon                                                                        |
+
+{% hint style="info" %}
+Values are applied to the matching form fields when the page loads, so check the fields backed by a dropdown, such as Primary Domain name and Usage Location, before submitting.
+{% endhint %}
+
+### AutoTask LiveLink
+
+The query string below can be used as the basis of an AutoTask LiveLink, substituting the AutoTask variables for your own.
+
+{% code overflow="wrap" %}
+```
+?tenantFilter=<UDF-TenantId(tblCustomers)>&primDomain=<ACCOUNTWEBSITEADDRESS>&usageLocation=NL&city=<CITY>&country=<COUNTRY>&streetAddress=<ACCOUNTADDRESS1>&companyName=<ACCOUNTNAME>&businessPhones%5B0%5D=<ACCOUNTPHONE>&postalCode=<ACCOUNTPOSTALCODE>&givenName=<CONTACTFIRSTNAME>&surname=<CONTACTLASTNAME>
+```
+{% endcode %}
 
 ***
 
