@@ -52,6 +52,7 @@ import {
   RemoveCircle,
   TaskAlt,
   Tune,
+  Visibility,
   WarningAmberOutlined,
 } from '@mui/icons-material'
 import { Layout as DashboardLayout } from '../../../../layouts/index.js'
@@ -77,6 +78,8 @@ import { useDialog } from '../../../../hooks/use-dialog'
 import { useSettings } from '../../../../hooks/use-settings'
 import { ApiGetCall } from '../../../../api/ApiCall'
 import { parseCippDate } from '../../../../utils/parse-cipp-date'
+import { CippOffCanvas } from '../../../../components/CippComponents/CippOffCanvas'
+import CippJsonView from '../../../../components/CippFormPages/CippJSONView'
 
 const deviationColors = {
   Compliant: 'success',
@@ -88,6 +91,80 @@ const deviationColors = {
   'Denied - Delete Pending': 'warning',
   'Skipped - No License': 'default',
   'No Data': 'default',
+}
+
+// Identity-carrying tiers (CA/Intune templates): the tier configures a full policy
+// template, so the card shows a View Policy button that opens the template in the
+// same policy viewer the editor's picker preview uses - a raw variables blob means
+// nothing to an operator.
+const templatePolicySources = {
+  intuneTemplate: {
+    title: 'Intune Template',
+    url: '/api/ListIntuneTemplates',
+    queryKey: 'ListIntuneTemplates',
+    property: 'RAWJson',
+    type: 'intune',
+  },
+  caTemplate: {
+    title: 'Conditional Access Policy',
+    url: '/api/ListCATemplates',
+    queryKey: 'ListCATemplates',
+    type: 'default',
+  },
+}
+
+const TierPolicyView = ({ variableKey, templateRef }) => {
+  const [visible, setVisible] = useState(false)
+  const source = templatePolicySources[variableKey]
+  const templatesApi = ApiGetCall({
+    url: source.url,
+    queryKey: source.queryKey,
+    waiting: visible,
+  })
+  const rawRef =
+    templateRef && typeof templateRef === 'object'
+      ? templateRef.value
+      : templateRef
+  const entry = (templatesApi.data ?? []).find(
+    (template) => template.GUID === rawRef
+  )
+  let policy = entry ?? null
+  if (entry && source.property) {
+    try {
+      policy = JSON.parse(entry[source.property])
+    } catch {
+      policy = entry
+    }
+  }
+  return (
+    <>
+      <Button
+        size="small"
+        variant="outlined"
+        startIcon={<Visibility />}
+        onClick={() => setVisible(true)}
+      >
+        View Policy
+      </Button>
+      <CippOffCanvas
+        visible={visible}
+        onClose={() => setVisible(false)}
+        title={source.title}
+        size="xl"
+      >
+        {templatesApi.isFetching ? (
+          <CircularProgress size={24} />
+        ) : policy ? (
+          <CippJsonView object={policy} defaultOpen={true} type={source.type} />
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            The template could not be found - it may have been deleted from the
+            template library.
+          </Typography>
+        )}
+      </CippOffCanvas>
+    </>
+  )
 }
 
 const propertyList = (properties) => (
@@ -713,6 +790,11 @@ const Page = () => {
           )
       )
       const differences = cardPaths.filter(hasDiffAt)
+      // Drift first: the whole point of opening the offcanvas is seeing what's wrong -
+      // deviating cards render before compliant ones (stable within each group).
+      const orderedCardPaths = [...cardPaths].sort(
+        (a, b) => Number(hasDiffAt(b)) - Number(hasDiffAt(a))
+      )
       // Settings-catalog diffs key on friendly setting LABELS, not object paths - any
       // diff entry that maps to no expected-value path renders as its own card, valued
       // straight from the engine's diff.
@@ -773,6 +855,220 @@ const Page = () => {
                 intended - nothing is compared or fixed until you edit one of
                 the baselines below.
               </Alert>
+            )}
+            <Typography
+              variant="caption"
+              sx={{
+                fontWeight: 600,
+                color: 'text.secondary',
+                textTransform: 'uppercase',
+                letterSpacing: 0.5,
+              }}
+            >
+              Expected vs Current
+            </Typography>
+            {row.currentValue ? (
+              <>
+                {unmatchedDiffEntries.map((entry) => {
+                  const acceptedPath = row.acceptedPaths?.[entry.Property]
+                  return (
+                    <Box
+                      key={entry.Property}
+                      sx={{
+                        p: 1.5,
+                        borderRadius: '12px',
+                        border: '1px solid',
+                        borderColor: acceptedPath ? 'divider' : 'error.main',
+                        bgcolor: 'background.paper',
+                      }}
+                    >
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
+                        justifyContent="space-between"
+                      >
+                        <Typography
+                          variant="subtitle2"
+                          sx={{ fontWeight: 600, fontFamily: 'monospace' }}
+                          noWrap
+                        >
+                          {entry.Property}
+                        </Typography>
+                        {acceptedPath ? (
+                          <Tooltip
+                            title={`${acceptedPath.reason} (${acceptedPath.by})`}
+                          >
+                            <Chip
+                              variant="outlined"
+                              size="small"
+                              color="info"
+                              label="Accepted"
+                            />
+                          </Tooltip>
+                        ) : (
+                          <Chip
+                            variant="outlined"
+                            size="small"
+                            color="error"
+                            label="Drift"
+                          />
+                        )}
+                      </Stack>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontFamily: 'monospace',
+                          display: 'block',
+                          mt: 0.5,
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        Expected: {JSON.stringify(entry.ExpectedValue)}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontFamily: 'monospace',
+                          display: 'block',
+                          wordBreak: 'break-word',
+                          color: acceptedPath ? 'text.secondary' : 'error.main',
+                        }}
+                      >
+                        Current: {JSON.stringify(entry.ReceivedValue)}
+                      </Typography>
+                      {!acceptedPath && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<CheckCircle />}
+                          sx={{ mt: 1 }}
+                          onClick={() => {
+                            setAcceptPathTarget({
+                              ...row,
+                              path: entry.Property,
+                            })
+                            acceptPathDialog.handleOpen()
+                          }}
+                        >
+                          Accept this property only
+                        </Button>
+                      )}
+                    </Box>
+                  )
+                })}
+                {orderedCardPaths.map((key) => {
+                  const drifted = differences.includes(key)
+                  const acceptedPath = row.acceptedPaths?.[key]
+                  return (
+                    <Box
+                      key={key}
+                      sx={{
+                        p: 1.5,
+                        borderRadius: '12px',
+                        border: '1px solid',
+                        borderColor:
+                          drifted && !acceptedPath ? 'error.main' : 'divider',
+                        bgcolor: 'background.paper',
+                      }}
+                    >
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
+                        justifyContent="space-between"
+                      >
+                        <Typography
+                          variant="subtitle2"
+                          sx={{ fontWeight: 600, fontFamily: 'monospace' }}
+                          noWrap
+                        >
+                          {key}
+                        </Typography>
+                        {acceptedPath ? (
+                          <Tooltip
+                            title={`${acceptedPath.reason} (${acceptedPath.by})`}
+                          >
+                            <Chip
+                              variant="outlined"
+                              size="small"
+                              color="info"
+                              label="Accepted"
+                            />
+                          </Tooltip>
+                        ) : drifted ? (
+                          <Chip
+                            variant="outlined"
+                            size="small"
+                            color="error"
+                            label="Drift"
+                          />
+                        ) : (
+                          <Chip
+                            variant="outlined"
+                            size="small"
+                            color="success"
+                            label="OK"
+                          />
+                        )}
+                      </Stack>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontFamily: 'monospace',
+                          display: 'block',
+                          mt: 0.5,
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        Expected:{' '}
+                        {JSON.stringify(getPath(row.expectedValue, key))}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontFamily: 'monospace',
+                          display: 'block',
+                          wordBreak: 'break-word',
+                          color: drifted ? 'error.main' : 'text.secondary',
+                        }}
+                      >
+                        Current:{' '}
+                        {JSON.stringify(getPath(row.currentValue, key))}
+                      </Typography>
+                      {drifted && !acceptedPath && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<CheckCircle />}
+                          sx={{ mt: 1 }}
+                          onClick={() => {
+                            setAcceptPathTarget({ ...row, path: key })
+                            acceptPathDialog.handleOpen()
+                          }}
+                        >
+                          Accept this property only
+                        </Button>
+                      )}
+                    </Box>
+                  )
+                })}
+                {(differences.length > 0 ||
+                  unmatchedDiffEntries.length > 0) && (
+                  <Typography variant="caption" color="text.secondary">
+                    Accepting a single property tolerates only that value -
+                    drift on any other property still raises a deviation.
+                  </Typography>
+                )}
+              </>
+            ) : (
+              <>
+                {jsonBox(row.expectedValue, true)}
+                <Typography variant="caption" color="text.secondary">
+                  No data has been collected for this standard yet - this is the
+                  configuration that will apply.
+                </Typography>
+              </>
             )}
             <Typography
               variant="caption"
@@ -874,17 +1170,32 @@ const Page = () => {
                     )}
                   </Stack>
                 )}
-                <Typography
-                  variant="caption"
-                  sx={{
-                    fontFamily: 'monospace',
-                    display: 'block',
-                    mt: 0.5,
-                    wordBreak: 'break-word',
-                  }}
-                >
-                  {JSON.stringify(tier.value)}
-                </Typography>
+                {tier.value?.intuneTemplate || tier.value?.caTemplate ? (
+                  <Box sx={{ mt: 1 }}>
+                    <TierPolicyView
+                      variableKey={
+                        tier.value?.intuneTemplate
+                          ? 'intuneTemplate'
+                          : 'caTemplate'
+                      }
+                      templateRef={
+                        tier.value?.intuneTemplate ?? tier.value?.caTemplate
+                      }
+                    />
+                  </Box>
+                ) : (
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontFamily: 'monospace',
+                      display: 'block',
+                      mt: 0.5,
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {JSON.stringify(tier.value)}
+                  </Typography>
+                )}
                 {tier.effective && tier.templateName === 'Tenant Override' && (
                   <Button
                     size="small"
@@ -963,220 +1274,6 @@ const Page = () => {
                     </Typography>
                   )}
                 </Box>
-              </>
-            )}
-            <Typography
-              variant="caption"
-              sx={{
-                fontWeight: 600,
-                color: 'text.secondary',
-                textTransform: 'uppercase',
-                letterSpacing: 0.5,
-              }}
-            >
-              Expected vs Current
-            </Typography>
-            {row.currentValue ? (
-              <>
-                {cardPaths.map((key) => {
-                  const drifted = differences.includes(key)
-                  const acceptedPath = row.acceptedPaths?.[key]
-                  return (
-                    <Box
-                      key={key}
-                      sx={{
-                        p: 1.5,
-                        borderRadius: '12px',
-                        border: '1px solid',
-                        borderColor:
-                          drifted && !acceptedPath ? 'error.main' : 'divider',
-                        bgcolor: 'background.paper',
-                      }}
-                    >
-                      <Stack
-                        direction="row"
-                        spacing={1}
-                        alignItems="center"
-                        justifyContent="space-between"
-                      >
-                        <Typography
-                          variant="subtitle2"
-                          sx={{ fontWeight: 600, fontFamily: 'monospace' }}
-                          noWrap
-                        >
-                          {key}
-                        </Typography>
-                        {acceptedPath ? (
-                          <Tooltip
-                            title={`${acceptedPath.reason} (${acceptedPath.by})`}
-                          >
-                            <Chip
-                              variant="outlined"
-                              size="small"
-                              color="info"
-                              label="Accepted"
-                            />
-                          </Tooltip>
-                        ) : drifted ? (
-                          <Chip
-                            variant="outlined"
-                            size="small"
-                            color="error"
-                            label="Drift"
-                          />
-                        ) : (
-                          <Chip
-                            variant="outlined"
-                            size="small"
-                            color="success"
-                            label="OK"
-                          />
-                        )}
-                      </Stack>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          fontFamily: 'monospace',
-                          display: 'block',
-                          mt: 0.5,
-                          wordBreak: 'break-word',
-                        }}
-                      >
-                        Expected:{' '}
-                        {JSON.stringify(getPath(row.expectedValue, key))}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          fontFamily: 'monospace',
-                          display: 'block',
-                          wordBreak: 'break-word',
-                          color: drifted ? 'error.main' : 'text.secondary',
-                        }}
-                      >
-                        Current:{' '}
-                        {JSON.stringify(getPath(row.currentValue, key))}
-                      </Typography>
-                      {drifted && !acceptedPath && (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          startIcon={<CheckCircle />}
-                          sx={{ mt: 1 }}
-                          onClick={() => {
-                            setAcceptPathTarget({ ...row, path: key })
-                            acceptPathDialog.handleOpen()
-                          }}
-                        >
-                          Accept this property only
-                        </Button>
-                      )}
-                    </Box>
-                  )
-                })}
-                {unmatchedDiffEntries.map((entry) => {
-                  const acceptedPath = row.acceptedPaths?.[entry.Property]
-                  return (
-                    <Box
-                      key={entry.Property}
-                      sx={{
-                        p: 1.5,
-                        borderRadius: '12px',
-                        border: '1px solid',
-                        borderColor: acceptedPath ? 'divider' : 'error.main',
-                        bgcolor: 'background.paper',
-                      }}
-                    >
-                      <Stack
-                        direction="row"
-                        spacing={1}
-                        alignItems="center"
-                        justifyContent="space-between"
-                      >
-                        <Typography
-                          variant="subtitle2"
-                          sx={{ fontWeight: 600, fontFamily: 'monospace' }}
-                          noWrap
-                        >
-                          {entry.Property}
-                        </Typography>
-                        {acceptedPath ? (
-                          <Tooltip
-                            title={`${acceptedPath.reason} (${acceptedPath.by})`}
-                          >
-                            <Chip
-                              variant="outlined"
-                              size="small"
-                              color="info"
-                              label="Accepted"
-                            />
-                          </Tooltip>
-                        ) : (
-                          <Chip
-                            variant="outlined"
-                            size="small"
-                            color="error"
-                            label="Drift"
-                          />
-                        )}
-                      </Stack>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          fontFamily: 'monospace',
-                          display: 'block',
-                          mt: 0.5,
-                          wordBreak: 'break-word',
-                        }}
-                      >
-                        Expected: {JSON.stringify(entry.ExpectedValue)}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          fontFamily: 'monospace',
-                          display: 'block',
-                          wordBreak: 'break-word',
-                          color: acceptedPath ? 'text.secondary' : 'error.main',
-                        }}
-                      >
-                        Current: {JSON.stringify(entry.ReceivedValue)}
-                      </Typography>
-                      {!acceptedPath && (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          startIcon={<CheckCircle />}
-                          sx={{ mt: 1 }}
-                          onClick={() => {
-                            setAcceptPathTarget({
-                              ...row,
-                              path: entry.Property,
-                            })
-                            acceptPathDialog.handleOpen()
-                          }}
-                        >
-                          Accept this property only
-                        </Button>
-                      )}
-                    </Box>
-                  )
-                })}
-                {(differences.length > 0 ||
-                  unmatchedDiffEntries.length > 0) && (
-                  <Typography variant="caption" color="text.secondary">
-                    Accepting a single property tolerates only that value -
-                    drift on any other property still raises a deviation.
-                  </Typography>
-                )}
-              </>
-            ) : (
-              <>
-                {jsonBox(row.expectedValue, true)}
-                <Typography variant="caption" color="text.secondary">
-                  No data has been collected for this standard yet - this is the
-                  configuration that will apply.
-                </Typography>
               </>
             )}
             <Typography

@@ -1,7 +1,7 @@
 import PropTypes from "prop-types";
 import { CippAutoComplete } from "../CippComponents/CippAutocomplete";
 import { ApiGetCall } from "../../api/ApiCall";
-import { IconButton, Tooltip, Box, ListItemText } from "@mui/material";
+import { IconButton, Tooltip, Box, Chip, Typography } from "@mui/material";
 import { Refresh, Star, StarBorder } from "@mui/icons-material";
 import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
@@ -417,6 +417,8 @@ export const CippTenantSelector = React.forwardRef((props, ref) => {
           onChange={handleTenantChange}
           options={groupedTenantOptions}
           groupBy={(option) => option.group ?? ""}
+          // Keep the selected tenant in the list so it stays in its group / alphabetical position
+          filterSelectedOptions={false}
           renderGroup={(params) => (
             <li key={params.key}>
               {params.group ? (
@@ -438,18 +440,40 @@ export const CippTenantSelector = React.forwardRef((props, ref) => {
               <ul style={{ padding: 0, margin: 0 }}>{params.children}</ul>
             </li>
           )}
-          renderOption={(props, option) => {
+          renderOption={(props, option, { selected }) => {
             const { key, ...optionProps } = props;
             const isAllTenants = option.value === "AllTenants";
             const favourited = !isAllTenants && isFavorite(option.value);
             return (
-              <li key={key ?? `${option.group}-${option.value}`} {...optionProps}>
-                <Box sx={{ display: "flex", alignItems: "center", width: "100%", gap: 1 }}>
-                  <ListItemText
-                    primary={option.label}
-                    primaryTypographyProps={{ variant: "body2", noWrap: true, fontWeight: isAllTenants ? 600 : 400 }}
-                    sx={{ flex: 1, minWidth: 0, my: 0 }}
-                  />
+              <Box component="li" key={key ?? `${option.group}-${option.value}`} {...optionProps}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    width: "100%",
+                    minWidth: 0,
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    noWrap
+                    sx={{ flex: 1, minWidth: 0, fontWeight: isAllTenants ? 600 : 400 }}
+                  >
+                    {option.label}
+                  </Typography>
+                  {selected && (
+                    <Chip
+                      label="Current"
+                      size="small"
+                      variant="outlined"
+                      sx={{
+                        flexShrink: 0,
+                        height: 20,
+                        color: "text.secondary",
+                      }}
+                    />
+                  )}
                   {!isAllTenants && (
                     <Tooltip title={favourited ? "Remove favorite" : "Add favorite"}>
                       <IconButton
@@ -458,14 +482,14 @@ export const CippTenantSelector = React.forwardRef((props, ref) => {
                         aria-label={favourited ? "Remove favorite" : "Add favorite"}
                         onClick={(event) => handleToggleFavorite(event, option)}
                         onMouseDown={(event) => event.preventDefault()}
-                        sx={{ color: favourited ? "warning.main" : "action.active" }}
+                        sx={{ color: favourited ? "warning.main" : "action.active", flexShrink: 0 }}
                       >
                         {favourited ? <Star fontSize="small" /> : <StarBorder fontSize="small" />}
                       </IconButton>
                     </Tooltip>
                   )}
                 </Box>
-              </li>
+              </Box>
             );
           }}
           getOptionLabel={(option) => option?.label || ""}

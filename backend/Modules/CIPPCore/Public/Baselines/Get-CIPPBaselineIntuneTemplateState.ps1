@@ -158,10 +158,15 @@ function Get-CIPPBaselineIntuneTemplateState {
         foreach ($CacheType in $Family.Caches) {
             $CacheMeta = $(try { Get-CIPPDbItem -TenantFilter $TenantFilter -Type $CacheType -CountsOnly } catch { $null })
             if ($null -ne $CacheMeta) {
+                # EmptyFamily: the WHOLE family came back empty, not just this policy.
+                # The engine cross-checks against the prior state - a family that held
+                # this policy recently going completely empty is more likely a failed
+                # or flaky collection than a mass deletion.
                 return @{
                     Expected    = $Expected
                     Current     = [PSCustomObject]@{ policyStatus = 'Policy is missing from this tenant' }
                     CompareType = $null
+                    EmptyFamily = $true
                 }
             }
         }
@@ -200,6 +205,7 @@ function Get-CIPPBaselineIntuneTemplateState {
     # An unknown result ($null, e.g. Graph error) counts as not-assigned, like V2.
     # Note remediation ASSIGNS in append mode - an extra portal-added assignment reports
     # as drift here but is never removed automatically.
+    $StrictCompare = $null
     if ((& $Unwrap $Variables.verifyAssignments) -eq $true) {
         $Expected | Add-Member -NotePropertyName 'isAssigned' -NotePropertyValue $true -Force
         $AssignTo = "$(& $Unwrap $Variables.assignTo)"
@@ -207,7 +213,11 @@ function Get-CIPPBaselineIntuneTemplateState {
         if ($CustomGroup) { $AssignTo = 'customGroup' }
         $AssignmentsMatch = Compare-CIPPIntuneAssignments -ExistingAssignments @($Live.assignments) -ExpectedAssignTo $AssignTo -ExpectedCustomGroup $CustomGroup -ExpectedExcludeGroup "$(& $Unwrap $Variables.excludeGroup)" -ExpectedAssignmentFilter "$(& $Unwrap $Variables.assignmentFilter)" -ExpectedAssignmentFilterType "$(& $Unwrap $Variables.assignmentFilterType)" -TenantFilter $TenantFilter
         $Current | Add-Member -NotePropertyName 'isAssigned' -NotePropertyValue ([bool]$AssignmentsMatch) -Force
+        # The Catalog flatten compares ONLY the settings arrays - top-level properties
+        # like isAssigned never reach it. StrictCompare makes the engine diff these
+        # explicitly, regardless of the family's compare type.
+        $StrictCompare = @('isAssigned')
     }
 
-    return @{ Expected = $Expected; Current = $Current; CompareType = $Family.CompareType }
+    return @{ Expected = $Expected; Current = $Current; CompareType = $Family.CompareType; StrictCompare = $StrictCompare }
 }
