@@ -34541,14 +34541,7 @@
                 "type": "object",
                 "properties": {
                   "action": {
-                    "type": "string",
-                    "enum": [
-                      "Accept",
-                      "AcceptPath",
-                      "Clear",
-                      "CompleteTask",
-                      "Deny"
-                    ]
+                    "type": "string"
                   },
                   "expires": {
                     "type": "string"
