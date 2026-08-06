@@ -29,6 +29,9 @@ param(
     # PowerShell describes the response, so this is the only static signal there is.
     [string]$FrontendPath = "$PSScriptRoot/../../frontend/src",
     [string]$OverridePath = "$PSScriptRoot/../../backend/Config/openapi-overrides",
+    # Vendored Graph CSDL. Endpoints that fetch a Graph collection and return it untouched
+    # name no field in their own source, but Graph publishes the entity's shape.
+    [string]$GraphMetadataPath = "$PSScriptRoot/../../backend/Config/graph-metadata",
     [string]$OutputPath = "$PSScriptRoot/../../backend/Config/openapi.json",
     [string]$ReportPath,
     [string]$Endpoint,
@@ -1083,6 +1086,9 @@ function Get-EndpointContract {
         ReturnsArray  = (Test-ArrayResponse -FunctionAst $Definition)
         HasResults    = (Test-ResultsEnvelope -FunctionAst $Definition)
         BackendFields = @(Get-BackendRecordField -FunctionAst $Definition -BodyVariable (Get-ResponseBodyVariable -FunctionAst $Definition))
+        TableNames    = @(Get-TableReadName -FunctionAst $Definition)
+        GraphRefs     = @(Get-GraphEntityReference -FunctionAst $Definition)
+        GraphSelect   = @(Get-GraphSelectField -FunctionAst $Definition)
         Path         = $Path
     }
 }
@@ -1260,6 +1266,268 @@ function Get-FrontendColumnMap {
     return $Resolved
 }
 
+function Get-GraphMetadataIndex {
+    # Parses the vendored Graph CSDL into entity set -> type and type -> properties.
+    #
+    # Deliberately a second implementation of what Get-CippGraphSchema does at runtime:
+    # this script is standalone by design - it parses sources rather than importing the
+    # modules - so reaching into CIPPCore here would couple the build to the thing it is
+    # describing. The parsing rules are the load-bearing part and both are tested.
+    param([string]$Path)
+
+    if (-not $Path -or -not (Test-Path $Path)) { return $null }
+
+    $EdmToJson = @{
+        'Edm.String' = 'string'; 'Edm.Boolean' = 'boolean'; 'Edm.Int16' = 'integer'
+        'Edm.Int32' = 'integer'; 'Edm.Int64' = 'integer'; 'Edm.Double' = 'number'
+        'Edm.Single' = 'number'; 'Edm.Decimal' = 'number'; 'Edm.Guid' = 'string'
+        'Edm.DateTimeOffset' = 'string'; 'Edm.Date' = 'string'; 'Edm.TimeOfDay' = 'string'
+        'Edm.Duration' = 'string'; 'Edm.Binary' = 'string'; 'Edm.Stream' = 'string'
+    }
+
+    $Index = @{}
+    foreach ($Version in @('v1.0', 'beta')) {
+        $File = Join-Path $Path "$Version.xml"
+        if (-not (Test-Path $File)) { continue }
+
+        $Xml = [System.Xml.XmlDocument]::new()
+        $Xml.Load($File)
+        $Ns = [System.Xml.XmlNamespaceManager]::new($Xml.NameTable)
+        $Ns.AddNamespace('edm', 'http://docs.oasis-open.org/odata/ns/edm')
+
+        # References use a schema's Namespace and its Alias interchangeably
+        # ('microsoft.graph.user' and 'graph.user' are the same type).
+        $AliasOf = @{}
+        foreach ($Schema in $Xml.SelectNodes('//edm:Schema', $Ns)) {
+            if ($Schema.Alias) { $AliasOf[$Schema.Alias] = $Schema.Namespace }
+        }
+        $Expand = {
+            param([string]$Type)
+            if (-not $Type) { return $null }
+            $Bare = $Type -replace '^Collection\(', '' -replace '\)$', ''
+            $Prefix = $Bare -replace '\.[^.]+$', ''
+            $Leaf = ($Bare -split '\.')[-1]
+            if ($AliasOf.ContainsKey($Prefix)) { return '{0}.{1}' -f $AliasOf[$Prefix], $Leaf }
+            return $Bare
+        }
+
+        # Keyed by fully qualified name: several namespaces declare a type called 'user',
+        # and a short-name key lets a usage-report type overwrite microsoft.graph.user.
+        $Raw = @{}
+        foreach ($Schema in $Xml.SelectNodes('//edm:Schema', $Ns)) {
+            foreach ($Node in $Schema.SelectNodes('edm:EntityType | edm:ComplexType', $Ns)) {
+                $Properties = [ordered]@{}
+                foreach ($Property in $Node.SelectNodes('edm:Property', $Ns)) {
+                    $Type = $Property.Type
+                    $Collection = $Type -match '^Collection\('
+                    $Inner = $Type -replace '^Collection\(', '' -replace '\)$', ''
+                    $Json = if ($Collection) { 'array' } elseif ($EdmToJson.ContainsKey($Inner)) { $EdmToJson[$Inner] } else { 'object' }
+                    $Properties[$Property.Name] = $Json
+                }
+                $Navigation = [ordered]@{}
+                foreach ($Property in $Node.SelectNodes('edm:NavigationProperty', $Ns)) {
+                    $Navigation[$Property.Name] = & $Expand $Property.Type
+                }
+                $Raw['{0}.{1}' -f $Schema.Namespace, $Node.Name] = @{
+                    Properties = $Properties
+                    Navigation = $Navigation
+                    Base       = & $Expand $Node.BaseType
+                }
+            }
+        }
+
+        $Types = @{}
+        function Resolve-GraphType {
+            param([string]$Name, $Raw, $Types, [System.Collections.Generic.HashSet[string]]$Seen)
+            if ($Types.ContainsKey($Name)) { return $Types[$Name] }
+            if (-not $Raw.ContainsKey($Name) -or $Seen.Contains($Name)) { return $null }
+            $null = $Seen.Add($Name)
+            $Merged = @{ Properties = [ordered]@{}; Navigation = [ordered]@{} }
+            if ($Raw[$Name].Base) {
+                $Parent = Resolve-GraphType -Name $Raw[$Name].Base -Raw $Raw -Types $Types -Seen $Seen
+                if ($Parent) {
+                    foreach ($Key in $Parent.Properties.Keys) { $Merged.Properties[$Key] = $Parent.Properties[$Key] }
+                    foreach ($Key in $Parent.Navigation.Keys) { $Merged.Navigation[$Key] = $Parent.Navigation[$Key] }
+                }
+            }
+            foreach ($Key in $Raw[$Name].Properties.Keys) { $Merged.Properties[$Key] = $Raw[$Name].Properties[$Key] }
+            foreach ($Key in $Raw[$Name].Navigation.Keys) { $Merged.Navigation[$Key] = $Raw[$Name].Navigation[$Key] }
+            $Types[$Name] = $Merged
+            return $Merged
+        }
+        foreach ($Name in @($Raw.Keys)) {
+            $null = Resolve-GraphType -Name $Name -Raw $Raw -Types $Types -Seen ([System.Collections.Generic.HashSet[string]]::new())
+        }
+
+        $Sets = [System.Collections.Hashtable]::new([System.StringComparer]::OrdinalIgnoreCase)
+        foreach ($Node in $Xml.SelectNodes('//edm:EntityContainer/edm:EntitySet | //edm:EntityContainer/edm:Singleton', $Ns)) {
+            $Type = if ($Node.EntityType) { $Node.EntityType } else { $Node.Type }
+            $Sets[$Node.Name] = & $Expand $Type
+        }
+
+        $Index[$Version] = @{ Sets = $Sets; Types = $Types }
+    }
+
+    return $Index
+}
+
+function Get-GraphEntityReference {
+    # The Graph paths an entrypoint reads, as @{ Version; Segments }. The WHOLE path is
+    # kept, not just its first segment: deviceManagement/windowsAutopilotDeviceIdentities
+    # is a collection of autopilot devices, and stopping at 'deviceManagement' resolves it
+    # to the tenant-level device management singleton instead - a plausible-looking record
+    # made of entirely the wrong fields.
+    param($FunctionAst)
+
+    $References = [System.Collections.Generic.List[object]]::new()
+    foreach ($Match in [regex]::Matches($FunctionAst.Extent.Text, 'graph\.microsoft\.com/(v1\.0|beta)/([A-Za-z0-9_/]+)')) {
+        $Segments = @($Match.Groups[2].Value -split '/' | Where-Object { $_ })
+        if ($Segments.Count -eq 0) { continue }
+        $Key = '{0}:{1}' -f $Match.Groups[1].Value, ($Segments -join '/')
+        if (-not ($References | Where-Object { $_.Key -eq $Key })) {
+            $References.Add(@{ Version = $Match.Groups[1].Value; Segments = $Segments; Key = $Key })
+        }
+    }
+    return @($References)
+}
+
+function Get-GraphSelectField {
+    # Field names from a Graph $select list. CIPP builds these as one long literal
+    # ('id,displayName,mail,...') and interpolates it into the URI, so when one is present
+    # it says exactly which of an entity's properties actually come back - Graph's user has
+    # 89 and a given endpoint may ask for 19.
+    param($FunctionAst)
+
+    $Fields = [System.Collections.Generic.List[string]]::new()
+    foreach ($String in $FunctionAst.FindAll({
+                param($n) $n -is [System.Management.Automation.Language.StringConstantExpressionAst]
+            }, $true)) {
+        $Value = $String.Value
+        # a select list is a comma-separated run of bare identifiers, nothing else
+        if ($Value -notmatch '^[A-Za-z_][\w]*(,[A-Za-z_][\w]*){2,}$') { continue }
+        foreach ($Field in ($Value -split ',')) {
+            if ($Field -and -not $Fields.Contains($Field)) { $Fields.Add($Field) }
+        }
+    }
+    return @($Fields)
+}
+
+function Get-TableEntityCastType {
+    # The JSON type implied by an explicit cast on a table entity's value. Storage writers
+    # cast almost everything ([string]$Repo.name, [bool]$Repo.permissions.push) because
+    # Azure Table columns are typed, which makes these the one place in CIPP where a
+    # response field's type is stated outright rather than guessed.
+    param($Ast)
+
+    $Node = Get-UnwrappedAst -Ast $Ast
+    if ($Node -isnot [System.Management.Automation.Language.ConvertExpressionAst]) { return $null }
+
+    switch -Regex ($Node.Type.TypeName.Name) {
+        '^(string|guid)$' { return 'string' }
+        '^bool(ean)?$' { return 'boolean' }
+        '^(int|int32|int64|long)$' { return 'integer' }
+        '^(double|decimal|single|float)$' { return 'number' }
+        '^datetime(offset)?$' { return 'string' }
+        default { return $null }
+    }
+}
+
+function Get-TableWriterIndex {
+    # Maps each Azure Table to the fields the code WRITES into it.
+    #
+    # A third of the endpoints with no describable response read a storage table and hand
+    # the rows straight back, so nothing at the read site names a field. The write site
+    # does: an entity is built as a hashtable literal with fixed keys, and Azure Table
+    # rows are homogeneous by construction, so the writer is an accurate description of
+    # what the reader returns. This is the same trick as following a helper for request
+    # fields, pointed at the other end of the pipe.
+    param([string[]]$SearchPath)
+
+    $Index = @{}
+
+    foreach ($File in Get-ChildItem -Path $SearchPath -Recurse -Filter '*.ps1' -File) {
+        $Tokens = $null; $Errs = $null
+        $Ast = [System.Management.Automation.Language.Parser]::ParseFile($File.FullName, [ref]$Tokens, [ref]$Errs)
+        if ($Errs.Count -gt 0) { continue }
+
+        # $X = Get-CIPPTable -TableName 'Y'  ->  which variable names which table
+        $TableOf = @{}
+        $Assignments = @($Ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.AssignmentStatementAst] }, $true))
+        foreach ($Assign in $Assignments) {
+            if ($Assign.Left -isnot [System.Management.Automation.Language.VariableExpressionAst]) { continue }
+            if ($Assign.Right.Extent.Text -match "(?i)Get-CIPPTable\s+-Table(?:Name)?\s+'?([\w\-]+)'?") {
+                $TableOf[$Assign.Left.VariablePath.UserPath] = $Matches[1]
+            }
+        }
+        if ($TableOf.Count -eq 0) { continue }
+
+        foreach ($Command in $Ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.CommandAst] }, $true)) {
+            if ($Command.GetCommandName() -notin @('Add-CIPPAzDataTableEntity', 'Update-AzDataTableEntity')) { continue }
+
+            $Elements = @($Command.CommandElements)
+            $Table = $null
+            $EntityVar = $null
+            for ($i = 0; $i -lt $Elements.Count; $i++) {
+                $El = $Elements[$i]
+                # the splatted table: @Table
+                if ($El.Extent.Text -match '^@(\w+)$' -and $TableOf.ContainsKey($Matches[1])) { $Table = $TableOf[$Matches[1]] }
+                if ($El -is [System.Management.Automation.Language.CommandParameterAst] -and $El.ParameterName -match '^Entity$') {
+                    $Next = if (($i + 1) -lt $Elements.Count) { $Elements[$i + 1] } else { $null }
+                    if ($Next -is [System.Management.Automation.Language.VariableExpressionAst]) { $EntityVar = $Next.VariablePath.UserPath }
+                }
+            }
+            if (-not $Table -or -not $EntityVar) { continue }
+            if (-not $Index.ContainsKey($Table)) { $Index[$Table] = [ordered]@{} }
+
+            foreach ($Assign in $Assignments) {
+                # the entity built as a literal
+                if ($Assign.Left -is [System.Management.Automation.Language.VariableExpressionAst] -and
+                    $Assign.Left.VariablePath.UserPath -eq $EntityVar) {
+                    $Hash = $Assign.Right.FindAll({ param($n) $n -is [System.Management.Automation.Language.HashtableAst] }, $true) | Select-Object -First 1
+                    if (-not $Hash) { continue }
+                    foreach ($Pair in $Hash.KeyValuePairs) {
+                        $Key = $Pair.Item1.Extent.Text.Trim("'", '"', ' ')
+                        if ($Key -notmatch '^[A-Za-z_][\w.-]*$') { continue }
+                        $Type = Get-TableEntityCastType -Ast $Pair.Item2
+                        # a later writer that states a type wins over one that does not
+                        if (-not $Index[$Table].Contains($Key) -or ($Type -and -not $Index[$Table][$Key])) {
+                            $Index[$Table][$Key] = $Type
+                        }
+                    }
+                }
+
+                # fields added conditionally: $Entity.Foo = ...
+                if ($Assign.Left -is [System.Management.Automation.Language.MemberExpressionAst] -and
+                    $Assign.Left.Expression.Extent.Text -eq ('$' + $EntityVar)) {
+                    $Key = $Assign.Left.Member.Extent.Text.Trim("'", '"')
+                    if ($Key -match '^[A-Za-z_][\w.-]*$' -and -not $Index[$Table].Contains($Key)) {
+                        $Index[$Table][$Key] = Get-TableEntityCastType -Ast $Assign.Right
+                    }
+                }
+            }
+        }
+    }
+
+    return $Index
+}
+
+function Get-TableReadName {
+    # Tables this entrypoint reads rows from. Only a read that is actually returned counts,
+    # but entrypoints routinely touch a config table as well as their data table, so the
+    # caller requires a single unambiguous table before using its shape.
+    param($FunctionAst)
+
+    $Names = [System.Collections.Generic.List[string]]::new()
+    $Text = $FunctionAst.Extent.Text
+    if ($Text -notmatch 'Get-CIPPAzDataTableEntity') { return @() }
+
+    foreach ($Match in [regex]::Matches($Text, "(?i)Get-CIPPTable\s+-Table(?:Name)?\s+'?([\w\-]+)'?")) {
+        $Name = $Match.Groups[1].Value
+        if (-not $Names.Contains($Name)) { $Names.Add($Name) }
+    }
+    return @($Names)
+}
+
 function Get-ResponseBodyVariable {
     # The variable handed to Body = ... in the returned HttpResponseContext. Knowing which
     # variable becomes the response is what makes the field extraction below safe: an
@@ -1432,25 +1700,59 @@ function ConvertTo-RecordSchema {
     # The record shape for a list response. Two independent sources: what the endpoint
     # selects onto each record, and what the UI declares it renders. They are recorded
     # separately in x-cipp-field-source so a surprising field can be traced back.
-    param([string[]]$Columns, [string[]]$BackendFields)
+    param([string[]]$Columns, [string[]]$BackendFields, $StorageFields, $GraphFields)
 
     $Properties = [ordered]@{}
     $Backend = @($BackendFields | Where-Object { $_ })
     $Frontend = @($Columns | Where-Object { $_ })
+    $Storage = if ($StorageFields) { [ordered]@{} } else { [ordered]@{} }
+    if ($StorageFields) {
+        foreach ($Key in $StorageFields.Keys) { $Storage[$Key] = $StorageFields[$Key] }
+        # Azure Table stamps these on every row and Get-CIPPAzDataTableEntity returns them,
+        # so they are present in the response even though no CIPP code writes them.
+        # Confirmed against live responses from ListCustomScripts and ListScheduledItems.
+        foreach ($System in @('ETag', 'Timestamp')) {
+            if (-not $Storage.Contains($System)) { $Storage[$System] = 'string' }
+        }
+    }
+    $StorageNames = @($Storage.Keys)
+    $Graph = if ($GraphFields) { $GraphFields } else { [ordered]@{} }
+    $GraphNames = @($Graph.Keys)
 
-    foreach ($Name in (@($Backend + $Frontend) | Sort-Object -CaseSensitive -Unique)) {
-        $Source = if ($Backend -contains $Name -and $Frontend -contains $Name) { 'backend,frontend' }
-        elseif ($Backend -contains $Name) { 'backend' }
-        else { 'frontend' }
-        $Properties[$Name] = [ordered]@{ type = 'string'; 'x-cipp-field-source' = $Source }
+    foreach ($Name in (@($Backend + $Frontend + $StorageNames + $GraphNames) | Sort-Object -CaseSensitive -Unique)) {
+        $From = [System.Collections.Generic.List[string]]::new()
+        if ($GraphNames -contains $Name) { $From.Add('graph') }
+        if ($StorageNames -contains $Name) { $From.Add('storage') }
+        if ($Backend -contains $Name) { $From.Add('backend') }
+        if ($Frontend -contains $Name) { $From.Add('frontend') }
+
+        $Property = [ordered]@{}
+        # A type only when the source actually states one. Storage writers cast their
+        # values because Azure Table columns are typed; a Select-Object property list or a
+        # UI column proves only that the field EXISTS, and these records routinely carry
+        # numbers, booleans, nested objects and arrays. An omitted type means "any", which
+        # is the truth for everything else.
+        if ($GraphNames -contains $Name -and $Graph[$Name]) { $Property['type'] = $Graph[$Name] }
+        elseif ($StorageNames -contains $Name -and $Storage[$Name]) { $Property['type'] = $Storage[$Name] }
+        $Property['x-cipp-field-source'] = ($From -join ',')
+        $Properties[$Name] = $Property
     }
 
-    $Description = if ($Backend.Count -gt 0 -and $Frontend.Count -gt 0) {
-        'Fields the endpoint selects onto each record, plus the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.'
-    } elseif ($Backend.Count -gt 0) {
-        'Fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.'
+    $Sources = [System.Collections.Generic.List[string]]::new()
+    if ($Graph.Count -gt 0) { $Sources.Add('the Microsoft Graph entity it queries') }
+    if ($Storage.Count -gt 0) { $Sources.Add('the fields written into the storage table it reads') }
+    if ($Backend.Count -gt 0) { $Sources.Add('the fields the endpoint selects onto each record') }
+    if ($Frontend.Count -gt 0) { $Sources.Add('the columns the CIPP UI renders') }
+
+    # Deliberately hedged in both directions. Storage fields come from the writers, and an
+    # endpoint may project only some of them or add computed ones, so this is neither a
+    # floor nor a ceiling - it is the best static description available.
+    $Description = if ($Graph.Count -gt 0) {
+        'Derived from {0}. Graph returns a subset of an entity unless the call selects fields explicitly, so a listed field may be absent from a given response.' -f ($Sources -join ', and ')
+    } elseif ($Storage.Count -gt 0) {
+        'Derived from {0}. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.' -f ($Sources -join ', and ')
     } else {
-        'Fields the CIPP UI renders for this endpoint. The response may carry more; these are the ones known to exist.'
+        'Derived from {0}. The response may carry more; these are the ones known to exist.' -f ($Sources -join ', and ')
     }
 
     return [ordered]@{
@@ -1543,10 +1845,67 @@ function ConvertTo-OasOperation {
 
     # What the endpoint selects onto the record, and what the UI declares it renders.
     # Either alone is a partial description; together they cover most list endpoints.
-    $Record = if ($Contract.Columns.Count -gt 0 -or $Contract.BackendFields.Count -gt 0) {
-        ConvertTo-RecordSchema -Columns $Contract.Columns -BackendFields $Contract.BackendFields
+    # The storage shape is only used when the endpoint reads exactly one table. Entrypoints
+    # routinely open a config or tenant table alongside their data table, and merging two
+    # row shapes would describe a record that never exists.
+    $StorageFields = $null
+    if ($TableIndex -and $Contract.TableNames.Count -eq 1) {
+        $Known = @($Contract.TableNames | Where-Object { $TableIndex.ContainsKey($_) })
+        if ($Known.Count -eq 1) { $StorageFields = $TableIndex[$Known[0]] }
+    }
+
+    # Same rule as storage: only when the endpoint reads exactly one Graph entity set.
+    # Several sets would mean merging two entity shapes into a record that never exists.
+    $GraphFields = $null
+    if ($GraphIndex -and $Contract.GraphRefs.Count -eq 1) {
+        $Reference = $Contract.GraphRefs[0]
+        $Version = $GraphIndex[$Reference.Version]
+        $Entity = $null
+        if ($Version -and $Version.Sets.ContainsKey($Reference.Segments[0])) {
+            $TypeName = $Version.Sets[$Reference.Segments[0]]
+            # Walk the rest of the path through navigation properties. Anything that cannot
+            # be resolved - an action, a function, a $ segment - abandons the whole lookup
+            # rather than falling back to the last type that did resolve, which would
+            # describe a parent object instead of the collection actually being read.
+            for ($Segment = 1; $Segment -lt $Reference.Segments.Count; $Segment++) {
+                $Current = $Version.Types[$TypeName]
+                $Next = if ($Current) { $Current.Navigation[$Reference.Segments[$Segment]] } else { $null }
+                if (-not $Next) { $TypeName = $null; break }
+                $TypeName = $Next
+            }
+            if ($TypeName -and $Version.Types.ContainsKey($TypeName)) {
+                $Entity = $Version.Types[$TypeName].Properties
+            }
+        }
+        if ($Entity -and $Entity.Count -gt 0) {
+            $GraphFields = [ordered]@{}
+            # A $select list names exactly what comes back. Without one Graph returns its
+            # default projection, which is not the full entity either, so the unselected
+            # case is the whole type and knowingly generous.
+            $Selected = @($Contract.GraphSelect | Where-Object { $Entity.Contains($_) })
+            if ($Selected.Count -ge 3) {
+                foreach ($Field in $Selected) { $GraphFields[$Field] = $Entity[$Field] }
+            } else {
+                foreach ($Field in $Entity.Keys) { $GraphFields[$Field] = $Entity[$Field] }
+            }
+        }
+    }
+
+    $Record = if ($Contract.Columns.Count -gt 0 -or $Contract.BackendFields.Count -gt 0 -or
+        ($StorageFields -and $StorageFields.Count -gt 0) -or ($GraphFields -and $GraphFields.Count -gt 0)) {
+        ConvertTo-RecordSchema -Columns $Contract.Columns -BackendFields $Contract.BackendFields `
+            -StorageFields $StorageFields -GraphFields $GraphFields
     } else {
-        [ordered]@{ type = 'object'; additionalProperties = $true }
+        # Nothing in the source names a field. Most of these hand an upstream response
+        # straight back (New-GraphGetRequest to Graph or the admin portal, New-ExoRequest to
+        # Exchange), so the shape is decided by Microsoft at runtime and is not recoverable
+        # from the entrypoint at all. Say so, rather than leaving a bare open object that a
+        # docs viewer renders as a fabricated "additionalProp1" placeholder.
+        [ordered]@{
+            type                 = 'object'
+            description          = 'Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.'
+            additionalProperties = $true
+        }
     }
 
     $SuccessSchema = if ($Contract.HasResults) {
@@ -1628,6 +1987,22 @@ if ($ModulesPath -and (Test-Path $ModulesPath)) {
         Where-Object { Test-Path $_ }
     if ($HelperRoots) { $HelperIndex = Get-HelperSourceIndex -SearchPath $HelperRoots }
 }
+# Storage tables are written all over the backend (CIPPDB's cache writers, CIPPCore's
+# settings and scheduler code), so the writer scan covers every module rather than the
+# handful searched for request helpers.
+$TableIndex = $null
+if ($ModulesPath -and (Test-Path $ModulesPath)) {
+    $TableIndex = Get-TableWriterIndex -SearchPath @($ModulesPath)
+    Write-Host "Recovered row shapes for $($TableIndex.Count) storage tables."
+}
+
+$GraphIndex = Get-GraphMetadataIndex -Path $GraphMetadataPath
+if ($GraphIndex) {
+    Write-Host "Loaded Graph metadata for: $(($GraphIndex.Keys | Sort-Object) -join ', ')."
+} else {
+    Write-Host "No Graph metadata at '$GraphMetadataPath'; Graph passthrough responses will be untyped."
+}
+
 $ColumnMap = Get-FrontendColumnMap -SrcDir $FrontendPath
 if ($ColumnMap.Count -eq 0) {
     Write-Host "No frontend column declarations found at '$FrontendPath'; list responses will be untyped."
@@ -1734,7 +2109,11 @@ backend and must be sent as an object, not a bare string.
 '@
         'x-cipp-docs' = 'https://docs.cipp.app'
     }
-    servers    = @([ordered]@{ url = '/api'; description = 'CIPP API' })
+    # The server is the deployment root, NOT '/api'. Path keys already carry the /api
+    # prefix because routing is name-based and the file name IS the path, so a server of
+    # '/api' makes every consumer build /api/api/ListUsers - which is exactly what Swagger
+    # UI's "Try it out" did.
+    servers    = @([ordered]@{ url = '/'; description = 'This CIPP deployment' })
     security   = @([ordered]@{ bearerAuth = @() })
     tags       = @(($TagSet | Sort-Object -CaseSensitive) | ForEach-Object { [ordered]@{ name = $_ } })
     components = [ordered]@{

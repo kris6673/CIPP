@@ -94,6 +94,9 @@ COPY backend/Modules/CIPPCore       /gen/Modules/CIPPCore
 COPY backend/Modules/CIPPStandards  /gen/Modules/CIPPStandards
 COPY backend/Modules/CippExtensions /gen/Modules/CippExtensions
 COPY backend/Config/openapi-overrides /gen/openapi-overrides
+# Vendored Graph CSDL. Endpoints that fetch a Graph collection and return it untouched
+# name no field in their own source, so without this their responses ship undescribed.
+COPY backend/Config/graph-metadata /gen/graph-metadata
 # The UI's simpleColumns declarations are the only static description of a list
 # response; without them every list endpoint documents an untyped object.
 COPY frontend/src /gen/frontend/src
@@ -102,6 +105,7 @@ RUN pwsh -File /build/build-openapi.ps1 \
     -ModulesPath /gen/Modules \
     -FrontendPath /gen/frontend/src \
     -OverridePath /gen/openapi-overrides \
+    -GraphMetadataPath /gen/graph-metadata \
     -OutputPath /gen/openapi.json
 
 # ── Frontend build ──

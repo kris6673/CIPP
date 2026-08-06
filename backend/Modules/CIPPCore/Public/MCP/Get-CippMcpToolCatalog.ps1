@@ -34,8 +34,11 @@ function Get-CippMcpToolCatalog {
         foreach ($PathEntry in $Spec['paths'].GetEnumerator()) {
             $Endpoint = $PathEntry.Key -replace '^/api/', ''
 
-            # Never expose the MCP transport itself as a tool.
-            if ($Endpoint -eq 'ExecMcp') { continue }
+            # Never expose the MCP transport itself as a tool, nor the spec endpoint that
+            # backs the in-app documentation browser: it returns the whole ~1.5 MB OpenAPI
+            # document, which would flood the caller's context to tell it what SearchTools
+            # already answers.
+            if ($Endpoint -in @('ExecMcp', 'ListOpenApiSpec')) { continue }
 
             foreach ($MethodEntry in $PathEntry.Value.GetEnumerator()) {
                 $Method = [string]$MethodEntry.Key
