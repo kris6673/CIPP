@@ -1080,8 +1080,9 @@ function Get-EndpointContract {
         StatusCodes  = @($StatusCodes)
         Downstream   = @($Followed)
         Columns      = @(if ($ColumnMap -and $ColumnMap.ContainsKey($Name)) { $ColumnMap[$Name] } else { @() })
-        ReturnsArray = (Test-ArrayResponse -FunctionAst $Definition)
-        HasResults   = (Test-ResultsEnvelope -FunctionAst $Definition)
+        ReturnsArray  = (Test-ArrayResponse -FunctionAst $Definition)
+        HasResults    = (Test-ResultsEnvelope -FunctionAst $Definition)
+        BackendFields = @(Get-BackendRecordField -FunctionAst $Definition -BodyVariable (Get-ResponseBodyVariable -FunctionAst $Definition))
         Path         = $Path
     }
 }
@@ -1135,11 +1136,30 @@ function Test-ResultsEnvelope {
     # Action endpoints answer with Body = @{ Results = ... }; CippApiResults on the
     # frontend renders exactly that shape, so detecting it is what distinguishes a
     # StandardResults response from a raw list.
+    #
+    # Only the success path counts. A list endpoint that rejects a bad argument with
+    # Body = @{ Results = 'x is required' } is still a list endpoint, and treating that
+    # error branch as the contract documents the whole endpoint as an action - which is
+    # exactly what happened to ListGroups when a validation guard was added to it.
     param($FunctionAst)
 
     foreach ($Hashtable in $FunctionAst.FindAll({
                 param($n) $n -is [System.Management.Automation.Language.HashtableAst]
             }, $true)) {
+
+        # a literal non-2xx StatusCode alongside the Body marks this as an error response
+        $IsErrorResponse = $false
+        foreach ($Pair in $Hashtable.KeyValuePairs) {
+            if ($Pair.Item1.Extent.Text -notmatch "^'?`"?StatusCode`"?'?$") { continue }
+            $Status = $Pair.Item2.Extent.Text
+            if ($Status -match '\[HttpStatusCode\]::(\w+)') {
+                $Numeric = $null
+                try { $Numeric = [int][System.Net.HttpStatusCode]::($Matches[1]) } catch { $Numeric = $null }
+                if ($null -ne $Numeric -and $Numeric -ge 400) { $IsErrorResponse = $true }
+            }
+        }
+        if ($IsErrorResponse) { continue }
+
         foreach ($Pair in $Hashtable.KeyValuePairs) {
             if ($Pair.Item1.Extent.Text -notmatch "^'?`"?Body`"?'?$") { continue }
             $Value = Get-UnwrappedAst -Ast $Pair.Item2
@@ -1240,17 +1260,202 @@ function Get-FrontendColumnMap {
     return $Resolved
 }
 
+function Get-ResponseBodyVariable {
+    # The variable handed to Body = ... in the returned HttpResponseContext. Knowing which
+    # variable becomes the response is what makes the field extraction below safe: an
+    # entrypoint may shape half a dozen intermediate values with Select-Object, and only
+    # the one that is actually returned describes the record.
+    param($FunctionAst)
+
+    # An endpoint often has several return paths - a cached branch, an AllTenants branch,
+    # a placeholder while an orchestrator runs - and any of them can be the one that
+    # carries the records, so every Body variable is collected rather than just the first.
+    $Variables = [System.Collections.Generic.List[string]]::new()
+
+    foreach ($Hashtable in $FunctionAst.FindAll({
+                param($n) $n -is [System.Management.Automation.Language.HashtableAst]
+            }, $true)) {
+        foreach ($Pair in $Hashtable.KeyValuePairs) {
+            if ($Pair.Item1.Extent.Text -notmatch "^'?`"?Body`"?'?$") { continue }
+            $Value = Get-UnwrappedAst -Ast $Pair.Item2
+            # Body = $GraphRequest, Body = @($GraphRequest), Body = @{ Results = $x }
+            $Var = $Value.FindAll({
+                    param($n) $n -is [System.Management.Automation.Language.VariableExpressionAst]
+                }, $true) | Select-Object -First 1
+            if ($Var -and -not $Variables.Contains($Var.VariablePath.UserPath)) {
+                $Variables.Add($Var.VariablePath.UserPath)
+            }
+        }
+    }
+    return @($Variables)
+}
+
+function Get-SelectObjectField {
+    # Property names from one Select-Object call: bare names, and the Name/Label of a
+    # calculated property. Returns $null when the call cannot be read statically, which
+    # is the signal to give up rather than describe the record wrongly.
+    param($CommandAst)
+
+    $Fields = [System.Collections.Generic.List[string]]::new()
+    $Open = $false
+    $Elements = @($CommandAst.CommandElements)
+
+    for ($i = 1; $i -lt $Elements.Count; $i++) {
+        $Element = $Elements[$i]
+
+        if ($Element -is [System.Management.Automation.Language.CommandParameterAst]) {
+            $ParameterName = $Element.ParameterName
+            # -ExpandProperty replaces the record with the contents of one property, so
+            # nothing collected here would describe the result.
+            if ($ParameterName -match '^(Expand|ExpandProperty)$') { return $null }
+            if ($ParameterName -match '^(Property|Prop)$') { continue }  # its argument is the list
+            # every other switch/parameter (First, Last, Unique, Skip, ExcludeProperty...)
+            # takes no property names; skip its argument too when it has one
+            if (-not $Element.Argument -and ($i + 1) -lt $Elements.Count -and
+                $Elements[$i + 1] -isnot [System.Management.Automation.Language.CommandParameterAst]) { $i++ }
+            continue
+        }
+
+        foreach ($Item in @(if ($Element -is [System.Management.Automation.Language.ArrayLiteralAst]) { $Element.Elements } else { $Element })) {
+            $Item = Get-UnwrappedAst -Ast $Item
+
+            if ($Item -is [System.Management.Automation.Language.HashtableAst]) {
+                foreach ($Pair in $Item.KeyValuePairs) {
+                    if ($Pair.Item1.Extent.Text -notmatch "^'?`"?(Name|N|Label|L)`"?'?$") { continue }
+                    $Value = Get-UnwrappedAst -Ast $Pair.Item2
+                    if ($Value -is [System.Management.Automation.Language.StringConstantExpressionAst] -and $Value.Value) {
+                        $Fields.Add($Value.Value)
+                    }
+                }
+                continue
+            }
+
+            if ($Item -is [System.Management.Automation.Language.StringConstantExpressionAst]) {
+                $Name = $Item.Value
+                # 'Select-Object *' keeps everything, so the record stays open
+                if ($Name -match '\*') { $Open = $true; continue }
+                if ($Name) { $Fields.Add($Name) }
+            }
+        }
+    }
+
+    return [pscustomobject]@{ Fields = @($Fields); Open = $Open }
+}
+
+function Get-BackendRecordField {
+    # Field names the endpoint demonstrably puts on each record. CIPP shapes nearly every
+    # list response with Select-Object - a literal property list plus calculated
+    # properties (@{ Name = 'primDomain'; Expression = {...} }) - so those names are a
+    # far better description of the payload than the UI's chosen columns, which only say
+    # what one page happens to render.
+    param($FunctionAst, [string[]]$BodyVariable)
+
+    $Fields = [System.Collections.Generic.List[string]]::new()
+    $Seed = @($BodyVariable | Where-Object { $_ })
+    if ($Seed.Count -eq 0) { return @() }
+
+    $Assignments = @($FunctionAst.FindAll({
+                param($n) $n -is [System.Management.Automation.Language.AssignmentStatementAst]
+            }, $true) | Where-Object {
+            $_.Left -is [System.Management.Automation.Language.VariableExpressionAst]
+        })
+
+    # The record is not always built into the returned variable directly: an endpoint may
+    # alias it ($response = $GraphRequest) or wrap it (Body = @{ Results = $Rows }). Follow
+    # both, breadth-first, but only two hops - chasing further starts describing
+    # intermediate values that never reach the caller.
+    $Targets = [System.Collections.Generic.List[string]]::new()
+    foreach ($Name in $Seed) { if (-not $Targets.Contains($Name)) { $Targets.Add($Name) } }
+
+    $Frontier = @($Seed)
+    for ($Hop = 0; $Hop -lt 2 -and $Frontier.Count -gt 0; $Hop++) {
+        $Next = [System.Collections.Generic.List[string]]::new()
+        foreach ($Assignment in $Assignments) {
+            if ($Assignment.Left.VariablePath.UserPath -notin $Frontier) { continue }
+            $Right = Get-UnwrappedAst -Ast $Assignment.Right
+
+            # a bare alias: $response = $GraphRequest
+            if ($Right -is [System.Management.Automation.Language.VariableExpressionAst]) {
+                $Next.Add($Right.VariablePath.UserPath)
+                continue
+            }
+
+            # an envelope: $Body = @{ Results = $Rows }
+            if ($Right -isnot [System.Management.Automation.Language.HashtableAst]) { continue }
+            foreach ($Pair in $Right.KeyValuePairs) {
+                if ($Pair.Item1.Extent.Text -notmatch "^'?`"?Results?`"?'?$") { continue }
+                $Inner = (Get-UnwrappedAst -Ast $Pair.Item2).FindAll({
+                        param($n) $n -is [System.Management.Automation.Language.VariableExpressionAst]
+                    }, $true) | Select-Object -First 1
+                if ($Inner) { $Next.Add($Inner.VariablePath.UserPath) }
+            }
+        }
+        $Frontier = @($Next | Where-Object { $_ -and -not $Targets.Contains($_) } | Select-Object -Unique)
+        foreach ($Name in $Frontier) { $Targets.Add($Name) }
+    }
+
+    foreach ($Assignment in $Assignments) {
+        if ($Assignment.Left.VariablePath.UserPath -notin $Targets) { continue }
+
+        # Select-Object property lists and calculated properties.
+        foreach ($Command in $Assignment.Right.FindAll({
+                    param($n) $n -is [System.Management.Automation.Language.CommandAst]
+                }, $true)) {
+            $Name = $Command.GetCommandName()
+            if ($Name -notin @('Select-Object', 'select')) { continue }
+            $Result = Get-SelectObjectField -CommandAst $Command
+            if ($null -eq $Result) { continue }
+            foreach ($Field in $Result.Fields) { if (-not $Fields.Contains($Field)) { $Fields.Add($Field) } }
+        }
+
+        # An explicitly constructed record: [PSCustomObject]@{ ... }. Only the cast form
+        # counts - a bare @{ } assigned to the body is usually the response envelope, not
+        # a record, and its keys would describe the wrapper instead of the payload.
+        foreach ($Cast in $Assignment.Right.FindAll({
+                    param($n) $n -is [System.Management.Automation.Language.ConvertExpressionAst]
+                }, $true)) {
+            $TypeName = $Cast.Type.TypeName.Name
+            if ($TypeName -notmatch '^(PSCustomObject|PSObject)$') { continue }
+            $Hashtable = Get-UnwrappedAst -Ast $Cast.Child
+            if ($Hashtable -isnot [System.Management.Automation.Language.HashtableAst]) { continue }
+            foreach ($Pair in $Hashtable.KeyValuePairs) {
+                $Key = $Pair.Item1.Extent.Text.Trim("'", '"', ' ')
+                if ($Key -and $Key -notmatch '[^\w.-]' -and -not $Fields.Contains($Key)) { $Fields.Add($Key) }
+            }
+        }
+    }
+
+    return @($Fields)
+}
+
 function ConvertTo-RecordSchema {
-    # The record shape for a list response, from the UI's declared columns.
-    param([string[]]$Columns)
+    # The record shape for a list response. Two independent sources: what the endpoint
+    # selects onto each record, and what the UI declares it renders. They are recorded
+    # separately in x-cipp-field-source so a surprising field can be traced back.
+    param([string[]]$Columns, [string[]]$BackendFields)
 
     $Properties = [ordered]@{}
-    foreach ($Name in ($Columns | Sort-Object -CaseSensitive)) {
-        $Properties[$Name] = [ordered]@{ type = 'string'; 'x-cipp-field-source' = 'frontend' }
+    $Backend = @($BackendFields | Where-Object { $_ })
+    $Frontend = @($Columns | Where-Object { $_ })
+
+    foreach ($Name in (@($Backend + $Frontend) | Sort-Object -CaseSensitive -Unique)) {
+        $Source = if ($Backend -contains $Name -and $Frontend -contains $Name) { 'backend,frontend' }
+        elseif ($Backend -contains $Name) { 'backend' }
+        else { 'frontend' }
+        $Properties[$Name] = [ordered]@{ type = 'string'; 'x-cipp-field-source' = $Source }
     }
+
+    $Description = if ($Backend.Count -gt 0 -and $Frontend.Count -gt 0) {
+        'Fields the endpoint selects onto each record, plus the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.'
+    } elseif ($Backend.Count -gt 0) {
+        'Fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.'
+    } else {
+        'Fields the CIPP UI renders for this endpoint. The response may carry more; these are the ones known to exist.'
+    }
+
     return [ordered]@{
         type                 = 'object'
-        description          = 'Fields the CIPP UI renders for this endpoint. The response may carry more; these are the ones known to exist.'
+        description          = $Description
         properties           = $Properties
         additionalProperties = $true
     }
@@ -1336,9 +1541,10 @@ function ConvertTo-OasOperation {
         if ($Parameters.Count -gt 0) { $Operation['parameters'] = @($Parameters) }
     }
 
-    # the UI's declared columns are the only static description of a list record
-    $Record = if ($Contract.Columns.Count -gt 0) {
-        ConvertTo-RecordSchema -Columns $Contract.Columns
+    # What the endpoint selects onto the record, and what the UI declares it renders.
+    # Either alone is a partial description; together they cover most list endpoints.
+    $Record = if ($Contract.Columns.Count -gt 0 -or $Contract.BackendFields.Count -gt 0) {
+        ConvertTo-RecordSchema -Columns $Contract.Columns -BackendFields $Contract.BackendFields
     } else {
         [ordered]@{ type = 'object'; additionalProperties = $true }
     }
