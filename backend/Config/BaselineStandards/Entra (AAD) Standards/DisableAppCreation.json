@@ -17,15 +17,8 @@
   "impactColour": "info",
   "addedDate": "2024-03-20",
   "powershellEquivalent": "Update-MgPolicyAuthorizationPolicy",
-  "appliesToTest": [
-    "CIS_5_1_2_2",
-    "EIDSCAAP10",
-    "SMB1001_2_8"
-  ],
-  "recommendedBy": [
-    "CIS",
-    "CIPP"
-  ],
+  "appliesToTest": ["CIS_5_1_2_2", "EIDSCAAP10", "SMB1001_2_8"],
+  "recommendedBy": ["CIS", "CIPP", "SMB1001"],
   "requiredCapabilities": [],
   "secureScoreImpact": 0,
   "compare": "subset",
