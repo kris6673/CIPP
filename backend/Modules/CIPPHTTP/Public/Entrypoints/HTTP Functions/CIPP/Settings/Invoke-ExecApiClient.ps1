@@ -220,12 +220,20 @@ function Invoke-ExecApiClient {
                 $RGName = Get-CIPPFunctionAppResourceGroup -SiteName $FunctionAppName
                 Set-CippApiAuth -RGName $RGName -FunctionAppName $FunctionAppName -TenantId $TenantId -ClientIds $ClientIds -McpClientIds $McpClientIds
 
-                # Advertise the MCP resource scope via App Service PRM so the Claude connector requests
-                # a scope that matches the resource app (clears AADSTS9010010). Cleared when no MCP clients.
-                if ($McpClientIds.Count -gt 0 -and $env:WEBSITE_HOSTNAME) {
-                    $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{ 'WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES' = "https://$($env:WEBSITE_HOSTNAME)/user_impersonation" }
+                 if ($McpClientIds.Count -gt 0 -and $env:WEBSITE_HOSTNAME) {
+                    if ($env:CIPPNG) {
+                        $PrmDocument = [ordered]@{
+                            resource                 = '{origin}/api/ExecMcp'
+                            authorization_servers    = @("https://login.microsoftonline.com/$($env:TenantID)/v2.0")
+                            scopes_supported         = @("https://$($env:WEBSITE_HOSTNAME)/user_impersonation")
+                            bearer_methods_supported = @('header')
+                        } | ConvertTo-Json -Compress
+                        $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{ 'CRAFT_PRM' = "$PrmDocument" } -RemoveKeys @('WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES')
+                    } else {
+                        $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{ 'WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES' = "https://$($env:WEBSITE_HOSTNAME)/user_impersonation" }
+                    }
                 } else {
-                    $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{} -RemoveKeys @('WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES')
+                    $null = Update-CIPPAzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{} -RemoveKeys @('WEBSITE_AUTH_PRM_DEFAULT_WITH_SCOPES', 'CRAFT_PRM')
                 }
 
                 $Body = @{ Results = 'API clients saved to Azure' }
