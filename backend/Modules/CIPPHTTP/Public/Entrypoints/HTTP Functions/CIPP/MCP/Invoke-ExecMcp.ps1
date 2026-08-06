@@ -60,6 +60,7 @@ function Invoke-ExecMcp {
                         name    = 'CIPP'
                         version = $Request.Headers.'X-CIPP-Version' ?? 'unknown'
                     }
+                    instructions    = 'CIPP is a gateway to the read-only CIPP API. Five tools are exposed: ListTenants (enumerate managed tenants; most tools need a tenantFilter — use the tenant''s defaultDomainName), ListGraphRequest (proxy an arbitrary Microsoft Graph GET), SearchTools (browse or keyword-search the full tool catalog), GetToolInfo (fetch a tool''s input schema), and ExecTool (run any discovered tool by name). Typical flow: ListTenants -> SearchTools -> GetToolInfo -> ExecTool.'
                 }
             }
             'ping' { $Result = @{} }
