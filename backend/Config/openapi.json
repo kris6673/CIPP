@@ -3,7 +3,7 @@
   "info": {
     "title": "CIPP API",
     "version": "auto",
-    "description": "The CIPP HTTP API. Every path maps one-to-one onto a PowerShell entrypoint:\nNew-CippCoreRequest resolves /api/<Name> to Invoke-<Name>, so the path segment is\nthe function name and is case-sensitive.\n\nThis spec is generated from the PowerShell AST of those entrypoints on every\nbuild. Request schemas describe the fields the backend actually reads, including\nnested ones: a property typed as LabelValue is read as `$Field.value` by the\nbackend and must be sent as an object, not a bare string.",
+    "description": "The CIPP HTTP API. Every path maps one-to-one onto a PowerShell entrypoint:\r\nNew-CippCoreRequest resolves /api/<Name> to Invoke-<Name>, so the path segment is\r\nthe function name and is case-sensitive.\r\n\r\nThis spec is generated from the PowerShell AST of those entrypoints on every\r\nbuild. Request schemas describe the fields the backend actually reads, including\r\nnested ones: a property typed as LabelValue is read as `$Field.value` by the\r\nbackend and must be sent as an object, not a bare string.",
     "x-cipp-docs": "https://docs.cipp.app"
   },
   "servers": [
@@ -60867,6 +60867,103 @@
           }
         ],
         "x-cipp-role": "Identity.User.ReadWrite"
+      }
+    },
+    "/api/PublicMcpRegister": {
+      "post": {
+        "summary": "Anonymous RFC 7591 dynamic client registration endpoint for MCP clients.",
+        "operationId": "PublicMcpRegister",
+        "tags": [
+          "CIPP > MCP"
+        ],
+        "description": "Entra ID offers no registration endpoint, but MCP clients (Claude, ChatGPT, VS Code)\nattempt dynamic client registration as the first step of connecting with only a URL. This\nendpoint closes that gap without any token handling: it validates the requested redirect\nURIs against the known MCP client allowlist and answers with the EXISTING MCP resource app\nregistration's client ID as a public (PKCE) client. Nothing is created or modified in\nEntra, and no secret is ever issued — Entra still enforces redirect URIs at authorize time\nand issues all tokens, which EasyAuth validates as always. A client ID is public\ninformation by OAuth design, so handing it out anonymously discloses nothing sensitive;\nRBAC on the MCP endpoint itself is unchanged.\n\nClients find this endpoint via the registration_endpoint field of the authorization server\nmetadata document Craft serves from the CRAFT_PRM_AS app setting, which SaveToAzure in\nInvoke-ExecApiClient composes. The route name starts with 'Public' so it rides the existing\n/api/Public* EasyAuth exclusion.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "client_name": {
+                    "type": "string"
+                  },
+                  "redirect_uris": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                  "properties": {
+                    "AppName": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Enabled": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "ETag": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "IPRange": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "MCPAllowed": {
+                      "type": "boolean",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "PartitionKey": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Role": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "RowKey": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Timestamp": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "NoContent"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "405": {
+            "description": "MethodNotAllowed"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Public",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/PublicPhishingCheck": {
