@@ -662,6 +662,11 @@ export const nativeMenuItems = [
             path: '/endpoint/MEM/list-scripts',
             permissions: ['Endpoint.MEM.*'],
           },
+          {
+            title: 'MAA Requests',
+            path: '/endpoint/MEM/approval-requests',
+            permissions: ['Endpoint.MEM.*'],
+          },
         ],
       },
       {

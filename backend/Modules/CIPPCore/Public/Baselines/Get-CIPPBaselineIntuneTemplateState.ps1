@@ -211,7 +211,7 @@ function Get-CIPPBaselineIntuneTemplateState {
         $AssignTo = "$(& $Unwrap $Variables.assignTo)"
         $CustomGroup = "$(& $Unwrap $Variables.customGroup)"
         if ($CustomGroup) { $AssignTo = 'customGroup' }
-        $AssignmentsMatch = Compare-CIPPIntuneAssignments -ExistingAssignments @($Live.assignments) -ExpectedAssignTo $AssignTo -ExpectedCustomGroup $CustomGroup -ExpectedExcludeGroup "$(& $Unwrap $Variables.excludeGroup)" -ExpectedAssignmentFilter "$(& $Unwrap $Variables.assignmentFilter)" -ExpectedAssignmentFilterType "$(& $Unwrap $Variables.assignmentFilterType)" -TenantFilter $TenantFilter
+        $AssignmentsMatch = Compare-CIPPIntuneAssignments -ExistingAssignments @($Live.assignments) -ExpectedAssignTo $AssignTo -ExpectedCustomGroup $CustomGroup -ExpectedExcludeGroup "$(& $Unwrap $Variables.excludeGroup)" -ExpectedAssignmentFilter "$(& $Unwrap $Variables.assignmentFilter)" -ExpectedAssignmentFilterType "$(& $Unwrap $Variables.assignmentFilterType)" -PolicyType $TemplateType -TenantFilter $TenantFilter
         $Current | Add-Member -NotePropertyName 'isAssigned' -NotePropertyValue ([bool]$AssignmentsMatch) -Force
         # The Catalog flatten compares ONLY the settings arrays - top-level properties
         # like isAssigned never reach it. StrictCompare makes the engine diff these
