@@ -220,15 +220,8 @@ function Invoke-ExecApiClient {
                 $RGName = Get-CIPPFunctionAppResourceGroup -SiteName $FunctionAppName
                 Set-CippApiAuth -RGName $RGName -FunctionAppName $FunctionAppName -TenantId $TenantId -ClientIds $ClientIds -McpClientIds $McpClientIds
 
-                 if ($McpClientIds.Count -gt 0 -and $env:WEBSITE_HOSTNAME) {
+                if ($McpClientIds.Count -gt 0 -and $env:WEBSITE_HOSTNAME) {
                     if ($env:CIPPNG) {
-                        # The PRM points clients at THIS host as the authorization server; the AS
-                        # metadata document then mirrors Entra's tenanted endpoints verbatim while
-                        # adding the one thing Entra lacks: a registration_endpoint (served by
-                        # Invoke-PublicMcpRegister, which answers with the MCP resource client's
-                        # ID). That completes URL-only discovery: clients that require dynamic
-                        # client registration (Claude, ChatGPT) self-provision the client ID.
-                        # Authorize/token stay at login.microsoftonline.com — nothing is proxied.
                         $TenantedLogin = "https://login.microsoftonline.com/$($env:TenantID)"
                         $McpScope = "https://$($env:WEBSITE_HOSTNAME)/user_impersonation"
                         $PrmDocument = [ordered]@{
