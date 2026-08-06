@@ -1,6 +1,6 @@
 # Add Group
 
-This page creates a new group in the selected tenant. Complete the shared details, choose a group type, then fill in any additional settings that appear for that type. Selecting **Submit** creates the group immediately. There is no confirmation step.
+This page creates a new group in the selected tenant. Complete the shared details, choose a group type, then fill in any additional settings that appear for that type. Selecting **Submit** creates the group immediately, with no confirmation step.
 
 ## Group Details
 
@@ -8,7 +8,7 @@ These fields apply to every group type.
 
 | Field               | Description                                                                                                                                                          |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Display Name        | The name shown for the group in the Microsoft 365 admin centre, address lists, and CIPP.                                                                             |
+| Display Name        | The name shown for the group in the Microsoft 365 admin center, address lists, and CIPP.                                                                             |
 | Description         | A free-text description of the group's purpose.                                                                                                                      |
 | Username            | The mail nickname for the group, entered without a domain. Combined with the primary domain to form the group's email address for group types that are mail-enabled. |
 | Primary Domain name | The verified domain used for the group's email address. Only verified domains for the tenant are listed, and the tenant's default domain is selected automatically.  |
@@ -16,7 +16,7 @@ These fields apply to every group type.
 | Members             | One or more users to add to the group when it is created.                                                                                                            |
 
 {% hint style="info" %}
-Security groups and Azure role groups are not mail-enabled, so **Username** and **Primary Domain name** are not used for those types — a random mail nickname is generated instead.
+Security groups and Azure role groups are not mail-enabled, so **Username** and **Primary Domain name** are not used for those types. A random mail nickname is generated instead. Any characters other than letters, numbers, hyphens and underscores are stripped from the username before it becomes the mail nickname.
 {% endhint %}
 
 ## Group Type
@@ -54,11 +54,13 @@ An example membership rule for a dynamic group, excluding guests and external us
 {% endhint %}
 
 {% hint style="warning" %}
-Group-based licensing requires the tenant to be licensed for Entra ID P1 or higher. Assigning licences through a group without the appropriate licensing is not compliant with Microsoft's licensing terms.
+Members entered on this page are ignored for a **Dynamic Group**, because membership is calculated from the rule rather than assigned directly. Owners are still applied.
+
+A **Dynamic Distribution Group** goes further and ignores owners, members and the description as well. Only the display name, the recipient filter, the email address and the external sender setting are used at creation, so anything else needed on the group has to be set afterwards from the edit.md page or Exchange Online.
 {% endhint %}
 
 {% hint style="warning" %}
-Members entered on this page are ignored when a membership rule is supplied, because membership of a dynamic group is calculated from the rule rather than assigned directly. Owners are still applied.
+Group-based licensing requires the tenant to be licensed for Entra ID P1 or higher. Assigning licences through a group without the appropriate licensing is not compliant with Microsoft's licensing terms.
 {% endhint %}
 
 ***
