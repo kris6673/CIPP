@@ -4,7 +4,7 @@ Global variables are key-value pairs that can be used to store additional inform
 
 These variables can be used in any type of template and will be replaced automatically.
 
-Tenant custom variables can be set in the [#custom-variables](../../manage/edit.md#custom-variables "mention") box, shown while editing a Tenant. Global variables are set on the [global-variables.md](global-variables.md "mention") tab under Tenant Administration > Administration > Tenants.
+Tenant custom variables can be set in the [#custom-variables](../../manage/edit.md#custom-variables "mention") box, shown while editing a Tenant.
 
 {% hint style="danger" %}
 Given the differences in how various systems treat the variable name, we recommend using all lowercase when naming variables, e.g. variablename.
@@ -40,8 +40,20 @@ The following variables are reserved and will not be used:
 * `%userprofile%`
 * `%windir%`
 
+## Unresolved Variables
+
+CIPP replaces only the variables that exist for the tenant being processed, which is the global set combined with that tenant's own variables. A variable that has neither a global value nor a tenant value is not resolved, and nothing blocks or validates the template beforehand. The token is left in place as the literal text `%variablename%` and is sent to Microsoft Graph exactly as written.
+
+Graph rejects the malformed value, so the standard fails for that tenant and the failure is recorded in the Standards logs for that tenant only. Tenants that do have a value for the variable continue to deploy normally, which is why this typically shows up as a template that works everywhere except for a handful of tenants. When you see an unexpected Graph error on a Standards deployment, check that every tenant in scope has a value for each variable the template uses.
+
+{% hint style="warning" %}
+Always give a variable a global value when it is used in a template deployed through Standards, even if you intend every tenant to override it. The global value acts as a fallback, so a tenant that has not been given its own value still deploys a valid value instead of failing. Choose a global default that is safe to apply to any tenant, because it is used wherever a tenant-specific value is missing.
+{% endhint %}
+
+The reserved variables listed above behave differently: they are deliberately passed through untouched so the target system can resolve them, and they are not a sign of a missing value.
+
 {% hint style="info" %}
-If you want to see how to combine Custom Variables and Tenant Groups to provide a way to "graduate" tenants through standards, see [#using-custom-variables-to-manage-standards-templates](../../../../demos/tutorials.md#using-custom-variables-to-manage-standards-templates "mention")
+If you want to see how to combine Custom Variables and Tenant Groups to provide a way to "graduate" tenants through standards, see Using Custom Variables to Manage Standards Templates.
 {% endhint %}
 
 ***

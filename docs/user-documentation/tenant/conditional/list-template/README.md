@@ -1,22 +1,18 @@
 # CA Templates
 
-This page lists available conditional access templates.
+This page lists the Conditional Access templates available in your CIPP instance. A template is a saved policy definition that can be deployed to any tenant, added to a standard, or shared through a GitHub repository.&#x20;
 
-## Page Actions
+## Action Buttons
 
-<details>
-
-<summary>Create Template</summary>
-
-Opens the [create-ca-template.md](create-ca-template.md "mention") page.
-
-</details>
+{% content-ref url="create-ca-template.md" %}
+[create-ca-template.md](create-ca-template.md)
+{% endcontent-ref %}
 
 <details>
 
 <summary>Browse Catalog</summary>
 
-This flyout will allow you to browse various catalogue sources, i.e. Open Intune Baseline, to import any additional policy templates you would like. Select the source, review the available templates, and click the `Import` button on any templates you would like to add.
+Opens the Browse Conditional Access Catalog drawer, for importing templates from elsewhere. The toggle at the top selects the source: **Community Catalog** browses published template repositories, while **From a Tenant** lets you pick one of your tenants, search its existing Conditional Access policies, and import one as a template. Either source lets you preview a policy's full JSON before importing.
 
 </details>
 
@@ -24,17 +20,36 @@ This flyout will allow you to browse various catalogue sources, i.e. Open Intune
 
 <summary>View Logs</summary>
 
-This will open a flyout that shows the log data for synced template updates that are included in Standards runs.
+Opens the Conditional Access entries from the CIPP logs.
 
 </details>
 
+### Browse Catalog
+
+The drawer offers two sources, chosen with the toggle at the top.
+
+| Source            | Description                                                                                                |
+| ----------------- | ---------------------------------------------------------------------------------------------------------- |
+| Community Catalog | Browse published template repositories and import any Conditional Access templates they contain.           |
+| From a Tenant     | Select one of your tenants, search its existing Conditional Access policies, and import one as a template. |
+
+Either source lets you preview a policy's full JSON before importing. Imported templates appear in the table immediately.
+
 ## Table Details
 
-The table will list available condition access templates that can be deployed to additional tenants, added to standards, etc.
+| Column       | Description                                                                         |
+| ------------ | ----------------------------------------------------------------------------------- |
+| Display Name | The name of the template, taken from the policy it was built from.                  |
+| Package      | The package tag assigned to the template, used to group related templates together. |
+| GUID         | The unique identifier CIPP uses for the template.                                   |
 
 ## Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Deploy Template</td><td>Opens the <a data-mention href="./#browse-catalog">#browse-catalog</a> wizard</td><td>true</td></tr><tr><td>Edit Template</td><td>Opens the <a data-mention href="edit.md">edit.md</a> page for the selected template</td><td>false</td></tr><tr><td>Add to Package</td><td>This will add the selected template(s) to a package tag</td><td>true</td></tr><tr><td>Remove from Package</td><td>This will remove the selected template(s) from a package tag</td><td>true</td></tr><tr><td>Save to GitHub</td><td>Saves template to the selected GitHub repo</td><td>true</td></tr><tr><td>Delete Template</td><td>Opens a modal to confirm you want to delete the template</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Deploy Template</td><td>Opens the Deploy Conditional Access Policy drawer with this template already selected, so you can choose a target tenant and deployment options.</td><td>true</td></tr><tr><td>Edit Template</td><td>Opens <a data-mention href="edit.md">edit.md</a> for editing.</td><td>false</td></tr><tr><td>Add to package</td><td>Assigns a package tag to the selected template or templates. You are asked for the package name.</td><td>true</td></tr><tr><td>Remove from package</td><td>Clears the package tag from the selected template or templates.</td><td>true</td></tr><tr><td>Save to GitHub</td><td>Commits the template to a repository you have write access to, with a commit message of your choosing. Only shown when the GitHub integration is enabled.</td><td>true</td></tr><tr><td>Delete Template</td><td>Deletes the template from CIPP. Policies already deployed from it are not affected.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
+
+{% hint style="info" %}
+Package tags are free text. Assigning the same package name to several templates groups them, which is useful for keeping a baseline set together when deploying to a new tenant.
+{% endhint %}
 
 ***
 
