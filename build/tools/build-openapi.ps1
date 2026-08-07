@@ -1755,11 +1755,14 @@ function ConvertTo-RecordSchema {
         'Derived from {0}. The response may carry more; these are the ones known to exist.' -f ($Sources -join ', and ')
     }
 
+    # additionalProperties is deliberately omitted rather than set to $true. The two mean
+    # the same thing - JSON Schema permits extra properties by default - but Swagger UI
+    # renders an explicit `additionalProperties: true` as a placeholder field called
+    # "additionalProp1" in every example, which reads as a real field CIPP returns.
     return [ordered]@{
-        type                 = 'object'
-        description          = $Description
-        properties           = $Properties
-        additionalProperties = $true
+        type        = 'object'
+        description = $Description
+        properties  = $Properties
     }
 }
 
@@ -1902,9 +1905,8 @@ function ConvertTo-OasOperation {
         # from the entrypoint at all. Say so, rather than leaving a bare open object that a
         # docs viewer renders as a fabricated "additionalProp1" placeholder.
         [ordered]@{
-            type                 = 'object'
-            description          = 'Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.'
-            additionalProperties = $true
+            type        = 'object'
+            description = 'Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides.'
         }
     }
 
