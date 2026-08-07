@@ -1,16 +1,21 @@
-# AAD Connect Report
+# Microsoft Entra Connect Report
 
-This page will output a table showing the status of Entra ID Connect syncing.
+This report lists the users, contacts and groups synchronised from on-premises Active Directory together with any provisioning errors Entra ID has recorded against them. Objects carrying an error are the ones to act on: a provisioning error means the object failed to synchronise correctly, commonly because of a duplicate attribute or an invalid value that has to be corrected on-premises.
 
-## Table Columns
+## Table Details
 
-| Column                          | Description                                |
-| ------------------------------- | ------------------------------------------ |
-| ID                              | GUID of object                             |
-| Display Name                    | Display name of object                     |
-| Created Date Time               | Relative time since the object was created |
-| On Premises Provisioning Errors | Any errors with syncing the object         |
-| Object Type                     | Type of the object                         |
+CIPP queries users, contacts and groups separately and combines the results, adding the Object Type column so the rows can be told apart.
+
+| Column                          | Description                                                                                        |
+| ------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Display Name                    | The name of the object.                                                                            |
+| Object Type                     | Whether the row is a User, Contact or Group.                                                       |
+| Created Date Time               | When the object was created.                                                                       |
+| On Premises Provisioning Errors | The synchronisation errors recorded against the object. Empty for an object synchronising cleanly. |
+
+{% hint style="info" %}
+Sort or filter on **On Premises Provisioning Errors** to bring the objects that need attention to the top, since the table lists every user, contact and group rather than only the ones in error.
+{% endhint %}
 
 ***
 

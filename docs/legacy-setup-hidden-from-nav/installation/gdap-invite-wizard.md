@@ -75,7 +75,7 @@ Select "Add Direct Tenant" and click "Next Step"
 Click the "Connect to Tenant" button. Use a service account with equivalent permissions as the partner tenant. More information on these roles can be found under [recommended-roles.md](../../setup/maintaining-cipp/recommended-roles.md "mention").
 
 {% hint style="info" %}
-Be sure to Consent on behalf of the organisation to prevent any prompting for future users that may log into CIPP, such as a comanaged client technician.
+Be sure to consent on behalf of the organisation to prevent prompts for future users who may log in to CIPP, such as a co-managed client technician.
 {% endhint %}
 {% endstep %}
 

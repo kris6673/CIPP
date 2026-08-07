@@ -11,7 +11,7 @@ Before being able to utilise the CIPP API, you need to first configure an API cl
 {% hint style="warning" %}
 #### Self-Hosted Clients
 
-If you originally deployed CIPP prior to v7.1 you will need to follow the instructions on [#pre-version-7.1-self-hosted-deployments](setup-and-authentication.md#pre-version-7.1-self-hosted-deployments "mention")
+If you originally deployed CIPP prior to v7.1 you will need to follow the instructions on [#pre-version-7.1-self-hosted-deployments](../user-documentation/cipp/integrations/cipp-api.md#pre-version-7.1-self-hosted-deployments "mention") before configuring your API client.
 {% endhint %}
 
 ## Authentication
@@ -169,52 +169,6 @@ This module is created and maintained by a community member. With CIPP's rapid d
     If your setup requires a custom scope (e.g., `access_as_user`), you may also need to add one under **Expose an API → Add a scope** and then grant that scope as an API permission on the client side.
 
     After making changes, wait a minute or two before retrying authentication since propagation isn't always instant. If the error persists, try re-consenting to the app permissions.
-
-## Pre Version 7.1 Self-Hosted Deployments
-
-#### Assign the “Contributor” Role to the Function App
-
-If you're self-hosting and running your own Azure Function App, you'll need to grant it proper access:
-
-{% stepper %}
-{% step %}
-#### Go to [Azure Portal](https://portal.azure.com).
-{% endstep %}
-
-{% step %}
-#### Open the resource group hosting CIPP.
-{% endstep %}
-
-{% step %}
-#### Select the **Function App** (not an offloaded app).
-{% endstep %}
-
-{% step %}
-#### Navigate to **Access control (IAM)** > **+ Add** > **Add role assignment**.
-{% endstep %}
-
-{% step %}
-#### Click on Privileged administrator roles.
-{% endstep %}
-
-{% step %}
-#### Choose:
-
-* **Role:** Contributor
-* **Assign access to:** User, group, or service principal
-* **Select:** The CIPP Function App identity
-
-{% hint style="info" %}
-The **Contributor** role should allow the identity to create and manage all types of Azure resources but does not allow them to grant access to others.
-
-In the **Select** field and type `cipp`. As you begin typing, the list of options will narrow, and you should see the Managed Identity for your Function App.
-{% endhint %}
-{% endstep %}
-
-{% step %}
-#### Click **Save.**
-{% endstep %}
-{% endstepper %}
 
 ***
 

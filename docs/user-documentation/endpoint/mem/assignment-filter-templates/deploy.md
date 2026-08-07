@@ -1,24 +1,32 @@
 # Deploy Assignment Filter Template
 
-This page will allow you to deploy an assignment filter template to one or multiple tenants at once.
+Creates an assignment filter in one or more tenants from a saved template.
 
 {% stepper %}
 {% step %}
 ### Tenant Selection
 
-The tenant selected in the top bar will be automatically selected. You can multi-select tenants.
+Select the tenants the filter should be created in. Several can be selected, and the same filter is created in each.
 {% endstep %}
 
 {% step %}
 ### Choose Template
 
-Choose the template from your saved templates that you wish to deploy
+Select the template under **Choose a Template**, which lists each one with its platform. The remaining fields fill in from the template and can be adjusted before deploying, without changing the template itself.
+
+| Field               | Description                                                                                    |
+| ------------------- | ---------------------------------------------------------------------------------------------- |
+| Filter Type         | Whether the filter matches Devices or Apps. Changing this changes which platforms are offered. |
+| Platform            | The platform the filter applies to.                                                            |
+| Filter Display Name | The name the filter is created under. Required.                                                |
+| Filter Description  | The description recorded against the filter.                                                   |
+| Filter Rule         | The rule deciding what the filter matches. Required.                                           |
 {% endstep %}
 
 {% step %}
-### Confirm
+### Confirmation
 
-Review your selections and confirm
+Review the tenants and the filter, then submit.
 {% endstep %}
 {% endstepper %}
 

@@ -1,27 +1,36 @@
 # Inactive Users
 
-The report indicates whether inactive users have licences assigned. It examines both interactive and non-interactive sign-in dates to determine this. This page lists all inactive users in the tenant who have not logged in for 180 days or more.
+This report lists accounts that have not signed in for six months or more, so licences sitting on dormant accounts can be found and reclaimed. Both interactive and non-interactive sign-ins are taken into account, and the most recent of the two decides whether an account counts as inactive.
 
-## Table Columns
+{% hint style="info" %}
+Accounts that have never signed in at all are included, since an account with no sign-in history has by definition not signed in during the period. Days Since Last Sign In is empty for those.
+{% endhint %}
 
-|                                        |                                                                                                                                                                                                                                                    |
-| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ID                                     | The GUID of the tenant concatenated with the GUID of the user separated by an underscore                                                                                                                                                           |
-| Tenant ID                              | GUID of the tenant                                                                                                                                                                                                                                 |
-| Tenant Display Name                    |                                                                                                                                                                                                                                                    |
-| Azure Ad User Id                       | GUID of the user                                                                                                                                                                                                                                   |
-| Display Name                           | User's display name                                                                                                                                                                                                                                |
-| User Principal Name                    | User's UPN                                                                                                                                                                                                                                         |
-| User Type                              | User type of "Member", "Guest", or "SharedMailbox"                                                                                                                                                                                                 |
-| Created Date Time                      | Relative time since the account was created                                                                                                                                                                                                        |
-| Number of Assigned Licenses            |                                                                                                                                                                                                                                                    |
-| Last Refreshed Date Time               | Relative time since the last refresh on the login statistics                                                                                                                                                                                       |
-| Last Sign In Date Time                 | Relative time since the last login                                                                                                                                                                                                                 |
-| Last Non Interactive Sign In Date Time | Relative time since the last non interactive sign in. For more information on what a non interactive sign in is, please see [Microsoft Learn](https://learn.microsoft.com/en-us/entra/identity/monitoring-health/concept-noninteractive-sign-ins). |
+{% hint style="info" %}
+Disabled accounts and guests are left out. A disabled account is already handled, and guest activity is recorded differently, so including either would add noise to a list meant to drive licence reclamation.
+{% endhint %}
+
+## Table Details
+
+| Column                                 | Description                                                                                                                                                                                                                                              |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tenant                                 | The tenant the user belongs to. Shown when All Tenants is selected.                                                                                                                                                                                      |
+| Tenant Display Name                    | The tenant's name.                                                                                                                                                                                                                                       |
+| User Principal Name                    | The user's sign-in name.                                                                                                                                                                                                                                 |
+| Display Name                           | The user's name.                                                                                                                                                                                                                                         |
+| Last Sign In Date Time                 | The most recent interactive sign-in, where the user signed in themselves.                                                                                                                                                                                |
+| Last Non Interactive Sign In Date Time | The most recent sign-in performed by a client on the user's behalf, such as a mail client refreshing a token. See [Microsoft Learn](https://learn.microsoft.com/en-us/entra/identity/monitoring-health/concept-noninteractive-sign-ins) for what counts. |
+| Number Of Assigned Licenses            | How many licences the account holds, which is the figure that turns this report into a reclamation list.                                                                                                                                                 |
+| Days Since Last Sign In                | How long the account has been dormant, counted from the later of the two sign-in dates.                                                                                                                                                                  |
+| Last Refreshed Date Time               | When this report was produced.                                                                                                                                                                                                                           |
 
 ## Table Actions
 
-<table><thead><tr><th></th><th></th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>View User</td><td>Opens the CIPP user page for the selected user</td><td>false</td></tr><tr><td>Edit User</td><td>Opens the CIPP edit user page for the selected user</td><td>false</td></tr><tr><td>Block Sign In</td><td>Opens a modal to confirm if you want to block sign in for the user</td><td>true</td></tr><tr><td>Delete User</td><td>Opens a modal to confirm if you want to delete the user</td><td>true</td></tr><tr><td>More Info</td><td>Opens Extended Info flyout</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>View User</td><td>Opens the full details page for the selected user.</td><td>false</td></tr><tr><td>Edit User</td><td>Opens the Edit User page for the selected user.</td><td>false</td></tr><tr><td>Block Sign In</td><td>Blocks the account from signing in, without removing it or its data.</td><td>true</td></tr><tr><td>Delete User</td><td>Deletes the account. Deleted accounts remain recoverable from Deleted Items for 30 days.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
+
+{% hint style="warning" %}
+Removing a licence from a dormant account starts a clock on the data attached to it. A mailbox left unlicensed stops receiving mail and is eventually removed, and OneDrive content follows its own retention schedule. Where the data still matters, convert the mailbox to shared or run the account through the offboarding-wizard.md rather than simply stripping the licence.
+{% endhint %}
 
 ***
 

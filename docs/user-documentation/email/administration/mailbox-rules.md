@@ -12,7 +12,7 @@
 
 ## Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Enabled</th></tr></thead><tbody><tr><td>Enable Mailbox Rule</td><td>Enables a disabled mailbox rule</td><td>true</td></tr><tr><td>Disable Mailbox Rule</td><td>Disables and enabled mailbox rule</td><td>true</td></tr><tr><td>Remove Mailbox Rule</td><td>Deletes the mailbox rule</td><td>true</td></tr><tr><td>More Info</td><td>Opens the extended info flyout</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Enabled</th></tr></thead><tbody><tr><td>Enable Mailbox Rule</td><td>Enables a disabled mailbox rule</td><td>true</td></tr><tr><td>Disable Mailbox Rule</td><td>Disables and enabled mailbox rule</td><td>true</td></tr><tr><td>Remove Mailbox Rule</td><td>Deletes the mailbox rule</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 ***
 

@@ -1,43 +1,91 @@
 # Template Library
 
-Template libraries are tenants set up to retrieve the latest version of a specific tenant's policies. These are then stored in CIPP's templates, allowing you to keep an up-to-date copy of the policies. Tenant-based template libraries sync every 4 hours, while community repository-based template libraries sync every 7 days.
+A template library keeps CIPP's stored templates in step with an external source. Point it at one of your tenants and CIPP copies that tenant's live policies into templates on a schedule, so you always hold a current copy. Point it at a community repository and CIPP pulls the templates published there whenever new versions are released.
 
-In the template library menu, you have two options; using a client tenant as a template library, or utilising a GitHub community template repository.
-
-CyberDrain includes 3 GitHub repositories by default:
-
-* Open Intune Baseline. Considered the best baseline for Intune devices applying multiple frameworks such as CIS, NIS, and others. See [https://github.com/SkipToTheEndpoint/OpenIntuneBaseline](https://github.com/SkipToTheEndpoint/OpenIntuneBaseline) for more information.
-* Conditional Access Framework - A ready made framework for conditional access templates that take away the heavy lifting for you. Check [https://github.com/j0eyv/ConditionalAccessBaseline](https://github.com/j0eyv/ConditionalAccessBaseline) for more information.
-* The CyberDrain baseline repository - Includes examples and settings for CIPP Standards.
-
-## Enabling the template library
+Tenant-based libraries sync every 4 hours. Community repository libraries sync every 7 days.
 
 {% hint style="warning" %}
 Enabling this feature will overwrite templates with the same name.
 {% endhint %}
 
+## Choosing a Source
+
+A library draws from either a tenant or a community repository, not both. Select one or the other from the two fields at the top of the page.
+
+### Tenant
+
+Choose a tenant to use as the source. CIPP reads its live policies and turns each one into a template.
+
+{% hint style="success" %}
+CIPP recommends using a Customer Development Experience tenant for developing your templates. See Microsoft's [CDX documentation](https://cdx.transform.microsoft.com/) for more information.
+{% endhint %}
+
+### Community Repository
+
+Choose a repository registered with your instance. Once selected, a **Repository Branch** field appears, prefilled with the repository's default branch and changeable if the templates you want live elsewhere.
+
+Repositories are managed separately, and you can register your own alongside the built-in ones:
+
+CIPP ships with five repositories registered:
+
+| Repository                                                                         | Contents                                                                                        |
+| ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| [CIPP Templates](https://github.com/CyberDrain/CIPP-Templates)                     | CyberDrain's own repository, covering standards, groups, policies, Conditional Access and more. |
+| [CyberDrain CIS Templates](https://github.com/CyberDrain/CyberDrain-CIS-Templates) | Intune templates aligned to CIS benchmarks.                                                     |
+| [Open Intune Baseline](https://github.com/SkipToTheEndpoint/OpenIntuneBaseline)    | A widely used Intune device baseline applying multiple frameworks including CIS and NIS.        |
+| [Conditional Access Baseline](https://github.com/j0eyv/ConditionalAccessBaseline)  | A ready-made framework of Conditional Access templates.                                         |
+| [Intune Baselines](https://github.com/IntuneAdmin/IntuneBaselines)                 | A further set of Intune baseline templates.                                                     |
+
+{% hint style="info" %}
+A repository-based library imports every template file the selected branch contains. The template type switches below apply to tenant-based libraries.
+{% endhint %}
+
+## Template Types
+
+Which switches appear depends on the source selected.
+
+For a tenant, choose the policy types to copy:
+
+| Setting                               | Description                                                                                     |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Create Conditional Access Templates   | Copies the tenant's Conditional Access policies, resolving the users and groups they reference. |
+| Create Intune Configuration Templates | Copies the tenant's device configuration profiles.                                              |
+| Create Intune Compliance Templates    | Copies the tenant's compliance policies.                                                        |
+| Create Intune Protection Templates    | Copies the tenant's app protection policies.                                                    |
+
+For the CyberDrain CIPP Templates repository, a different set is offered covering the template kinds that repository publishes:
+
+| Setting                   | Description                   |
+| ------------------------- | ----------------------------- |
+| Create Template Standards | Standards templates.          |
+| Create Group Templates    | Group templates.              |
+| Create Policy Templates   | Policy templates.             |
+| Create CA Templates       | Conditional Access templates. |
+
+## Setting Up a Template Library
+
 {% stepper %}
 {% step %}
-### Select a tenant OR a community library
+### Select a tenant or a community repository
 
-Select an available tenant from the dropdown. This tenant will be the source of your templates, if you select a community template library you do not have to select a tenant.
+Choose the source the templates will come from. Selecting a repository also lets you pick a branch.
 {% endstep %}
 
 {% step %}
 ### Select template types
 
-Toggle on the template types you would like to have copied.
+Toggle on the template types you would like copied.
 {% endstep %}
 
 {% step %}
 ### Submit
 
-Submit will save your settings. CIPP will now update your templates every four hours from your template tenant.
+Saving creates a scheduled task named after the tenant or repository, which performs the sync from then on. A tenant already has a library where the name is rejected as a duplicate, so each source can only have one.
 {% endstep %}
 {% endstepper %}
 
-{% hint style="success" %}
-CIPP recommends usage of a Customer Development Experience tenant for development of your templates. For more information, please see Microsoft's [CDX documentation](https://cdx.transform.microsoft.com/).
+{% hint style="info" %}
+Templates are compared before being written. Where a template already exists, carries the same source, and its content is unchanged, CIPP skips it rather than rewriting it, so a sync that reports no changes is working correctly.
 {% endhint %}
 
 ***

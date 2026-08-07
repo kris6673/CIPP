@@ -69,5 +69,6 @@ To stop: `Ctrl+C`, or `docker compose -f docker-compose-all.yml down`.
 ### Good to know
 
 * **All your data lives in Azurite**, in the `cipp-ng_azurite-data` Docker volume, and survives restarts. Delete the volume for a factory-reset dev environment.
-* **Ports**: `5196` is the app + API (use this one for local development), `3000` is the raw Next.js dev server, `10000-10002` are Azurite.
-* **Pull requests** go to the `dev` branch of [CyberDrain/CIPP](https://github.com/CyberDrain/CIPP) and must apply convential commits.
+* **Ports**: `5196` is the app + API (use this one for local development), `3000` is the raw Next.js dev server, `6006` is Storybook, `10000-10002` are Azurite.
+* **Storybook** runs as its own container (`cipp-storybook`) in the Linux/macOS loop and comes up with the rest of the stack at **http://localhost:6006**. It shares the frontend container's `node_modules` volume, so it only starts once `cipp-frontend` is healthy. On the Windows loop it isn't containerized — run `yarn storybook` on the host instead.
+* **Pull requests** go to the `dev` branch of [CyberDrain/CIPP](https://github.com/CyberDrain/CIPP) and must use conventional commits.

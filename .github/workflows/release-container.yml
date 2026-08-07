@@ -55,6 +55,11 @@ jobs:
       # Persist the Next.js compile cache and yarn cache across runs (BuildKit
       # cache mounts are not exported by type=gha). Separate key prefix and gha
       # scope from dev/nightly — release builds a different Dockerfile/base image.
+      # Weekly rotation rather than per-run - see the note in dev-container.yml.
+      - name: Compute cache epoch
+        id: cache-epoch
+        run: echo "week=$(date -u +%Y-%W)" >> $GITHUB_OUTPUT
+
       - name: Restore frontend build caches
         id: build-cache
         uses: actions/cache@v4
@@ -62,8 +67,9 @@ jobs:
           path: |
             yarn-cache
             next-cache
-          key: cipp-frontend-cache-release-${{ github.run_id }}
+          key: cipp-frontend-cache-release-${{ hashFiles('frontend/yarn.lock') }}-${{ steps.cache-epoch.outputs.week }}
           restore-keys: |
+            cipp-frontend-cache-release-${{ hashFiles('frontend/yarn.lock') }}-
             cipp-frontend-cache-release-
 
       - name: Inject build caches into BuildKit

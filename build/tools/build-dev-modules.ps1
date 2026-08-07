@@ -60,12 +60,26 @@ foreach ($mod in $Modules) {
     $tmpOut = Join-Path ([System.IO.Path]::GetTempPath()) "cipp-devbuild-$mod"
     Remove-Item $tmpOut -Recurse -Force -ErrorAction SilentlyContinue
     try {
+        Build-Module -SourcePath $buildManifest -OutputDirectory $tmpOut -ErrorAction Stop | Out-Null
+
         if ($mod -eq 'CIPPTests') {
-            # Build the tests module but keep the source files as well as the compiled module in the dev environment.
-            Build-Module -SourcePath $buildManifest -OutputDirectory $tmpOut -ErrorAction Stop | Out-Null
-            Copy-Item (Join-Path $sourceModulesPath $mod) (Join-Path $outputModulesPath $mod) -Recurse -Force
-        } else {
-            Build-Module -SourcePath $buildManifest -OutputDirectory $tmpOut -ErrorAction Stop | Out-Null
+            # cipp-api enumerates the test source at runtime to discover tests, so for this
+            # module the source tree ships alongside the compiled module instead of being
+            # replaced by it.
+            #
+            # Copy the *contents*, not the directory: Copy-Item of a directory onto a
+            # destination that already exists puts it inside, giving
+            # .devmodules/CIPPTests/CIPPTests. The watcher recompiles on every save, so the
+            # directory form nests one level deeper each time a test file is touched.
+            $srcTree = Join-Path $sourceModulesPath $mod
+            $dstTree = Join-Path $outputModulesPath $mod
+            New-Item -ItemType Directory -Path $dstTree -Force | Out-Null
+            # heal nesting left behind by earlier runs. only the nested copy is removed --
+            # $dstTree itself is bind-mounted into the running container, and deleting a
+            # mount root out from under Docker breaks the mount
+            $stale = Join-Path $dstTree $mod
+            if (Test-Path $stale) { Remove-Item $stale -Recurse -Force }
+            Copy-Item (Join-Path $srcTree '*') $dstTree -Recurse -Force
         }
     } catch {
         Write-Host " FAILED: $_" -ForegroundColor Red
@@ -103,6 +117,25 @@ if ($Modules -contains 'CIPPCore') {
             -ModulePath (Join-Path $sourceModulesPath 'CIPPCore') -OutputPath $paramCachePath
     } catch {
         Write-Host "function-parameters.json generation FAILED ($_); missing cache is slow, stale cache hides new functions from the scheduler" -ForegroundColor Red
+    }
+}
+
+# openapi.json, AST-extracted from the CIPPHTTP entrypoints. Regenerated on every
+# CIPPHTTP build so the local MCP tool list matches the endpoints you just edited.
+# unlike function-parameters.json this file IS committed, so a change here shows up
+# as a working-tree diff — that diff is the point, it belongs in the same commit as
+# the endpoint change
+if ($Modules -contains 'CIPPHTTP') {
+    $backendPath = Split-Path -Parent $sourceModulesPath
+    try {
+        & (Join-Path $PSScriptRoot 'build-openapi.ps1') `
+            -EntrypointPath (Join-Path $sourceModulesPath 'CIPPHTTP' 'Public' 'Entrypoints' 'HTTP Functions') `
+            -ModulesPath $sourceModulesPath `
+            -FrontendPath (Join-Path (Split-Path -Parent $backendPath) 'frontend' 'src') `
+            -OverridePath (Join-Path $backendPath 'Config' 'openapi-overrides') `
+            -OutputPath (Join-Path $backendPath 'Config' 'openapi.json')
+    } catch {
+        Write-Host "openapi.json generation FAILED ($_); a stale spec means the MCP tool list no longer matches the API" -ForegroundColor Red
     }
 }
 

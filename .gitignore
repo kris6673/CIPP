@@ -13,6 +13,7 @@ Thumbs.db
 
 # Local settings (contains secrets)
 .env
+build/tools/local.settings.json
 
 # Runtime-generated files
 _startup.ps1
@@ -21,10 +22,18 @@ _cache/
 
 # Local dev: ModuleBuilder-compiled CIPP modules overlaid into the dev container
 build/.devmodules/
+# Local dev: writable .psd1 copies the container rewrites instead of the tracked manifests
+build/.devmanifests/
 # Build-generated Get-Help cache (build-function-parameters.ps1)
 backend/Config/function-parameters.json*
 localfiles/
 
 graphify-out/
+graphify/
 .claude/
 CLAUDE.md
+AGENTS.md
+
+# Static copy of the generated OpenAPI spec, written by build-openapi.ps1 so the
+# in-app Swagger UI can read it without going through the API. Generated, not authored.
+frontend/public/openapi.json

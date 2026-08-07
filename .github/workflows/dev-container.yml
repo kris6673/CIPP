@@ -66,6 +66,16 @@ jobs:
       # BuildKit cache *mounts* (Dockerfile lines 67/85) — they are NOT exported by
       # type=gha, so without this every CI build is a cold Next.js compile. Shared
       # key prefix with the nightly workflow (identical Dockerfile/base image).
+      # The key rotates weekly, not per-run. A github.run_id key can never match, so
+      # actions/cache missed every build and its post step saved a fresh ~1.7 GB entry
+      # every time - hundreds of them, of which only the newest was ever read back
+      # (restore-keys resolves to the most recent prefix match). Keyed on the lockfile
+      # plus an ISO week, repeat builds hit exactly and save nothing, while the Next.js
+      # compile cache still refreshes often enough not to go cold.
+      - name: Compute cache epoch
+        id: cache-epoch
+        run: echo "week=$(date -u +%Y-%W)" >> $GITHUB_OUTPUT
+
       - name: Restore frontend build caches
         id: build-cache
         uses: actions/cache@v4
@@ -73,8 +83,9 @@ jobs:
           path: |
             yarn-cache
             next-cache
-          key: cipp-frontend-cache-dev-${{ github.run_id }}
+          key: cipp-frontend-cache-dev-${{ hashFiles('frontend/yarn.lock') }}-${{ steps.cache-epoch.outputs.week }}
           restore-keys: |
+            cipp-frontend-cache-dev-${{ hashFiles('frontend/yarn.lock') }}-
             cipp-frontend-cache-dev-
 
       - name: Inject build caches into BuildKit

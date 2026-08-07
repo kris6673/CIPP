@@ -1,0 +1,87 @@
+---
+name: OpenAPI Spec
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'backend/Modules/CIPPHTTP/**'
+      # entrypoints hand the body to these, and the generator follows the call
+      - 'backend/Modules/CIPPCore/**'
+      - 'backend/Config/openapi.json'
+      - 'backend/Config/openapi-overrides/**'
+      # simpleColumns declarations type the list responses
+      - 'frontend/src/**'
+      - 'build/tools/build-openapi.ps1'
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
+  cancel-in-progress: true
+jobs:
+  spec:
+    if: github.repository_owner == 'CyberDrain'
+    name: Validate and check for drift
+    runs-on: ubuntu-latest
+    # Checkout only; the spec is regenerated in a temp file and compared, never
+    # written back to the branch.
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      # backend/Config/openapi.json is loaded at runtime by Get-CippMcpSpec and
+      # projected into the MCP tool list, so a stale committed spec ships a tool
+      # contract that no longer matches the endpoints.
+      - name: Check the committed spec matches the entrypoints
+        shell: pwsh
+        run: |
+          try {
+            ./build/tools/build-openapi.ps1 -Check
+          } catch {
+            Write-Host "::error::$($_.Exception.Message)"
+            Write-Host 'Regenerate with: pwsh build/tools/build-openapi.ps1'
+            exit 1
+          }
+
+      - name: Validate OpenAPI 3.1 structure
+        run: |
+          python -m pip install --quiet openapi-spec-validator
+          python - <<'PY'
+          import json, sys
+          from openapi_spec_validator import validate
+          with open('backend/Config/openapi.json', encoding='utf-8') as handle:
+              spec = json.load(handle)
+          try:
+              validate(spec)
+          except Exception as exc:
+              print(f'::error::OpenAPI 3.1 validation failed: {exc}')
+              sys.exit(1)
+          print(f"openapi.json is valid ({len(spec['paths'])} endpoints)")
+          PY
+
+      # Get-CippMcpToolList keys tools by endpoint name, so a path carrying two
+      # operations would advertise two tools with the same name.
+      - name: Check MCP projection invariants
+        shell: pwsh
+        run: |
+          $Spec = Get-Content backend/Config/openapi.json -Raw | ConvertFrom-Json -AsHashtable -Depth 100
+          $Problems = @()
+          foreach ($Entry in $Spec.paths.GetEnumerator()) {
+            $Methods = @($Entry.Value.Keys)
+            if ($Methods.Count -ne 1) {
+              $Problems += "$($Entry.Key) has $($Methods.Count) operations: $($Methods -join ', ')"
+            }
+            foreach ($Method in $Methods) {
+              if ($Method -notin @('get', 'post')) {
+                $Problems += "$($Entry.Key) uses '$Method'; the API only accepts GET and POST"
+              }
+              if (-not $Entry.Value[$Method]['x-cipp-role']) {
+                $Problems += "$($Entry.Key) has no x-cipp-role, so RBAC cannot be documented"
+              }
+            }
+          }
+          if ($Problems) {
+            $Problems | ForEach-Object { Write-Host "::error::$_" }
+            exit 1
+          }
+          Write-Host "MCP projection invariants hold across $($Spec.paths.Count) endpoints."

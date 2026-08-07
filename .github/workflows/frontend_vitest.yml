@@ -1,0 +1,86 @@
+---
+name: Frontend Vitest
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend_vitest.yml'
+  # Commits pushed straight to dev never open a PR, so the trigger above never sees
+  # them. Runs half an hour ahead of the nightly container build so a red suite
+  # surfaces before that image is published.
+  schedule:
+    - cron: '30 22 * * *'
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
+  cancel-in-progress: true
+jobs:
+  # Split from the storybook project deliberately: this one needs no browser, so it is the
+  # fast signal, and a flaky browser run can never mask a failing unit test.
+  unit:
+    if: github.repository_owner == 'CyberDrain'
+    name: vitest (unit)
+    runs-on: ubuntu-latest
+    # Checkout and test only; nothing is written back to the repo.
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # GitHub only fires schedules from the default branch, so a scheduled run
+          # would otherwise test main. dev is where the unreviewed commits land.
+          # PR and manual runs keep their own ref.
+          ref: ${{ github.event_name == 'schedule' && 'dev' || github.ref }}
+      # 22.x, not the 22.13.0 the other workflows pin: jsdom@30 declares
+      # engines.node ^22.22.2, so yarn refuses to install on exactly 22.13.0.
+      # The floating 22.x still satisfies this repo's own engines ^22.13.0.
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: 'yarn'
+          cache-dependency-path: frontend/yarn.lock
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+      # --testTimeout matches the existing test:coverage script. Several of these tests
+      # drive userEvent through MUI autocompletes and comfortably exceed vitest's 5s
+      # default on a loaded machine - at 5s they fail intermittently, and a different
+      # handful each run. They pass consistently at 30s.
+      - name: Run unit tests
+        run: yarn test:unit --testTimeout=30000
+
+  storybook:
+    if: github.repository_owner == 'CyberDrain'
+    name: vitest (storybook)
+    runs-on: ubuntu-latest
+    # Checkout and test only; nothing is written back to the repo.
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'dev' || github.ref }}
+      # See the note on the unit job: jsdom@30 rules out an exact 22.13.0 pin.
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: 'yarn'
+          cache-dependency-path: frontend/yarn.lock
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+      # The storybook project renders in a real browser (@vitest/browser-playwright,
+      # headless chromium per vitest.config.mjs), which the runner image does not provide.
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run storybook tests
+        run: yarn test:storybook

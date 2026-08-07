@@ -37,7 +37,7 @@ Go to [management.cipp.app](https://management.cipp.app/)
 The screen will give you the DNS record you need to add at your DNS provider: a CNAME for a subdomain, or an A record for an apex (root) domain.
 
 {% hint style="warning" %}
-If a TXT record named `asuid.<your domain>` exists from a previous setup, remove it — a stale domain-verification record blocks validation. These records are no longer used.
+If a TXT record named `asuid.<your domain>` exists from a previous setup, remove it — domain-verification TXT records are no longer used, and a leftover one blocks validation.
 {% endhint %}
 {% endstep %}
 
@@ -50,7 +50,7 @@ Enter your desired domain into the management portal. Click Add Domain
 {% step %}
 ### Wait
 
-The system will now validate the DNS record exists and provision a certificate. The new custom domain will not be available for use until the certificate is available. When it's available the status will change to Ready when it's available for use.
+The system will validate that the DNS record exists and provision a certificate. The custom domain will become available when certificate provisioning is complete and its status changes to Ready.
 {% endstep %}
 {% endstepper %}
 

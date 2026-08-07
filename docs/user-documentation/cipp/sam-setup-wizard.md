@@ -1,70 +1,103 @@
 # Setup Wizard
 
-The Setup Wizard is the keys to the engine that allows CIPP to manage your client tenants. It handles creating and managing the **Secure Application Model (SAM)** app registration that CIPP uses to authenticate to your tenants via Microsoft Graph, Exchange Online, and Partner Center APIs.
+The Setup Wizard is the component that gives CIPP access to your client tenants. It creates and maintains the **Secure Application Model (SAM)** application registration that CIPP authenticates with against Microsoft Graph, Exchange Online and the Partner Center APIs, and it is also where tenants are added to an existing deployment.
 
-You can access it from the sidebar under **CIPP > Setup Wizard**, or via the "Start Wizard" banner that appears when setup has not been completed.
-
-The Setup Wizard has five options:
-
-***
+The wizard offers five setup options. Which steps you see depends entirely on the option chosen, so the flow is short for routine tasks and longer for a first-time build.
 
 ## First Setup
 
-Choose this option if this is your first time setting up CIPP, or if you'd like to redo the previous setup. This walks you through the entire initial configuration in one flow.
+Choose **First Setup** if this is your first time setting up CIPP, or if you want to redo a previous setup. This is the only option that runs the complete initial configuration in one pass, covering the application registration, tenant access, baselines, notification settings, and a closing summary of what to do next.
 
-For a complete step-by-step walkthrough, see [Executing the Setup Wizard](https://docs.cipp.app/setup/installation/executing-the-setup-wizard).
-
-***
+For the full walkthrough, see [executing-the-setup-wizard.md](../../setup/installation/executing-the-setup-wizard.md "mention"). The service account this relies on is covered in [creating-the-cipp-service-account-gdap-ready.md](../../setup/installation/creating-the-cipp-service-account-gdap-ready.md "mention").
 
 ## Add a Tenant
 
-Choose this option to add a new tenant to your existing CIPP deployment. You will be asked to select a tenant type:
+Choose **Add a tenant** to bring a new tenant into an existing CIPP deployment. You are then asked to pick a tenant type, and each type leads to a different path.
 
-* **GDAP Tenant** — For Microsoft CSP partners. Walks you through creating a GDAP relationship, selecting admin roles, generating the invite link, and completing onboarding once the customer accepts.
-* **Direct Tenant** — For non-partner scenarios, or tenants outside the scope of your Partner Center. You authenticate directly to the target tenant to grant CIPP access.
-* **Indirect Reseller Link** — Generates a reseller relationship invite link to send to a customer. If your service account is an indirect reseller, you can optionally include your indirect provider in the link. This does **not** add the tenant to CIPP — it only provides the Microsoft Admin Portal invitation link.
+Detailed steps for the GDAP and direct paths are in [gdap-invite-wizard.md](../../setup/installation/gdap-invite-wizard.md "mention").
 
-For detailed steps, see [Tenant Onboarding](https://docs.cipp.app/setup/installation/gdap-invite-wizard).
+### Add GDAP Tenant
 
-***
+For Microsoft CSP partners. This walks you through creating a GDAP relationship, selecting the admin roles to request, and generating an invite link to send to the customer.
+
+Once the customer accepts the invite, a further **GDAP Tenant Onboarding** step becomes available in the same wizard. That step maps the requested GDAP roles to security groups and validates that CIPP can reach the tenant, and it offers the option to exclude the newly onboarded tenant from All Tenant standards. Onboarding progress can also be reviewed later on onboarding.md.
+
+### Add Direct Tenant
+
+For non-partner scenarios, or tenants that fall outside the scope of your Partner Center. You authenticate directly against the target tenant to grant CIPP access, rather than relying on a delegated relationship.
+
+### Get Reseller Invite Link
+
+Generates a reseller relationship invite link to send to a customer. If your service account is an indirect reseller, your indirect provider can optionally be included in the link.
+
+{% hint style="warning" %}
+This option does not add the tenant to CIPP. It only produces the Microsoft Admin Portal invitation link. Once the reseller relationship exists, come back and add the tenant using one of the other two types.
+{% endhint %}
 
 ## Create a New Application Registration
 
-Select this option when you need to replace the app registration CIPP is using or would like to use your own custom app registration. This runs the Application and Tenants steps from the First Setup flow without the baselines, notifications, or next-steps screens.
-
-***
+Select this option when you need to replace the application registration CIPP is using, or want to use your own custom registration. It runs the Application and Tenants steps from the First Setup flow, without the baselines, notifications or next steps screens.
 
 ## Refresh Tokens for Existing Application
 
-This option is used to re-authenticate your existing CIPP-SAM application. It refreshes the Graph API token and updates the stored refresh token without changing the app registration itself.
+Re-authenticates your existing CIPP-SAM application. It refreshes the Graph API token and updates the stored refresh token, leaving the application registration itself untouched.
 
-This can be necessary if there was an authentication issue that prevented CIPP from managing its own token refresh, or if someone accidentally used their personal account instead of the CIPP service account to authenticate CIPP.
-
-***
+This is the option to use when an authentication problem has stopped CIPP refreshing its own token, or when someone has authenticated CIPP with a personal account instead of the CIPP service account.
 
 ## Manually Enter Credentials
 
-Use this option to manually enter or update credentials for an existing application. You can provide values for:
+Enter or update the credentials for an existing application by hand.
 
-* **Tenant ID** — Your partner/primary tenant GUID
-* **Application ID** — The app registration's client ID
-* **Application Secret** — The client secret value (not the secret ID)
-* **Refresh Token** — A valid refresh token for the service account
+| Field              | Description                                    |
+| ------------------ | ---------------------------------------------- |
+| Tenant ID          | Your partner or primary tenant GUID.           |
+| Application ID     | The client ID of the application registration. |
+| Application Secret | The client secret value, not the secret ID.    |
+| Refresh Token      | A valid refresh token for the service account. |
 
-Leave any field blank to retain its current stored value.
+Leave any field blank to retain its currently stored value.
 
-This is especially useful if you have migrated CIPP to a new Azure Resource Group and would like to carry over your existing setup. This option is recommended for advanced users only.
+{% hint style="info" %}
+This is most useful when migrating CIPP to a new Azure resource group and carrying an existing setup across. It is recommended for advanced users only, since an incorrect value here will break CIPP's access to every tenant.
+{% endhint %}
 
-***
+## Wizard Steps
+
+The steps shown depend on the option chosen, and every path finishes with a confirmation screen.
+
+| Option                                               | Steps                                                                                                                          |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| First Setup                                          | Application, Tenants, Baselines, Notifications, Next Steps                                                                     |
+| Add a tenant                                         | Tenant Type, followed by Direct Tenant, GDAP Setup or Reseller Link. GDAP Onboarding appears once the invite has been accepted |
+| Create a new application registration                | Application, Tenants                                                                                                           |
+| Refresh Tokens for existing application registration | Refresh Tokens                                                                                                                 |
+| Manually enter credentials                           | Manually enter credentials                                                                                                     |
+
+## Deep Linking
+
+The wizard accepts two query parameters, which preselect an option and skip the corresponding selection screens.
+
+| Parameter        | Description                                                                                                                                         |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `selectedOption` | Preselects a setup option and skips the option list. Accepts `FirstSetup`, `AddTenant`, `CreateApp`, `UpdateTokens` or `Manual`.                    |
+| `tenantType`     | Used alongside `selectedOption=AddTenant` to preselect the tenant type and skip the type selection. Accepts `GDAP`, `Direct` or `IndirectReseller`. |
+
+This is how links elsewhere in CIPP drop you straight into the right place, such as re-authenticating a direct tenant from the tenants list. It is equally useful in your own runbooks.
 
 ## Related Documentation
 
-* [Creating the CIPP Service Account](https://docs.cipp.app/setup/installation/creating-the-cipp-service-account-gdap-ready)
-* [Executing the Setup Wizard (First-Time Setup)](https://docs.cipp.app/setup/installation/executing-the-setup-wizard)
-* [Tenant Onboarding (GDAP & Direct)](https://docs.cipp.app/setup/installation/gdap-invite-wizard)
+{% content-ref url="../../setup/installation/creating-the-cipp-service-account-gdap-ready.md" %}
+[creating-the-cipp-service-account-gdap-ready.md](../../setup/installation/creating-the-cipp-service-account-gdap-ready.md)
+{% endcontent-ref %}
+
+{% content-ref url="../../setup/installation/executing-the-setup-wizard.md" %}
+[executing-the-setup-wizard.md](../../setup/installation/executing-the-setup-wizard.md)
+{% endcontent-ref %}
+
+{% content-ref url="../../setup/installation/gdap-invite-wizard.md" %}
+[gdap-invite-wizard.md](../../setup/installation/gdap-invite-wizard.md)
+{% endcontent-ref %}
 
 ***
 
-## Feature Requests / Ideas
-
-We value your feedback and ideas. Please raise any [feature requests](https://github.com/KelvinTegelaar/CIPP/issues/new?template=feature.yml) on GitHub.
+{% include "../../../.gitbook/includes/feature-request.md" %}

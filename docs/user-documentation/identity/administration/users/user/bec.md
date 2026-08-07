@@ -4,33 +4,61 @@ description: Single pane of glass review of common Indicators of Compromise (IoC
 
 # Compromise Remediation
 
-Upon page load, CIPP will run an analysis on the user to identify common Indicators of Compromise (IoC). Once that analysis is returned, review the information presented and determine if the user has been compromised. The analysis performs the checks listed in the table below. A green check will indicate that information was found for the check and needs review.
+This page gathers the signals worth checking when a mailbox is suspected of being compromised, so an investigation does not mean opening the Entra, Exchange and Purview portals in turn. Opening the page starts an analysis of the user, and each check appears as a collapsible card with a count of what it found. A count is a prompt to look, not a verdict.
 
 {% hint style="warning" %}
-Note: This page is intended to surface information about potential information that should be reviewed when a compromise is suspected. The existence of information in one of the indicators should not be interpreted as an absolute sign of compromise but rather as a useful tool to help quickly surface the basic information that should be reviewed during your investigation.
+Nothing on this page is proof of a compromise. The checks surface the information that usually matters during an investigation, and several of them return results on perfectly healthy accounts. Read the findings alongside what you already know about the user and the tenant.
 {% endhint %}
 
-## Indicators of Compromise Checks
+## Running the analysis
 
-| Check                      | What It Looks For                                                                                                                                                                                                                                |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Mailbox Rules              | Inbox rules currently on the mailbox, plus any rule create/change/remove operations in the last 7 days. Flags a potential breach when a rule moves mail to an `RSS`-type folder, and highlights rules created or changed within the last 7 days. |
-| Recently Added Users       | Users created in the tenant within the last 14 days.                                                                                                                                                                                             |
-| New Applications           | App registrations / service principals recently added to the tenant (display name, app ID, created date).                                                                                                                                        |
-| Mailbox Permission Changes | Delegated mailbox permission grants and changes (actor, operation, permission level).                                                                                                                                                            |
-| Sent Messages              | Messages sent from the mailbox within the analysis window — subject, recipient, status, received time and source IP — for spotting suspicious outbound activity.                                                                                 |
-| MFA Devices                | Authentication / MFA methods registered on the account (method type, display name, registration date).                                                                                                                                           |
-| Password Changes           | Most recent password-change timestamps across the tenant's users.                                                                                                                                                                                |
-| Trusted & Blocked Senders  | The mailbox's trusted and blocked sender/domain safelist, plus any changes to that list in the last 7 days.                                                                                                                                      |
+The analysis runs as a background job. The first visit queues it and the page polls until it finishes, which can take up to ten minutes on a tenant with a lot of log data. The result is then cached against the user, so returning to the page shows the earlier run rather than starting a new one.
+
+The **Log information** card at the top of the checks reports whether the audit log extraction succeeded and when the data was pulled. It is the first thing to read, because the outcome shapes everything below it.
+
+{% hint style="danger" %}
+Most checks depend on the unified audit log. When it is disabled for the tenant, the Log information card says so and the checks that read from it come back empty rather than clean. An empty result in that state means nothing was available to search, not that nothing happened.
+{% endhint %}
+
+## Checks
+
+Every check covers the seven days before the analysis ran, apart from the MFA device list, which is the account's current registrations regardless of age.
+
+| Check                               | What it looks for                                                                                                                                                                                                                                                                                                                                             |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Check 1: Mailbox Rules              | The inbox rules currently on the mailbox, and any rule created, changed or removed in the last seven days. A rule that moves mail into an `RSS` folder raises a potential breach message, as it is a long-standing trick for hiding replies. Rules whose names match a recent audit event are marked as changed in the last seven days and sorted to the top. |
+| Check 2: Recently added users       | Accounts created in the tenant during the window, listed with their creation date.                                                                                                                                                                                                                                                                            |
+| Check 3: New Applications           | Service principals registered during the window, listed with their application ID and creation date.                                                                                                                                                                                                                                                          |
+| Check 4: Mailbox permission changes | Mailbox permission and delegation changes across the tenant, listed with who made the change, the operation and the rights involved. Covers permissions being added or removed, calendar delegation updates and folder permission grants.                                                                                                                     |
+| Check 5: Sent Messages              | Messages sent by the mailbox during the window, from the message trace, with the subject, recipient, delivery status, time received and originating IP address.                                                                                                                                                                                               |
+| Check 6: MFA Devices                | The authentication methods registered on the account, other than its password, listed with the method type, name and registration date.                                                                                                                                                                                                                       |
+| Check 7: Password Changes           | Accounts across the tenant whose password changed during the window, listed with the change time.                                                                                                                                                                                                                                                             |
+| Check 8: Trusted & Blocked Senders  | The mailbox's own trusted and blocked sender and domain lists, along with any changes to them in the last seven days.                                                                                                                                                                                                                                         |
+
+{% hint style="info" %}
+Checks 2, 3, 4 and 7 are tenant-wide rather than scoped to this user. That is deliberate: an intruder who has taken one mailbox often leaves traces elsewhere, so a new account or an unfamiliar application appearing in the same window is worth knowing about even though it has nothing to do with the mailbox in front of you.
+{% endhint %}
+
+{% hint style="info" %}
+Inbox rules carry no timestamp of their own, so a rule is marked as recently changed by matching its name against audit events from the last seven days. Rules changed from the Outlook client are recorded without a rule name, so a rule altered that way stays unmarked even though the change appears under the rule change entries.
+{% endhint %}
 
 ## Actions
 
-| Action              | Description                                                                                                                                                                                                                                                       |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Refresh Data        | This will refresh the analysis for the user and update the Indicators of Compromise checks. This button is found at the top of the overview card.                                                                                                                 |
-| Remediate User      | This action will block user sign-in, reset the user's password, disconnect all current sessions, remove all MFA methods for the user, disable all inbox rules for the user, and Disable OneDrive sharing. The button is found at the bottom of the overview card. |
-| Generate PDF Report | Generates a PDF of the report data, including helpful data points on user education. This button is found in the Report expandable card at the bottom of the list of checks.                                                                                      |
-| Download JSON       | This will download a JSON file for the checks completed in the analysis. This button is found in the Report expandable card at the bottom of the list of checks.                                                                                                  |
+| Action              | Description                                                                                                                                                                                                                                                                                                       |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Refresh Data        | Discards the cached result and runs the analysis again. Use it when the cached data predates something you need to see, such as a rule created in the last few minutes. The page returns to its waiting state while the new run completes.                                                                        |
+| Remediate User      | Runs the containment steps listed on the overview card in one go: blocks sign-in, resets the password, disconnects all current sessions, removes every MFA method, disables all inbox rules and disables OneDrive sharing. A confirmation dialog appears first.                                                   |
+| Generate PDF Report | Opens a preview of a formatted report covering the findings, written to be readable by managers and end users as well as technicians, and suitable for attaching to a compliance record. **Download PDF** saves it. Long result sets are truncated in the PDF, which points to the JSON export for the full list. |
+| Download JSON       | Saves the complete analysis as a JSON file, including data the cards do not display.                                                                                                                                                                                                                              |
+
+{% hint style="warning" %}
+Removing every MFA method leaves the account with no second factor registered. Once sign-in is unblocked and the password reset, the user has to register a method again, so plan how they will do that before running the remediation on someone who is not sitting next to you.
+{% endhint %}
+
+{% hint style="info" %}
+The JSON export carries three data sets that no card displays: the last fifty sign-ins for the tenant, the user's most recent sign-in, and the mobile devices attached to the mailbox. If the investigation turns on sign-in origin or an unrecognised device, that is where to look.
+{% endhint %}
 
 ***
 

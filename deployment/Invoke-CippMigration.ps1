@@ -34,6 +34,10 @@
 .PARAMETER Force
     Run the migration even if the instance appears to have already been migrated to the container architecture.
 
+.PARAMETER SkipIamCheck
+    Skip the Owner permission check. The migration will still fail at the point a missing
+    permission is needed — only use this if the check itself cannot run in your environment.
+
 .EXAMPLE
     .\Invoke-CippMigration.ps1 -ResourceGroupName 'CIPP-RG'
 
@@ -58,12 +62,20 @@ param (
 
     [switch]$TestOnly,
 
-    [switch]$Force
+    [switch]$Force,
+
+    [switch]$SkipIamCheck
 )
 
 $ErrorActionPreference = 'Stop'
 $InformationPreference = 'Continue'
 $TemplateFilePath = Join-Path $PSScriptRoot 'cipp-migration.json'
+
+# The Az.Websites static-site cmdlets print an upcoming-breaking-change banner that drowns
+# out this script's output. Neither $env:SuppressAzurePowerShellBreakingChangeWarnings nor
+# Update-AzConfig -DisplayBreakingChangeWarning suppresses it for these autorest-generated
+# cmdlets, so each call passes -WarningAction SilentlyContinue instead. Kept per-call rather
+# than script-wide so this script's own Write-Warning output still reaches the user.
 
 # ── AzBobbyTables module check ────────────────────────────────────────────────
 if (-not (Get-Module -ListAvailable -Name AzBobbyTables)) {
@@ -96,7 +108,106 @@ if (-not $SubscriptionId) {
     $SubscriptionId = $argResult.subscriptionId
 }
 Write-Information "Using subscription: $SubscriptionId"
-$null = Set-AzContext -SubscriptionId $SubscriptionId
+# -WhatIf:$false — selecting the subscription is not a change. Without this, -WhatIf
+# skips the context switch and every subsequent lookup runs against the wrong subscription.
+$null = Set-AzContext -SubscriptionId $SubscriptionId -WhatIf:$false
+
+# ── Permission check ──────────────────────────────────────────────────────────
+# The migration creates and deletes resources across Web, Storage, Key Vault and
+# Insights, and cipp-migration.json assigns Contributor on the new web app to its
+# own managed identity — that last part needs Microsoft.Authorization/roleAssignments/write,
+# which Contributor does not have. Rather than enumerate every action, require Owner
+# on the resource group and fail fast, before anything has been deleted.
+$RgScope = "/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName"
+
+if ($SkipIamCheck.IsPresent) {
+    Write-Warning 'Skipping the Owner permission check (-SkipIamCheck). A missing permission will surface mid-migration, after resources have already been deleted.'
+} else {
+    Write-Information "Checking permissions on '$ResourceGroupName'..."
+
+    # The ARM token's 'oid' claim identifies the caller regardless of principal type
+    # (user, service principal, managed identity) and needs no Graph permissions.
+    $callerObjectId = $null
+    try {
+        $tokenObj = Get-AzAccessToken -ResourceUrl 'https://management.azure.com/' -ErrorAction Stop
+        $rawToken = if ($tokenObj.Token -is [securestring]) { ConvertFrom-SecureString $tokenObj.Token -AsPlainText } else { $tokenObj.Token }
+        $payload = $rawToken.Split('.')[1].Replace('-', '+').Replace('_', '/')
+        switch ($payload.Length % 4) { 2 { $payload += '==' } 3 { $payload += '=' } }
+        $callerObjectId = ([System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($payload)) | ConvertFrom-Json).oid
+    } catch {
+        Write-Verbose "Could not read object ID from access token: $($_.Exception.Message)"
+    }
+    Write-Information "  Signed in as: $((Get-AzContext).Account.Id)"
+
+    # Owner is 'can do anything, including assign roles'. Probing those two actions
+    # via checkAccess covers built-in Owner, an equivalent custom role, and
+    # Contributor + User Access Administrator — and honours deny assignments.
+    $OwnerProbeActions = @('Microsoft.Authorization/roleAssignments/write', 'Microsoft.Web/sites/delete')
+    $HasOwnerAccess = $null   # $null = could not determine
+
+    if ($callerObjectId) {
+        try {
+            $body = @{
+                Subject  = @{ Attributes = @{ ObjectId = $callerObjectId } }
+                Actions  = @($OwnerProbeActions | ForEach-Object { @{ Id = $_; IsDataAction = $false } })
+                Resource = @{ Id = $RgScope }
+            } | ConvertTo-Json -Depth 6
+
+            # -WhatIf:$false — checkAccess is a read; it must run even under -WhatIf
+            $checkAccess = Invoke-AzRestMethod `
+                -Method POST `
+                -Uri "https://management.azure.com$RgScope/providers/Microsoft.Authorization/checkAccess?api-version=2018-09-01-preview" `
+                -Payload $body `
+                -WhatIf:$false
+
+            if ($checkAccess.StatusCode -ge 200 -and $checkAccess.StatusCode -lt 300) {
+                # The API returns a bare array of decisions; some versions wrap it
+                # in an 'accessDecisions' property. Handle both.
+                $parsed = $checkAccess.Content | ConvertFrom-Json
+                # NB: test for an array FIRST — on an array, $parsed.accessDecisions
+                # member-enumerates to an empty array, which is not $null.
+                $decisions = @(if ($parsed -is [System.Array]) { $parsed } elseif ($parsed.accessDecisions) { $parsed.accessDecisions } else { $parsed })
+                $decisions = @($decisions | Where-Object { $_.accessDecision })
+                if ($decisions.Count -eq $OwnerProbeActions.Count) {
+                    $HasOwnerAccess = -not @($decisions | Where-Object { $_.accessDecision -ne 'Allowed' }).Count
+                } else {
+                    Write-Verbose "checkAccess returned $($decisions.Count) decisions for $($OwnerProbeActions.Count) actions — ignoring."
+                }
+            } else {
+                Write-Verbose "checkAccess returned HTTP $($checkAccess.StatusCode): $($checkAccess.Content)"
+            }
+        } catch {
+            Write-Verbose "checkAccess call failed: $($_.Exception.Message)"
+        }
+    }
+
+    # Fallback: look for an Owner (or wildcard-action) assignment at or above the scope.
+    if ($null -eq $HasOwnerAccess) {
+        try {
+            $assignments = @(Get-AzRoleAssignment -Scope $RgScope -ErrorAction Stop |
+                    Where-Object { -not $callerObjectId -or $_.ObjectId -eq $callerObjectId })
+            $HasOwnerAccess = [bool](@($assignments | Where-Object {
+                        $_.RoleDefinitionName -in @('Owner', 'User Access Administrator', 'Role Based Access Control Administrator')
+                    }).Count)
+        } catch {
+            Write-Verbose "Role assignment lookup failed: $($_.Exception.Message)"
+        }
+    }
+
+    if ($null -eq $HasOwnerAccess) {
+        Write-Warning "Could not determine your permissions on '$ResourceGroupName'. Owner on the resource group is required — the migration will fail partway through without it."
+    } elseif (-not $HasOwnerAccess) {
+        $iamReason = "Owner on resource group '$ResourceGroupName' is required to run this migration. The migration deletes the function apps, app service plans, Application Insights components and Static Web App, and grants the new web app's managed identity Contributor on itself — Contributor alone cannot create that role assignment. Grant Owner (or Contributor + User Access Administrator) on '$ResourceGroupName' and re-run."
+        if ($TestOnly.IsPresent) {
+            Write-Warning "$iamReason A live migration run would stop here."
+        } else {
+            Write-Error $iamReason
+            exit 1
+        }
+    } else {
+        Write-Information '  Owner-level access confirmed.'
+    }
+}
 
 # ── Storage account (location source) ────────────────────────────────────────
 Write-Information "Detecting storage account in '$ResourceGroupName'..."
@@ -181,6 +292,39 @@ $SsoStageHints = @{
 }
 $SsoReady = $SsoStatus -in @('secrets_stored', 'complete')
 
+# A missing SSOMigration row does not always mean the migration was never run — an
+# instance already cut over to the container app has working SSO via Easy Auth, and
+# the tracking row may have been cleaned up or never written. If Easy Auth is
+# configured on the container app with an enabled AAD provider, SSO is done in the
+# only sense that matters here. Other statuses still indicate a genuinely incomplete
+# migration, so this fallback applies to '(not found)' only.
+$SsoSatisfiedByEasyAuth = $false
+if (-not $SsoReady -and $SsoStatus -eq '(not found)' -and $existingCippNgApp) {
+    Write-Information "  No SSOMigration record — checking Easy Auth on '$($existingCippNgApp.Name)'..."
+    try {
+        $authResponse = Invoke-AzRestMethod `
+            -Method GET `
+            -Uri "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Web/sites/$($existingCippNgApp.Name)/config/authsettingsV2?api-version=2024-11-01" `
+            -WhatIf:$false
+
+        if ($authResponse.StatusCode -ge 200 -and $authResponse.StatusCode -lt 300) {
+            $authProps = ($authResponse.Content | ConvertFrom-Json).properties
+            $aad = $authProps.identityProviders.azureActiveDirectory
+            if ($authProps.platform.enabled -and $aad.enabled -and $aad.registration.clientId) {
+                $SsoSatisfiedByEasyAuth = $true
+                $SsoReady = $true
+                Write-Information "  Easy Auth is configured (AAD client ID $($aad.registration.clientId)) — treating SSO as complete."
+            } else {
+                Write-Information "  Easy Auth is not fully configured (platform enabled: $([bool]$authProps.platform.enabled), AAD enabled: $([bool]$aad.enabled), client ID set: $([bool]$aad.registration.clientId))."
+            }
+        } else {
+            Write-Information "  Could not read Easy Auth config: HTTP $($authResponse.StatusCode)."
+        }
+    } catch {
+        Write-Information "  Could not read Easy Auth config: $($_.Exception.Message)"
+    }
+}
+
 if (-not $SsoReady) {
     $stageHint = if ($SsoStageHints.ContainsKey($SsoStatus)) { $SsoStageHints[$SsoStatus] } else { 'unrecognized status' }
     $ssoReason = "SSO migration has not completed for '$ResourceGroupName' — status is '$SsoStatus' ($stageHint; expected 'secrets_stored' or 'complete'). Complete the SSO migration in CIPP before running this script."
@@ -200,22 +344,26 @@ $appServicePlans = Get-AzAppServicePlan -ResourceGroupName $ResourceGroupName
 
 # ── Static Web App ────────────────────────────────────────────────────────────
 Write-Information "Detecting Static Web App in '$ResourceGroupName'..."
-$swa = Get-AzStaticWebApp -ResourceGroupName $ResourceGroupName | Select-Object -First 1
-if (-not $swa) {
-    Write-Error "No Static Web App found in '$ResourceGroupName'."
-    exit 1
-}
-$SwaName = $swa.Name
-Write-Information "Static Web App: $SwaName"
+$swa = Get-AzStaticWebApp -ResourceGroupName $ResourceGroupName -WarningAction SilentlyContinue | Select-Object -First 1
+# A missing SWA is not fatal — a re-run or a partially completed migration has already
+# deleted it. Every SWA-dependent step below is skipped instead.
+$swaCustomDomains = @()
+if ($swa) {
+    $SwaName = $swa.Name
+    Write-Information "Static Web App: $SwaName"
 
-# ── Custom domains on SWA ─────────────────────────────────────────────────────
-Write-Information "Checking for custom domains on '$SwaName'..."
-$swaCustomDomains = Get-AzStaticWebAppCustomDomain -ResourceGroupName $ResourceGroupName -Name $SwaName -ErrorAction SilentlyContinue
-$swaCustomDomains = @($swaCustomDomains | Where-Object { $_.DomainName -notmatch 'azurestaticapps\.net' })
-if ($swaCustomDomains.Count -gt 0) {
-    Write-Information "Custom domains found on SWA: $($swaCustomDomains.DomainName -join ', ')"
+    # ── Custom domains on SWA ─────────────────────────────────────────────────
+    Write-Information "Checking for custom domains on '$SwaName'..."
+    $swaCustomDomains = Get-AzStaticWebAppCustomDomain -ResourceGroupName $ResourceGroupName -Name $SwaName -ErrorAction SilentlyContinue -WarningAction SilentlyContinue
+    $swaCustomDomains = @($swaCustomDomains | Where-Object { $_.DomainName -notmatch 'azurestaticapps\.net' })
+    if ($swaCustomDomains.Count -gt 0) {
+        Write-Information "Custom domains found on SWA: $($swaCustomDomains.DomainName -join ', ')"
+    } else {
+        Write-Information '  No custom domains on SWA.'
+    }
 } else {
-    Write-Information '  No custom domains on SWA.'
+    $SwaName = ''
+    Write-Warning "No Static Web App found in '$ResourceGroupName' — assuming already removed. SWA user migration and teardown will be skipped."
 }
 
 # ── Check for existing Key Vault ───────────────────────────────────────────────
@@ -249,19 +397,29 @@ $DeploymentParams = @{
     webAppName                 = $TargetWebAppName
 }
 
-Write-Information 'Testing ARM template...'
-try {
-    $TestResult = Test-AzResourceGroupDeployment @DeploymentParams -ErrorAction Stop
-} catch {
-    Write-Error "ARM template test failed: $($_.Exception.Message)"
-    exit 1
-}
+# An instance that is already on the container architecture has everything the template
+# would create. Re-deploying it is at best a no-op and at worst harmful — it asks for a
+# second app service plan, which fails outright in subscriptions with no spare VM quota.
+# With -Force the remaining cleanup steps still run; only the deployment is skipped.
+$SkipDeployment = $AlreadyMigrated
 
-if ($TestResult.Code) {
-    Write-Error "ARM template validation failed: $($TestResult.Code) — $($TestResult.Message)"
-    exit 1
+if ($SkipDeployment) {
+    Write-Information 'Already migrated — skipping ARM template test and deployment; only leftover cleanup will run.'
+} else {
+    Write-Information 'Testing ARM template...'
+    try {
+        $TestResult = Test-AzResourceGroupDeployment @DeploymentParams -ErrorAction Stop
+    } catch {
+        Write-Error "ARM template test failed: $($_.Exception.Message)"
+        exit 1
+    }
+
+    if ($TestResult.Code) {
+        Write-Error "ARM template validation failed: $($TestResult.Code) — $($TestResult.Message)"
+        exit 1
+    }
+    Write-Information 'ARM template test passed.'
 }
-Write-Information 'ARM template test passed.'
 
 if ($TestOnly.IsPresent) {
     Write-Information ''
@@ -270,11 +428,13 @@ if ($TestOnly.IsPresent) {
     Write-Information "Location        : $Location"
     Write-Information "Storage account : $($storageAccount.StorageAccountName)"
     Write-Information "Key Vault       : $($existingKv.VaultName)"
-    Write-Information "SSO migration   : $SsoStatus$(if (-not $SsoReady) { ' (NOT READY - live run would stop)' })"
+    Write-Information "Permissions     : $(if ($SkipIamCheck.IsPresent) { '(check skipped)' } elseif ($null -eq $HasOwnerAccess) { '(could not determine)' } elseif ($HasOwnerAccess) { 'Owner' } else { 'NOT Owner (NOT READY - live run would stop)' })"
+    Write-Information "SSO migration   : $SsoStatus$(if ($SsoSatisfiedByEasyAuth) { ' (Easy Auth configured - OK)' } elseif (-not $SsoReady) { ' (NOT READY - live run would stop)' })"
     Write-Information "Function app    : $(if ($FuncAppName) { $FuncAppName } else { '(not found - already removed)' })"
     Write-Information "Existing ng app : $(if ($existingCippNgApp) { $existingCippNgApp.Name } else { '(none)' })"
     Write-Information "New web app name : $TargetWebAppName"
-    Write-Information "SWA (to delete) : $SwaName"
+    Write-Information "ARM deployment  : $(if ($SkipDeployment) { '(skipped - already migrated)' } else { 'would deploy' })"
+    Write-Information "SWA (to delete) : $(if ($SwaName) { $SwaName } else { '(not found - already removed)' })"
     if ($swaCustomDomains.Count -gt 0) {
         Write-Information "SWA custom domains (to remove): $($swaCustomDomains.DomainName -join ', ')"
     }
@@ -285,11 +445,18 @@ if ($TestOnly.IsPresent) {
 # MIGRATE SWA USERS
 # ══════════════════════════════════════════════════════════════════════════════
 
-Write-Information 'Migrating SWA role assignments to allowedUsers table...'
-$aadUsersResponse = Invoke-AzRestMethod `
-    -Method POST `
-    -Uri "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Web/staticSites/$SwaName/authproviders/all/listUsers?api-version=2022-09-01"
-$swaUsers = ($aadUsersResponse.Content | ConvertFrom-Json).value
+$swaUsers = @()
+if ($swa) {
+    Write-Information 'Migrating SWA role assignments to allowedUsers table...'
+    # -WhatIf:$false — listUsers is a read despite being a POST
+    $aadUsersResponse = Invoke-AzRestMethod `
+        -Method POST `
+        -Uri "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Web/staticSites/$SwaName/authproviders/all/listUsers?api-version=2022-09-01" `
+        -WhatIf:$false
+    $swaUsers = @(($aadUsersResponse.Content | ConvertFrom-Json).value)
+} else {
+    Write-Information 'No Static Web App — skipping SWA user migration (allowedUsers was populated on the original run).'
+}
 
 $tableCtx = New-AzDataTableContext -ConnectionString $storageConnString -TableName 'allowedUsers'
 
@@ -383,21 +550,24 @@ if ($swaUsers.Count -gt 0) {
 # ══════════════════════════════════════════════════════════════════════════════
 
 # ── Remove SWA linked backend ─────────────────────────────────────────────────
-Write-Information "Removing SWA linked backend from '$SwaName'..."
-$backendResponse = Invoke-AzRestMethod `
-    -Method GET `
-    -Uri "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Web/staticSites/$SwaName/builds/default/linkedBackends?api-version=2022-09-01"
-$backend = ($backendResponse.Content | ConvertFrom-Json).value | Select-Object -First 1
+if ($swa) {
+    Write-Information "Removing SWA linked backend from '$SwaName'..."
+    $backendResponse = Invoke-AzRestMethod `
+        -Method GET `
+        -Uri "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Web/staticSites/$SwaName/builds/default/linkedBackends?api-version=2022-09-01" `
+        -WhatIf:$false
+    $backend = ($backendResponse.Content | ConvertFrom-Json).value | Select-Object -First 1
 
-if ($backend.id) {
-    Write-Information "  Unlinking backend: $($backend.name)"
-    if ($PSCmdlet.ShouldProcess($backend.name, 'Unlink SWA backend')) {
-        $null = Invoke-AzRestMethod `
-            -Method DELETE `
-            -Uri "https://management.azure.com$($backend.id)?isCleaningAuthConfig=false&api-version=2022-09-01"
+    if ($backend.id) {
+        Write-Information "  Unlinking backend: $($backend.name)"
+        if ($PSCmdlet.ShouldProcess($backend.name, 'Unlink SWA backend')) {
+            $null = Invoke-AzRestMethod `
+                -Method DELETE `
+                -Uri "https://management.azure.com$($backend.id)?isCleaningAuthConfig=false&api-version=2022-09-01"
+        }
+    } else {
+        Write-Information '  No linked backend found.'
     }
-} else {
-    Write-Information '  No linked backend found.'
 }
 
 # ── Remove old function apps and app service plans ────────────────────────────
@@ -480,15 +650,21 @@ if ($fileShares) {
 }
 
 # ── Deploy cipp ─────────────────────────────────────────────────────────────
-Write-Information 'Deploying cipp ARM template...'
 $Deployment = $null
-if ($PSCmdlet.ShouldProcess($ResourceGroupName, 'Deploy cipp ARM template')) {
-    $Deployment = New-AzResourceGroupDeployment -Name 'cipp-migration' @DeploymentParams -Verbose -ErrorAction Stop
-    Write-Information 'Deployment completed.'
+if ($SkipDeployment) {
+    Write-Information "Skipping ARM deployment — '$($existingCippNgApp.Name)' is already running the container architecture."
+} else {
+    Write-Information 'Deploying cipp ARM template...'
+    if ($PSCmdlet.ShouldProcess($ResourceGroupName, 'Deploy cipp ARM template')) {
+        $Deployment = New-AzResourceGroupDeployment -Name 'cipp-migration' @DeploymentParams -Verbose -ErrorAction Stop
+        Write-Information 'Deployment completed.'
+    }
 }
 
-$NewHostname = $Deployment.Outputs['hostname'].Value
-$NewWebAppName = $Deployment.Outputs['webAppName'].Value
+# No outputs to read when the deployment was skipped (already migrated) or suppressed (-WhatIf);
+# fall back to the existing web app so the DNS summary below still has something to report.
+$NewHostname = if ($Deployment) { $Deployment.Outputs['hostname'].Value } elseif ($existingCippNgApp) { $existingCippNgApp.DefaultHostName } else { '' }
+$NewWebAppName = if ($Deployment) { $Deployment.Outputs['webAppName'].Value } elseif ($existingCippNgApp) { $existingCippNgApp.Name } else { $TargetWebAppName }
 $NewKvName = $existingKv.VaultName
 
 if ($NewHostname) {
@@ -496,21 +672,6 @@ if ($NewHostname) {
     Write-Information "cipp URL      : https://$NewHostname"
 }
 Write-Information "Key Vault        : $NewKvName"
-
-# ── Retrieve DNS record values from the new web app ──────────────────────────
-$NewInboundIp = ''
-$NewDomainVerificationId = ''
-if ($NewWebAppName) {
-    Write-Information "Retrieving DNS record values from '$NewWebAppName'..."
-    $siteResponse = Invoke-AzRestMethod `
-        -Method GET `
-        -Uri "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Web/sites/$NewWebAppName`?api-version=2024-11-01"
-    $siteProperties = ($siteResponse.Content | ConvertFrom-Json).properties
-    $NewInboundIp = $siteProperties.inboundIpAddress
-    $NewDomainVerificationId = $siteProperties.customDomainVerificationId
-    Write-Information "  Inbound IP (A record)        : $NewInboundIp"
-    Write-Information "  Domain verification ID (TXT) : $NewDomainVerificationId"
-}
 
 # ── Remove custom domains from SWA before deletion ───────────────────────────
 if ($swaCustomDomains.Count -gt 0) {
@@ -530,7 +691,7 @@ if ($swaCustomDomains.Count -gt 0) {
     $maxPollAttempts = 24  # 2 minutes at 5s intervals
     do {
         Start-Sleep -Seconds 5
-        $remaining = Get-AzStaticWebAppCustomDomain -ResourceGroupName $ResourceGroupName -Name $SwaName -ErrorAction SilentlyContinue |
+        $remaining = Get-AzStaticWebAppCustomDomain -ResourceGroupName $ResourceGroupName -Name $SwaName -ErrorAction SilentlyContinue -WarningAction SilentlyContinue |
             Where-Object { $_.DomainName -notmatch 'azurestaticapps\.net' }
         $pollAttempts++
         if ($remaining) {
@@ -546,21 +707,25 @@ if ($swaCustomDomains.Count -gt 0) {
 }
 
 # ── Delete Static Web App ─────────────────────────────────────────────────────
-Write-Information "Deleting Static Web App '$SwaName'..."
-if ($PSCmdlet.ShouldProcess($SwaName, 'Delete Static Web App')) {
-    $null = Invoke-AzRestMethod `
-        -Method DELETE `
-        -Uri "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Web/staticSites/$SwaName`?api-version=2022-09-01"
-    Write-Information "  '$SwaName' deleted."
+if ($swa) {
+    Write-Information "Deleting Static Web App '$SwaName'..."
+    if ($PSCmdlet.ShouldProcess($SwaName, 'Delete Static Web App')) {
+        $null = Invoke-AzRestMethod `
+            -Method DELETE `
+            -Uri "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Web/staticSites/$SwaName`?api-version=2022-09-01"
+        Write-Information "  '$SwaName' deleted."
+    }
 }
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 Write-Information ''
-Write-Information '=== Migration Complete ==='
+Write-Information "=== $(if ($SkipDeployment) { 'Cleanup Complete — instance was already migrated, nothing was deployed' } else { 'Migration Complete' }) ==="
 Write-Information "CIPP hostname : https://$NewHostname"
 Write-Information "Web app name     : $NewWebAppName"
 Write-Information "Key Vault        : $NewKvName"
-Write-Information "Static Web App '$SwaName' has been deleted."
+if ($swa) {
+    Write-Information "Static Web App '$SwaName' has been deleted."
+}
 
 $domainsToPoint = [System.Collections.Generic.List[string]]::new()
 foreach ($domain in $swaCustomDomains) { $domainsToPoint.Add($domain.DomainName) }
@@ -573,25 +738,11 @@ if ($domainsToPoint.Count -gt 0) {
     foreach ($domain in $domainsToPoint) {
         $source = if ($swaCustomDomains.DomainName -contains $domain) { ' (was on SWA)' } else { '' }
         Write-Information "Domain: $domain$source"
-        # Subdomains verify via the CNAME alone — no asuid TXT needed (and a stale one from a
-        # previous setup blocks validation; it should be removed). Apex domains map via an A
-        # record, which can't prove ownership, so those still need the verification TXT.
-        $isApex = @($domain.Split('.')).Count -le 2
-        if ($isApex) {
-            Write-Information '  A record'
-            Write-Information "    Name  : $domain"
-            Write-Information "    Value : $NewInboundIp"
-            if ($NewDomainVerificationId) {
-                Write-Information '  TXT record (domain verification — required for apex/A records)'
-                Write-Information "    Name  : asuid.$domain"
-                Write-Information "    Value : $NewDomainVerificationId"
-            }
-        } else {
-            Write-Information '  CNAME record'
-            Write-Information "    Name  : $domain"
-            Write-Information "    Value : $NewHostname"
-            Write-Information "  NOTE: if a TXT record named 'asuid.$domain' exists from a previous setup, REMOVE it — a stale verification record blocks validation. (Only proxied/orange-cloud aliases need it, set to: $NewDomainVerificationId)"
-        }
+        # The alias record is all that's needed — domain-verification TXT records are no longer used.
+        Write-Information '  CNAME record'
+        Write-Information "    Name  : $domain"
+        Write-Information "    Value : $NewHostname"
+        Write-Information "  NOTE: if a TXT record named 'asuid.$domain' exists from a previous setup, REMOVE it — these records are no longer used and a leftover one blocks validation."
         Write-Information ''
     }
 }

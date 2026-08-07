@@ -24,7 +24,7 @@ The properties returned are for the Exchange Online PowerShell command `Get-Tran
 
 ## Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Create template based on rule</td><td>Creates a template based on the selected rule(s)</td><td>true</td></tr><tr><td>Enable Rule</td><td>Enables the selected rule(s)</td><td>true</td></tr><tr><td>Disable Rule</td><td>Disables the selected rule(s)</td><td>true</td></tr><tr><td>Delete Rule</td><td>Deletes the selected rule(s)</td><td>true</td></tr><tr><td>More Info</td><td>Opens Extended Info flyout</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Create template based on rule</td><td>Creates a template based on the selected rule(s)</td><td>true</td></tr><tr><td>Enable Rule</td><td>Enables the selected rule(s)</td><td>true</td></tr><tr><td>Disable Rule</td><td>Disables the selected rule(s)</td><td>true</td></tr><tr><td>Delete Rule</td><td>Deletes the selected rule(s)</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 ***
 

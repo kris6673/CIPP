@@ -14,8 +14,8 @@ Version: 1.2 - Only overwrites if SHA values differ
 #>
 
 # Source and destination paths, relative to this script in the monorepo's tools folder
-$source = Join-Path $PSScriptRoot '..\frontend\src\data\standards.json'
-$destination = Join-Path $PSScriptRoot '..\backend\Config\standards.json'
+$source = Join-Path $PSScriptRoot '..\..\frontend\src\data\standards.json'
+$destination = Join-Path $PSScriptRoot '..\..\backend\Config\standards.json'
 
 function Get-FileSHA256 {
     param (

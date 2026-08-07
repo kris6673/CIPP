@@ -4,72 +4,121 @@ description: Check your managed domains against security and configuration best 
 
 # Domains Analyser
 
-The domain analyser is a series of best practice checks that run on all your e-mail enabled domains across your delegated Microsoft 365 tenants.
+The Domains Analyser runs a series of best practice checks against every mail-enabled domain across your delegated Microsoft 365 tenants. It inspects the public DNS records for each domain and scores them, so you can see at a glance which clients have gaps in their mail authentication.
 
-It analyses the DNS records that are available and assesses the following areas:
+It assesses the following areas:
 
 * Sender Policy Framework (SPF)
 * Domain-based Message Authentication, Reporting & Conformance (DMARC)
 * DomainKeys Identified Mail (DKIM)
 * Domain Name System Security Extensions (DNSSEC)
+* Mail exchanger (MX) records and the detected mail provider
+* Microsoft device enrolment and registration CNAME records
+
+Analysis runs automatically once a day. You can also trigger it on demand with **Run Analysis Now**.
 
 {% hint style="info" %}
-If this is your first ever run you may see an error initially because there is no data, please wait for the analyser to run or use the refresh button.
+On a first run you may see an error because no data has been collected yet. Wait for the scheduled analysis or use **Run Analysis Now**.
 {% endhint %}
 
-## Page Actions
+## Action Buttons
 
-<details>
-
-<summary>Check Individual Domain</summary>
-
-This will open [individual-domains.md](../../../tools/tenant-tools/individual-domains.md "mention")
-
-</details>
+{% content-ref url="../../../tools/tenant-tools/individual-domains.md" %}
+[individual-domains.md](../../../tools/tenant-tools/individual-domains.md)
+{% endcontent-ref %}
 
 <details>
 
 <summary>Run Analysis Now</summary>
 
-This will add a task to the queue to update the analysis for the selected tenants. If you have offloading enabled, this will begin at the next quarter hour. It can take several minutes for CIPP to check all the required tests.
+Opens the Run Domain Analysis dialog. Pick a single tenant or all tenants and queue a fresh analysis. It can take several minutes to work through all the checks.
 
 </details>
 
 ## Table Details
 
-The table will display the results of CIPP's tests for all domains in the included tenant(s) from the [tenant-select.md](../../../shared-features/menu-bar/tenant-select.md "mention") dropdown.
+The table shows results for all domains in the tenant or tenants selected in the tenant-select.md dropdown.
 
-<table data-full-width="false"><thead><tr><th>Column</th><th>Description</th><th>Score Implications</th></tr></thead><tbody><tr><td>Domain</td><td>The domain name being analysed.</td><td></td></tr><tr><td>Score Percentage</td><td><code>(Score / 160) * 100</code></td><td></td></tr><tr><td>Mail Provider</td><td>Name of the detected mail provider (e.g. Microsoft, Google, Unknown), derived from MX record lookup.</td><td></td></tr><tr><td>SPF Pass All</td><td><code>true</code> if the SPF record passes all validation checks (zero validation failures).</td><td><ul><li>SPF record present (exactly 1 record) → <strong>+10 pts</strong></li><li>SPF passes all validation → <strong>+20 pts</strong></li><li>Multiple SPF records or missing record → 0, adds explanation</li></ul></td></tr><tr><td>MX Pass Test</td><td><code>true</code> if MX record passes all validation checks (zero validation failures).</td><td><ul><li>MX passes validation → <strong>+10 pts</strong></li></ul></td></tr><tr><td>DMARC Present</td><td><code>true</code> if a DMARC record exists for the domain.</td><td><ul><li>DMARC record found → <strong>+10 pts</strong></li></ul></td></tr><tr><td>DMARC Action Policy</td><td>The enforced DMARC policy. Values: <code>Reject</code>, <code>Quarantine</code>, <code>None</code>.</td><td><ul><li>Policy = <code>reject</code> AND subdomain policy = <code>reject</code> → <strong>+30 pts</strong></li><li>Policy = <code>quarantine</code> → <strong>+20 pts</strong></li><li>Policy = <code>none</code> → 0 pts, adds "DMARC is not being enforced" to explanation</li></ul></td></tr><tr><td>DMARC Reporting Active</td><td><code>true</code> if at least one <code>rua</code> reporting email is configured.</td><td><ul><li>Reporting active → <strong>+20 pts</strong></li></ul></td></tr><tr><td>DMARC Percentage Pass</td><td><code>true</code> if DMARC percentage (<code>pct</code>) is set to 100.</td><td><ul><li>pct = 100 → <strong>+20 pts</strong></li><li>pct &#x3C; 100 → 0 pts, adds "DMARC Not Checking All Messages"</li></ul></td></tr><tr><td>DNSSEC Present</td><td><code>true</code> if DNSSEC passes with zero validation failures/warnings.</td><td><ul><li>DNSSEC passes → <strong>+20 pts</strong></li></ul></td></tr><tr><td>DKIM Enabled</td><td><code>true</code> if at least one DKIM record is found and passes validation (zero failures).</td><td><ul><li>DKIM active and valid → <strong>+20 pts</strong></li><li>Uses configured selectors, falls back to Microsoft selectors if none set</li></ul></td></tr><tr><td>Enterprise Enrollment</td><td><p>CNAME check for <code>enterpriseenrollment.&#x3C;domain></code>. Values:</p><ul><li><code>Correct</code> — points to <code>enterpriseenrollment-s.manage.microsoft.com</code></li><li><code>Legacy</code> — points to old <code>enterpriseenrollment.manage.microsoft.com</code> endpoint</li><li><code>Unexpected: &#x3C;value></code> — unknown CNAME target</li><li><code>No CNAME</code> — record missing</li></ul></td><td>Adds to <code>ScoreExplanation</code> if not Correct, but contributes <strong>0 pts</strong>.</td></tr><tr><td>Enterprise Registration</td><td><p>CNAME check for <code>enterpriseregistration.&#x3C;domain></code>. Values:</p><ul><li><code>Correct</code> — points to <code>enterpriseregistration.windows.net</code></li><li><code>Unexpected: &#x3C;value></code> — unknown target</li><li><code>No CNAME</code> — record missing</li></ul></td><td>Adds to <code>ScoreExplanation</code> if not Correct, but contributes <strong>0 pts</strong>.</td></tr></tbody></table>
+| Column                  | Description                                                                                                                                               |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Domain                  | The domain name being analysed.                                                                                                                           |
+| Score Percentage        | The domain's score as a percentage of the maximum of 160. See below.                                                                                      |
+| Mail Provider           | The detected mail provider, for example Microsoft, Google, or Unknown, derived from the MX lookup.                                                        |
+| SPF Pass All            | Whether the SPF record passes all validation checks with no failures.                                                                                     |
+| MX Pass Test            | Whether the MX record passes all validation checks with no failures.                                                                                      |
+| DMARC Present           | Whether a DMARC record exists for the domain.                                                                                                             |
+| DMARC Action Policy     | The enforced DMARC policy: Reject, Quarantine, or None.                                                                                                   |
+| DMARC Percentage Pass   | Whether the DMARC percentage (`pct`) is set to 100.                                                                                                       |
+| DNSSEC Present          | Whether DNSSEC passes with no validation failures or warnings.                                                                                            |
+| DKIM Enabled            | Whether at least one DKIM record is found and passes validation. Uses your configured selectors, falling back to the Microsoft selectors if none are set. |
+| Enterprise Enrollment   | CNAME check for `enterpriseenrollment.<domain>`. See below.                                                                                               |
+| Enterprise Registration | CNAME check for `enterpriseregistration.<domain>`. See below.                                                                                             |
 
 {% hint style="info" %}
-Additional columns exist for informational purposes. Information from those columns is also used to build the Extended Info panel viewable from each row.
+Further columns are collected for information and are not shown by default. They feed the Extended Info flyout available on each row.
+{% endhint %}
+
+### Enrolment and Registration Values
+
+Both CNAME checks report one of the following. Neither contributes to the score, but a value other than Correct is added to the score explanation.
+
+| Value                 | Meaning                                                                                                                  |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Correct               | Enrolment points at `enterpriseenrollment-s.manage.microsoft.com`, registration at `enterpriseregistration.windows.net`. |
+| Legacy                | Enrolment only. Points at the older `enterpriseenrollment.manage.microsoft.com` endpoint.                                |
+| Unexpected: `<value>` | The CNAME resolves to something CIPP does not recognise.                                                                 |
+| No CNAME              | The record is missing.                                                                                                   |
+
+## Scoring
+
+Each domain is scored out of a maximum of **160**, and the Score Percentage column is that score expressed as a percentage.
+
+| Check                                                | Points |
+| ---------------------------------------------------- | ------ |
+| SPF record present (exactly one record)              | 10     |
+| SPF record passes all validation                     | 20     |
+| MX record passes validation                          | 10     |
+| DMARC record present                                 | 10     |
+| DMARC policy and subdomain policy both set to reject | 30     |
+| DMARC policy set to quarantine                       | 20     |
+| DMARC reporting active (at least one `rua` address)  | 20     |
+| DMARC percentage set to 100                          | 20     |
+| DNSSEC passes                                        | 20     |
+| DKIM active and valid                                | 20     |
+
+{% hint style="info" %}
+The reject and quarantine awards are mutually exclusive, so a domain reaches 160 only with a full reject policy. A policy of `none` scores nothing for enforcement and adds "DMARC is not being enforced" to the score explanation. Note also that reject only scores where the subdomain policy is reject as well.
+{% endhint %}
+
+{% hint style="info" %}
+DMARC reporting is scored but is not one of the default columns. To see it, open the Extended Info flyout for the domain.
 {% endhint %}
 
 ## Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Add/Modify DKIM Selectors</td><td>This will allow you to update the DKIM Selectors for the selected domain(s)</td><td>true</td></tr><tr><td>Delete from analyser</td><td>Deletes the selected domain(s) from the analyser</td><td>true</td></tr><tr><td>More Info</td><td>This opens an enhanced Extended Info flyout. Here you can view further detail on each test performed. Success/failure is easy to identify through the use of standard red/green coloured icons next to each test. Additional features can help you review the results and dig deeper:</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Add/Modify DKIM Selectors</td><td>Sets the DKIM selectors used when checking the selected domain or domains. Accepts a comma-separated list.</td><td>true</td></tr><tr><td>Delete from analyser</td><td>Removes the selected domain or domains from the analyser.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
-### Reviewing the Extended Information Panel
+## Reviewing the Extended Info Flyout
 
-#### Settings
+The flyout breaks the domain down test by test, with the full record returned for each.
 
-You can click the settings icon to toggle the visibility of additional options for the domain check. Here you can set specific SPF records, a DKIM Selector, or set HTTPS subdomains to check. Click `Check` to run the tests again after configuring your desired options.
+### Settings
 
-#### Results List
+The settings icon reveals additional options for the check. You can supply a specific SPF record to test against, set a DKIM selector, and enable an HTTPS certificate check against a list of subdomains. Click **Check** to rerun the tests with your chosen options.
 
-The test results will display below with the following features:
+### Results
 
-* Easy to identify pass/fail indicators using green check marks for pass and red exclamation marks for fail.
-* Detailed information on the information returned for each test including the same pass/fail for multi-part tests
-* A three dots icon that will open a further Extended Info window allowing you to view the full results of that specific test.
-* A question mark icon that will launch external documentation on how to influence the test results.
+* Pass and fail are shown with green ticks and red exclamation marks, including for the individual parts of multi-part tests.
+* Each test shows the detail of what was returned.
+* The three dots icon opens a further panel with the full result of that specific test.
+* The question mark icon opens external documentation explaining how to influence that test's result.
 
 ## Common Problems
 
 * This feature requires that your Secure Application Model (SAM) app has the delegated permission `Domain.Read.All`.
-* You must give adequate time for the Best Practice Analyser to run. In an environment with 100 tenants this takes on average 2 minutes.
-* Check that your permissions are correct by navigating to **CIPP > Application Settings > Permissions** and review the results of Permissions Check.
-* Make sure both CIPP-API and CIPP are fully up to date. There is extensive logging in the log files in the CIPP-API Function App.
+* Allow enough time for the analysis to complete. In an environment with 100 tenants this takes around two minutes.
+* Check your permissions under **CIPP > Application Settings > Permissions** and review the Permissions Check results.
+* Make sure both CIPP-API and CIPP are fully up to date. There is extensive logging in the CIPP-API Function App.
 
 ***
 
