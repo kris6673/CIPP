@@ -1,5 +1,5 @@
 ---
-icon: hard-drive
+icon: cloud
 ---
 
 # Teams & SharePoint

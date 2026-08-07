@@ -8,7 +8,7 @@ The properties returned are for the Exchange PowerShell command `Get-Mailbox` wi
 
 ## Table Actions
 
-<table><thead><tr><th>Actions</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Block Sign In</td><td>Blocks sign in for the selected shared mailbox(es)</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Actions</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Block Sign In</td><td>Blocks sign in for the selected shared mailbox(es)</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 ***
 

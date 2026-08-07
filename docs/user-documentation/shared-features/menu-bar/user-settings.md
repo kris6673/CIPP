@@ -1,47 +1,93 @@
 # User Preferences
 
-The User Preferences page provides a tailored interface for users to manage and configure their individual settings related to general preferences, appearance, and offboarding defaults. This document outlines the functionalities available on the User Settings page.
+The Preferences page holds the interface settings that control how CIPP looks and behaves for you, along with defaults used elsewhere in the application. Most settings on this page can be saved either for your own account or for all users of the instance, chosen from the Actions card before saving. Where a setting is saved for all users, an individual user's own preference takes precedence over it.
+
+The page opens on whichever scope currently applies to you: your own settings if you have saved any, and the all-users settings if you have not.
 
 ## General Settings
 
-In this section, users can manage general settings related to their account and workspace:
+| Setting                                   | Description                                                                                                                                                                                                                                                                                                                                                                                  |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Default usage location for users          | The country pre-selected as the usage location when creating a new user. Required.                                                                                                                                                                                                                                                                                                           |
+| Default Page Size                         | How many rows tables show per page by default, chosen from 25, 50, 100, or 250. Required.                                                                                                                                                                                                                                                                                                    |
+| Default test suite on the Home page       | The test suite whose results are shown on the Home page by default, chosen from your saved test reports.                                                                                                                                                                                                                                                                                     |
+| Added Attributes when creating a new user | Additional user attributes to make available on the new user form. Anything selected here appears as an extra field when creating a user. The available attributes are `consentProvidedForMinor`, `employeeId`, `employeeHireDate`, `employeeLeaveDateTime`, `employeeType`, `faxNumber`, `legalAgeGroupClassification`, `officeLocation`, `otherMails`, `showInAddressList`, and `sponsor`. |
+| Save last used table filter               | When enabled, the filter you last applied to a table is remembered and re-applied the next time you open it.                                                                                                                                                                                                                                                                                 |
 
-* **Default new user usage location**: This setting allows users to specify the default user location when creating or editing a user.
-* **Default Page Size**: Set the default page size for tables across CIPP.
-* **Added Attributes when creating a new user:** Users can select additional user object attributes that are available when creating a new user.
+{% hint style="info" %}
+**Default Page Size** sets the starting value only. An individual table's own rows-per-page control offers 500 as well, and choosing it there applies for as long as you stay on that page.
+{% endhint %}
 
 ## Navigation Settings
 
-This section will allow you to alter the display format for bookmarks.
+| Setting                | Description                                                           |
+| ---------------------- | --------------------------------------------------------------------- |
+| Show Sidebar Bookmarks | Shows your bookmarked pages in the sidebar.                           |
+| Show Popover Bookmarks | Shows your bookmarked pages in a popover opened from the menu bar.    |
+| Bookmark Reorder Mode  | How bookmarks are reordered: with Arrow Buttons, or by Drag and Drop. |
+| Compact Navigation     | Reduces the size of the navigation menu so more of it fits on screen. |
 
-* **Show Sidebar Bookmarks:** This will enable bookmarks in the sidebar
-* **Show Popover Bookmarks:** This will enable bookmarks in the menu bar
-* **Bookmark Reorder Mode:** "Arrow Buttons" will make it so you click arrows to sort bookmarks while "Drag and Drop" is as labelled.
-* **Compact Navigation:** This will change the left-hand menu into a denser display.&#x20;
+## Offboarding Default Settings
 
-## Offboarding Defaults
+Sets which offboarding options are pre-selected when you offboard a user, so that routine offboardings do not have to be configured each time. These are defaults only and can still be changed for an individual offboarding.
 
-This section provides you the ability to set offboarding defaults, this allows you to easily preselect your predefined offboarding preferences.
+A label on the card indicates which defaults are currently in effect: **Using Tenant Defaults**, **Using User Defaults**, **Using All Users Defaults**, or **Using Default Settings** where none have been saved.
 
-## CIPP Roles
+| Setting                                       | Description                                                            |
+| --------------------------------------------- | ---------------------------------------------------------------------- |
+| Convert to Shared Mailbox                     | Converts the user's mailbox to a shared mailbox.                       |
+| Remove from all groups                        | Removes the user from every group they belong to.                      |
+| Hide from Global Address List                 | Hides the user's mailbox from the address list.                        |
+| Remove Licenses                               | Removes all licences assigned to the user.                             |
+| Cancel all calendar invites                   | Cancels the meetings the user has organised.                           |
+| Revoke all sessions                           | Signs the user out of all active sessions.                             |
+| Remove users mailbox permissions              | Removes the permissions the user holds on other mailboxes.             |
+| Remove users calendar permissions             | Removes the permissions the user holds on other calendars.             |
+| Remove all Rules                              | Removes the inbox rules on the user's mailbox.                         |
+| Reset Password                                | Resets the user's password.                                            |
+| Keep copy of forwarded mail in source mailbox | Where mail is being forwarded, retains a copy in the original mailbox. |
+| Delete user                                   | Deletes the user account.                                              |
+| Remove all Mobile Devices                     | Removes the user's registered mobile devices.                          |
+| Disable Sign in                               | Blocks the user from signing in.                                       |
+| Remove all MFA Devices                        | Removes the user's registered multi-factor authentication methods.     |
+| Remove Teams Phone DID                        | Removes the phone number assigned to the user in Teams.                |
+| Clear Immutable ID                            | Clears the user's immutable ID.                                        |
+| Disable OneDrive Sharing Links                | Disables the sharing links the user created in OneDrive.               |
 
-This will display the active roles for the logged in user.
-
-## Actions
-
-* **Save Settings**: Save the modified settings for the individual user.
-* **Save for All Users**: If the user has admin privileges, they have the option to save the modified settings for all users within the tenant, this will overwrite all personal settings and be force on each full refresh of a page.
-
-## Developer Options
-
-* Enable TanStack Query Tools
+A **Send results to** section chooses where the outcome of an offboarding is reported, with options for Webhook, E-mail, and PSA.
 
 ## Portal Links Configuration
 
-This will allow you to toggle on and off the various portal links displayed in the [tenant-select.md](tenant-select.md "mention") or on the Portals dropdown on the [dashboard](../../dashboard/ "mention").
+Chooses which Microsoft portal shortcuts appear in the tenant information flyout. All are enabled by default; switch off any you do not use to shorten the list.
+
+The available portals are M365, Exchange, Entra, Teams, Azure, Intune, SharePoint, Security, Purview, Power Platform, and Power BI. The **Manage Tenant** entry is always shown and cannot be switched off. See [tenant-select.md](tenant-select.md "mention").
+
+## Developer Options
+
+Diagnostic options intended for troubleshooting and development.
+
+| Option               | Description                                                                                                                                         |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TanStack Query Tools | Enables or disables the query developer tools, used for inspecting how data is fetched and cached.                                                  |
+| Advanced Views       | Enables or disables advanced views, which reveal diagnostic pages that are otherwise hidden from day-to-day use, such as audit-log Search Coverage. |
+
+{% hint style="info" %}
+These two take effect the moment you click them, and are not part of what the **Save Changes** button commits. They are stored in the browser you are using, so they apply only to you on this device and cannot be set for all users.
+{% endhint %}
+
+## CIPP Roles
+
+A read-only card lists the CIPP roles held by the account you are signed in as, so you can confirm what your access allows. Roles cannot be changed here.
+
+## Saving Your Preferences
+
+The Actions card controls who your changes apply to and commits them.
+
+| Control       | Description                                                                                                                                                                     |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| User selector | Chooses whether the settings are saved for Current User or for All Users. Selecting a different option reloads the page's values to show the settings that apply to that scope. |
+| Save Changes  | Saves the settings for the selected scope. The button is unavailable while any required field is empty or invalid, and a message confirms the save or reports an error.         |
 
 ***
 
-### Feature Requests / Ideas
-
-We value your feedback and ideas. Please raise any [feature requests](https://github.com/KelvinTegelaar/CIPP/issues/new?assignees=\&labels=enhancement%2Cno-priority\&projects=\&template=feature.yml\&title=%5BFeature+Request%5D%3A+) on GitHub.
+{% include "../../../../.gitbook/includes/feature-request.md" %}

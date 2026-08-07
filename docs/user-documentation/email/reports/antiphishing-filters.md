@@ -11,7 +11,7 @@ The properties returned are for the combination of the following Exchange PowerS
 
 ## Table Actions
 
-<table><thead><tr><th></th><th></th><th data-type="checkbox"></th></tr></thead><tbody><tr><td>Enable Rule</td><td>Enables the selected filter(s)</td><td>true</td></tr><tr><td>Disable Rule</td><td>Disables the selected filter(s)</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th></th><th></th><th data-type="checkbox"></th></tr></thead><tbody><tr><td>Enable Rule</td><td>Enables the selected filter(s)</td><td>true</td></tr><tr><td>Disable Rule</td><td>Disables the selected filter(s)</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 ***
 

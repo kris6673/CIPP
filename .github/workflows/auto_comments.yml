@@ -37,13 +37,15 @@ jobs:
             Hello,
 
             Thank you for your interest in improving CIPP! 
-            To keep our development process focused and manageable, **feature requests are limited to paying users**. This policy helps us prioritize improvements that directly benefit those actively supporting CIPP and ensures we can sustain our development and support.
+            To keep our development process focused and manageable, **feature requests are limited to paying users**. This policy helps us prioritise improvements that directly benefit those actively supporting CIPP and ensures we can sustain our development and support.
 
             When a sponsor makes a feature request, their support covers training, development, documentation, and security checks. Allowing non-sponsor requests could lead to a backlog that slows down updates and stretches resources thin, ultimately affecting the quality and sustainability of CIPP.
 
             While we’ve closed this request, we appreciate your input. You’re always welcome to participate in ongoing discussions or contribute to open issues. If you are a developer, feel free to open a PR that includes your feature request or comment "**I’d like to work on this!**" to assign the issue to yourself.
 
-            **Did you get this notification in error?** Reply with a screenshot of your sponsorship payment and we’ll reopen the issue.
+            **Organisation sponsor?** If your company sponsors CIPP, make sure your GitHub account is publicly linked to the sponsoring organisation. Go to the organisation page on GitHub, select **People**, and ensure your membership shows as **Public** (not Private). If your membership is private, we won't be able to verify that you're covered by the organisation's sponsorship.
+
+            **Did you get this notification in error?** Reply with a screenshot of your sponsorship payment or public organisation membership and we'll reopen the issue.
 
             _Thank you for understanding,_  
             **The CIPP Team**
@@ -57,7 +59,7 @@ jobs:
           body: |
             Hello,
 
-            Thank you for reaching out! This report has been classified as a **support request** rather than a bug or feature request. To keep our development process focused, support requests are limited to paying users. This policy allows us to prioritize resources for those actively supporting CIPP, helping us maintain high-quality development and support.
+            Thank you for reaching out! This report has been classified as a **support request** rather than a bug or feature request. To keep our development process focused, support requests are limited to paying users. This policy allows us to prioritise resources for those actively supporting CIPP, helping us maintain high-quality development and support.
 
             Sponsors can contact our helpdesk directly via email for assistance with any issues or questions. For non-sponsor support, please refer to our documentation and community discussions—many questions have been answered there.
 

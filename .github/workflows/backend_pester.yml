@@ -1,0 +1,121 @@
+---
+name: Backend Pester
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend_pester.yml'
+  # Commits pushed straight to dev never open a PR, so the trigger above never sees
+  # them. Runs half an hour ahead of the nightly container build so a red suite
+  # surfaces before that image is published.
+  schedule:
+    - cron: '30 22 * * *'
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
+  cancel-in-progress: true
+jobs:
+  pester:
+    if: github.repository_owner == 'CyberDrain'
+    name: Pester
+    runs-on: ubuntu-latest
+    # Checkout and artifact upload only; nothing is written back to the repo.
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # GitHub only fires schedules from the default branch, so a scheduled run
+          # would otherwise test main. dev is where the unreviewed commits land.
+          # PR and manual runs keep their own ref.
+          ref: ${{ github.event_name == 'schedule' && 'dev' || github.ref }}
+      # The runner image ships a Pester, but not necessarily 5.x, and the suite uses the
+      # Pester 5 Should -Invoke / -ParameterFilter syntax throughout.
+      - name: Install Pester 5
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name Pester -MinimumVersion 5.0 -Force -Scope CurrentUser -SkipPublisherCheck
+      # The tests dot-source the function under test and stub its dependencies, so nothing
+      # has to be built or hosted first - no ModuleBuilder, no Azurite, no Craft.
+      # -CI adds the NUnit result file; the exit code is the failed-test count regardless.
+      - name: Run the Pester suite
+        shell: pwsh
+        run: ./backend/Tests/Invoke-CippTests.ps1 -CI
+      # Renders the NUnit file into the run's summary page so a failure is readable
+      # without opening the log. Runs on failure too - that is the case it exists for.
+      - name: Publish results to the job summary
+        if: always()
+        shell: pwsh
+        run: |
+          $Path = 'backend/Tests/TestResults.xml'
+          $Out = $env:GITHUB_STEP_SUMMARY
+          if (-not (Test-Path $Path)) {
+              "## Backend Pester`n`n> No result file was produced - the suite failed before Pester could report." |
+                  Out-File -FilePath $Out -Append -Encoding utf8
+              exit 0
+          }
+
+          [xml]$Xml = Get-Content -LiteralPath $Path -Raw
+          $Root = $Xml.'test-results'
+          $Total = [int]$Root.total
+          $Failed = [int]$Root.failures + [int]$Root.errors
+          $Skipped = [int]$Root.skipped + [int]$Root.ignored + [int]$Root.'not-run' + [int]$Root.inconclusive
+          $Passed = $Total - $Failed - $Skipped
+          $Duration = [math]::Round([double]$Root.'test-suite'.time, 2)
+
+          # Direct children of the top-level 'Pester' suite are one per *.Tests.ps1 file.
+          $Files = $Xml.SelectNodes('/test-results/test-suite/results/test-suite')
+          # Skipped cases are also success="False" (result="Ignored"), so match on result.
+          $FailedCase = ".//test-case[@result='Failure' or @result='Error']"
+          $FailedFiles = @($Files | Where-Object { $_.SelectNodes($FailedCase).Count -gt 0 })
+          $FilesFailed = $FailedFiles.Count
+          $FilesPassed = $Files.Count - $FilesFailed
+
+          $Icon = if ($Failed -gt 0) { ':x:' } else { ':white_check_mark:' }
+          $Headline = if ($Failed -gt 0) { "**$Failed of $Total tests failed**" } else { "**All $Total tests passed**" }
+
+          $Lines = @(
+              '## :test_tube: Backend Pester'
+              ''
+              "$Icon $Headline"
+              ''
+              '| | Passed | Failed | Skipped | Total |'
+              '| :-- | --: | --: | --: | --: |'
+              "| **Test Files** | $FilesPassed | $FilesFailed | - | $($Files.Count) |"
+              "| **Tests** | $Passed | $Failed | $Skipped | $Total |"
+              ''
+              "Duration ``${Duration}s``"
+          )
+
+          if ($Failed -gt 0) {
+              $Lines += @('', '<details open><summary>Failed tests</summary>', '')
+              $Shown = 0
+              foreach ($File in $FailedFiles) {
+                  $Lines += "**$(Split-Path $File.name -Leaf)**"
+                  $Lines += ''
+                  foreach ($Case in $File.SelectNodes($FailedCase)) {
+                      if ($Shown -ge 50) { break }
+                      $Shown++
+                      $Lines += "- ``$($Case.name)``"
+                      $Message = ($Case.failure.message -split "`n" | Where-Object { $_.Trim() } | Select-Object -First 1)
+                      if ($Message) { $Lines += "  - $($Message.Trim())" }
+                  }
+                  $Lines += ''
+                  if ($Shown -ge 50) { $Lines += '_Truncated at 50 failures - see the run log for the rest._'; break }
+              }
+              $Lines += '</details>'
+          }
+
+          $Lines -join "`n" | Out-File -FilePath $Out -Append -Encoding utf8
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pester-results
+          path: backend/Tests/TestResults.xml
+          if-no-files-found: warn

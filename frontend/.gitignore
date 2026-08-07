@@ -3,3 +3,9 @@ node_modules/
 out/
 .env.local
 .env.*.local
+
+# storybook / vitest
+*storybook.log
+storybook-static
+build-storybook
+coverage/

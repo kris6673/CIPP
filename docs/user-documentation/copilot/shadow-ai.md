@@ -12,14 +12,6 @@ This will allow you to generate an executive summary of the shadow AI in the ten
 
 </details>
 
-<details>
-
-<summary>Sync data</summary>
-
-Allows you to queue a refresh of the cached data present in the page.
-
-</details>
-
 ## Overview
 
 The overview contains several information cards that you can use to get a view of the tenant's shadow IT.
@@ -118,7 +110,7 @@ Lists AI-related applications that have been consented into the tenant in Entra 
 
 ### Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Mark as Company Sanctioned</td><td>Shown when the row's <code>status</code> is not <code>Sanctioned</code>. Marks the tool sanctioned for the tenant so <code>risk</code> reports as <code>Informational</code> and <code>status</code> becomes <code>Sanctioned</code>. Refetches the report so cards, charts, and both tables update.</td><td>true</td></tr><tr><td>Remove Company Sanctioned Status</td><td>Shown when the row's <code>status</code> is <code>Sanctioned</code>. Removes the sanction so the catalogue risk level applies again and <code>status</code> returns to <code>Unsanctioned</code>. Refetches the report.</td><td>true</td></tr><tr><td>Application Users</td><td>Opens a side drawer listing the app's per-user sign-in activity over the last 7 days (<code>userPrincipalName</code>, <code>userDisplayName</code>, sign-in count, and last sign-in time). The data depends on the same P1 sign-in enrichment.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Mark as Company Sanctioned</td><td>Shown when the row's <code>status</code> is not <code>Sanctioned</code>. Marks the tool sanctioned for the tenant so <code>risk</code> reports as <code>Informational</code> and <code>status</code> becomes <code>Sanctioned</code>. Refetches the report so cards, charts, and both tables update.</td><td>true</td></tr><tr><td>Remove Company Sanctioned Status</td><td>Shown when the row's <code>status</code> is <code>Sanctioned</code>. Removes the sanction so the catalogue risk level applies again and <code>status</code> returns to <code>Unsanctioned</code>. Refetches the report.</td><td>true</td></tr><tr><td>Application Users</td><td>Opens a side drawer listing the app's per-user sign-in activity over the last 7 days (<code>userPrincipalName</code>, <code>userDisplayName</code>, sign-in count, and last sign-in time). The data depends on the same P1 sign-in enrichment.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 ***
 

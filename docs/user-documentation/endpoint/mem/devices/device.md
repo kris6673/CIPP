@@ -1,41 +1,69 @@
 # View Device
 
-This page will allow you to view in depth information on the device you selected from the [devices.md](../../../identity/administration/devices.md "mention") page.
+The View Device page shows everything CIPP knows about a single Intune-managed device, and is where you act on that device individually. It brings together the device's own details, the compliance and configuration policies applied to it, the applications detected on it, the users associated with it, and the groups it belongs to. The full set of device actions is available from the page header, so a device can be synced, wiped, or renamed without returning to the device list.
 
-## Page Actions
+The page header shows the device's name, with copyable chips for the device name and device ID, how long ago the device last synced, and a **View in Intune** link that opens the device in the Microsoft Intune admin centre.
 
-These page actions are nearly identical to the [#table-actions](../../../identity/administration/devices.md#table-actions "mention") from the Devices page. Please see that reference for information on the actions and what they do.
+## Device Actions
 
-## Device Quick View
-
-* Device Name: This is a click-to-copy field to allow you to see the name of the selected device
-* Device Id: This is a click-to-copy field to allow you to see the deviceId of the selected device
-* Last Sync: The relative time since the device's last sync with Intune
-* View in Intune: This will launch the Intune portal to the selected device. NOTE: To view the Intune portal, your user account - not the CIPP service account - will need rights through either direct assignment if the partner tenant or GDAP if a client tenant.
+Every action available on the Devices list is available here from the [.](./ "mention") page, applied to this device alone.&#x20;
 
 ## Device Details
 
-This card will output some basic information about the device and the information you can gather from Intune. This includes hardware details like manufacturer, model, serial number, etc. in addition to Intune compliance status, enrolment date, etc.
+| Field            | Description                                                               |
+| ---------------- | ------------------------------------------------------------------------- |
+| Device Name      | The name of the device.                                                   |
+| Device ID        | The device's identifier in Intune.                                        |
+| Operating System | The device's operating system and version.                                |
+| Manufacturer     | The device's manufacturer.                                                |
+| Model            | The device's model.                                                       |
+| Serial Number    | The device's serial number.                                               |
+| Compliance State | Whether the device currently meets the compliance policies applied to it. |
+| Enrolled Date    | When the device was enrolled in Intune.                                   |
+| Last Sync        | When the device last checked in with Intune.                              |
+
+{% hint style="info" %}
+A refresh control on this card reloads the device's details and the sections below it.
+{% endhint %}
 
 ## Compliance Policies
 
-These cards allow you to view the device's compliance to the applicable compliance policies. Each card can be expanded to see the setting being measured and the current state. Compliance will report on a pass, fail, unknown, or no policies status.
+Lists the compliance policies applied to the device, one entry per policy. Each entry shows the policy's name and the state the device is in against it, marked as compliant or flagged for attention, and expands to show the number of settings in the policy and how many setting states were returned.
 
 ## Configuration Policies
 
-These cards allow you to view the device's compliance to the applicable configuration policies. Each card can be expanded to see the setting being measured and the current state. Compliance will report on a pass, fail, unknown, or no policies status.
+Lists the configuration policies applied to the device in the same form as compliance policies: the policy name, the device's state against it, and the setting counts on expansion.
 
 ## Detected Applications
 
-This card will display a list of the applications Intune has detected as installed on the computer.
+Reports the applications Intune has detected on the device, with a count in the section header. Expanding the entry shows the full list.
+
+| Column       | Description                           |
+| ------------ | ------------------------------------- |
+| Display Name | The name of the detected application. |
+| Version      | The version detected on the device.   |
+| Platform     | The platform the application runs on. |
 
 ## Associated Users
 
-This card will display a list of the users associated with the device. The table has an action to View User that will allow you to jump to [user](../../../identity/administration/users/user/ "mention") for the selected user.
+Lists the users associated with the device. Expanding the entry shows the full list, and a **View User** action on each row opens that user's page in CIPP.
+
+| Column              | Description               |
+| ------------------- | ------------------------- |
+| Display Name        | The user's name.          |
+| User Principal Name | The user's sign-in name.  |
+| Mail                | The user's email address. |
 
 ## Memberships
 
-This card will display a list of the groups the device is a member of.
+Lists the groups the device belongs to. Expanding the entry shows the full list, and an **Edit Group** action on each row opens that group for editing.
+
+| Column           | Description                            |
+| ---------------- | -------------------------------------- |
+| Display Name     | The name of the group.                 |
+| Group Types      | The group's type.                      |
+| Security Enabled | Whether the group is security enabled. |
+| Mail Enabled     | Whether the group is mail enabled.     |
 
 ***
 

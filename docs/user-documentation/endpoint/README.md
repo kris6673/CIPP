@@ -1,5 +1,5 @@
 ---
-icon: cloud
+icon: laptop
 ---
 
 # Intune

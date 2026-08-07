@@ -7,43 +7,79 @@ description: >-
 
 # Domain Analyser Updates & Data Refreshing
 
-### Domain Visibility
+## How the Analyser Gets Its Data
 
-Sometimes a domain is missing from the analyser even though it appears elsewhere in the dashboard. Common reasons include:
+The Domain Analyser does not query Microsoft Graph for your domain list. It reads from CIPP's cached tenant data, then performs its own DNS lookups against the domains it finds there.
 
-* Only **verified Microsoft 365 domains** are included.
-* Certain service domains (for example `*.microsoftonline.com`, `exclaimer.cloud`, `codetwo.online`) are automatically excluded.
-* If the tenant’s **default domain was changed**, the “All Tenants” view and the tenant-specific view may temporarily differ until the next scheduled run.
-* Newly added domains only appear after the next nightly analysis or if you refresh manually.
+This two-stage arrangement explains most of the timing surprises on this page. A domain has to reach CIPP's cache before the analyser can see it, and no amount of re-running the analysis will pull in a domain the cache has not collected yet. Where a tenant has no cached domain data at all, the analyser logs that analysis is being skipped until data collection completes, and moves on.
 
-***
+The analysis itself runs automatically once a day, in the early hours of the morning in your deployment's configured timezone.
 
-### Deleting & Restoring Domains
+## Domain Visibility
 
-* Clicking **Delete from analyser** removes the domain from CIPP’s list, but it **does not remove it from Microsoft 365**.
-* Deleted domains will reappear automatically during the nightly run (**00:00 UTC**).
-* You can restore them immediately by clicking **Run Analysis Now**.
-* If a domain was actually removed from Microsoft 365 or is no longer verified, it will not return.
+Sometimes a domain is missing from the analyser even though it appears elsewhere in CIPP. The common reasons are:
 
-***
+| Reason                  | Detail                                                                                                                      |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Not verified            | Only verified domains are analysed. A domain added but not yet verified in Microsoft 365 is ignored.                        |
+| Excluded service domain | CIPP skips domains belonging to Microsoft and to known cloud signature and voice providers. See below.                      |
+| Tenant excluded in CIPP | If a tenant is marked as excluded, the analyser removes that tenant's domains from its data rather than just skipping them. |
+| Repeated Graph failures | Tenants with a high accumulated Graph error count are skipped entirely until the underlying access problem is resolved.     |
+| Not yet cached          | A newly added domain appears only once CIPP's tenant data collection has picked it up.                                      |
 
-### Refreshing Results
+### Excluded Domains
 
-Use **Run Analysis Now** if you want to refresh the analyser outside the normal daily cycle. This is useful for:
+The following patterns are never analysed, because they either belong to Microsoft or are used by cloud signature and voice services where the DNS records are outside your control:
 
-* Refreshing results after adding or verifying a domain.
-* Repopulating a deleted domain without waiting 24 hours.
-* Forcing an update if you suspect results are stale.
+* `*.microsoftonline.com`
+* `*.mail.onmicrosoft.com`
+* `*.exclaimer.cloud`
+* `*.excl.cloud`
+* `*.codetwo.online`
+* `*.call2teams.com`
+* `*.signature365.net`
+* `*.myteamsconnect.io`
+* `*.teams.dstny.com`
+* `*.msteams.8x8.com`
+* `*.ucconnect.co.uk`
+* `*.teams-sbc.dk`
 
 {% hint style="info" %}
-For most tenants, this is rarely needed. The nightly job keeps results up to date automatically.
+The same exclusions are applied by the Add DKIM standard, so a domain that is invisible here will also be skipped there.
 {% endhint %}
+
+## Deleting and Restoring Domains
+
+**Delete from analyser** removes the domain from CIPP's own records. It does not remove the domain from Microsoft 365, and it does not change any DNS.
+
+Because the analyser rebuilds its list from cached tenant data on each run, a deleted domain reappears at the next daily run, or sooner if you use **Run Analysis Now**. If the domain was genuinely removed from Microsoft 365, or is no longer verified, it will not come back.
+
+## Refreshing Results
+
+Use **Run Analysis Now** to refresh outside the daily cycle. It is worth doing when:
+
+* You have changed DNS records and want to confirm the new score.
+* You want to repopulate a domain you deleted, without waiting for the next run.
+* You suspect the stored results are stale.
+
+{% hint style="warning" %}
+Re-running the analysis re-checks DNS for domains CIPP already knows about. It does not refresh the underlying tenant domain list, so a domain added to Microsoft 365 in the last few minutes may still not appear. If a newly verified domain is missing, the tenant data cache is the thing that has not caught up, not the analyser.
+{% endhint %}
+
+{% hint style="info" %}
+For most tenants this is rarely needed. The daily job keeps results current on its own.
+{% endhint %}
+
+## Troubleshooting
+
+| Symptom                                                  | What to check                                                                                                              |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Domain missing after adding it                           | Confirm it is verified in Microsoft 365, then allow time for CIPP's tenant data to refresh before re-running the analysis. |
+| Domain visible elsewhere in CIPP but not in the analyser | Check it is not on the excluded list above, and that it is verified.                                                       |
+| All of a tenant's domains have vanished                  | Check whether the tenant has been excluded in CIPP, which clears its domains from the analyser.                            |
+| A tenant is never analysed                               | Check the tenant for repeated Graph failures. Tenants with a high error count are skipped until access is fixed.           |
+| Results not updating at all                              | Confirm CIPP and CIPP-API are up to date, and review the Domain Analyser entries in the CIPP logs.                         |
 
 ***
 
-### Troubleshooting
-
-* **Domain missing after adding** → Run Analysis Now or wait until midnight UTC.
-* **Domain missing in analyser but visible in dashboard** → Often caused by default vs. initial domain mismatch; re-run analysis.
-* **Deleted domain not returning** → Confirm the domain still exists and is verified in Microsoft 365.
-* **Analysis not updating** → Check CIPP permissions (`Domain.Read.All`) and make sure both CIPP and CIPP-API are up to date.
+{% include "../../../../../.gitbook/includes/feature-request.md" %}

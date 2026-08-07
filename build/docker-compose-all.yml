@@ -1,3 +1,18 @@
+# macOS/Linux dev loop (frontend runs in a container too — see docker-compose-no-frontend.yml
+# for the Windows loop, where node_modules over a bind mount is too slow).
+#
+# START WITH:
+#   docker compose -p cipp -f docker-compose-all.yml up --pull always --watch
+#
+# The --watch flag is REQUIRED. The `develop: watch:` blocks below are what restart cipp-api on
+# a backend source edit, and they are inert under a plain `up`/`up -d` — edit a .ps1, nothing
+# happens. Windows gets this via Start-Cipp-Dev-Windows-docker.ps1, which runs `up --watch` in
+# its own terminal; here it has to be on the command line. Watch runs in the foreground, so
+# leave it in a dedicated terminal (Ctrl-C stops the stack).
+#
+# -p cipp keeps the project name stable regardless of the directory the command is run from.
+#
+# Ports: 5196 CRAFT (browse the app here), 3000 Next.js dev, 6006 Storybook, 10000-10002 azurite.
 services:
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite:latest
@@ -21,6 +36,31 @@ services:
       - NODE_OPTIONS=--max-old-space-size=8192
     volumes:
       - cipp-ng_azurite-data:/workspace
+    networks:
+      - cipp-network
+
+  cipp-manifests:
+    # DEV ONLY seed step, runs to completion before cipp-api starts.
+    #
+    # Craft's DevExpandModuleExports (below) rewrites FunctionsToExport = '*' to the explicit
+    # Public/*.ps1 list with a plain in-place write. Pointed at the bind-mounted source that
+    # dirties backend/Modules/*.psd1 on every run. Instead, copy those manifests into the
+    # gitignored .devmanifests/ and mount the copies over the source (see cipp-api volumes) —
+    # the rewrite lands on the copy and the working tree stays clean. Production is unaffected:
+    # the image build bakes explicit exports via ModuleBuilder and never runs this path.
+    #
+    # Copies are refreshed from source on every `up`, so genuine manifest edits (version bumps,
+    # RequiredModules, ...) still flow through. The module list must match App__Worker__
+    # DevExpandModules__N and the mount list in cipp-api.
+    image: busybox:latest
+    container_name: cipp-manifests
+    command: >
+      sh -c 'set -e; mkdir -p /out;
+      for m in CIPPStandards CIPPAlerts CIPPTests CIPPDB CippExtensions CIPPActivityTriggers; do
+      cp -f "/src/$$m/$$m.psd1" "/out/$$m.psd1"; done'
+    volumes:
+      - ../backend/Modules:/src:ro
+      - ./.devmanifests:/out
     networks:
       - cipp-network
 
@@ -69,11 +109,25 @@ services:
       # The Next.js dev server runs in a container, if using windows bind mounts are too slow for node_modules
       # you should use the other docker compose file without the frontend container and run the frontend dev server on the host using the start script
       - CRAFT_DEV_FRONTEND_URL=http://cipp-frontend:3000
+      # DEV ONLY: Azure App Service injects REGION_NAME (normalised form, e.g. 'eastus').
+      # Set it here so the region-derived timezone default can be exercised locally -
+      # without it Initialize-CIPPTimezone correctly falls back to UTC. eastus -> America/New_York.
+      #- REGION_NAME=eastus
     volumes:
       - ./config/appsettings.Local.Development.json:/app/appsettings.Development.json:ro
       # Live backend source. rw because runtime permission extraction writes
       # Config/function-permissions.json back into the repo (gitignored).
       - ../backend:/app/API
+      # Writable manifest shims, seeded by cipp-manifests. Each mount shadows a single
+      # .psd1 so DevExpandModuleExports rewrites the copy under .devmanifests/ instead of
+      # the tracked file in backend/Modules. Everything else in the module dir (Public/,
+      # the .psm1 stub) still comes from the bind mount above, so PS edits stay live.
+      - ./.devmanifests/CIPPStandards.psd1:/app/API/Modules/CIPPStandards/CIPPStandards.psd1
+      - ./.devmanifests/CIPPAlerts.psd1:/app/API/Modules/CIPPAlerts/CIPPAlerts.psd1
+      - ./.devmanifests/CIPPTests.psd1:/app/API/Modules/CIPPTests/CIPPTests.psd1
+      - ./.devmanifests/CIPPDB.psd1:/app/API/Modules/CIPPDB/CIPPDB.psd1
+      - ./.devmanifests/CippExtensions.psd1:/app/API/Modules/CippExtensions/CippExtensions.psd1
+      - ./.devmanifests/CIPPActivityTriggers.psd1:/app/API/Modules/CIPPActivityTriggers/CIPPActivityTriggers.psd1
     develop:
       watch:
         - action: restart
@@ -89,7 +143,12 @@ services:
             # container writes this back at startup, would cause a restart loop
             - function-permissions.json
     depends_on:
-      - azurite
+      azurite:
+        condition: service_started
+      # must finish first: without the seeded files Docker would create .devmanifests/*.psd1
+      # as empty directories and every shadowed module would fail to import
+      cipp-manifests:
+        condition: service_completed_successfully
     networks:
       - cipp-network
 
@@ -110,8 +169,60 @@ services:
       - ../frontend:/app
       - cipp-frontend_node_modules:/app/node_modules
       - cipp-frontend_out_dev:/app/out/dev
+    # cipp-storybook shares this container's node_modules volume and must not run its own
+    # `yarn install` against it. A TCP connect to the dev server is the signal that install
+    # finished AND next dev is listening — cheap, and it doesn't wait on a route compile the
+    # way an HTTP request to / would.
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "require('net').connect(3000,'127.0.0.1').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
     depends_on:
       - azurite
+    networks:
+      - cipp-network
+
+  cipp-storybook:
+    # Storybook dev server on http://localhost:6006, driven by frontend/.storybook.
+    #
+    # Deliberately NOT in docker-compose-no-frontend.yml: it reuses cipp-frontend's
+    # node_modules volume, and on the Windows loop that volume doesn't exist (run
+    # `yarn storybook` on the host there instead).
+    image: node:22-slim
+    platform: linux/amd64
+    container_name: cipp-storybook
+    restart: unless-stopped
+    working_dir: /app
+    # No yarn install here — cipp-frontend owns that for the shared node_modules volume, and
+    # depends_on/service_healthy below guarantees it has finished. --host 0.0.0.0 for the same
+    # reason as next dev: the default bind is unreachable from outside the container.
+    #
+    # The playwright install is for @storybook/addon-vitest, which boots vitest in browser mode
+    # inside the dev server — without a browser it throws "Executable doesn't exist" and the
+    # component-test widget is dead. npx resolves the version pinned in package.json, so this
+    # stays correct across playwright bumps. Browsers land in the cached volume below (first run
+    # only); --with-deps installs the apt libs into the container fs, so it re-runs on recreate.
+    command: >
+      sh -c "npx playwright install --with-deps chromium &&
+      npx storybook dev -p 6006 --host 0.0.0.0 --no-open"
+    ports:
+      - "6006:6006"
+    environment:
+      - CHOKIDAR_USEPOLLING=true # story/source edits trigger a rebuild over the bind mount
+      - NODE_OPTIONS=--max-old-space-size=4096
+    volumes:
+      - ../frontend:/app
+      - cipp-frontend_node_modules:/app/node_modules
+      - cipp-storybook_playwright:/root/.cache/ms-playwright
+    depends_on:
+      cipp-frontend:
+        condition: service_healthy
     networks:
       - cipp-network
 
@@ -122,6 +233,8 @@ volumes:
     external: true
   cipp-frontend_out_dev:
     external: true
+  # not external: compose creates this one, it's a throwaway browser cache
+  cipp-storybook_playwright:
 
 networks:
   cipp-network:

@@ -22,7 +22,7 @@ The properties returned are for the Graph resource type `windowsAutopilotDeviceI
 
 ## Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Assign Device</td><td>Opens a modal to select the user to assign the device to</td><td>true</td></tr><tr><td>Rename Device</td><td>Opens a modal to set a new display name for the device</td><td>true</td></tr><tr><td>Edit Group Tag</td><td>Opens a modal to enter a new Autopilot group tag for the device</td><td>true</td></tr><tr><td>Delete Device</td><td>Opens a modal to confirm deletion of the device from Autopilot</td><td>true</td></tr><tr><td>More Info</td><td>Opens the extended information flyout</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Assign Device</td><td>Opens a modal to select the user to assign the device to</td><td>true</td></tr><tr><td>Rename Device</td><td>Opens a modal to set a new display name for the device</td><td>true</td></tr><tr><td>Edit Group Tag</td><td>Opens a modal to enter a new Autopilot group tag for the device</td><td>true</td></tr><tr><td>Delete Device</td><td>Opens a modal to confirm deletion of the device from Autopilot</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 ***
 

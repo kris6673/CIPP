@@ -1,34 +1,68 @@
 # Licenses
 
-On this page you can review the licences that have been excluded from CIPP.
+Excluded licences are SKUs that CIPP leaves out of its licence counts and reporting. The list is seeded with a set of defaults covering free and trial SKUs that would otherwise inflate reports, and you can add or remove entries to suit your own reporting. Exclusions apply across the whole instance rather than per tenant.
 
-### Action Buttons
+## Exclusion Types
 
-<details>
+An exclusion works in one of two ways, shown in the Exclusion Type column.
 
-<summary>Add Excluded License</summary>
+| Type                      | Description                                                                                                                                                                              |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Excluded Everywhere       | The licence is left out of licence reporting, alerts, and the data sent to integrations such as Gradient. This is the default for a newly added exclusion.                               |
+| Excluded from Alerts Only | The licence still appears in licence reports and integration data, but is ignored when alerts are evaluated. Use this for SKUs you want visibility of without being notified about them. |
 
-Here you will be able to add an excluded licence to the table. Basic mode includes a dropdown with a prepopulated list of licences. If you are unable to locate your desired licence, you can switch to Advanced Mode and enter the licences GUID and SKU/Name (e.g. `f30db892-07e9-47e9-837c-80727f46fd3d` for MICROSOFT FLOW FREE)
+Separately from the exclusion type, each entry carries a flag controlling whether the licence still appears in CIPP's licence pickers.
 
-If you would like a complete list of licences and SKU's https://learn.microsoft.com/entra/identity/users/licensing-service-plan-reference
+{% hint style="info" %}
+Excluding a licence hides it from reporting, but it does not stop the licence existing in the tenant or prevent it being assigned in Microsoft 365. Allow an excluded licence back into the pickers with **Show in License Dropdowns** when you still need to assign it from within CIPP.
+{% endhint %}
 
-</details>
+## Page Actions
 
-<details>
+| Button                                                              | Description                                                          |
+| ------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| [#add-excluded-license](licenses.md#add-excluded-license "mention") | Adds a licence to the exclusion list.                                |
+| [#restore-defaults](licenses.md#restore-defaults "mention")         | Re-applies CIPP's default exclusions from its bundled configuration. |
 
-<summary>Restore Defaults</summary>
+### Add Excluded License
 
-This will allow you to be able to reset your excluded licences to CIPP defaults. Enable `Full Reset` to clear the table before restoring the CIPP defaults. Leave it enabled and CIPP will ensure the defaults are included in the excluded licences list.
+The dialog offers two ways of identifying the licence.
 
-</details>
+| Field          | Description                                                                                                                                                                                                |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Advanced Mode  | Switches from picking a known licence to entering the details by hand. Leave off unless the licence you want is not in the list.                                                                           |
+| Select License | The licence to exclude, chosen from CIPP's built-in list of Microsoft 365 SKUs. Where two products share a display name, the GUID is appended so you can tell them apart. Shown when Advanced Mode is off. |
+| GUID           | The SKU identifier of the licence, for example `f30db892-07e9-47e9-837c-80727f46fd3d`. Shown when Advanced Mode is on.                                                                                     |
+| SKU Name       | The display name to record against the GUID, for example `MICROSOFT FLOW FREE`. Shown when Advanced Mode is on.                                                                                            |
+
+{% hint style="info" %}
+Microsoft publish the full list of product names, SKU identifiers and service plans in their [licensing service plan reference](https://learn.microsoft.com/entra/identity/users/licensing-service-plan-reference), which is the place to look up a GUID for Advanced Mode.
+{% endhint %}
+
+A licence added this way is set to Excluded Everywhere. Change it afterwards with the **Only Exclude from Alerts** row action if you want the narrower behaviour.
+
+### Restore Defaults
+
+| Field                                                        | Description                                                                                                                                                                     |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Full Reset (clear all entries including manually added ones) | Clears the entire list before restoring the defaults. Leave this off to add any missing defaults while keeping your own entries and any changes you have made to existing ones. |
+
+{% hint style="danger" %}
+A full reset deletes every entry in the list, including licences you added yourself and any exclusions you switched to alerts only. There is no undo, so leave the switch off unless you genuinely want to start again.
+{% endhint %}
 
 ## Table Details
 
-The table will display the product name and GUID for any licence that you've globally excluded from CIPP.
+| Column                   | Description                                                                         |
+| ------------------------ | ----------------------------------------------------------------------------------- |
+| Product Display Name     | The name of the excluded licence.                                                   |
+| GUID                     | The SKU identifier of the licence.                                                  |
+| Exclusion Type           | Whether the licence is excluded everywhere or only from alerts.                     |
+| Show In License Dropdown | Whether the licence still appears in CIPP's licence pickers despite being excluded. |
 
 ## Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Only Exclude from Alerts</td><td>This will allow the selected exclusions(s) to only apply to alerts. The licence will be available on other reports, for user assignment, etc.</td><td>true</td></tr><tr><td>Delete Exclusion</td><td>Deletes the selected exclusions(s)</td><td>true</td></tr><tr><td>More Info</td><td>Opens Extended Info flyout</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Only Exclude from Alerts</td><td>Narrows the exclusion so the licence is ignored by alerts but still appears in reports and integration data.</td><td>true</td></tr><tr><td>Show in License Dropdowns</td><td>Makes the licence selectable in CIPP's licence pickers again. Only offered for licences currently hidden from them.</td><td>true</td></tr><tr><td>Hide from License Dropdowns</td><td>Removes the licence from CIPP's licence pickers. Only offered for licences currently shown in them.</td><td>true</td></tr><tr><td>Delete Exclusion</td><td>Removes the licence from the exclusion list, so it is counted and reported on again.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 ***
 

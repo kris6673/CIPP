@@ -17,7 +17,7 @@ The properties returned are for the combination of the following four Graph reso
 
 ## Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Edit Script</td><td>Opens a modal to edit the script file. Click the save icon in the top right to save changes or X to close out.</td><td>true</td></tr><tr><td>Delete Script</td><td>Opens a modal to confirm deletion of the script</td><td>true</td></tr><tr><td>More Info</td><td>Opens Extended Info flyout</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Edit Script</td><td>Opens a modal to edit the script file. Click the save icon in the top right to save changes or X to close out.</td><td>true</td></tr><tr><td>Delete Script</td><td>Opens a modal to confirm deletion of the script</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 ***
 
