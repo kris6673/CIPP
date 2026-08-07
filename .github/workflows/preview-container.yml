@@ -105,10 +105,11 @@ jobs:
           echo "slug=${SLUG}" >> $GITHUB_OUTPUT
           echo "image_tag=${SLUG}" >> $GITHUB_OUTPUT
           # Keep the "preview." marker in the version regardless of tag prefix, so a build image
-          # is identifiable as one at runtime the same way +dev./+nightly. builds are.
-          echo "app_version=${BASE}+preview.${SLUG}.${SHORT_SHA}" >> $GITHUB_OUTPUT
+          # is identifiable as one at runtime the same way +dev./+nightly. builds are. The slug
+          # already starts with "preview-" for preview/** branches, so strip that to avoid
+          # "+preview.preview-foo"; other prefixes (fix-, feat-, ...) are kept as-is.
+          echo "app_version=${BASE}+preview.${SLUG#preview-}.${SHORT_SHA}" >> $GITHUB_OUTPUT
           echo "full_sha=${FULL_SHA}" >> $GITHUB_OUTPUT
-          echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
           echo "build_date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
 
           # build/Dockerfile ships the Development appsettings (what the dev channel uses and
@@ -136,6 +137,13 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       # Own key prefix so preview builds do not churn the dev/release frontend caches.
+      # Weekly rotation rather than per-run - see the note in dev-container.yml. It
+      # matters most here: preview builds are the highest-volume of the four, and each
+      # per-run save evicted from the same 10 GB budget the dev/release caches live in.
+      - name: Compute cache epoch
+        id: cache-epoch
+        run: echo "week=$(date -u +%Y-%W)" >> $GITHUB_OUTPUT
+
       - name: Restore frontend build caches
         id: build-cache
         uses: actions/cache@v4
@@ -143,8 +151,9 @@ jobs:
           path: |
             yarn-cache
             next-cache
-          key: cipp-frontend-cache-preview-${{ github.run_id }}
+          key: cipp-frontend-cache-preview-${{ hashFiles('frontend/yarn.lock') }}-${{ steps.cache-epoch.outputs.week }}
           restore-keys: |
+            cipp-frontend-cache-preview-${{ hashFiles('frontend/yarn.lock') }}-
             cipp-frontend-cache-preview-
             cipp-frontend-cache-dev-
 
@@ -164,6 +173,7 @@ jobs:
       # preview shares ONE scope and writes mode=min (final-stage layers only) rather than the
       # mode=max dev/release use. scope=dev is read-only here, for a warm start on a new branch.
       - name: Build and push
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -179,11 +189,12 @@ jobs:
             IMAGE_TAG=${{ steps.version.outputs.image_tag }}
             BUILD_DATE=${{ steps.version.outputs.build_date }}
             DOTNET_REGISTRY=${{ vars.DOTNET_REGISTRY || 'ghcr.io/cyberdrain' }}
-          # Moving tag is what the Release Channel points at; the -<sha> tag is immutable so a
-          # specific build can be pinned or rolled back to.
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}:${{ steps.version.outputs.image_tag }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}:${{ steps.version.outputs.image_tag }}-${{ steps.version.outputs.short_sha }}
+          # One moving tag per branch, deliberately. A second immutable -<shortsha> tag would
+          # double the tag count and the picker entries for every build, and it is not needed to
+          # pin: linuxFxVersion accepts a digest (DOCKER|<image>@sha256:...), and the revision
+          # label below identifies the commit behind whatever the moving tag currently points at.
+          # The moving tag follows the branch, same as :dev and :nightly.
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}:${{ steps.version.outputs.image_tag }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.description=CIPP - Preview Build (${{ steps.version.outputs.slug }})
@@ -196,12 +207,20 @@ jobs:
           {
             echo "### Preview image built"
             echo
+            echo "Built from \`${{ steps.version.outputs.full_sha }}\`."
+            echo
+            echo "Select **${{ steps.version.outputs.image_tag }}** under Settings → Container Management → Release Channel to run it:"
+            echo
             echo '```'
             echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}:${{ steps.version.outputs.image_tag }}"
-            echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}:${{ steps.version.outputs.image_tag }}-${{ steps.version.outputs.short_sha }}"
             echo '```'
             echo
-            echo "Select **${{ steps.version.outputs.image_tag }}** under Settings → Container Management → Release Channel to run it."
+            echo "The tag follows the branch, so a later push replaces it. To hold this exact"
+            echo "build across restarts, set linuxFxVersion to the digest instead:"
+            echo
+            echo '```'
+            echo "DOCKER|${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LC }}@${{ steps.build.outputs.digest }}"
+            echo '```'
             echo
             echo "> Preview images are unsupported and are deleted when the branch is deleted."
           } >> $GITHUB_STEP_SUMMARY
