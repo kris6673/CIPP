@@ -41,3 +41,8 @@ backend/Config/function-parameters.json*
 # NOTE: do NOT exclude *.md here. backend/Modules/CIPPTests ships ~573 markdown files
 # that Invoke-ListTests.ps1 enumerates at runtime, so excluding them would silently
 # strip the in-app compliance test documentation from the image.
+
+# Locally generated static spec copy. The image builds its own and injects it into
+# out/ after `yarn build`; letting a developer's copy into the build context would put
+# it in the COPY frontend/ layer and invalidate the compile on every backend change.
+frontend/public/openapi.json

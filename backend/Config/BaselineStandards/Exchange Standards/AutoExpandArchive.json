@@ -4,8 +4,12 @@
   "cat": "Exchange Standards",
   "tag": [],
   "impact": "Low Impact",
-  "helpText": "Enables auto-expanding archives for the tenant. Does not enable archives for users.",
+  "helpText": "Enables auto-expanding archives for the tenant",
   "executiveText": "Enables automatic expansion of email archive storage when users approach their archive limits, ensuring continuous email retention without manual intervention. This prevents email storage issues and maintains compliance with data retention policies without requiring ongoing administrative management.",
+  "docsDescription": "Enables auto-expanding archives for the tenant. Does not enable archives for users.",
+  "impactColour": "info",
+  "addedDate": "2021-11-16",
+  "powershellEquivalent": "Set-OrganizationConfig -AutoExpandingArchive",
   "recommendedBy": [],
   "requiredCapabilities": [
     "EXCHANGE_S_STANDARD",

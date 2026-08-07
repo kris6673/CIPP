@@ -1,63 +1,69 @@
----
-description: >-
-  This page will allow you to test your conditional access policies before
-  putting them in production. The returned results will show you if the user is
-  allowed or denied access based on the policy.
----
-
 # Conditional Access
 
+This page runs a Conditional Access "what if" evaluation for the user: you describe a sign-in, and CIPP reports which of the tenant's policies would apply to it and why. It is the quickest way to answer questions like whether a new policy would lock someone out, or why an existing one is not catching the sign-ins you expected.
+
 {% hint style="info" %}
-This page works off of conditional access policies that would be applied to the user. Be sure to deploy your test policy in "Report Only" mode to ensure that you can test without breaking the user's login experience.
+The evaluation is a simulation. No sign-in takes place, nothing is written to the tenant, and the user is not affected in any way, so it is safe to run against a live account at any time. The results table reports each policy's state alongside the outcome, so a policy that would apply in report-only mode can be told apart from one that would be enforced.
 {% endhint %}
 
-## How to Test
+## Test Conditional Access Policy
 
 {% stepper %}
 {% step %}
-### Select the Application to Test
+### Select the application to test
 
-This drop down contains the list of applications available for login scenarios
+The application the simulated sign-in is directed at, chosen from the service principals in the tenant. This is the only required field.
 {% endstep %}
 
 {% step %}
-### Select Optional Parameters
+### Set any optional conditions
 
-See the [#optional-parameters](conditional-access.md#optional-parameters "mention") table below for more information
+Anything left blank is simply not included in the evaluation, so start with the application alone and add conditions as you narrow down the behaviour you are chasing. The options are described below.
 {% endstep %}
 
 {% step %}
-### Click the "Test policies" button
+### Select **Test policies**
+
+The evaluation runs against Entra ID and the results replace whatever is in the table.
 {% endstep %}
 
 {% step %}
-### Review the Test Results
+### Review the results
 
-See the [#test-results](conditional-access.md#test-results "mention") table below for more information
+Work through the table on the right, described in #ca-test-results.
 {% endstep %}
 {% endstepper %}
 
 ## Optional Parameters
 
-| Parameter          | Description                                                                              |
-| ------------------ | ---------------------------------------------------------------------------------------- |
-| Country            | Select the country you want to test logging in from via the drop down.                   |
-| IP Address         | Enter the IP address you want to test logging in from. Format must be similar to 8.8.8.8 |
-| Device Platform    | Select the device platform you want to test.                                             |
-| Client Application | Select the client application you want to test.                                          |
-| Sign-In Risk Level | Select the sign-in risk level of the user signing in you want to test.                   |
-| User Risk Level    | Select the user risk level of the user signing in you want to test.                      |
+| Field                                                | Description                                                                                                                                                                                                |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Select the device platform to test                   | The operating system the sign-in comes from: Windows, iOS, Android, MacOS or Linux.                                                                                                                        |
+| Select the client application type to test           | How the sign-in reaches Microsoft 365: All, Browser, Mobile apps and desktop clients, Exchange ActiveSync, EAS supported, or Other clients. Legacy authentication policies usually turn on this condition. |
+| Select the authentication flow                       | Whether the sign-in uses a flow that policies can target separately: None, Device code flow or Authentication transfer.                                                                                    |
+| Test from this IP                                    | The address the sign-in appears to originate from, entered in the form `8.8.8.8`. Use this to check policies built on named locations.                                                                     |
+| Test from this country                               | The country the sign-in appears to originate from.                                                                                                                                                         |
+| Select the sign-in risk level of the user signing in | The risk Entra ID Protection would assign to the sign-in itself: Low, Medium, High or None.                                                                                                                |
+| Select the user risk level of the user signing in    | The risk Entra ID Protection would assign to the account: Low, Medium, High or None.                                                                                                                       |
 
-## Test Results
+{% hint style="info" %}
+The two risk conditions describe risk the evaluation should assume, not risk the account currently carries. Setting them is how you test a risk-based policy without waiting for Entra ID Protection to flag someone, and the policies themselves still need the licensing that risk-based Conditional Access requires before they will do anything in production.
+{% endhint %}
 
-This table will outline the following information about the conditional access policies configured for the tenant and the results of the test.
+## CA Test Results
 
-| Column         | Description                                                    |
-| -------------- | -------------------------------------------------------------- |
-| Display Name   | The display name of the conditional access policy.             |
-| State          | The enablement state of the conditional access policy.         |
-| Policy Applies | A Boolean showing if the policy applies to the test settings.  |
-| Reasons        | A value for the reason for the decision on policy application. |
+Each of the tenant's Conditional Access policies is listed with what the evaluation decided about it.
+
+| Column           | Description                                                                                                               |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Display Name     | The name of the policy.                                                                                                   |
+| State            | Whether the policy is enabled, disabled, or enabled in report-only mode.                                                  |
+| Policy Applies   | Whether the policy would apply to the sign-in as described.                                                               |
+| Analysis Reasons | Why the evaluation reached that conclusion, which for a policy that does not apply names the condition that ruled it out. |
+
+{% hint style="info" %}
+Analysis Reasons is the column that earns its keep. A policy showing as not applying will usually name the single condition responsible, so it points straight at the assignment or condition to change rather than leaving you to compare the policy against your test settings by hand.
+{% endhint %}
 
 ***
 

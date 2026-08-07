@@ -1,87 +1,124 @@
 # View Individual User
 
-The View User page provides a comprehensive overview of user details and settings. It serves as the main landing page when viewing a user, with additional tabs available for more specific operations, such as Edit User, Compromise Remediation, etc.
+This page brings together everything CIPP knows about a single user, and is where most investigation starts before an action is taken. The header shows the user's display name along with their user principal name, object ID and creation date, each of which can be copied, and a **View in Entra** button that opens the same account in the Microsoft Entra admin center. The **Actions** menu in the header offers the same [#table-actions](../#table-actions "mention") available from the Users list, minus the ones that navigate elsewhere: View User, Edit User and Research Compromised Account are reachable from the tabs instead.
 
-## Overview
+Apart from the profile photo, the MFA method controls and the role removal action described below, everything on this page is read only. Use the Edit User tab to change the account.
 
-- Primary display of user information including a quick link to view the user in Entra
-- Additional tabs at top for extended functionality (Edit, Compromise Remediation, etc.)
-- Inherits Actions dropdown from list users page
+## Tabs
 
-## Actions
+{% content-ref url="edit.md" %}
+[edit.md](edit.md)
+{% endcontent-ref %}
 
-The actions dropdown carries forward the same [#table-actions](../#table-actions "mention") from the main Users page.
+{% content-ref url="exchange.md" %}
+[exchange.md](exchange.md)
+{% endcontent-ref %}
 
----
+{% content-ref url="bec.md" %}
+[bec.md](bec.md)
+{% endcontent-ref %}
 
-## User Information Fields
+{% content-ref url="conditional-access.md" %}
+[conditional-access.md](conditional-access.md)
+{% endcontent-ref %}
 
-### Profile & Identity
+## User Details
 
-| Field                        | Description                                                                                                                                     |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| User Photo                   | Displays user's Entra ID photo; shows initials if no photo is uploaded. Includes the ability to upload a new photo or delete the current photo. |
-| Display Name                 | User's full display name as shown in the directory                                                                                              |
-| User Principal Name          | Primary username/login identity for the user                                                                                                    |
-| Account Enabled              | Boolean indicator showing if user can sign in (✓/✗)                                                                                             |
-| Synced from Active Directory | Boolean indicator showing if account is AD-synced (✓/✗)                                                                                         |
+The card on the left holds the account's directory properties. The work, contact and address sections only show the fields that have a value, and display a short placeholder when the account has none of them.
 
-### Licensing & Contact
+| Field                                                       | Description                                                                 |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Profile photo                                               | The user's Entra ID photo, or their initials when no photo is set.          |
+| Account Enabled                                             | Whether the account is currently able to sign in.                           |
+| Synced from AD                                              | Whether the account is synchronised from on-premises Active Directory.      |
+| Display Name                                                | The name shown throughout Microsoft 365.                                    |
+| Email Address                                               | The addresses on the account, taken from its proxy addresses.               |
+| User Principal Name                                         | The sign-in name for the account.                                           |
+| Licenses                                                    | The licences currently assigned. A note is shown when the account has none. |
+| Job Title, Company Name, Department, Manager                | The account's work information.                                             |
+| Mobile Phone, Business Phones                               | The contact numbers on the account.                                         |
+| Street Address, City, Postal Code, Country, Office Location | The account's address information.                                          |
 
-| Field          | Description                                    |
-| -------------- | ---------------------------------------------- |
-| Licenses       | List of currently assigned M365/Azure licences |
-| Email Address  | Primary and alternative email addresses        |
-| Business Phone | Primary business contact number                |
-| Mobile Phone   | User's mobile contact number                   |
+{% hint style="info" %}
+Buttons below the photo change or remove it. Uploads must be JPEG or PNG and no larger than 4 MB, and the new photo appears as soon as it has been written to Entra ID.
+{% endhint %}
 
-### Professional Information
+## Latest Logon
 
-| Field           | Description                  |
-| --------------- | ---------------------------- |
-| Job Title       | User's current position/role |
-| Department      | Organisational department    |
-| Office Location | Physical office location     |
+The most recent sign-in recorded for the user, shown as success or failure along with the address it came from and the application that was signed in to. Expanding the entry adds the client app used, the operating system or browser detected, the MFA method used and any additional detail Entra recorded against the result. When the sign-in carries location data, the expanded view also plots it on a map alongside the city, state and country or region.
 
-### Address Information
+**More Sign-In Logs** opens a dialog with the user's last 50 sign-ins, listing the time, result, IP address, client app, target resource, error code and location for each. The location is a button that opens a map of where the sign-in came from.
 
-| Field       | Description             |
-| ----------- | ----------------------- |
-| Address     | Street address details  |
-| Postal Code | ZIP/Postal code         |
-| Country     | The country of the user |
-| City        | The city of the user    |
+{% hint style="info" %}
+Sign-in logs require Microsoft Entra ID P1 or higher. Without it this card reports an error rather than data, and the same applies to the Applied Conditional Access Policies card, which is built from the same sign-in record.
+{% endhint %}
 
-### Security & Access
+## Applied Conditional Access Policies
 
-| Field                               | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Last Logon                          | <p>Most recent sign-in information<br>• Expandable for additional details (click arrow)</p>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| Applied Conditional Access Policies | <p>Active security policies<br>• Expandable for policy details (click arrow)</p>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| Multi-Factor Authentication Devices | <p>Registered MFA methods. Each card shows the method type and the identifier that distinguishes it (device name, phone number, security key model, email address), plus when the method was last used<br>• The method matching the user's preferred second factor is marked <strong>User default</strong><br>• The method Microsoft selects while system-preferred MFA is enabled is marked <strong>System-preferred</strong><br>• Remove an individual method with the bin icon<br>• <strong>Set Default MFA Method</strong> sets the preferred second factor, offering only methods the user has registered<br>• Expandable for method details (click arrow)</p> |
+The Conditional Access policies that applied successfully during the sign-in shown above. This is a record of one sign-in rather than a list of every policy targeting the user, so a policy that did not apply on that occasion will not appear here. Expanding an entry shows the grant controls and session controls the policy enforced, and the conditions that were satisfied.
 
-### Group & Role Memberships
+The card reports separately when the sign-in applied no policies at all and when no policy data is available.
 
-| Field             | Description                                                                                                                                                                                          |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Group Memberships | <p>Table of all group associations<br>• Includes per-row actions<br>• Direct link to <a data-mention href="../../groups/edit.md">edit.md</a> page for the associated group to manage membership.</p> |
-| Admin Roles       | Table of assigned administrative roles. The Actions column will allow you to remove the user from the assigned role.                                                                                 |
+{% hint style="info" %}
+To see how a policy would behave for this user rather than how one behaved on a single sign-in, use the conditional-access.md tab.
+{% endhint %}
 
-### Managed Devices
+## Multi-Factor Authentication Devices
 
-This card will display the devices the user is associated with.
+Every authentication method registered against the account, other than the password itself. Each entry names the method type and the detail that distinguishes it, and shows when the method was last used where Graph reports it.
 
-## Notes
+| Method                                 | Shown alongside the method name                                                                                                         |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Microsoft Authenticator                | The device name registered with the app.                                                                                                |
+| Microsoft Authenticator (passwordless) | The device name. This registration type has been retired by Graph but still appears on users who registered before the two were merged. |
+| Phone                                  | The number and which slot it occupies, such as mobile, alternate mobile or office.                                                      |
+| Passkey (FIDO2)                        | The key's model, or its name where no model is reported.                                                                                |
+| Software OATH token                    | The name given to the registration. Any app producing time-based codes appears here, not just Microsoft Authenticator.                  |
+| Hardware OATH token                    | The token's serial number, which Graph only returns when the device relationship is expanded.                                           |
+| Email                                  | The address used for verification.                                                                                                      |
+| Windows Hello for Business             | The name of the registration.                                                                                                           |
+| Platform credential                    | The name, or the platform where no name is set.                                                                                         |
+| Temporary Access Pass                  | Nothing further, as Graph returns no identifying detail.                                                                                |
+| QR code                                | Nothing further, as Graph returns only the identifier and last used date.                                                               |
+| External provider                      | The name of the registration.                                                                                                           |
 
-- Information is read-only in this view, apart from the user photo and the MFA method actions described above
-- When system-preferred MFA is enabled, Microsoft selects the strongest registered method at sign-in and the user's default second factor is ignored
-- Use Edit tab to modify information
-- Expandable sections (▼) provide additional details
-- Direct links to related management pages
-- Real-time data from Entra ID
+A method type CIPP does not yet recognise still appears, labelled with the type name Graph returned.
 
-This view serves as the central hub for user information, providing quick access to both basic details and advanced management options through the tabbed interface.
+Two markers can appear on a method:
 
----
+| Marker           | Meaning                                                                                                                        |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| User default     | The method matches the user's chosen second factor.                                                                            |
+| System-preferred | The method matches the one Microsoft would select while system-preferred multifactor authentication is enabled for the tenant. |
+
+Both preferences are held against a method type rather than an individual registration, so every method of a preferred type carries the marker. A mobile number backs both SMS and voice, for example, so it is marked for either.
+
+Expanding a method shows its device name, app version, creation date and the underlying Graph method type.
+
+### Managing methods
+
+The bin icon on a method removes that single registration, leaving the user's other methods intact.
+
+**Set Default MFA Method** sets the user's preferred second factor. The list only offers preferences the user can actually satisfy, drawn from what they have registered: Microsoft Authenticator push, an authenticator app or hardware token code, SMS, and voice calls to the mobile, alternate mobile or office number. Methods such as passkeys, Windows Hello for Business, email and Temporary Access Pass cannot be a default second factor, so a user registered only with those has the button disabled.
+
+Both controls require user write permissions.
+
+{% hint style="warning" %}
+While system-preferred multifactor authentication is enabled, Microsoft selects the strongest registered method at sign-in and the user's chosen default is not used.
+{% endhint %}
+
+## Memberships
+
+Two cards list what the account belongs to, each showing a count in its header.
+
+**Groups** lists the groups the user is a member of, with the group name, its types, and whether it is security enabled and mail enabled. The row action opens the [edit.md](../../groups/edit.md "mention") page for that group, where the membership itself can be changed.
+
+**Admin Roles** lists the directory roles assigned to the user, with the role name and description. The row action removes the user from that role, and requires role write permissions.
+
+## Managed Devices
+
+The Intune managed devices registered to this user, matched on their user principal name. Each row shows the device name, operating system, OS version and management type, and the row action opens the device.md page. The card reports separately when the user has no managed devices and when the device lookup failed.
+
+***
 
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}
