@@ -23,7 +23,17 @@ const purgePersistedCache = () => {
 // CippAuthShell - its 520px card is far too narrow for the wizard's stepper forms.
 const SetupGatePage = () => {
   const queryClient = useQueryClient()
-  useEffect(() => purgePersistedCache(), [])
+  useEffect(() => {
+    purgePersistedCache()
+    // The persister already rehydrated pre-setup queries into memory at app start,
+    // so purging localStorage alone still leaves e.g. a stale listAppId showing
+    // yesterday's partner tenant inside the wizard. Drop everything except the
+    // auth queries the gate itself depends on.
+    queryClient.removeQueries({
+      predicate: (query) =>
+        !['authmecipp', 'authmeswa'].includes(String(query.queryKey?.[0] ?? '')),
+    })
+  }, [queryClient])
 
   // Cache read only - PrivateRoute already fetched authmecipp before rendering this.
   // samAppPresent means an app registration exists but the refresh token is missing,
