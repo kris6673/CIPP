@@ -16,10 +16,10 @@ Creates a single user in the selected tenant. **Create User** submits the form, 
 
 **Starting point**
 
-| Field                             | Description                                                                                                                                                  |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Copy properties from another user | Pre-fills the form from an existing user's name, job, address and contact details. Licences and group memberships are not copied by this selector.           |
-| User Template (optional)          | Applies a saved user template, filling in the properties, licences, groups and shared access it defines. Templates are managed on the user-defaults.md page. |
+| Field                             | Description                                                                                                                                                                                                       |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Copy properties from another user | Pre-fills the form from an existing user's name, job, address and contact details. Licences and group memberships are not copied by this selector.                                                                |
+| User Template (optional)          | Applies a saved user template, filling in the properties, licences, groups and shared access it defines. Templates are managed on the [user-defaults.md](../../../tenant/manage/user-defaults.md "mention") page. |
 
 **Identity**
 
@@ -75,7 +75,7 @@ Extra directory attributes can be added to this form under [user-settings.md](..
 {% hint style="info" %}
 Exchange cannot add a calendar to someone's Outlook directly, so CIPP grants calendar access with a sharing invitation, which the user accepts by clicking the link in the email they receive. Mailbox access needs no invitation: with Full Access, automapping adds the mailbox to Outlook by itself. Only the permission levels listed above are offered for calendars, as those are the ones Exchange sends an invitation for.
 
-A newly created user is not a usable Exchange recipient for the first few minutes, so both grants are queued as scheduled tasks that run 15 minutes after creation. Their progress, and any failure, can be followed on the Scheduler page.
+A newly created user is not a usable Exchange recipient for the first few minutes, so both grants are queued as scheduled tasks that run 15 minutes after creation. Their progress, and any failure, can be followed on the [scheduler](../../../tools/scheduler/ "mention")page.
 {% endhint %}
 
 **Scheduling and notifications**
