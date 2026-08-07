@@ -6,9 +6,11 @@ The tenant selector sits at the top of CIPP and controls which tenant you are ma
 
 Tenants are listed as their display name followed by their default domain in brackets. Start typing to narrow the list by either part, then choose a tenant to switch to it.
 
-**\*All Tenants** appears at the top of the list. Selecting it shows data across every tenant you manage on pages that support it. Some pages behave differently under All Tenants, most notably tables, which always read from cached data in this mode.
+**\*All Tenants** is pinned to the top of the list. Selecting it shows data across every tenant you manage on pages that support it. Some pages behave differently under All Tenants, most notably tables, which always read from cached data in this mode.
 
-The circular arrows button beside the selector refreshes the tenant list from Microsoft. Use it after adding a new customer relationship so the tenant appears without having to reload CIPP.
+The tenant you are currently on stays in the list in its usual position, marked with a **Current** chip, and the list scrolls to it when you open the dropdown.
+
+The circular arrows button beside the selector reloads the tenant list. Use it when the list looks stale, for example after tenants have been added or removed since you opened CIPP.
 
 The selected tenant is reflected in the page address as a `tenantFilter` parameter, so any CIPP page can be linked to with a tenant already chosen. The parameter accepts the tenant's default domain, its initial `onmicrosoft.com` domain, or its tenant ID, and CIPP rewrites the address to the default domain once the page loads.
 
@@ -16,9 +18,27 @@ The selected tenant is reflected in the page address as a `tenantFilter` paramet
 Your selected tenant is remembered between sessions. If you open CIPP at a page with no tenant in its address, the tenant you last used is applied automatically.
 {% endhint %}
 
+## Favourites and Recent Tenants
+
+The list is grouped, so the tenants you work with most sit at the top rather than buried in an alphabetical list of everything you manage.
+
+| Group           | Description                                                                                                                        |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **Favorites**   | Tenants you have starred, in the order you starred them.                                                                           |
+| **Recent**      | The tenants you have selected most recently, newest first, up to eight. A tenant that is already a favourite is not repeated here. |
+| **All tenants** | Everything else, sorted alphabetically.                                                                                            |
+
+Each row carries a star on the right. Select it to add that tenant to **Favorites**, or select it again to remove it. Selecting the star does not change tenant, so you can reorganise the list without leaving the page you are on.
+
+Recent tenants are tracked for you: choosing a tenant from the dropdown adds it to the top of the group. **\*All Tenants** is excluded from both groups and cannot be starred, since it is already pinned above them.
+
+{% hint style="info" %}
+Favourites and recent tenants are stored in your browser rather than in your CIPP user settings. They are specific to the browser and device you set them on, they do not follow you to another machine, and clearing your browser's site data removes them. Both lists update immediately in any other CIPP tab you have open.
+{% endhint %}
+
 ## Tenant Information
 
-The building icon to the left of the selector opens a flyout with details of the currently selected tenant, available from any page. It is unavailable while All Tenants is selected.
+The building icon to the left of the selector opens a flyout with details of the currently selected tenant, available from any page. It is unavailable while All Tenants is selected, and is not shown on narrow screens, where the selector moves into the mobile navigation menu.
 
 | Field                                    | Description                                                                     |
 | ---------------------------------------- | ------------------------------------------------------------------------------- |

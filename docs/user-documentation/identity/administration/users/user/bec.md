@@ -4,7 +4,7 @@ description: Single pane of glass review of common Indicators of Compromise (IoC
 
 # Compromise Remediation
 
-This page gathers the signals worth checking when a mailbox is suspected of being compromised, so an investigation does not mean opening the Entra, Exchange and Purview portals in turn. Opening the page starts an analysis of the user, and each check appears as a collapsible card with a count of what it found. A count is a prompt to look, not a verdict.
+This page gathers the signals worth checking when a mailbox is suspected of being compromised, so an investigation does not mean opening the Entra, Exchange, and Purview portals in turn. Opening the page starts an analysis of the user, and each check appears as a collapsible card with a count of what it found. A count is a prompt to look, not a verdict.
 
 {% hint style="warning" %}
 Nothing on this page is proof of a compromise. The checks surface the information that usually matters during an investigation, and several of them return results on perfectly healthy accounts. Read the findings alongside what you already know about the user and the tenant.
@@ -22,33 +22,55 @@ Most checks depend on the unified audit log. When it is disabled for the tenant,
 
 ## Checks
 
-Every check covers the seven days before the analysis ran, apart from the MFA device list, which is the account's current registrations regardless of age.
+Every check covers the seven days before the analysis ran, apart from the MFA device list and the Intune device list, which show the account's current registrations and devices regardless of age.
 
-| Check                               | What it looks for                                                                                                                                                                                                                                                                                                                                             |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Check 1: Mailbox Rules              | The inbox rules currently on the mailbox, and any rule created, changed or removed in the last seven days. A rule that moves mail into an `RSS` folder raises a potential breach message, as it is a long-standing trick for hiding replies. Rules whose names match a recent audit event are marked as changed in the last seven days and sorted to the top. |
-| Check 2: Recently added users       | Accounts created in the tenant during the window, listed with their creation date.                                                                                                                                                                                                                                                                            |
-| Check 3: New Applications           | Service principals registered during the window, listed with their application ID and creation date.                                                                                                                                                                                                                                                          |
-| Check 4: Mailbox permission changes | Mailbox permission and delegation changes across the tenant, listed with who made the change, the operation and the rights involved. Covers permissions being added or removed, calendar delegation updates and folder permission grants.                                                                                                                     |
-| Check 5: Sent Messages              | Messages sent by the mailbox during the window, from the message trace, with the subject, recipient, delivery status, time received and originating IP address.                                                                                                                                                                                               |
-| Check 6: MFA Devices                | The authentication methods registered on the account, other than its password, listed with the method type, name and registration date.                                                                                                                                                                                                                       |
-| Check 7: Password Changes           | Accounts across the tenant whose password changed during the window, listed with the change time.                                                                                                                                                                                                                                                             |
-| Check 8: Trusted & Blocked Senders  | The mailbox's own trusted and blocked sender and domain lists, along with any changes to them in the last seven days.                                                                                                                                                                                                                                         |
+| Check                               | What it looks for                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Check 1: Mailbox Rules              | The inbox rules currently on the mailbox, and any rule created, changed, or removed in the last seven days. A rule that moves mail into an `RSS` folder raises a potential breach message, as it is a long-standing trick for hiding replies. Rules whose names match a recent audit event are marked as changed in the last seven days and sorted to the top.                                                                                              |
+| Check 2: Recently added users       | Accounts created in the tenant during the window, listed with their creation date.                                                                                                                                                                                                                                                                                                                                                                          |
+| Check 3: New Applications           | Service principals registered during the window, listed with their application ID and creation date.                                                                                                                                                                                                                                                                                                                                                        |
+| Check 4: Mailbox permission changes | Mailbox permission and delegation changes across the tenant, listed with who made the change, the operation, and the rights involved. Covers permissions being added or removed, calendar delegation updates, and folder permission grants.                                                                                                                                                                                                                 |
+| Check 5: Sent Messages              | Messages sent by the mailbox during the window, from the message trace, with the subject, recipient, delivery status, time received, and originating IP address.                                                                                                                                                                                                                                                                                            |
+| Check 6: MFA Devices                | The authentication methods registered on the account, other than its password, listed with the method type, name, and registration date.                                                                                                                                                                                                                                                                                                                    |
+| Check 7: Password Changes           | Accounts across the tenant whose password changed during the window, listed with the change time.                                                                                                                                                                                                                                                                                                                                                           |
+| Check 8: Trusted & Blocked Senders  | The mailbox's own trusted and blocked sender and domain lists, along with any changes to them in the last seven days.                                                                                                                                                                                                                                                                                                                                       |
+| Check 9: Intune Devices             | Every Intune-managed device enrolled under the account, newest enrolment first. The card's count is the number enrolled in the last seven days rather than the total, so a zero here still leaves a device list worth reading. A device standing up during the window can mean an intruder enrolling a virtual machine or personal endpoint under the identity, which is also a route to registering Windows Hello for Business as a persistence mechanism. |
 
 {% hint style="info" %}
-Checks 2, 3, 4 and 7 are tenant-wide rather than scoped to this user. That is deliberate: an intruder who has taken one mailbox often leaves traces elsewhere, so a new account or an unfamiliar application appearing in the same window is worth knowing about even though it has nothing to do with the mailbox in front of you.
+Checks 2, 3, 4, and 7 are tenant-wide rather than scoped to this user. That is deliberate: an intruder who has taken one mailbox often leaves traces elsewhere, so a new account or an unfamiliar application appearing in the same window is worth knowing about even though it has nothing to do with the mailbox in front of you.
 {% endhint %}
 
 {% hint style="info" %}
 Inbox rules carry no timestamp of their own, so a rule is marked as recently changed by matching its name against audit events from the last seven days. Rules changed from the Outlook client are recorded without a rule name, so a rule altered that way stays unmarked even though the change appears under the rule change entries.
 {% endhint %}
 
+### Intune device actions
+
+Each row in Check 9 carries its own actions, so a suspect device can be dealt with without leaving the investigation.
+
+| Action                          | Description                                                                             |
+| ------------------------------- | --------------------------------------------------------------------------------------- |
+| View Device                     | Opens the device's page within CIPP.                                                    |
+| View in Intune                  | Opens the device in the Microsoft Intune admin center in a new tab.                     |
+| Retire device                   | Removes company data and the Intune management profile, leaving personal data in place. |
+| Wipe device (remove enrollment) | Returns the device to factory settings, removing all data and the Intune enrolment.     |
+
+{% hint style="danger" %}
+**Wipe device (remove enrollment)** is a full factory wipe, not the lighter wipe that keeps user or enrolment data. It cannot be undone, and it will take the device out of service for whoever is holding it. Confirm the device is genuinely the intruder's before running it.
+{% endhint %}
+
+Both actions need write permission for device management, and the list does not update on its own afterwards. Use **Refresh Data** to see the result.
+
+{% hint style="warning" %}
+If CIPP cannot read the tenant's Intune devices, the card says so in red and shows no count. That is not the same as the user having no devices, and it usually points at missing permissions or licensing rather than a clean result. Fix the underlying problem and refresh rather than reading the empty card as an all-clear.
+{% endhint %}
+
 ## Actions
 
 | Action              | Description                                                                                                                                                                                                                                                                                                       |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Refresh Data        | Discards the cached result and runs the analysis again. Use it when the cached data predates something you need to see, such as a rule created in the last few minutes. The page returns to its waiting state while the new run completes.                                                                        |
-| Remediate User      | Runs the containment steps listed on the overview card in one go: blocks sign-in, resets the password, disconnects all current sessions, removes every MFA method, disables all inbox rules and disables OneDrive sharing. A confirmation dialog appears first.                                                   |
+| Refresh Data        | Discards the cached result and runs the analysis again. Use it when the cached data predates something you need to see, such as a rule created in the last few minutes or a device you have just retired. The page returns to its waiting state while the new run completes.                                      |
+| Remediate User      | Runs the containment steps listed on the overview card in one go: blocks sign-in, resets the password, disconnects all current sessions, removes every MFA method, disables all inbox rules, and disables OneDrive sharing. A confirmation dialog appears first.                                                  |
 | Generate PDF Report | Opens a preview of a formatted report covering the findings, written to be readable by managers and end users as well as technicians, and suitable for attaching to a compliance record. **Download PDF** saves it. Long result sets are truncated in the PDF, which points to the JSON export for the full list. |
 | Download JSON       | Saves the complete analysis as a JSON file, including data the cards do not display.                                                                                                                                                                                                                              |
 
@@ -57,7 +79,11 @@ Removing every MFA method leaves the account with no second factor registered. O
 {% endhint %}
 
 {% hint style="info" %}
-The JSON export carries three data sets that no card displays: the last fifty sign-ins for the tenant, the user's most recent sign-in, and the mobile devices attached to the mailbox. If the investigation turns on sign-in origin or an unrecognised device, that is where to look.
+**Remediate User** does not touch the user's devices. If Check 9 has turned up an enrolment you do not recognise, retiring or wiping it is a separate decision and a separate action.
+{% endhint %}
+
+{% hint style="info" %}
+The JSON export carries three data sets that no card displays: the last fifty sign-ins for the tenant, the user's most recent sign-in, and the mobile devices attached to the mailbox. If the investigation turns on sign-in origin or an unrecognised device, that is where to look. The Intune device list in the export also holds the manufacturer, model, owner type, and assigned user, none of which the card shows.
 {% endhint %}
 
 ***
