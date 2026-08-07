@@ -1,14 +1,14 @@
----
-description: Manage Autopilot devices across your Microsoft 365 tenants.
----
-
 # Add Autopilot Device
 
-Add autopilot devices by following the Wizard on this page. As a partner, you can register devices to Windows Autopilot using any one of these methods:
+Registers devices to Windows Autopilot in a customer tenant through the Partner Center device batch API. Devices can be identified in any of three ways:
 
-* Hardware Hash (available from OEM or on-device script)
-* Combination of Manufacturer, Device Model, and Device Serial Number
-* Windows Product Key ID
+* Hardware hash, obtained from the OEM or from an on-device script
+* Serial number together with both manufacturer and model
+* Windows product key ID
+
+{% hint style="warning" %}
+Registration goes through the Partner Center API rather than Graph, so a reseller relationship with the customer tenant is required. GDAP on its own is not enough, and without a reseller relationship the import will fail. Where one does not yet exist, the [sam-setup-wizard.md](../../cipp/sam-setup-wizard.md "mention") can generate the invitation link to send to the customer using the option **Add Tenant** and then **Get Reseller Invite Link**.
+{% endhint %}
 
 ## Importing Devices
 
@@ -16,36 +16,57 @@ Add autopilot devices by following the Wizard on this page. As a partner, you ca
 {% step %}
 ### Tenant Selection
 
-Select the tenant you want to add the devices to
+Select the tenant the devices should be registered to. Only one tenant can be chosen.
 {% endstep %}
 
 {% step %}
 ### Device Import
 
-You have two options for importing the devices
+Build the list of devices to register. Three buttons sit above the list:
 
-* CSV Import: CIPP has a template CSV that you can fill out and upload to ease population of the targeted devices
-* Manual Import: This will open a window where you can add one or more devices to the import list. Enter the required information. If using a Serial Number, you must include either both Manufacturer and Model or a Hardware Hash.
+**Download Template** produces a CSV containing the expected column headers, ready to fill in.
+
+**Import from CSV** reads a file into the list. Only `SerialNumber` is required. Headers may use any of the accepted names below, and a headerless file is also accepted, in which case the columns are read in the order serial number, product key, hardware hash, group tag, with at least three columns present.
+
+| Template column     | Also accepted as                   |
+| ------------------- | ---------------------------------- |
+| SerialNumber        | Serialnumber, Device Serial Number |
+| oemManufacturerName | Manufacturer, Manufacturer name    |
+| modelName           | Model, Device model                |
+| productKey          | Product ID, Windows Product ID     |
+| hardwareHash        | Hardware hash, Hardware Hash       |
+| groupTag            | Group Tag                          |
+
+**Manual Import** opens a dialogue for typing devices in one row at a time. Pressing Enter in the Product ID field adds another row. Rows are validated as they are entered, and the Add button stays disabled until every problem is resolved.
+
+Each row must satisfy the following:
+
+* Serial numbers must be unique within the batch.
+* Product IDs must be unique within the batch, and exactly 13 characters where supplied.
+* A row with a serial number must also carry either both manufacturer and model, or a hardware hash.
+
+Devices already in the list can be removed with the Delete Row action.
 {% endstep %}
 
 {% step %}
 ### Extra Options
 
-You can optionally select a Group Name to add the devices to
+**Group Name** names the Partner Center device batch the devices are added to. Leaving it blank generates one automatically. Entering the name of a batch that already exists appends the devices to it rather than creating a new one.
 {% endstep %}
 
 {% step %}
 ### Confirmation
 
-Review the information to confirm everything looks as it should prior to clicking `Submit`.
+Review the tenant, the device list and the batch name, then submit. CIPP waits briefly for Partner Center to finish processing and then reports the outcome for each device individually, including the error code and description where one failed.
 {% endstep %}
 {% endstepper %}
 
-## Known Issues / Limitations <a href="#adddevice-knownissues" id="adddevice-knownissues"></a>
+## Known Issues / Limitations
 
-* A Reseller Relationship with the customer tenant may be required in addition to GDAP in order to add Autopilot devices.
-* Getting the correct information for Manufacturer and Device Model can be quite difficult if you're trying to guess from the device's box. Windows Product Key ID or Hardware Hash are the most reliable methods. Some manufacturers include the Windows Product Key ID on the box.
-* This API does not directly return data to CIPP and thus can incorrectly report the upload has failed.
+* Guessing the manufacturer and model from the device's packaging is unreliable. The hardware hash or the Windows product key ID are far more dependable, and some manufacturers print the product key ID on the box.
+* CIPP only waits a few seconds for the import job to report back. On a large batch it may give up before Partner Center finishes and returns a message saying the job may still be running. The registration usually completes regardless, so check the Autopilot Devices list about ten minutes later rather than resubmitting.
+* Group tags are only submitted when a new device batch is created. Adding devices to a batch name that already exists drops the group tag, and it will need setting afterwards with **Edit Group Tag** on the Autopilot Devices page.
+* Validation runs on manually entered rows only. A CSV is loaded without the duplicate, product key length or serial number companion checks being applied, so errors in a file surface as failures from Partner Center at the end rather than at import time.
 
 ***
 
