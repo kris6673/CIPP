@@ -2211,7 +2211,12 @@ $Spec = [ordered]@{
     info       = [ordered]@{
         title       = 'CIPP API'
         version     = 'auto'
-        description = @'
+        # Normalized to LF. This script is checked out with CRLF on Windows (core.autocrlf),
+        # so the here-string absorbs CRLF and ConvertTo-Json escapes it as a literal \r\n
+        # inside the description. Git's EOL filter only rewrites physical newlines, not an
+        # escaped sequence inside a JSON string, so that difference gets committed and makes
+        # -Check fail against the LF spec CI regenerates on ubuntu.
+        description = (@'
 The CIPP HTTP API. Every path maps one-to-one onto a PowerShell entrypoint:
 New-CippCoreRequest resolves /api/<Name> to Invoke-<Name>, so the path segment is
 the function name and is case-sensitive.
@@ -2220,7 +2225,7 @@ This spec is generated from the PowerShell AST of those entrypoints on every
 build. Request schemas describe the fields the backend actually reads, including
 nested ones: a property typed as LabelValue is read as `$Field.value` by the
 backend and must be sent as an object, not a bare string.
-'@
+'@ -replace "`r`n", "`n")
         'x-cipp-docs' = 'https://docs.cipp.app'
     }
     # The server is the deployment root, NOT '/api'. Path keys already carry the /api
