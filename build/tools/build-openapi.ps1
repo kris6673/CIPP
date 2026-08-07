@@ -33,6 +33,12 @@ param(
     # name no field in their own source, but Graph publishes the entity's shape.
     [string]$GraphMetadataPath = "$PSScriptRoot/../../backend/Config/graph-metadata",
     [string]$OutputPath = "$PSScriptRoot/../../backend/Config/openapi.json",
+    # Second copy, served as a static asset at /openapi.json. The in-app Swagger UI reads
+    # that instead of calling the API for it, and external consumers can pull the spec
+    # without occupying a PowerShell worker. Skipped when the directory does not exist,
+    # which is the case in the image's openapi build stage - there the Dockerfile injects
+    # it into the exported frontend after `yarn build`, so the compile stays cached.
+    [string]$PublicPath = "$PSScriptRoot/../../frontend/public/openapi.json",
     [string]$ReportPath,
     [string]$Endpoint,
     [switch]$Check
@@ -2139,8 +2145,40 @@ foreach ($Contract in ($Contracts | Sort-Object Name -CaseSensitive)) {
     # Exactly one operation per path: Get-CippMcpToolList keys tools by endpoint
     # name, so a second method would advertise a duplicate tool.
     $HasBodyShape = $Contract.BodyTree.Children.Count -gt 0 -or $Contract.BodyTree.IsArray -or $Contract.BodyTree.IsDynamic
-    $Method = if ($Contract.UsesBody -and $HasBodyShape) { 'post' }
-    elseif ($Contract.UsesQuery -or $Contract.QueryTree.Children.Count -gt 0) { 'get' }
+    $ReadsQuery = $Contract.UsesQuery -or $Contract.QueryTree.Children.Count -gt 0
+
+    # Endpoints written as `$Request.Query.X ?? $Request.Body.X` accept either, and the
+    # rule "a body shape means POST" documented all of them as POST-only. That is wrong for
+    # the read endpoints: the UI fetches ListCustomScripts as
+    # /api/ListCustomScripts?ScriptGuid=..., and a caller following the spec would send a
+    # body instead. A List/Get endpoint that reads the query string is therefore documented
+    # as GET.
+    #
+    # Only when every body field can also be supplied on the query string, because the GET
+    # form describes query parameters alone - flipping an endpoint with a body-only field
+    # would silently drop it from the contract.
+    $BodyOnly = @($Contract.BodyTree.Children.Keys | Where-Object { -not $Contract.QueryTree.Children.Contains($_) })
+    $IsReadVerb = $Contract.Name -match '^(List|Get)'
+    $QueryCoversBody = $BodyOnly.Count -eq 0 -and -not $Contract.BodyTree.IsArray -and -not $Contract.BodyTree.IsDynamic
+
+    # An endpoint that changes something is a POST whatever it happens to read from. Where
+    # its arguments come from the query string those stay documented as query parameters -
+    # the POST form emits both - so nothing is lost by saying so, and RemoveStandard being
+    # documented as GET invited callers, caches and link prefetchers to treat a deletion as
+    # a safe request.
+    #
+    # A .ReadWrite role is the reliable signal for the Exec* endpoints, whose names say
+    # nothing either way: ExecServicePrincipals holds Tenant.Application.ReadWrite, while
+    # ExecAccessChecks only reads and stays a GET. None of these reach the MCP catalog,
+    # which requires a .Read role and rejects mutation-verb names, so this cannot affect
+    # how a tool call delivers its arguments.
+    $IsMutation = $Contract.Name -match '^(Add|Set|Remove|Delete|Edit|New|Update|Disable|Enable|Reset|Revoke|Push|Clear|Start|Stop|Rename|Move|Copy)' -or
+        $Contract.Role -match '\.ReadWrite$'
+
+    $Method = if ($IsMutation) { 'post' }
+    elseif ($Contract.UsesBody -and $HasBodyShape -and $ReadsQuery -and $IsReadVerb -and $QueryCoversBody) { 'get' }
+    elseif ($Contract.UsesBody -and $HasBodyShape) { 'post' }
+    elseif ($ReadsQuery) { 'get' }
     elseif ($Contract.UsesBody) { 'post' }
     else { 'get' }
 
@@ -2272,6 +2310,19 @@ $null = New-Item -ItemType Directory -Path (Split-Path -Parent $OutputPath) -For
 # half-written spec, matching build-function-parameters.ps1
 Set-Content -Path "$OutputPath.tmp" -Value $Json -Encoding UTF8
 Move-Item -Path "$OutputPath.tmp" -Destination $OutputPath -Force
+
+# Static copy for the frontend. Written here rather than by the callers so it can never
+# go stale: every path that regenerates the spec gets it, not just the dev watcher.
+if ($PublicPath) {
+    $PublicDir = Split-Path -Parent $PublicPath
+    if (Test-Path $PublicDir) {
+        Set-Content -Path "$PublicPath.tmp" -Value $Json -Encoding UTF8
+        Move-Item -Path "$PublicPath.tmp" -Destination $PublicPath -Force
+        Write-Host "Copied the spec to $PublicPath for static serving."
+    } else {
+        Write-Host "Skipped the static copy: '$PublicDir' does not exist."
+    }
+}
 
 if ($ReportPath) {
     $Summary = [ordered]@{

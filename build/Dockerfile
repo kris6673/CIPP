@@ -128,6 +128,14 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN --mount=type=cache,target=/build/.next/cache \
     yarn build
 
+# The OpenAPI spec, served as a static asset at /openapi.json. Injected after the
+# compile for the same reason as version.json below: it is generated from backend
+# sources, so copying it in before `yarn build` would invalidate the compile on every
+# backend change. Landing it in out/ before the precompress step below gets it Brotli
+# q11 + gzip 9 - the runtime compressor only manages ~460KB on this file against
+# ~130KB for plain gzip -9, so precompressing is worth several hundred KB per fetch.
+COPY --from=build-openapi /gen/openapi.json out/openapi.json
+
 # Inject build metadata into version.json AFTER the compile. The frontend reads
 # this only at runtime via fetch('/version.json') — it doesn't need to be present
 # during `yarn build`. Writing it into the exported out/ dir (so precompress
