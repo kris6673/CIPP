@@ -1089,6 +1089,7 @@ function Get-EndpointContract {
         TableNames    = @(Get-TableReadName -FunctionAst $Definition)
         GraphRefs     = @(Get-GraphEntityReference -FunctionAst $Definition)
         GraphSelect   = @(Get-GraphSelectField -FunctionAst $Definition)
+        OutputNames   = @(Get-OutputMemberName -FunctionAst $Definition)
         Path         = $Path
     }
 }
@@ -1412,6 +1413,44 @@ function Get-GraphSelectField {
     return @($Fields)
 }
 
+function Get-OutputMemberName {
+    # Literal -NotePropertyName values from Add-Member. When an endpoint reshapes a record
+    # it names the output property outright, and that spelling is what reaches the wire -
+    # so it settles casing disputes that the other sources get wrong. listStandardTemplates
+    # reads a table whose writer stores 'Source' but emits it as 'source', and JSON is
+    # case-sensitive, so documenting the writer's spelling sends callers looking for a key
+    # that is not there.
+    #
+    # Used ONLY to correct the case of a field another source already found, never to add
+    # one: Add-Member is also used on intermediate objects that never reach the response,
+    # and this way such a name can never invent a field.
+    param($FunctionAst)
+
+    $Names = [System.Collections.Generic.List[string]]::new()
+    foreach ($Command in $FunctionAst.FindAll({
+                param($n) $n -is [System.Management.Automation.Language.CommandAst]
+            }, $true)) {
+        # Add-Member names the property outright. Sort-Object/Where-Object -Property name a
+        # property of the object being emitted, so they are equally good evidence of the
+        # spelling that reaches the wire - listStandardTemplates never writes 'templateName'
+        # except in a Sort-Object, and that is the casing the response carries.
+        $CommandName = $Command.GetCommandName()
+        if ($CommandName -notin @('Add-Member', 'Sort-Object', 'Where-Object')) { continue }
+        $Elements = @($Command.CommandElements)
+        for ($i = 0; $i -lt $Elements.Count; $i++) {
+            $Element = $Elements[$i]
+            if ($Element -isnot [System.Management.Automation.Language.CommandParameterAst]) { continue }
+            if ($Element.ParameterName -notmatch '^(NotePropertyName|Property)$') { continue }
+            $Value = if ($Element.Argument) { $Element.Argument } elseif (($i + 1) -lt $Elements.Count) { $Elements[$i + 1] } else { $null }
+            $Value = Get-UnwrappedAst -Ast $Value
+            if ($Value -is [System.Management.Automation.Language.StringConstantExpressionAst] -and $Value.Value) {
+                if (-not $Names.Contains($Value.Value)) { $Names.Add($Value.Value) }
+            }
+        }
+    }
+    return @($Names)
+}
+
 function Get-TableEntityCastType {
     # The JSON type implied by an explicit cast on a table entity's value. Storage writers
     # cast almost everything ([string]$Repo.name, [bool]$Repo.permissions.push) because
@@ -1700,7 +1739,7 @@ function ConvertTo-RecordSchema {
     # The record shape for a list response. Two independent sources: what the endpoint
     # selects onto each record, and what the UI declares it renders. They are recorded
     # separately in x-cipp-field-source so a surprising field can be traced back.
-    param([string[]]$Columns, [string[]]$BackendFields, $StorageFields, $GraphFields)
+    param([string[]]$Columns, [string[]]$BackendFields, $StorageFields, $GraphFields, [switch]$GraphProven, [string[]]$OutputNames)
 
     $Properties = [ordered]@{}
     $Backend = @($BackendFields | Where-Object { $_ })
@@ -1719,9 +1758,21 @@ function ConvertTo-RecordSchema {
     $Graph = if ($GraphFields) { $GraphFields } else { [ordered]@{} }
     $GraphNames = @($Graph.Keys)
 
-    foreach ($Name in (@($Backend + $Frontend + $StorageNames + $GraphNames) | Sort-Object -CaseSensitive -Unique)) {
+    # An explicit Add-Member name is what actually reaches the wire, so where a field was
+    # found under a different case it is corrected to that spelling. Only the case changes;
+    # a name no other source found is not introduced here.
+    $Names = @(@($Backend + $Frontend + $StorageNames + $GraphNames) | Sort-Object -CaseSensitive -Unique)
+    if ($OutputNames.Count -gt 0) {
+        $Names = @($Names | ForEach-Object {
+                $Field = $_
+                $Corrected = @($OutputNames | Where-Object { $_ -eq $Field -and $_ -cne $Field }) | Select-Object -First 1
+                if ($Corrected) { $Corrected } else { $Field }
+            } | Sort-Object -CaseSensitive -Unique)
+    }
+
+    foreach ($Name in $Names) {
         $From = [System.Collections.Generic.List[string]]::new()
-        if ($GraphNames -contains $Name) { $From.Add('graph') }
+        if ($GraphNames -contains $Name) { $From.Add($(if ($GraphProven) { 'graph' } else { 'graph-entity' })) }
         if ($StorageNames -contains $Name) { $From.Add('storage') }
         if ($Backend -contains $Name) { $From.Add('backend') }
         if ($Frontend -contains $Name) { $From.Add('frontend') }
@@ -1747,8 +1798,10 @@ function ConvertTo-RecordSchema {
     # Deliberately hedged in both directions. Storage fields come from the writers, and an
     # endpoint may project only some of them or add computed ones, so this is neither a
     # floor nor a ceiling - it is the best static description available.
-    $Description = if ($Graph.Count -gt 0) {
-        'Derived from {0}. Graph returns a subset of an entity unless the call selects fields explicitly, so a listed field may be absent from a given response.' -f ($Sources -join ', and ')
+    $Description = if ($Graph.Count -gt 0 -and -not $GraphProven) {
+        'Derived from {0}. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.' -f ($Sources -join ', and ')
+    } elseif ($Graph.Count -gt 0) {
+        'Derived from {0}. The fields taken from Graph are the ones this endpoint selects, so they are what the response actually carries.' -f ($Sources -join ', and ')
     } elseif ($Storage.Count -gt 0) {
         'Derived from {0}. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.' -f ($Sources -join ', and ')
     } else {
@@ -1860,6 +1913,7 @@ function ConvertTo-OasOperation {
     # Same rule as storage: only when the endpoint reads exactly one Graph entity set.
     # Several sets would mean merging two entity shapes into a record that never exists.
     $GraphFields = $null
+    $GraphProven = $false
     if ($GraphIndex -and $Contract.GraphRefs.Count -eq 1) {
         $Reference = $Contract.GraphRefs[0]
         $Version = $GraphIndex[$Reference.Version]
@@ -1881,15 +1935,35 @@ function ConvertTo-OasOperation {
             }
         }
         if ($Entity -and $Entity.Count -gt 0) {
-            $GraphFields = [ordered]@{}
-            # A $select list names exactly what comes back. Without one Graph returns its
-            # default projection, which is not the full entity either, so the unselected
-            # case is the whole type and knowingly generous.
+            # What the code does with the response decides how much of the entity to claim.
+            # Graph never returns a whole entity: without $select it returns a default
+            # projection, and CIPP usually narrows further still. Documenting the full type
+            # was measurably wrong - ListSharedMailboxAccountEnabled listed 90 fields and
+            # returned 8 - so the entity is used as a source of TYPES, and only as a source
+            # of FIELDS when the code proves which fields come back.
             $Selected = @($Contract.GraphSelect | Where-Object { $Entity.Contains($_) })
+            $Shaped = @($Contract.BackendFields | Where-Object { $Entity.Contains($_) })
+
+            $GraphFields = [ordered]@{}
             if ($Selected.Count -ge 3) {
+                # an explicit $select names exactly what Graph returns
                 foreach ($Field in $Selected) { $GraphFields[$Field] = $Entity[$Field] }
+                $GraphProven = $true
+            } elseif ($Shaped.Count -gt 0) {
+                # the endpoint reshapes the response itself, so its own field list is the
+                # authority and Graph only supplies the types for it
+                foreach ($Field in $Shaped) { $GraphFields[$Field] = $Entity[$Field] }
+                $GraphProven = $true
             } else {
+                # A pure passthrough proves nothing about which fields come back, and that
+                # is exactly the case Graph was brought in for - dropping it here would
+                # leave these endpoints undescribed again. The entity is used, but marked
+                # as the entity rather than as a proven projection, because Graph returns a
+                # default subset unless asked otherwise. The distinction is carried in
+                # x-cipp-field-source so a caller can tell "this is returned" from "this
+                # exists on the type".
                 foreach ($Field in $Entity.Keys) { $GraphFields[$Field] = $Entity[$Field] }
+                $GraphProven = $false
             }
         }
     }
@@ -1897,7 +1971,7 @@ function ConvertTo-OasOperation {
     $Record = if ($Contract.Columns.Count -gt 0 -or $Contract.BackendFields.Count -gt 0 -or
         ($StorageFields -and $StorageFields.Count -gt 0) -or ($GraphFields -and $GraphFields.Count -gt 0)) {
         ConvertTo-RecordSchema -Columns $Contract.Columns -BackendFields $Contract.BackendFields `
-            -StorageFields $StorageFields -GraphFields $GraphFields
+            -StorageFields $StorageFields -GraphFields $GraphFields -GraphProven:$GraphProven -OutputNames $Contract.OutputNames
     } else {
         # Nothing in the source names a field. Most of these hand an upstream response
         # straight back (New-GraphGetRequest to Graph or the admin portal, New-ExoRequest to
