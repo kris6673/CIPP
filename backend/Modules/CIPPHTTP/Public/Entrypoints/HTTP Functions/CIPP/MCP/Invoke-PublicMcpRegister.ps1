@@ -62,13 +62,14 @@ function Invoke-PublicMcpRegister {
     # desktop/CLI clients bind ephemeral ports; Entra applies its own loopback rules at authorize
     # time and remains the final authority on every redirect).
     $KnownClients = Get-CippMcpKnownClients
+    $AllowedCallbacks = @($KnownClients.PublicClientRedirectUris) + @($KnownClients.ConfidentialRedirectUris)
     foreach ($Uri in $RedirectUris) {
         $Parsed = $null
         if (-not [System.Uri]::TryCreate($Uri, [System.UriKind]::Absolute, [ref]$Parsed)) {
             return (New-CippMcpRegistrationError -Code 'invalid_redirect_uri' -Description "Redirect URI '$Uri' is not a valid absolute URI." -Headers $CorsHeaders)
         }
         $IsLoopback = $Parsed.Scheme -eq 'http' -and $Parsed.Host -in @('127.0.0.1', 'localhost', '[::1]')
-        $IsKnown = @($KnownClients.WebRedirectUris) -contains $Uri
+        $IsKnown = $AllowedCallbacks -contains $Uri
         if (-not ($IsKnown -or $IsLoopback)) {
             return (New-CippMcpRegistrationError -Code 'invalid_redirect_uri' -Description "Redirect URI '$Uri' is not an allowed MCP client callback for this server." -Headers $CorsHeaders)
         }

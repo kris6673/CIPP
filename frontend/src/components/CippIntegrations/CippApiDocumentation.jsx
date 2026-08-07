@@ -28,9 +28,15 @@ const CippApiDocumentation = () => {
 
   // The spec is generated from the entrypoint sources at build time, so it always
   // describes the running version rather than a separately maintained document.
+  //
+  // Served as a static asset rather than through the API: it is a ~2MB build artefact
+  // that cannot change at runtime, so fetching it over /api would tie up one of the
+  // PowerShell HTTP workers per page load and re-send the whole body every time. As a
+  // static file it is precompressed at build time and revalidates with an ETag, so a
+  // repeat load costs a 304.
   const spec = ApiGetCall({
-    url: '/api/ListOpenApiSpec',
-    queryKey: 'ListOpenApiSpec',
+    url: '/openapi.json',
+    queryKey: 'OpenApiSpec',
   })
 
   useEffect(() => {

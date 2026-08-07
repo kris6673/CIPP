@@ -24,6 +24,7 @@ BeforeAll {
     # deliberately a plain scan, independent of the generator's AST walk
     $ValueRead = [regex]::new('\$Request\.Body\.([A-Za-z0-9_]+)\.(value|label)\b')
     $BodyRead = [regex]::new('\$Request\.Body\.([A-Za-z0-9_]+)')
+    $QueryRead = [regex]::new('\$Request\.Query\.([A-Za-z0-9_]+)')
 
     $script:Sources = @(
         foreach ($File in Get-ChildItem -Path $script:EntrypointRoot -Filter 'Invoke-*.ps1' -Recurse -File) {
@@ -38,6 +39,7 @@ BeforeAll {
                 File        = $File.Name
                 ValueFields = @($ValueRead.Matches($Text) | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
                 BodyFields  = @($BodyRead.Matches($Text) | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
+                QueryFields = @($QueryRead.Matches($Text) | ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique)
             }
         }
     )
@@ -161,14 +163,50 @@ Describe 'invariants the MCP projection depends on' {
         $Bad | Should -BeNullOrEmpty
     }
 
-    It 'classifies an endpoint that reads the request body as POST' {
-        # Get-CippMcpToolResult picks Query vs Body purely from the spec's method, so a
-        # body-reading endpoint documented as GET receives none of its arguments
+    It 'documents a body-reading endpoint as POST unless the query can carry every field' {
+        # Invoke-CippMcpApiRequest sends a tool's arguments as the query string for a GET
+        # and as the body for a POST, purely from the spec's method - so an endpoint
+        # documented as GET that can only read a field from the body never receives it.
+        #
+        # Reading the body does not by itself mean POST. Many read endpoints are written as
+        # `$Request.Query.X ?? $Request.Body.X` and accept either, and the UI calls them
+        # with a query string; documenting those as POST described a shape no caller uses.
+        # They are safe as GET precisely because every field is also readable from the
+        # query, which is what this checks.
         $Bad = @(
             foreach ($Source in $script:Sources) {
                 if ($Source.BodyFields.Count -eq 0) { continue }
                 $Entry = Get-SoleOperation -Endpoint $Source.Endpoint
-                if ($Entry -and $Entry.Method -ne 'post') { "$($Source.Endpoint) is $($Entry.Method) but reads the body" }
+                if (-not $Entry -or $Entry.Method -eq 'post') { continue }
+                $Unreachable = @($Source.BodyFields | Where-Object { $_ -notin $Source.QueryFields })
+                if ($Unreachable.Count -gt 0) {
+                    "$($Source.Endpoint) is $($Entry.Method) but reads $($Unreachable -join ', ') only from the body"
+                }
+            }
+        )
+        $Bad | Should -BeNullOrEmpty
+    }
+
+    It 'never documents an endpoint that changes something as GET' {
+        # The counterpart to the rule above, and the direction that actually hurts: GET is
+        # defined as safe, so callers, caches and link prefetchers may repeat one freely.
+        # RemoveStandard was documented as GET purely because it happens to read its
+        # arguments from the query string, which says nothing about what it does.
+        #
+        # Two independent signals, because neither covers the other: the CIPP verb prefix
+        # catches Remove/Add/Edit and friends, and the role catches the Exec* endpoints
+        # whose names are silent about intent - ExecServicePrincipals holds
+        # Tenant.Application.ReadWrite while ExecAccessChecks only reads.
+        $MutationVerb = [regex]::new('^(Add|Set|Remove|Delete|Edit|New|Update|Disable|Enable|Reset|Revoke|Push|Clear|Start|Stop|Rename|Move|Copy)')
+        $Bad = @(
+            foreach ($Entry in $script:Spec.paths.GetEnumerator()) {
+                $Endpoint = $Entry.Key -replace '^/api/', ''
+                foreach ($Method in $Entry.Value.Keys) {
+                    if ($Method -ne 'get') { continue }
+                    $Role = [string]$Entry.Value[$Method].'x-cipp-role'
+                    if ($MutationVerb.IsMatch($Endpoint)) { "$Endpoint is GET but its name is a mutation" }
+                    elseif ($Role -match '\.ReadWrite$') { "$Endpoint is GET but holds $Role" }
+                }
             }
         )
         $Bad | Should -BeNullOrEmpty
