@@ -1,6 +1,15 @@
-# Add Safe Links Policy
+# Edit Safe Links Template
 
-Creates a new Safe Links policy and the rule that scopes it, in the tenant you currently have selected. The form builds both objects together, so the configuration lands complete rather than as a policy with nobody attached to it.
+Opens a saved Safe Links policy template with its stored settings loaded in. The form is the same as [create.md](create.md "mention"), with one difference: **Policy Name** is fixed, since changing it would make the template deploy a different policy from the one it was built for.
+
+Editing a template changes only what future deployments will create. Policies already deployed from it are untouched.
+
+## Template Information
+
+| Field | Description |
+| ----- | ----------- |
+| Template Name | Required. Names the template. |
+| Template Description | Describe what this template is used for. |
 
 ## Safe Links Policy Configuration
 
@@ -8,7 +17,7 @@ Creates a new Safe Links policy and the rule that scopes it, in the tenant you c
 
 | Field | Description |
 | ----- | ----------- |
-| Policy Name | Required. Names the policy. It is checked against the tenant's existing policies as you type, and a name already in use is rejected. |
+| Policy Name | Read only. The name the policy will be created with in each tenant you deploy to. |
 | Description | Free text describing what the policy is for. |
 | Enable Safe Links For Email | Protects links in email. |
 | Enable Safe Links For Teams | Protects links in Teams. |
@@ -29,9 +38,9 @@ Creates a new Safe Links policy and the rule that scopes it, in the tenant you c
 
 | Field | Description |
 | ----- | ----------- |
-| Rule Name (Auto-generated) | Read only. Filled in for you as the policy name followed by `_Rule`. |
-| Priority | The order this rule is evaluated in against other Safe Links rules. Lower numbers are evaluated first, and the value must be 0 or greater. |
-| Enable Rule | Whether the configuration is active once created. On by default. |
+| Rule Name (Auto-generated) | Read only. Shows the rule name stored with the template. |
+| Priority | The order the rule will be evaluated in against other Safe Links rules. Lower numbers are evaluated first, and the value must be 0 or greater. |
+| Enable Rule | Whether the configuration is active once deployed. |
 | Comments | Free text kept against the rule. |
 
 **Applies To:**
@@ -50,8 +59,8 @@ Creates a new Safe Links policy and the rule that scopes it, in the tenant you c
 | Groups | Groups whose members are excluded from the policy. |
 | Recipients | Individual recipients excluded from the policy. |
 
-{% hint style="info" %}
-Changes to Safe Links policies and rules may take up to 6 hours to propagate throughout your organization.
+{% hint style="warning" %}
+The domain, group and recipient pickers read from the tenant you currently have selected, so a template scoped with them carries that tenant's objects. Where a template is meant for several customers, scope it after deployment rather than here, or keep the scoping to values that exist in every tenant you will deploy to.
 {% endhint %}
 
 ***
