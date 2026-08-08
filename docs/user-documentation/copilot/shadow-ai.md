@@ -2,11 +2,7 @@
 
 This page lists the AI tools in use in a tenant, so you can discover unapproved tools known as shadow AI.
 
-The report is compiled from cached Intune and Entra data rather than live Graph queries, with the last data refresh time shown at the top of the page (the oldest of the cached datasets, so it reflects the stalest data on the page). If no cached data exists for the tenant yet, the page prompts you to run **Sync data** first.
-
-{% hint style="info" %}
-Shadow AI Discovery requires a single tenant to be selected. It is not available in the All Tenants view.
-{% endhint %}
+The date the tenant's data was last collected is shown at the top of the page. If nothing has been collected yet, the page prompts you to run **Sync data** first.
 
 ## Action Buttons
 
@@ -22,7 +18,7 @@ Generates an executive summary of the shadow AI in the tenant, for ease of shari
 
 <summary>Sync data</summary>
 
-Queues a refresh of the cached datasets the report is compiled from (Intune detected apps, Entra service principals, and OAuth2 permission grants) for the selected tenant. The report updates once the sync completes.
+Collects fresh device and application data for the tenant. The report updates once the sync completes.
 
 </details>
 
@@ -83,7 +79,7 @@ Risk Categorisation:
 
 ## AI Software on Managed Devices (Intune) Table
 
-Lists AI-related software installed on the tenant's Intune-managed devices. Each row is a catalogue tool whose name or publisher matched the detected-apps inventory, showing which tool it maps to, its category and risk, and the devices it's installed on. The inventory reports a separate entry per version and install flavour, so everything matching the same tool is merged into a single row. This is the device-installed view of Shadow AI: what's physically running on endpoints. It draws from the cached Intune detected-apps data, so it's empty when no installed software matches the catalogue or the Intune cache hasn't been synced.
+Lists the AI software found on the tenant's Intune-managed devices, which is the view of what is physically running on endpoints. One row covers one AI tool, however many versions or installer variants of it Intune reports, with its category, risk, and the devices it is installed on. The table is empty when no installed software matches a known AI tool, or when the tenant's device data has not been collected yet.
 
 Preset filters are available from the **Filters** button for **Sanctioned**, **Unsanctioned**, and **High Risk** rows. Clicking a row (or using the More Info action) opens a detail panel for the matched tool, showing its description, an explanation of why it carries its catalogue risk rating, its sanction status, its key properties, and the list of devices it is installed on.
 
@@ -91,23 +87,27 @@ Preset filters are available from the **Filters** button for **Sanctioned**, **U
 
 | Column      | Description                                                                                                                                                                                      |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Application | The installed application names exactly as Intune reports them, combined across the merged inventory entries, for example "Copilot, Microsoft.Copilot".                                          |
-| AI Tool     | The normalised catalogue tool name the application matched to, for example "Cursor (User)" becomes Cursor. This is the deduplication key used across the rest of the page.                       |
-| Category    | The catalogue category of the matched tool, for example AI Coding, AI Assistant, or AI Meeting Notetaker.                                                                                        |
-| Risk        | The effective, sanction-aware risk level. Shows the catalogue risk normally, or `Informational` when the tool is Company Sanctioned for the tenant.                                              |
-| Status      | `Sanctioned` or `Unsanctioned`, driven by the per-tenant sanction list.                                                                                                                          |
-| Publisher   | The software publisher reported by Intune. Where the inventory mixes clean names with full certificate subjects, the shortest is shown. Also one of the two fields fed into the catalogue match. |
-| Platform    | The distinct operating systems Intune reported across the merged entries, defaulting to `Unknown` when blank.                                                                                    |
-| Version     | The distinct application versions detected across the merged inventory entries, combined.                                                                                                        |
-| Devices     | The distinct devices backing the install across all merged entries, each carrying the device name, assigned user, platform, and OS version. Feeds the device list in the row flyout.             |
+| Application | The application names as Intune reports them, for example "Copilot, Microsoft.Copilot".                                                            |
+| AI Tool     | The AI tool the application was recognised as, for example "Cursor (User)" is listed as Cursor.                                                    |
+| Category    | The kind of AI tool it is, for example AI Coding, AI Assistant, or AI Meeting Notetaker.                                                           |
+| Risk        | The risk level for the tool. Reads `Informational` while the tool is marked as company sanctioned for the tenant.                                  |
+| Status      | Whether the tool is `Sanctioned` or `Unsanctioned` in this tenant.                                                                                 |
+| Publisher   | The software publisher Intune reports.                                                                                                            |
+| Platform    | The operating systems the tool was found on, showing `Unknown` where Intune does not report one.                                                   |
+| Version     | The versions of the tool found across the tenant's devices.                                                                                       |
+| Devices     | The devices the tool is installed on, with the assigned user, platform, and OS version for each.                                                   |
 
 ### Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Mark as Company Sanctioned</td><td>Shown when the row's <strong>Status</strong> is not <code>Sanctioned</code>. Marks the tool sanctioned for the tenant so <strong>Risk</strong> reports as <code>Informational</code> and <strong>Status</strong> becomes <code>Sanctioned</code>. Refetches the report so cards, charts, and both tables update.</td><td>true</td></tr><tr><td>Remove Company Sanctioned Status</td><td>Shown when the row's <strong>Status</strong> is <code>Sanctioned</code>. Removes the sanction so the catalogue risk level applies again and <strong>Status</strong> returns to <code>Unsanctioned</code>. Refetches the report so cards, charts, and both tables update.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Mark as Company Sanctioned</td><td>Greyed out on a tool that is already sanctioned. Marks the tool sanctioned for the tenant so <strong>Risk</strong> reports as <code>Informational</code> and <strong>Status</strong> becomes <code>Sanctioned</code>. Refetches the report so cards, charts, and both tables update.</td><td>true</td></tr><tr><td>Remove Company Sanctioned Status</td><td>Greyed out on a tool that is not sanctioned. Removes the sanction so the catalogue risk level applies again and <strong>Status</strong> returns to <code>Unsanctioned</code>. Refetches the report so cards, charts, and both tables update.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 ## AI Applications in Entra Table
 
-Lists AI-related applications that have been consented into the tenant in Entra ID. Each row is a matched service principal, showing the tool it maps to, its category and risk, the OAuth permissions it was granted, and recent sign-in activity. This is the identity/consent view of Shadow AI: what's been authorised to access tenant data via OAuth, independent of any device install. It draws from the cached service principal and OAuth grant data: every cached service principal is matched by display name, not only those holding OAuth grants, with duplicates collapsed by application ID. A best-effort 7-day sign-in enrichment (a single bounded query covering up to 15 matched applications) requires Entra ID P1.
+Lists the AI applications users have consented to in Entra ID, which is the view of what has been authorised to reach tenant data regardless of whether anything is installed on a device. Each row shows the tool, its category and risk, the permissions it was granted, and how much it has been used recently.
+
+{% hint style="info" %}
+The sign-in columns need Entra ID P1 and read `0` without it.
+{% endhint %}
 
 Preset filters are available from the **Filters** button for **Sanctioned**, **Unsanctioned**, and **High Risk** rows. Clicking a row (or using the More Info action) opens a detail panel for the matched tool, showing its description, an explanation of why it carries its catalogue risk rating, its sanction status, its key properties, the OAuth permissions granted, and the per-user sign-in activity from the last 7 days.
 
@@ -115,20 +115,20 @@ Preset filters are available from the **Filters** button for **Sanctioned**, **U
 
 | Column                | Description                                                                                                                                          |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Application           | The Entra service principal's display name, the enterprise application as it appears consented in the tenant.                                        |
-| AI Tool               | The normalised catalogue tool name matched from the service principal's display name. Shares the deduplication key used across the rest of the page. |
-| Category              | The catalogue category of the matched tool, for example AI Assistant, AI Agent & Automation, or AI Email.                                            |
-| Risk                  | The effective, sanction-aware risk level. Shows the catalogue risk normally, or `Informational` when the tool is Company Sanctioned for the tenant.  |
-| Status                | `Sanctioned` or `Unsanctioned`, driven by the per-tenant sanction list.                                                                              |
-| Application ID        | The application's client ID, taken from the service principal.                                                                                       |
-| Approved Permissions  | The individual delegated OAuth scopes granted to the application, derived from the tenant's OAuth2 permission grants and shown as chips.             |
-| Sign-ins (7 Days)     | Count of sign-ins to the application over the last 7 days. A best-effort enrichment that requires Entra ID P1, reporting `0` when unavailable.       |
-| Active Users (7 Days) | Distinct users who signed in to the application over the last 7 days. Carries the same P1 dependency and reports `0` when unavailable.               |
-| First Consented       | When the service principal was created in the tenant, used as a proxy for first consent because the OAuth grant start time is unreliable.            |
+| Application           | The name of the enterprise application as it appears in the tenant.                                            |
+| AI Tool               | The AI tool the application was recognised as.                                                                 |
+| Category              | The kind of AI tool it is, for example AI Assistant, AI Agent &#38; Automation, or AI Email.                    |
+| Risk                  | The risk level for the tool. Reads `Informational` while the tool is marked as company sanctioned.             |
+| Status                | Whether the tool is `Sanctioned` or `Unsanctioned` in this tenant.                                             |
+| Application ID        | The application's client ID.                                                                                   |
+| Approved Permissions  | The permissions users have granted the application, listed individually.                                       |
+| Sign-ins (7 Days)     | How many times anyone signed in to the application in the last 7 days.                                         |
+| Active Users (7 Days) | How many different people signed in to the application in the last 7 days.                                     |
+| First Consented       | When the application first appeared in the tenant, which is the best available indication of when it was first approved. |
 
 ### Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Mark as Company Sanctioned</td><td>Shown when the row's <strong>Status</strong> is not <code>Sanctioned</code>. Marks the tool sanctioned for the tenant so <strong>Risk</strong> reports as <code>Informational</code> and <strong>Status</strong> becomes <code>Sanctioned</code>. Refetches the report so cards, charts, and both tables update.</td><td>true</td></tr><tr><td>Remove Company Sanctioned Status</td><td>Shown when the row's <strong>Status</strong> is <code>Sanctioned</code>. Removes the sanction so the catalogue risk level applies again and <strong>Status</strong> returns to <code>Unsanctioned</code>. Refetches the report.</td><td>true</td></tr><tr><td>Application Users</td><td>Opens a side drawer listing the application's per-user sign-in activity over the last 7 days: user principal name, display name, sign-in count, and last sign-in time. The data depends on the same Entra ID P1 sign-in enrichment.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Mark as Company Sanctioned</td><td>Greyed out on a tool that is already sanctioned. Marks the tool sanctioned for the tenant so <strong>Risk</strong> reports as <code>Informational</code> and <strong>Status</strong> becomes <code>Sanctioned</code>. Refetches the report so cards, charts, and both tables update.</td><td>true</td></tr><tr><td>Remove Company Sanctioned Status</td><td>Greyed out on a tool that is not sanctioned. Removes the sanction so the catalogue risk level applies again and <strong>Status</strong> returns to <code>Unsanctioned</code>. Refetches the report.</td><td>true</td></tr><tr><td>Application Users</td><td>Opens a side drawer listing the application's per-user sign-in activity over the last 7 days: user principal name, display name, sign-in count, and last sign-in time. The data depends on the same Entra ID P1 sign-in enrichment.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 ***
 
