@@ -1,10 +1,15 @@
 # Add Team
 
-The Add Team page gives you the ability to create a brand-new team and set a Display Name, Description, Owner, and Team Visibility.
+Creates a new team in the selected tenant, using Microsoft's standard team template. The Microsoft 365 group behind the team, including its mail nickname, is created automatically from the display name.
 
-## Details <a href="#addteam-details" id="addteam-details"></a>
+## Details
 
-Attributes like the mail nickname will be automatically generated based on the display name.
+| Field                                       | Description                                                                                                                         |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Display Name                                | The name of the team. Required.                                                                                                     |
+| Description                                 | A description of what the team is for.                                                                                              |
+| Select owner (must have a Teams license)    | The user who will be added to the team as its owner. Required, and at least one owner has to be set for the team to be created.     |
+| Team Visibility                             | **Private Team** means people can only join if an owner adds them. **Public Team** means anyone in the organisation can join it.     |
 
 ***
 

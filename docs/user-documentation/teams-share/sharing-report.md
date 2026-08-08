@@ -1,16 +1,16 @@
 # Sharing Report
 
-The SharePoint and OneDrive Sharing Report shows the sharing links and external shares across a single tenant's SharePoint sites and OneDrive accounts, drawing attention to the riskiest ones — anonymous links, anonymous links that allow editing or never expire, and shares reaching external recipients. It requires a single tenant to be selected and is not available for All Tenants. The data is compiled from cached scans that you trigger and keep current from this page, and the report can be exported as a PDF.
+The SharePoint and OneDrive Sharing Report shows the sharing links and external shares across a single tenant's SharePoint sites and OneDrive accounts, drawing attention to the riskiest ones: anonymous links, anonymous links that allow editing or never expire, and shares reaching external recipients. It requires a single tenant to be selected and is not available for All Tenants. The data is compiled from cached scans that you trigger and keep current from this page, and the report can be exported as a PDF.
 
 ## Syncing Sharing Data
 
 The report reads from cached scans rather than querying SharePoint and OneDrive live. The first time you open it for a tenant there is no data yet, and a prompt invites you to run a scan. The controls at the top of the page build and refresh that data.
 
-| Control       | Description                                                                                                                                                                                                                                                                                   |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Control       | Description                                                                                                                                                                                                                                                                                 |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Sync data     | Queues scans of the tenant's SharePoint sites and OneDrive accounts for sharing links, together with SharePoint and OneDrive usage data. Scanning every drive can take a while on large tenants. Progress is shown next to the button, and the report refreshes itself once the scans finish. |
-| Refresh       | Reloads the report from the cached data without running a new scan.                                                                                                                                                                                                                           |
-| Export report | Generates a PDF of the current report for the selected tenant.                                                                                                                                                                                                                                |
+| Refresh       | The refresh icon reloads the report from the cached data without running a new scan. Use it when a scan has finished elsewhere, or when someone else has refreshed the cache.                                                                                                                |
+| Export Report | Opens a preview of the report as a PDF, which you can then download. Greyed out until the report has data.                                                                                                                                                                                   |
 
 The time of the last scan is shown as "Last data refresh."
 
@@ -45,7 +45,7 @@ A row of headline counts sits above two cards that break the environment down fu
 
 ## Charts
 
-Once a scan has data, the report charts the sharing links from several angles. The final two charts appear only after usage data has been synced.
+Once a scan has data, the report charts the sharing links from several angles. The last two charts are added once usage data has been synced.
 
 | Chart                          | Shows                                                         |
 | ------------------------------ | ------------------------------------------------------------- |
@@ -56,6 +56,20 @@ Once a scan has data, the report charts the sharing links from several angles. T
 | Top External Recipients        | The external recipients appearing in the most shares.         |
 | Storage Used (GB) by Workload  | Storage used across SharePoint, Teams, and OneDrive.          |
 | Files by Workload              | File counts across SharePoint, Teams, and OneDrive.           |
+
+## Filters
+
+Buttons above the table apply common filters in one click:
+
+| Filter               | Shows                                         |
+| -------------------- | --------------------------------------------- |
+| Anonymous            | Only anonymous links.                         |
+| Anonymous + Editable | Only anonymous links that also allow editing. |
+| Folder Shares        | Only shares placed on folders.                |
+| External             | Only external links and shares.               |
+| Internal             | Only internal links.                          |
+| SharePoint           | Only items in SharePoint.                     |
+| OneDrive             | Only items in OneDrive.                       |
 
 ## Table Details
 
@@ -76,20 +90,6 @@ The Sharing Links & External Shares table lists every sharing link and external 
 | Has Password            | Whether the sharing link is password protected.       |
 | Expiration Date Time    | When the link expires, if an expiry is set.           |
 | Last Modified Date Time | When the item was last modified.                      |
-
-### Quick filters
-
-Buttons above the table apply common filters in one click:
-
-| Filter               | Shows                                         |
-| -------------------- | --------------------------------------------- |
-| Anonymous            | Only anonymous links.                         |
-| Anonymous + Editable | Only anonymous links that also allow editing. |
-| Folder Shares        | Only shares placed on folders.                |
-| External             | Only external links and shares.               |
-| Internal             | Only internal links.                          |
-| SharePoint           | Only items in SharePoint.                     |
-| OneDrive             | Only items in OneDrive.                       |
 
 ## Table Actions
 
