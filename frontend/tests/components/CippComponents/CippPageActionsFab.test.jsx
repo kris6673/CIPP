@@ -1,7 +1,8 @@
+import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Button, ListItemButton, MenuItem, Typography } from "@mui/material";
+import { Button, Drawer, ListItemButton, MenuItem, Typography } from "@mui/material";
 import { CippPageActionsFab } from "../../../src/components/CippComponents/CippPageActionsFab";
 import { renderWithProviders } from "../../test-utils";
 
@@ -20,7 +21,9 @@ describe("CippPageActionsFab", () => {
       </CippPageActionsFab>
     );
 
-    expect(screen.queryByText("Sheet content")).not.toBeInTheDocument();
+    // keepMounted: the children stay mounted so a child-owned overlay survives the
+    // sheet closing, so "closed" means hidden rather than absent.
+    expect(screen.getByText("Sheet content")).not.toBeVisible();
     await openSheet(user);
 
     expect(screen.getByText("Sheet content")).toBeInTheDocument();
@@ -54,7 +57,7 @@ describe("CippPageActionsFab", () => {
     await user.click(screen.getByRole("button", { name: "Do a thing" }));
 
     expect(onClick).toHaveBeenCalledTimes(1);
-    await waitFor(() => expect(screen.queryByText("Sheet content")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Sheet content")).not.toBeVisible());
   });
 
   it("closes the sheet when a child link is tapped", async () => {
@@ -71,7 +74,7 @@ describe("CippPageActionsFab", () => {
     await openSheet(user);
     await user.click(screen.getByRole("link", { name: "External portal" }));
 
-    await waitFor(() => expect(screen.queryByText("Sheet content")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Sheet content")).not.toBeVisible());
   });
 
   it("closes the sheet when a MenuItem child is tapped", async () => {
@@ -89,7 +92,7 @@ describe("CippPageActionsFab", () => {
     await user.click(screen.getByRole("menuitem", { name: "Executive Summary" }));
 
     expect(onClick).toHaveBeenCalledTimes(1);
-    await waitFor(() => expect(screen.queryByText("Sheet content")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Sheet content")).not.toBeVisible());
   });
 
   it("keeps the sheet open when non-interactive content is tapped", async () => {
@@ -104,5 +107,39 @@ describe("CippPageActionsFab", () => {
     await user.click(screen.getByText("Sheet content"));
 
     expect(screen.getByText("Sheet content")).toBeInTheDocument();
+  });
+});
+
+// A cardButton child renders both its trigger and its own overlay (CippAddUserDrawer is a
+// button plus a CippOffCanvas). If the sheet unmounts its children on close, that overlay
+// disappears the instant it opens.
+describe("CippPageActionsFab with a child that owns an overlay", () => {
+  const DrawerAction = () => {
+    const [open, setOpen] = React.useState(false);
+    return (
+      <>
+        <Button onClick={() => setOpen(true)}>Add User</Button>
+        <Drawer anchor="right" open={open} onClose={() => setOpen(false)}>
+          <div>Add user form</div>
+        </Drawer>
+      </>
+    );
+  };
+
+  it("keeps the child's overlay open after the sheet closes", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <CippPageActionsFab>
+        <DrawerAction />
+      </CippPageActionsFab>
+    );
+
+    await user.click(screen.getByRole("button", { name: "Page actions" }));
+    await user.click(await screen.findByRole("button", { name: "Add User" }));
+
+    // the tap closes the sheet and opens the child's drawer — the drawer must survive it
+    expect(await screen.findByText("Add user form")).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    expect(screen.getByText("Add user form")).toBeInTheDocument();
   });
 });

@@ -86,7 +86,9 @@ export const RestackedCardButton = {
 
     await step('tapping an action closes the sheet', async () => {
       await userEvent.click(body.getByRole('button', { name: 'Bulk Add' }))
-      await waitFor(() => expect(body.queryByText('Actions')).not.toBeInTheDocument())
+      // keepMounted: a cardButton child owns its own drawer, so the sheet hides rather
+      // than unmounting — otherwise that drawer would vanish the moment it opened.
+      await waitFor(() => expect(body.getByText('Actions')).not.toBeVisible())
     })
   },
 }

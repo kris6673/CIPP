@@ -80,6 +80,10 @@ export const CippPageActionsFab = (props) => {
         onExited={sheet.handleExited}
         title={resolvedTitle}
         {...sheetProps}
+        // A cardButton child owns its own drawer/dialog (CippAddUserDrawer renders both the
+        // trigger and the CippOffCanvas). Unmounting the sheet would take that overlay with
+        // it the instant it opened, so the children stay mounted.
+        ModalProps={{ keepMounted: true, ...sheetProps?.ModalProps }}
       >
         <Stack
           spacing={restackButtons ? 1 : 0}

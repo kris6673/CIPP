@@ -85,8 +85,8 @@ describe("HeaderedTabbedLayout mobile actions", () => {
     await user.click(screen.getByRole("button", { name: "Views" }));
     await user.click(await screen.findByText("Reset Password"));
 
-    // sheet goes away
-    await waitFor(() => expect(screen.queryByText("Manage Drift")).not.toBeInTheDocument());
+    // sheet goes away — keepMounted keeps its rows in the DOM, so closed means hidden
+    await waitFor(() => expect(screen.getByText("Manage Drift")).not.toBeVisible());
 
     // and the confirmation overlay is present and stays present
     const confirm = await screen.findByText(/Reset the password\?/i, {}, { timeout: 3000 });
