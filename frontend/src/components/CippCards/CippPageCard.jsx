@@ -28,7 +28,9 @@ const CippPageCard = (props) => {
           pb: { xs: 2, md: 4 },
         }}
       >
-        <Container maxWidth={cardSize}>
+        {/* MUI's Container widens its gutters at sm; every layout in this app switches at
+            md, so a 600-900px viewport got 24px here and 16px everywhere else. */}
+        <Container maxWidth={cardSize} sx={{ px: { xs: 2, md: 3 } }}>
           <Stack spacing={2}>
             <Stack spacing={2}>
               {hideTitleText !== true && (
