@@ -19,6 +19,7 @@ import {
 } from '@mui/material'
 import { PictureAsPdf, Download, Close, Settings } from '@mui/icons-material'
 import { CippAutoComplete } from './CippComponents/CippAutocomplete'
+import { CippOffCanvas } from './CippComponents/CippOffCanvas'
 import { Document, Page, Text, View, PDFViewer, Image } from '@react-pdf/renderer'
 import { useSettings } from '../hooks/use-settings'
 import { useSecureScore } from '../hooks/use-securescore'
@@ -1622,6 +1623,10 @@ export const ExecutiveReportButton = (props) => {
     setPreviewOpen(false)
   }
 
+  // Below md the 320px config rail would leave the preview about 70px wide, so it moves into
+  // a drawer and the preview takes the whole dialog.
+  const [sectionsOpen, setSectionsOpen] = useState(false)
+
   // Section configuration options
   const sectionOptions = [
     {
@@ -1670,6 +1675,102 @@ export const ExecutiveReportButton = (props) => {
       description: 'AI usage discovery and risk pages from the Shadow AI report',
     },
   ]
+
+  // One definition, two homes: the desktop rail and the mobile drawer. The drawer's own
+  // header already says "Report Sections", so it takes the panel without the heading.
+  const sectionPanel = ({ showHeading = true } = {}) => (
+    <Box sx={{ p: 2 }}>
+      {showHeading && (
+        <Typography
+          variant="h6"
+          gutterBottom
+          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+        >
+          <Settings size={20} />
+          Report Sections
+        </Typography>
+      )}
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        Configure which sections to include in your executive report. Changes are reflected in
+        real-time.
+      </Typography>
+
+      <Box sx={{ mb: 3 }}>
+        <CippAutoComplete
+          size="small"
+          label="Branding"
+          multiple={false}
+          creatable={false}
+          disableClearable={true}
+          isFetching={brandingPresets.isFetching}
+          options={presetOptions}
+          value={
+            presetOptions.find((option) => option.value === brandingPresetId) ?? presetOptions[0]
+          }
+          onChange={(option) => setPresetOverride(option?.value ?? '')}
+        />
+        <Typography variant="caption" color="text.secondary">
+          Presets are managed in Settings → Branding
+        </Typography>
+      </Box>
+
+      <Stack spacing={1.5}>
+        {sectionOptions.map((option) => (
+          <Paper
+            key={option.key}
+            onClick={() => handleSectionToggle(option.key)}
+            sx={{
+              p: 1.5,
+              border: '1px solid',
+              borderColor: sectionConfig[option.key] ? 'primary.main' : 'divider',
+              bgcolor: sectionConfig[option.key] ? 'primary.50' : 'background.paper',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease-in-out',
+              display: 'flex',
+              alignItems: 'center',
+              '&:hover': {
+                borderColor: 'primary.main',
+                bgcolor: sectionConfig[option.key] ? 'primary.100' : 'primary.25',
+              },
+            }}
+          >
+            <Switch
+              checked={sectionConfig[option.key]}
+              onChange={(event) => {
+                event.stopPropagation()
+                handleSectionToggle(option.key)
+              }}
+              onClick={(event) => event.stopPropagation()}
+              color="primary"
+              size="small"
+              disabled={
+                sectionConfig[option.key] &&
+                Object.values(sectionConfig).filter(Boolean).length === 1
+              }
+            />
+            <Box sx={{ ml: 1, flexGrow: 1, minWidth: 0 }}>
+              <Typography variant="subtitle2" fontWeight="bold" sx={{ fontSize: '0.875rem' }}>
+                {option.label}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                {option.description}
+              </Typography>
+            </Box>
+          </Paper>
+        ))}
+      </Stack>
+
+      <Box sx={{ mt: 3, p: 2, bgcolor: 'primary.50', borderRadius: 1 }}>
+        <Typography variant="caption" color="primary.main" fontWeight="bold">
+          💡 Pro Tip
+        </Typography>
+        <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 0.5 }}>
+          Enable only the sections relevant to your audience to create focused, impactful reports.
+          At least one section must be enabled.
+        </Typography>
+      </Box>
+    </Box>
+  )
 
   return (
     <>
@@ -1742,8 +1843,9 @@ export const ExecutiveReportButton = (props) => {
         fullWidth
         sx={{
           '& .MuiDialog-paper': {
-            height: '95vh',
-            maxHeight: '95vh',
+            // dvh, not vh: iOS counts the collapsing address bar in vh, so 95vh overflows.
+            height: { xs: '100dvh', md: '95vh' },
+            maxHeight: { xs: '100dvh', md: '95vh' },
           },
         }}
       >
@@ -1757,16 +1859,28 @@ export const ExecutiveReportButton = (props) => {
             borderColor: 'divider',
           }}
         >
-          <Typography variant="h6" component="div">
+          <Typography variant="h6" component="div" noWrap sx={{ minWidth: 0 }}>
             Executive Report - {tenantName}
           </Typography>
-          <IconButton onClick={handleClose} size="small">
-            <Close />
-          </IconButton>
+          <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
+            {/* The config rail's stand-in below md, in the title bar because the dialog is
+                full-screen there and this is the only chrome that stays put. */}
+            <IconButton
+              onClick={() => setSectionsOpen(true)}
+              size="small"
+              aria-label="Report sections"
+              sx={{ display: { xs: 'inline-flex', md: 'none' } }}
+            >
+              <Settings />
+            </IconButton>
+            <IconButton onClick={handleClose} size="small" aria-label="Close preview">
+              <Close />
+            </IconButton>
+          </Stack>
         </DialogTitle>
 
         <DialogContent sx={{ p: 0, height: '100%', display: 'flex' }}>
-          {/* Left Panel - Section Configuration */}
+          {/* Left Panel - Section Configuration. Below md it lives in the drawer instead. */}
           <Paper
             sx={{
               width: 320,
@@ -1776,115 +1890,14 @@ export const ExecutiveReportButton = (props) => {
               borderColor: 'divider',
               height: '100%',
               overflow: 'auto',
+              display: { xs: 'none', md: 'block' },
             }}
           >
-            <Box sx={{ p: 2 }}>
-              <Typography
-                variant="h6"
-                gutterBottom
-                sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
-              >
-                <Settings size={20} />
-                Report Sections
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Configure which sections to include in your executive report. Changes are reflected
-                in real-time.
-              </Typography>
-
-              <Box sx={{ mb: 3 }}>
-                <CippAutoComplete
-                  size="small"
-                  label="Branding"
-                  multiple={false}
-                  creatable={false}
-                  disableClearable={true}
-                  isFetching={brandingPresets.isFetching}
-                  options={presetOptions}
-                  value={
-                    presetOptions.find((option) => option.value === brandingPresetId) ??
-                    presetOptions[0]
-                  }
-                  onChange={(option) => setPresetOverride(option?.value ?? '')}
-                />
-                <Typography variant="caption" color="text.secondary">
-                  Presets are managed in Settings → Branding
-                </Typography>
-              </Box>
-
-              <Stack spacing={1.5}>
-                {sectionOptions.map((option) => (
-                  <Paper
-                    key={option.key}
-                    onClick={() => handleSectionToggle(option.key)}
-                    sx={{
-                      p: 1.5,
-                      border: '1px solid',
-                      borderColor: sectionConfig[option.key] ? 'primary.main' : 'divider',
-                      bgcolor: sectionConfig[option.key] ? 'primary.50' : 'background.paper',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease-in-out',
-                      display: 'flex',
-                      alignItems: 'center',
-                      '&:hover': {
-                        borderColor: 'primary.main',
-                        bgcolor: sectionConfig[option.key] ? 'primary.100' : 'primary.25',
-                      },
-                    }}
-                  >
-                    <Switch
-                      checked={sectionConfig[option.key]}
-                      onChange={(event) => {
-                        event.stopPropagation()
-                        handleSectionToggle(option.key)
-                      }}
-                      onClick={(event) => event.stopPropagation()}
-                      color="primary"
-                      size="small"
-                      disabled={
-                        sectionConfig[option.key] &&
-                        Object.values(sectionConfig).filter(Boolean).length === 1
-                      }
-                    />
-                    <Box sx={{ ml: 1, flexGrow: 1 }}>
-                      <Typography
-                        variant="subtitle2"
-                        fontWeight="bold"
-                        sx={{ fontSize: '0.875rem' }}
-                      >
-                        {option.label}
-                      </Typography>
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ fontSize: '0.75rem' }}
-                      >
-                        {option.description}
-                      </Typography>
-                    </Box>
-                  </Paper>
-                ))}
-              </Stack>
-
-              <Box sx={{ mt: 3, p: 2, bgcolor: 'primary.50', borderRadius: 1 }}>
-                <Typography variant="caption" color="primary.main" fontWeight="bold">
-                  💡 Pro Tip
-                </Typography>
-                <Typography
-                  variant="caption"
-                  display="block"
-                  color="text.secondary"
-                  sx={{ mt: 0.5 }}
-                >
-                  Enable only the sections relevant to your audience to create focused, impactful
-                  reports. At least one section must be enabled.
-                </Typography>
-              </Box>
-            </Box>
+            {sectionPanel()}
           </Paper>
 
           {/* Right Panel - PDF Preview */}
-          <Box sx={{ flex: 1, height: '100%' }}>
+          <Box sx={{ flex: 1, height: '100%', minWidth: 0 }}>
             {isDataLoading ? (
               <Box
                 sx={{
@@ -1930,7 +1943,19 @@ export const ExecutiveReportButton = (props) => {
           </Box>
         </DialogContent>
 
-        <DialogActions sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', gap: 1 }}>
+        <DialogActions
+          sx={{
+            p: 2,
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            gap: 1,
+            // Caption plus two buttons in one row leaves nothing usable at 390px; the primary
+            // action goes to the bottom of the stack, in thumb reach.
+            flexDirection: { xs: 'column-reverse', md: 'row' },
+            alignItems: { xs: 'stretch', md: 'center' },
+            '& > :not(style) ~ :not(style)': { ml: { xs: 0, md: 1 } },
+          }}
+        >
           <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="caption" color="text.secondary">
               Sections enabled: {Object.values(sectionConfig).filter(Boolean).length} of{' '}
@@ -2000,6 +2025,19 @@ export const ExecutiveReportButton = (props) => {
             Close
           </Button>
         </DialogActions>
+
+        {/* Mounted inside the Dialog so it inherits its theme scope; aboveModal lifts it over
+            the dialog it is opened from. */}
+        <CippOffCanvas
+          visible={sectionsOpen}
+          onClose={() => setSectionsOpen(false)}
+          title="Report Sections"
+          size="sm"
+          contentPadding={0}
+          aboveModal
+        >
+          {sectionPanel({ showHeading: false })}
+        </CippOffCanvas>
       </Dialog>
     </>
   )

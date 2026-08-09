@@ -30,6 +30,7 @@ export const CippOffCanvas = (props) => {
     contentPadding = 2,
     keepMounted = false,
     richFormatting = false,
+    aboveModal = false,
   } = props;
 
   const mdDown = useMediaQuery((theme) => theme.breakpoints.down("md"));
@@ -91,6 +92,9 @@ export const CippOffCanvas = (props) => {
         ModalProps={{
           keepMounted: keepMounted,
         }}
+        // A stock Drawer sits at 1200 and a Dialog at 1300, so a drawer opened from inside a
+        // dialog renders behind it. Same lift CippBottomSheet takes, for the same reason.
+        sx={aboveModal ? { zIndex: (theme) => theme.zIndex.modal + 1 } : undefined}
         anchor={"right"}
         open={visible}
         onClose={onClose}
