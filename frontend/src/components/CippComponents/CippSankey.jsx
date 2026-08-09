@@ -60,11 +60,17 @@ export const CippSankey = ({ data, onNodeClick, onLinkClick }) => {
           modifiers: [["darker", 0.8]],
         }}
         nodeBorderRadius={3}
-        linkOpacity={0.5}
+        linkOpacity={isMobile ? 0.75 : 0.5}
         linkHoverOthersOpacity={0.1}
-        linkContract={3}
-        linkBlendMode={isDark ? "lighten" : "multiply"}
-        enableLinkGradient={true}
+        // Contracting each end eats into the gap between node columns; on a narrow chart
+        // that gap is small enough that 3px a side visibly thins the ribbons.
+        linkContract={isMobile ? 0 : 3}
+        // mix-blend-mode on SVG is unreliable in mobile WebKit — combined with a gradient
+        // fill it can composite the ribbons to nothing, which shows as bare node bars with
+        // no links between them. Blend is decoration here, so mobile renders them plainly
+        // and leans on opacity instead.
+        linkBlendMode={isMobile ? "normal" : isDark ? "lighten" : "multiply"}
+        enableLinkGradient={!isMobile}
         labelPosition="inside"
         labelOrientation={isMobile ? "vertical" : "horizontal"}
         labelPadding={isMobile ? 6 : 16}

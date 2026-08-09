@@ -37,10 +37,24 @@ describe("CippSankey", () => {
     sankeyProps.last = null;
   });
 
-  it("keeps horizontal inside labels on desktop", () => {
+  it("keeps horizontal inside labels and blended gradient links on desktop", () => {
     render(<CippSankey data={data} />);
     expect(sankeyProps.last.labelOrientation).toBe("horizontal");
     expect(sankeyProps.last.nodeThickness).toBe(18);
+    expect(sankeyProps.last.enableLinkGradient).toBe(true);
+    expect(sankeyProps.last.linkBlendMode).toBe("multiply");
+  });
+
+  // Bare node bars with no ribbons between them: mix-blend-mode on SVG is unreliable in
+  // mobile WebKit and can composite gradient-filled links away entirely.
+  it("draws links without blend modes or gradients on narrow screens", () => {
+    layoutState.isMobile = true;
+    render(<CippSankey data={data} />);
+
+    expect(sankeyProps.last.linkBlendMode).toBe("normal");
+    expect(sankeyProps.last.enableLinkGradient).toBe(false);
+    expect(sankeyProps.last.linkOpacity).toBeGreaterThan(0.5);
+    expect(sankeyProps.last.linkContract).toBe(0);
   });
 
   it("rotates labels and thins the nodes on narrow screens", () => {

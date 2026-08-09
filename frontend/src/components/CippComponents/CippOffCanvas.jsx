@@ -8,6 +8,7 @@ import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { renderUrlValue } from "../../utils/render-url-value";
+import { useHistoryDismiss } from "../../hooks/use-history-dismiss";
 
 export const CippOffCanvas = (props) => {
   const {
@@ -75,6 +76,11 @@ export const CippOffCanvas = (props) => {
   // header arrows move to a 44px bottom bar in thumb reach.
   const hasRowNavigation = canNavigateUp || canNavigateDown;
   const showBottomNav = mdDown && hasRowNavigation;
+
+  // Below md this drawer reads as a detail page, so the back gesture has to behave like the
+  // header's back chevron. Without a history entry of its own, swiping back from a row's
+  // details leaves the list page entirely — and takes the table's loaded state with it.
+  useHistoryDismiss(visible, onClose, mdDown);
 
   return (
     <>
