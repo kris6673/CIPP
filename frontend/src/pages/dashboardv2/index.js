@@ -2,6 +2,10 @@ import {
   Box,
   Container,
   Button,
+  Divider,
+  List,
+  ListItemButton,
+  ListSubheader,
   Menu,
   MenuItem,
   ListItemIcon,
@@ -13,9 +17,12 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import { Grid, useMediaQuery } from '@mui/system'
 import { useSettings } from '../../hooks/use-settings'
+import { useIsMobileLayout } from '../../hooks/use-breakpoint'
 import { ApiGetCall } from '../../api/ApiCall.jsx'
-import Portals from '../../data/portals'
+import { getFilteredPortals } from '../../utils/get-filtered-portals'
+import { getIconByName } from '../../utils/icon-registry'
 import { BulkActionsMenu } from '../../components/bulk-actions-menu.js'
+import { CippPageActionsFab } from '../../components/CippComponents/CippPageActionsFab'
 import { ExecutiveReportButton } from '../../components/ExecutiveReportButton.js'
 import { TabbedLayout } from '../../layouts/TabbedLayout'
 import { Layout as DashboardLayout } from '../../layouts/index.js'
@@ -45,6 +52,9 @@ const Page = () => {
   const isAllTenants = !currentTenant || currentTenant === 'AllTenants'
   const [portalMenuItems, setPortalMenuItems] = useState([])
   const isWide = useMediaQuery('(min-width:1513px)')
+  // Below md the Portals/Reports button row gives way to a bottom-right FAB sheet, and
+  // CippReportToolbar collapses to selector + kebab on its own.
+  const isMobile = useIsMobileLayout()
   const [reportsMenuAnchor, setReportsMenuAnchor] = useState(null)
   // Get reportId from query params or default to the user's preferred suite (Preferences page)
   // Only use default if router is ready and reportId is still not present
@@ -137,41 +147,6 @@ const Page = () => {
         }
       : dashboardDemoData
 
-  // Function to filter portals based on user preferences
-  const getFilteredPortals = () => {
-    const defaultLinks = {
-      M365_Portal: true,
-      Exchange_Portal: true,
-      Entra_Portal: true,
-      Teams_Portal: true,
-      Azure_Portal: true,
-      Intune_Portal: true,
-      SharePoint_Admin: true,
-      Security_Portal: true,
-      Compliance_Portal: true,
-      Power_Platform_Portal: true,
-      Power_BI_Portal: true,
-    }
-
-    let portalLinks
-    if (settings.UserSpecificSettings?.portalLinks) {
-      portalLinks = {
-        ...defaultLinks,
-        ...settings.UserSpecificSettings.portalLinks,
-      }
-    } else if (settings.portalLinks) {
-      portalLinks = { ...defaultLinks, ...settings.portalLinks }
-    } else {
-      portalLinks = defaultLinks
-    }
-
-    // Filter the portals based on user settings
-    return Portals.filter((portal) => {
-      const settingKey = portal.name
-      return settingKey ? portalLinks[settingKey] === true : true
-    })
-  }
-
   useEffect(() => {
     if (currentTenantInfo.isSuccess) {
       const tenantLookup = currentTenantInfo.data?.find(
@@ -179,7 +154,7 @@ const Page = () => {
       )
 
       // Get filtered portals based on user preferences
-      const filteredPortals = getFilteredPortals()
+      const filteredPortals = getFilteredPortals(settings)
 
       const menuItems = filteredPortals.map((portal) => ({
         label: portal.label,
@@ -211,8 +186,6 @@ const Page = () => {
 
   if (isAllTenants) {
     // No top margin, matching CippTablePage: the layout's breadcrumb Divider already carries mb: 2.
-    // The per-tenant view below needs mt: 12 only because it sits under the test-suite tab bar,
-    // which AllTenants does not render.
     return (
       <Container maxWidth={false} sx={{ mb: 6 }}>
         <CippHead title="Dashboard" />
@@ -222,10 +195,14 @@ const Page = () => {
   }
 
   return (
-    <Container maxWidth={false} sx={{ mt: 12, mb: 6 }}>
+    // Both branches sit under the same TabbedLayout tab bar; the per-tenant mt: 12 is legacy
+    // desktop spacing kept for now. On mobile it becomes a thin rail — enough to lift the
+    // test-suite selector off the breadcrumb divider without the old 96px dead band.
+    <Container maxWidth={false} sx={{ mt: { xs: 1.5, md: 12 }, mb: 6 }}>
       <CippHead title="Dashboard" />
       <Box sx={{ width: '100%', mx: 'auto' }}>
         <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>
+          {!isMobile && (
           <Grid size={{ xs: 12, md: 4 }}>
             <Box
               data-tutorial="dashboard-toolbar"
@@ -348,7 +325,8 @@ const Page = () => {
               )}
             </Box>
           </Grid>
-          <Grid size={{ xs: 12, md: 8 }} data-tutorial="dashboard-test-suite">
+          )}
+          <Grid size={{ xs: 12, md: 8 }} sx={{ mt: { xs: 2, md: 0 } }} data-tutorial="dashboard-test-suite">
             <CippReportToolbar />
           </Grid>
         </Grid>
@@ -443,6 +421,65 @@ const Page = () => {
           </Grid>
         </Box>
       </Box>
+
+      {/* Mobile home of the Portals/Reports header row. keepMounted: ExecutiveReportButton's
+          preview Dialog is internal state and must survive the sheet auto-closing under it
+          (same trick as the desktop Reports Menu above). */}
+      {isMobile && (
+        <CippPageActionsFab
+          title="Dashboard actions"
+          restackButtons={false}
+          sheetProps={{ ModalProps: { keepMounted: true } }}
+        >
+          {portalMenuItems.length > 0 && (
+            <>
+              <List
+                sx={{ py: 0 }}
+                subheader={
+                  <ListSubheader disableSticky sx={{ bgcolor: 'transparent' }}>
+                    Portals
+                  </ListSubheader>
+                }
+              >
+                {portalMenuItems.map((item, index) => (
+                  <ListItemButton
+                    key={`portal-${index}`}
+                    component="a"
+                    href={item.link}
+                    target="_blank"
+                    rel="noreferrer"
+                    sx={{ minHeight: 48 }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 40 }}>{getIconByName(item.icon)}</ListItemIcon>
+                    <ListItemText primary={item.label} />
+                  </ListItemButton>
+                ))}
+              </List>
+              <Divider sx={{ my: 0.5 }} />
+            </>
+          )}
+          <List
+            sx={{ py: 0 }}
+            subheader={
+              <ListSubheader disableSticky sx={{ bgcolor: 'transparent' }}>
+                Reports
+              </ListSubheader>
+            }
+          >
+            <ExecutiveReportButton variant="menuItem" disabled={organization.isFetching} />
+            <ListItemButton
+              component={Link}
+              href="/tools/report-builder/generated"
+              sx={{ minHeight: 48 }}
+            >
+              <ListItemIcon sx={{ minWidth: 40 }}>
+                <AssessmentIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="Report Builder" />
+            </ListItemButton>
+          </List>
+        </CippPageActionsFab>
+      )}
     </Container>
   )
 }

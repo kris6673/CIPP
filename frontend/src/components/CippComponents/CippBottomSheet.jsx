@@ -1,0 +1,73 @@
+import { Box, Drawer, Typography } from "@mui/material";
+
+// Mobile bottom sheet — the house rule for the mobile surface is that anything rendered
+// as a Menu on desktop becomes one of these: predictable position, 44px+ rows, thumb reach.
+export const CippBottomSheet = (props) => {
+  const { open, onClose, title, children, footer, ...other } = props;
+  return (
+    <Drawer
+      anchor="bottom"
+      open={open}
+      onClose={onClose}
+      // Above the modal layer, like a Menu would be: sheets are transient pickers, and the
+      // tables that spawn them can live inside Dialogs (popout tables) — a stock Drawer's
+      // z-index (1200) would open the sheet BEHIND the 1300 Dialog that launched it.
+      sx={{ zIndex: (theme) => theme.zIndex.modal + 1 }}
+      PaperProps={{
+        sx: {
+          borderTopLeftRadius: 14,
+          borderTopRightRadius: 14,
+          maxHeight: "85dvh",
+          display: "flex",
+          flexDirection: "column",
+        },
+      }}
+      {...other}
+    >
+      <Box
+        sx={{
+          width: 36,
+          height: 4,
+          borderRadius: 2,
+          bgcolor: "divider",
+          mx: "auto",
+          mt: 1,
+          flexShrink: 0,
+        }}
+      />
+      {title && (
+        <Typography
+          variant="subtitle2"
+          color="text.secondary"
+          noWrap
+          sx={{ px: 2.25, pt: 1, flexShrink: 0 }}
+        >
+          {title}
+        </Typography>
+      )}
+      <Box
+        sx={{
+          overflowY: "auto",
+          flexGrow: 1,
+          pb: footer ? 1 : "calc(env(safe-area-inset-bottom) + 8px)",
+        }}
+      >
+        {children}
+      </Box>
+      {footer && (
+        <Box
+          sx={{
+            borderTop: 1,
+            borderColor: "divider",
+            px: 2,
+            pt: 1.5,
+            pb: "calc(env(safe-area-inset-bottom) + 12px)",
+            flexShrink: 0,
+          }}
+        >
+          {footer}
+        </Box>
+      )}
+    </Drawer>
+  );
+};

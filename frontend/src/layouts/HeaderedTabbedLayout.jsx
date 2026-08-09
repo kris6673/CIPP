@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/router";
 import PropTypes from "prop-types";
@@ -18,6 +18,9 @@ import {
 import { ActionsMenu } from "../components/actions-menu";
 import { useMediaQuery } from "@mui/material";
 import { getIconByName } from "../utils/icon-registry";
+import { useActionsDispatch } from "../hooks/use-actions-dispatch";
+import { TabNavigationContext, useTabNavigationValue } from "./tab-navigation-context";
+import { CippPageActionsFab } from "../components/CippComponents/CippPageActionsFab";
 
 export const HeaderedTabbedLayout = (props) => {
   const {
@@ -35,8 +38,8 @@ export const HeaderedTabbedLayout = (props) => {
   const router = useRouter();
   const pathname = usePathname();
   const queryParams = router.query;
-  const handleTabsChange = useCallback(
-    (event, value) => {
+  const navigateToTab = useCallback(
+    (value) => {
       //if we have query params, we need to append them to the new path
       router.push(
         {
@@ -47,106 +50,157 @@ export const HeaderedTabbedLayout = (props) => {
         { shallow: true }
       );
     },
-    [router]
+    [router, queryParams]
   );
+
+  const handleTabsChange = useCallback((event, value) => navigateToTab(value), [navigateToTab]);
 
   const currentTab = tabOptions.find((option) => option.path === pathname);
 
+  // Below md the tab row scrolls horizontally and still hides tabs off the right edge, so
+  // navigation moves into the bottom sheet of whichever FAB owns the corner — and the
+  // header's Actions menu goes with it, since it gets clipped at that width too.
+  const actionsDispatch = useActionsDispatch({ actions, data: actionsData });
+  const sheetActions = useMemo(
+    () =>
+      mdDown
+        ? actionsDispatch.visibleActions.map((action) => ({
+            label: action.label,
+            icon: action.icon ? <SvgIcon fontSize="small">{action.icon}</SvgIcon> : null,
+            disabled: isFetching || actionsDispatch.isDisabled(action),
+            onClick: () => actionsDispatch.dispatch(action),
+          }))
+        : [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [mdDown, actions, actionsData, isFetching]
+  );
+
+  const tabNavValue = useTabNavigationValue({
+    tabs: tabOptions,
+    currentPath: pathname,
+    onNavigate: navigateToTab,
+    actions: sheetActions,
+    enabled: mdDown,
+  });
+
   return (
-    <Box
-      sx={{
-        flexGrow: 1,
-        pb: 4,
-      }}
-    >
-      <Container maxWidth="xl" sx={{ height: "100%" }}>
-        <Stack spacing={1} sx={{ height: "100%" }}>
-          <Stack spacing={2}>
-            <Stack
-              alignItems="flex-start"
-              direction="row"
-              justifyContent="space-between"
-              spacing={1}
-            >
-              <Stack spacing={1}>
-                <Stack
-                  alignItems="center"
-                  direction="row"
-                  spacing={1}
-                  justifyContent="space-between"
-                >
-                  <Typography variant={mdDown ? "h6" : "h4"}>{title}</Typography>
+    <TabNavigationContext.Provider value={tabNavValue}>
+      <Box
+        sx={{
+          flexGrow: 1,
+          pb: 4,
+        }}
+      >
+        {/* One gutter for the whole page, matching the layout's breadcrumb rail
+            (mx: {xs: 2, md: 3}): the breadcrumbs, this header's text and the left edge of
+            every card below it then share a single left edge. */}
+        <Container maxWidth="xl" sx={{ height: "100%", px: { xs: 2, md: 3 } }}>
+          <Stack spacing={1} sx={{ height: "100%" }}>
+            <Stack spacing={2}>
+              <Stack
+                alignItems="flex-start"
+                direction="row"
+                justifyContent="space-between"
+                spacing={1}
+              >
+                <Stack spacing={1}>
+                  <Stack
+                    alignItems="center"
+                    direction="row"
+                    spacing={1}
+                    justifyContent="space-between"
+                  >
+                    <Typography variant={mdDown ? "h6" : "h4"}>{title}</Typography>
+                  </Stack>
+                  {isFetching ? (
+                    <Skeleton variant="text" width={200} />
+                  ) : (
+                    subtitle && (
+                      // useFlexGap: Stack's default spacing is a margin-left between
+                      // children, which every wrapped row inherits — that margin is why the
+                      // icon/chip pairs sat indented from the title above them. Gap applies
+                      // to both axes, so the row gap is set separately or the stacked pairs
+                      // end up as far apart vertically as they are horizontally.
+                      <Stack
+                        alignItems="center"
+                        flexWrap="wrap"
+                        useFlexGap
+                        direction="row"
+                        sx={{ columnGap: 2, rowGap: 0.5 }}
+                      >
+                        {subtitle.map((item, index) =>
+                          item.component ? (
+                            <Box key={index}>{item.component}</Box>
+                          ) : (
+                            <Stack key={index} alignItems="center" direction="row" spacing={1}>
+                              <SvgIcon fontSize="small">{item.icon}</SvgIcon>
+                              <Typography color="text.secondary" variant="body2">
+                                {item.text}
+                              </Typography>
+                            </Stack>
+                          )
+                        )}
+                      </Stack>
+                    )
+                  )}
                 </Stack>
-                {isFetching ? (
-                  <Skeleton variant="text" width={200} />
-                ) : (
-                  subtitle && (
-                    <Stack alignItems="center" flexWrap="wrap" direction="row" spacing={2}>
-                      {subtitle.map((item, index) =>
-                        item.component ? (
-                          <Box key={index}>{item.component}</Box>
-                        ) : (
-                          <Stack key={index} alignItems="center" direction="row" spacing={1}>
-                            <SvgIcon fontSize="small">{item.icon}</SvgIcon>
-                            <Typography color="text.secondary" variant="body2">
-                              {item.text}
-                            </Typography>
-                          </Stack>
-                        )
-                      )}
-                    </Stack>
-                  )
+                {!mdDown && actions && actions.length > 0 && (
+                  <ActionsMenu actions={actions} data={actionsData} disabled={isFetching} />
                 )}
               </Stack>
-              {actions && actions.length > 0 && (
-                <ActionsMenu actions={actions} data={actionsData} disabled={isFetching} />
+              {!mdDown && (
+                <div>
+                  <Tabs
+                    onChange={handleTabsChange}
+                    value={currentTab?.path}
+                    variant="scrollable"
+                    sx={{
+                      "& .MuiTab-root:first-of-type": {
+                        ml: 2,
+                      },
+                    }}
+                  >
+                    {tabOptions.map((option) => {
+                      const icon = getIconByName(option.icon, { fontSize: "small" });
+                      const iconPosition = option.iconPosition ?? "start";
+                      const compactIcon = icon && ["end", "start"].includes(iconPosition);
+
+                      return (
+                        <Tab
+                          key={option.path}
+                          label={option.label}
+                          value={option.path}
+                          icon={icon ?? undefined}
+                          iconPosition={icon ? iconPosition : undefined}
+                          sx={compactIcon ? { minHeight: 48, py: 1.5 } : undefined}
+                        />
+                      );
+                    })}
+                  </Tabs>
+                  <Divider />
+                </div>
               )}
             </Stack>
-            <div>
-              <Tabs
-                onChange={handleTabsChange}
-                value={currentTab?.path}
-                variant="scrollable"
-                sx={{
-                  "& .MuiTab-root:first-of-type": {
-                    ml: 2,
-                  },
-                }}
-              >
-                {tabOptions.map((option) => {
-                  const icon = getIconByName(option.icon, { fontSize: "small" });
-                  const iconPosition = option.iconPosition ?? "start";
-                  const compactIcon = icon && ["end", "start"].includes(iconPosition);
-
-                  return (
-                    <Tab
-                      key={option.path}
-                      label={option.label}
-                      value={option.path}
-                      icon={icon ?? undefined}
-                      iconPosition={icon ? iconPosition : undefined}
-                      sx={compactIcon ? { minHeight: 48, py: 1.5 } : undefined}
-                    />
-                  );
-                })}
-              </Tabs>
-              <Divider />
-            </div>
-          </Stack>
-          <Box
-            sx={
-              !mdDown && {
-                flexGrow: 1,
-                overflow: "auto",
-                height: "calc(100vh - 350px)",
+            <Box
+              sx={
+                !mdDown && {
+                  flexGrow: 1,
+                  overflow: "auto",
+                  height: "calc(100vh - 350px)",
+                }
               }
-            }
-          >
-            {children}
-          </Box>
-        </Stack>
-      </Container>
-    </Box>
+            >
+              {children}
+            </Box>
+          </Stack>
+        </Container>
+      </Box>
+      {mdDown && actionsDispatch.dialog}
+      {/* Only when no page FAB claimed the corner — otherwise the tabs ride in that sheet */}
+      {mdDown && tabOptions.length > 0 && !tabNavValue.isClaimed && (
+        <CippPageActionsFab ariaLabel="Views" claimTabCorner={false} />
+      )}
+    </TabNavigationContext.Provider>
   );
 };
 

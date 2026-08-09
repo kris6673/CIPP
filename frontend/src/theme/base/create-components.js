@@ -232,9 +232,17 @@ export const createComponents = () => {
         root: {
           borderRadius: 6,
           padding: 8,
+          // Touch devices get 44px hit targets without changing desktop density —
+          // pointer:coarse only matches touch-primary input.
+          "@media (pointer: coarse)": {
+            padding: 10,
+          },
         },
         sizeSmall: {
           padding: 4,
+          "@media (pointer: coarse)": {
+            padding: 8,
+          },
         },
       },
     },

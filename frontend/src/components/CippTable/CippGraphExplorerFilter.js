@@ -104,13 +104,16 @@ const CippGraphExplorerFilter = ({
     waiting: false,
   })
 
-  var presetFilter = {}
-  if (endpointFilter) {
-    if (formControl.getValues('endpoint') !== endpointFilter) {
+  // Seeding the form from the endpointFilter prop is a side effect: doing it during render
+  // updates the subscribed Controller mid-render ("Cannot update a component while rendering
+  // a different component"). It fires twice on mobile, where the table remounts as cards.
+  useEffect(() => {
+    if (endpointFilter && formControl.getValues('endpoint') !== endpointFilter) {
       formControl.setValue('endpoint', endpointFilter)
     }
-    presetFilter = { Endpoint: endpointFilter }
-  }
+  }, [endpointFilter, formControl])
+
+  const presetFilter = endpointFilter ? { Endpoint: endpointFilter } : {}
 
   // API call for available presets
   const presetList = ApiGetCall({
@@ -737,7 +740,7 @@ const CippGraphExplorerFilter = ({
             compareValue={true}
           >
             {/* Reverse Tenant Lookup Property Field */}
-            <Grid size={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <CippFormComponent
                 type="textField"
                 name="ReverseTenantLookupProperty"

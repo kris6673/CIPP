@@ -1,3 +1,7 @@
+// Card mode renders its own list, so a huge desktop tablePageSize preference must not
+// become that many unvirtualized cards. CippMobileCardList grows pageSize from here.
+const MOBILE_PAGE_SIZE_CAP = 50
+
 export const utilTableMode = (
   columnVisibility,
   mode,
@@ -6,7 +10,8 @@ export const utilTableMode = (
   offCanvas,
   onChange,
   maxHeightOffset = '380px',
-  settings = {}
+  settings = {},
+  viewMode = 'table'
 ) => {
   if (mode === true) {
     return {
@@ -42,15 +47,20 @@ export const utilTableMode = (
       },
     }
   } else {
+    const configuredPageSize = settings?.tablePageSize?.value
+      ? parseInt(settings?.tablePageSize?.value, 10)
+      : 25
+    const isCards = viewMode === 'cards'
+
     return {
       enableRowSelection: actions || onChange ? true : false,
       enableRowActions: actions ? true : false,
       enableSelectAll: true,
       enableFacetedValues: true,
       enableColumnFilterModes: true,
-      enableStickyHeader: true,
+      enableStickyHeader: !isCards,
       selectAllMode: 'all',
-      enableColumnPinning: true,
+      enableColumnPinning: !isCards,
       muiPaginationProps: {
         rowsPerPageOptions: [25, 50, 100, 250, 500],
       },
@@ -71,15 +81,17 @@ export const utilTableMode = (
         showGlobalFilter: true,
         density: 'compact',
         pagination: {
-          pageSize: settings?.tablePageSize?.value
-            ? parseInt(settings?.tablePageSize?.value, 10)
-            : 25,
+          pageSize: isCards
+            ? Math.min(configuredPageSize, MOBILE_PAGE_SIZE_CAP)
+            : configuredPageSize,
           pageIndex: 0,
         },
-        columnPinning: {
-          left: ['mrt-row-select'],
-          right: ['mrt-row-actions'],
-        },
+        ...(!isCards && {
+          columnPinning: {
+            left: ['mrt-row-select'],
+            right: ['mrt-row-actions'],
+          },
+        }),
       },
     }
   }

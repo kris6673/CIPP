@@ -22,7 +22,7 @@ import { CippMaintenanceBanner } from '../components/CippComponents/CippMaintena
 
 import {
   BANNER_HEIGHT_VAR,
-  SIDE_NAV_PINNED_WIDTH,
+  SIDE_NAV_COLLAPSED_WIDTH,
   SIDE_NAV_WIDTH,
   TOP_NAV_HEIGHT,
 } from './constants'
@@ -56,6 +56,9 @@ const useMobileNav = () => {
   }
 }
 
+// No breakpoint paddingLeft here: the side-nav offset is applied once, via the inline
+// `sx` on the rendered LayoutRoot (it depends on pinNav). A second static rule at lg+
+// used to fight that dynamic one over the same property.
 const LayoutRoot = styled('div')(({ theme }) => ({
   backgroundColor: theme.palette.background.default,
   display: 'flex',
@@ -64,9 +67,6 @@ const LayoutRoot = styled('div')(({ theme }) => ({
   height: '100vh',
   overflow: 'hidden',
   paddingTop: `calc(${TOP_NAV_HEIGHT}px + ${BANNER_HEIGHT_VAR})`,
-  [theme.breakpoints.up('lg')]: {
-    paddingLeft: SIDE_NAV_WIDTH,
-  },
 }))
 
 const LayoutContainer = styled('div')({
@@ -203,7 +203,9 @@ export const Layout = (props) => {
     })
   }, [settings])
 
-  const offset = settings.pinNav ? SIDE_NAV_WIDTH : SIDE_NAV_PINNED_WIDTH
+  // Unpinned content offset must match the collapsed drawer's real width — the old 50px
+  // constant left 23px of content underneath the 73px rail.
+  const offset = settings.pinNav ? SIDE_NAV_WIDTH : SIDE_NAV_COLLAPSED_WIDTH
 
   const userSettingsAPI = ApiGetCall({
     url: '/api/ListUserSettings',
@@ -307,7 +309,12 @@ export const Layout = (props) => {
         <>
           <TopNav onNavOpen={mobileNav.handleOpen} openNav={mobileNav.open} />
           {mdDown && (
-            <MobileNav items={menuItems} onClose={mobileNav.handleClose} open={mobileNav.open} />
+            <MobileNav
+              items={menuItems}
+              onClose={mobileNav.handleClose}
+              onOpen={mobileNav.handleOpen}
+              open={mobileNav.open}
+            />
           )}
           {!mdDown && <SideNav items={menuItems} onPin={handleNavPin} pinned={!!settings.pinNav} />}
         </>
@@ -347,10 +354,12 @@ export const Layout = (props) => {
             <Stack>
               {showBreadcrumb && (
                 <>
-                  <Box sx={{ mx: 3, mt: 3 }}>
+                  {/* Breadcrumbs sit directly under the fixed top nav — a slim rail, not a
+                      spaced section. The old mt:3 left a 24px dead band on every page. */}
+                  <Box sx={{ mx: { xs: 2, md: 3 }, mt: { xs: 0.75, md: 1.25 } }}>
                     <CippBreadcrumbNav mode="hierarchical" />
                   </Box>
-                  <Divider sx={{ mb: 2 }} />
+                  <Divider sx={{ mb: { xs: 1, md: 1.5 } }} />
                 </>
               )}
               {children}

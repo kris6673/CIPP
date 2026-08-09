@@ -40,6 +40,7 @@ import { useUserBookmarks } from '../hooks/use-user-bookmarks'
 import { paths } from '../paths'
 import { AccountPopover } from './account-popover'
 import { CippTenantSelector } from '../components/CippComponents/CippTenantSelector'
+import { CippMobileTenantPicker } from '../components/CippComponents/CippMobileTenantPicker'
 import { NotificationsPopover } from './notifications-popover'
 import { useDialog } from '../hooks/use-dialog'
 import { CippUniversalSearchV2 } from '../components/CippCards/CippUniversalSearchV2'
@@ -263,34 +264,43 @@ export const TopNav = (props) => {
         alignItems="center"
         sx={{
           minHeight: TOP_NAV_HEIGHT,
-          px: 3,
+          // Mobile: the 24px desktop inset pushed the hamburger far off the left edge —
+          // an 8px inset puts the ☰ glyph on the content gutter line.
+          px: { xs: 1, md: 3 },
         }}
       >
         <Stack
           alignItems="center"
           direction="row"
-          spacing={3}
+          spacing={mdDown ? 1 : 3}
+          sx={{ flex: 1, minWidth: 0, mr: mdDown ? 1 : 0 }}
           divider={
-            <Divider
-              orientation="vertical"
-              sx={{
-                borderColor: 'neutral.500',
-                height: 36,
-              }}
-            />
+            mdDown ? undefined : (
+              <Divider
+                orientation="vertical"
+                sx={{
+                  borderColor: 'neutral.500',
+                  height: 36,
+                }}
+              />
+            )
           }
         >
-          <Box
-            component={NextLink}
-            href={paths.index}
-            sx={{
-              display: 'inline-flex',
-              height: 24,
-              width: 24,
-            }}
-          >
-            <Logo />
-          </Box>
+          {/* On phones the logo gives way to the tenant chip — the app's primary scoping
+              control earns the space a 24px decorative link was using. */}
+          {!mdDown && (
+            <Box
+              component={NextLink}
+              href={paths.index}
+              sx={{
+                display: 'inline-flex',
+                height: 24,
+                width: 24,
+              }}
+            >
+              <Logo />
+            </Box>
+          )}
           {!mdDown && (
             <Box data-tutorial="tenant-selector">
               <CippTenantSelector
@@ -301,14 +311,24 @@ export const TopNav = (props) => {
             </Box>
           )}
           {mdDown && (
-            <IconButton color="inherit" onClick={onNavOpen}>
+            <IconButton
+              color="inherit"
+              onClick={onNavOpen}
+              aria-label="Open navigation"
+              sx={{ minWidth: 44, minHeight: 44 }}
+            >
               <SvgIcon color="action" fontSize="small">
                 <Bars3Icon />
               </SvgIcon>
             </IconButton>
           )}
+          {mdDown && (
+            <Box data-tutorial="tenant-selector" sx={{ flex: 1, minWidth: 0, display: 'flex' }}>
+              <CippMobileTenantPicker />
+            </Box>
+          )}
         </Stack>
-        <Stack alignItems="center" direction="row" spacing={1.5}>
+        <Stack alignItems="center" direction="row" spacing={mdDown ? 0.5 : 1.5}>
           {!mdDown && (
             <Tooltip title="Search users & entities (Ctrl/Cmd+Shift+F)">
               <IconButton
@@ -340,6 +360,8 @@ export const TopNav = (props) => {
               </IconButton>
             </Tooltip>
           )}
+          {/* Mobile: no search icon in the bar — the tenant chip is the more important
+              control and gets the width. Universal search lives in the account menu. */}
           {showPopoverBookmarks && (
             <>
               <IconButton color="inherit" onClick={handleBookmarkClick}>
@@ -627,17 +649,18 @@ export const TopNav = (props) => {
             open={universalSearchDialog.open}
             onClose={closeUniversalSearch}
             fullWidth
+            fullScreen={mdDown}
             maxWidth="md"
             sx={{
               '& .MuiDialog-container': {
                 alignItems: 'flex-start',
               },
               '& .MuiDialog-paper': {
-                mt: 8,
+                mt: mdDown ? 0 : 8,
               },
             }}
           >
-            <DialogTitle sx={{ px: 3, pt: 2, pb: 1 }}>
+            <DialogTitle sx={{ px: mdDown ? 2 : 3, pt: 2, pb: 1 }}>
               <Stack
                 direction="row"
                 alignItems="center"
@@ -646,10 +669,24 @@ export const TopNav = (props) => {
                 useFlexGap
                 spacing={1}
               >
-                <span>Universal Search</span>
-                <Typography variant="caption" color="text.secondary">
-                  Pages: Ctrl/Cmd+K · Users: Ctrl/Cmd+Shift+F · Tenant: Ctrl/Cmd+Alt+K
-                </Typography>
+                <Stack direction="row" alignItems="center" spacing={0.5}>
+                  {/* Fullscreen on mobile leaves no backdrop to tap — provide a close button */}
+                  {mdDown && (
+                    <IconButton
+                      onClick={closeUniversalSearch}
+                      aria-label="Close search"
+                      sx={{ ml: -1, minWidth: 44, minHeight: 44 }}
+                    >
+                      <CloseIcon />
+                    </IconButton>
+                  )}
+                  <span>Universal Search</span>
+                </Stack>
+                {!mdDown && (
+                  <Typography variant="caption" color="text.secondary">
+                    Pages: Ctrl/Cmd+K · Users: Ctrl/Cmd+Shift+F · Tenant: Ctrl/Cmd+Alt+K
+                  </Typography>
+                )}
               </Stack>
             </DialogTitle>
             <DialogContent sx={{ px: 3, pt: 1, pb: 3 }}>
@@ -680,6 +717,7 @@ export const TopNav = (props) => {
           <NotificationsPopover />
           <AccountPopover
             onThemeSwitch={handleThemeSwitch}
+            onOpenSearch={() => openUniversalSearch('Pages')}
             paletteMode={effectivePaletteMode === 'light' ? 'dark' : 'light'}
           />
         </Stack>

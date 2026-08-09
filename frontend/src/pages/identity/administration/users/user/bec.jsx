@@ -321,7 +321,7 @@ const Page = () => {
         >
           <Grid container spacing={2}>
             {/* Remediation Card */}
-            <Grid size={5}>
+            <Grid size={{ xs: 12, lg: 5 }}>
               <CippRemediationCard
                 userPrincipalName={userRequest.data[0].userPrincipalName}
                 userId={userRequest.data[0].id}
@@ -331,7 +331,7 @@ const Page = () => {
               />
             </Grid>
             {/* Check 1 Card with Loading */}
-            <Grid size={7}>
+            <Grid size={{ xs: 12, lg: 7 }}>
               <CippButtonCard
                 variant="outlined"
                 isFetching={false}
@@ -362,7 +362,7 @@ const Page = () => {
         >
           <Grid container spacing={2}>
             {/* Remediation Card */}
-            <Grid size={5}>
+            <Grid size={{ xs: 12, lg: 5 }}>
               <CippRemediationCard
                 userPrincipalName={userRequest.data[0].userPrincipalName}
                 userId={userRequest.data[0].id}
@@ -372,7 +372,7 @@ const Page = () => {
               />
             </Grid>
             {/* All Steps */}
-            <Grid size={7}>
+            <Grid size={{ xs: 12, lg: 7 }}>
               <Stack spacing={3}>
                 <BecCheckCard title="Log information">
                   <Typography variant="body2" gutterBottom>

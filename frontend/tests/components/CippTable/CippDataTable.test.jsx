@@ -1,5 +1,6 @@
 import React from 'react'
 import { screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import { renderWithProviders } from '../../test-utils'
 import { CippDataTable } from '../../../src/components/CippTable/CippDataTable'
@@ -308,5 +309,120 @@ describe('CippDataTable', () => {
       />
     )
     expect(container.querySelector('table')).not.toBeNull()
+  })
+})
+
+// A card shows a title, subtitle and a few chips/details — on pages that never configured
+// an offCanvas the rest of the row used to be unreachable in card view.
+describe('CippDataTable card view without an offCanvas', () => {
+  const wideData = [
+    {
+      displayName: 'Alice Smith',
+      mail: 'alice@contoso.com',
+      department: 'IT',
+      jobTitle: 'Engineer',
+      city: 'Seattle',
+      country: 'US',
+      accountEnabled: true,
+    },
+  ]
+  const columns = ['displayName', 'mail', 'department', 'jobTitle', 'city', 'country']
+
+  it('opens an extended-info drawer from a card tap showing every shown column', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(
+      <CippDataTable viewMode="cards" data={wideData} simpleColumns={columns} title="Users" />
+    )
+
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument())
+    await user.click(screen.getByText('Alice Smith'))
+
+    // fields that never fit on the card are present in the drawer
+    await waitFor(() => expect(screen.getAllByText(/Engineer/).length).toBeGreaterThan(0))
+    expect(screen.getAllByText(/Seattle/).length).toBeGreaterThan(0)
+  })
+
+  it('formats fallback values the way their table cells do', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(
+      <CippDataTable
+        viewMode="cards"
+        data={[{ displayName: 'Alice Smith', defaultDomainName: 'contoso.com', accountEnabled: true }]}
+        simpleColumns={['displayName', 'defaultDomainName', 'accountEnabled']}
+        title="Tenants"
+      />
+    )
+
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument())
+    await user.click(screen.getByText('Alice Smith'))
+
+    // 'text' mode would flatten the boolean to the string "Yes"; the cell renderer uses an icon
+    await waitFor(() => expect(screen.getAllByText(/contoso\.com/).length).toBeGreaterThan(0))
+    expect(screen.queryByText('Yes')).toBeNull()
+  })
+
+  it('spells out portal links instead of showing a bare icon', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(
+      <CippDataTable
+        viewMode="cards"
+        data={[
+          {
+            displayName: 'Contoso',
+            portal_m365: 'https://admin.cloud.microsoft/?delegatedOrg=contoso',
+          },
+        ]}
+        simpleColumns={['displayName', 'portal_m365']}
+        title="Tenants"
+      />
+    )
+
+    await waitFor(() => expect(screen.getByText('Contoso')).toBeInTheDocument())
+    await user.click(screen.getByText('Contoso'))
+
+    const link = await screen.findByRole('link', { name: /open portal/i })
+    expect(link).toHaveAttribute('href', 'https://admin.cloud.microsoft/?delegatedOrg=contoso')
+    expect(link).toHaveAttribute('target', '_blank')
+  })
+
+  it('links portal values on the card itself, scheme-less ones included', async () => {
+    renderWithProviders(
+      <CippDataTable
+        viewMode="cards"
+        data={[
+          {
+            displayName: 'Contoso',
+            portal_sharepoint: 'contoso-admin.sharepoint.com',
+          },
+        ]}
+        simpleColumns={['displayName', 'portal_sharepoint']}
+        title="Tenants"
+      />
+    )
+
+    await waitFor(() => expect(screen.getByText('Contoso')).toBeInTheDocument())
+    // rendered on the card, without opening the drawer
+    const link = await screen.findByRole('link', { name: /open portal/i })
+    expect(link).toHaveAttribute('href', 'https://contoso-admin.sharepoint.com')
+  })
+
+  it('leaves a page-supplied offCanvas in charge', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(
+      <CippDataTable
+        viewMode="cards"
+        data={wideData}
+        simpleColumns={columns}
+        title="Users"
+        offCanvas={{ title: 'User Details', extendedInfoFields: ['city'] }}
+      />
+    )
+
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument())
+    await user.click(screen.getByText('Alice Smith'))
+
+    // the page's own drawer opens — the fallback never substitutes for a configured one
+    await waitFor(() => expect(screen.getByText('User Details')).toBeInTheDocument())
+    expect(screen.getAllByText(/Seattle/).length).toBeGreaterThan(0)
   })
 })

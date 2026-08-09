@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/router'
-import { Breadcrumbs, Link, Typography, Box, IconButton, Tooltip } from '@mui/material'
+import { Breadcrumbs, Link, Typography, Box, IconButton, Tooltip, useMediaQuery } from '@mui/material'
 import { History, AccountTree } from '@mui/icons-material'
 import { nativeMenuItems } from '../../layouts/config'
 import { useSettings } from '../../hooks/use-settings'
@@ -39,6 +39,9 @@ const loadTabOptions = () => {
 export const CippBreadcrumbNav = () => {
   const router = useRouter()
   const settings = useSettings()
+  // Phones get one line: leading crumbs collapse behind MUI's ellipsis button instead of
+  // the trail wrapping to two rows of chrome above every table.
+  const mdDown = useMediaQuery((theme) => theme.breakpoints.down('md'))
   const [history, setHistory] = useState([])
   const [mode, setMode] = useState(settings.breadcrumbMode || 'hierarchical')
   const [tabOptions] = useState(loadTabOptions)
@@ -627,6 +630,9 @@ export const CippBreadcrumbNav = () => {
         <Breadcrumbs
           separator=">"
           aria-label="page hierarchy"
+          maxItems={mdDown ? 2 : undefined}
+          itemsBeforeCollapse={mdDown ? 0 : 1}
+          itemsAfterCollapse={mdDown ? 2 : 1}
           sx={{
             fontSize: '0.875rem',
             // Not flexGrow - the bookmark button sits directly after the last crumb rather than
@@ -634,6 +640,16 @@ export const CippBreadcrumbNav = () => {
             minWidth: 0,
             userSelect: 'text',
             '& .MuiBreadcrumbs-separator': { userSelect: 'text' },
+            ...(mdDown && {
+              '& .MuiBreadcrumbs-ol': { flexWrap: 'nowrap' },
+              '& .MuiBreadcrumbs-li': { minWidth: 0 },
+              '& .MuiBreadcrumbs-li > *': {
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                display: 'block',
+              },
+            }),
           }}
         >
           {breadcrumbs.map((crumb, index) => {
@@ -703,7 +719,9 @@ export const CippBreadcrumbNav = () => {
             }
           })}
         </Breadcrumbs>
-        {bookmarkStar}
+        {/* Mobile: star pinned to the right edge — a stable tap target instead of trailing
+            the crumb text. Desktop keeps it directly after the last crumb. */}
+        <Box sx={{ ml: { xs: "auto", md: 0 }, display: "inline-flex" }}>{bookmarkStar}</Box>
       </Box>
     )
   }
@@ -728,7 +746,9 @@ export const CippBreadcrumbNav = () => {
         </IconButton>
       </Tooltip>
       <Breadcrumbs
-        maxItems={MAX_BREADCRUMB_DISPLAY}
+        maxItems={mdDown ? 2 : MAX_BREADCRUMB_DISPLAY}
+        itemsBeforeCollapse={mdDown ? 0 : 1}
+        itemsAfterCollapse={mdDown ? 2 : 1}
         separator=">"
         aria-label="navigation history"
         sx={{
@@ -736,6 +756,10 @@ export const CippBreadcrumbNav = () => {
           minWidth: 0,
           userSelect: 'text',
           '& .MuiBreadcrumbs-separator': { userSelect: 'text' },
+          ...(mdDown && {
+            '& .MuiBreadcrumbs-ol': { flexWrap: 'nowrap' },
+            '& .MuiBreadcrumbs-li': { minWidth: 0 },
+          }),
         }}
       >
         {visibleHistory.map((page, index) => {
@@ -786,7 +810,7 @@ export const CippBreadcrumbNav = () => {
           )
         })}
       </Breadcrumbs>
-      {bookmarkStar}
+      <Box sx={{ ml: { xs: "auto", md: 0 }, display: "inline-flex" }}>{bookmarkStar}</Box>
     </Box>
   )
 }

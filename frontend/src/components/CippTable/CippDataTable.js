@@ -8,6 +8,7 @@ import {
   ListItemText,
   MenuItem,
   SvgIcon,
+  Typography,
 } from '@mui/material'
 import { ResourceUnavailable } from '../resource-unavailable'
 import { ResourceError } from '../resource-error'
@@ -30,6 +31,8 @@ import { useSettings } from '../../hooks/use-settings'
 import { parseCippDate } from '../../utils/parse-cipp-date'
 import { isEqual } from 'lodash' // Import lodash for deep comparison
 import { useLicenseBackfill } from '../../hooks/use-license-backfill'
+import { useTableViewMode } from '../../hooks/use-breakpoint'
+import { CippMobileCardList } from './CippMobileCardList'
 
 // Resolve dot-delimited property paths against arbitrary data objects.
 const getNestedValue = (source, path) => {
@@ -388,6 +391,8 @@ export const CippDataTable = (props) => {
     defaultSorting = [],
     isInDialog = false,
     showBulkExportAction = true,
+    viewMode: viewModeProp,
+    mobileCard,
   } = props
 
   // Create a map of column IDs to their filterType for quick lookup
@@ -433,6 +438,15 @@ export const CippDataTable = (props) => {
   const waitingBool = api?.url ? true : false
 
   const settings = useSettings()
+
+  // 'cards' below the md breakpoint (or when forced via settings/prop), 'table' otherwise.
+  // simple tables always resolve to 'table'.
+  const resolvedViewMode = useTableViewMode({ viewMode: viewModeProp, simple })
+  const isCardView = resolvedViewMode === 'cards'
+  // Mobile select mode: checkboxes on cards + the bottom bulk bar. Lives here so the
+  // toolbar (which renders the Select toggle) and the card list stay in sync. Picker
+  // tables (onChange) force it on — selection is their entire purpose.
+  const [mobileSelectMode, setMobileSelectMode] = useState(false)
 
   // Hook to trigger re-render when license backfill completes
   const { updateTrigger } = useLicenseBackfill()
@@ -648,7 +662,8 @@ export const CippDataTable = (props) => {
         offCanvas,
         onChange,
         maxHeightOffset,
-        settings
+        settings,
+        resolvedViewMode
       ),
     [
       simple,
@@ -657,6 +672,7 @@ export const CippDataTable = (props) => {
       hasOnChange,
       maxHeightOffset,
       settings?.tablePageSize?.value,
+      resolvedViewMode,
     ]
   )
 
@@ -785,6 +801,62 @@ export const CippDataTable = (props) => {
     [sanitizedColumnVisibility, sorting, columnFilters, showSkeletons]
   )
 
+  // Single row-action dispatch used by BOTH the desktop row menu and the mobile action
+  // sheet — the two presentations must not drift.
+  // `table` is referenced via closure: it is declared below but initialized before any
+  // handler can run (the same pattern the row menu has always relied on).
+  const dispatchRowAction = useCallback(
+    (action, rowOriginal, closeMenu = () => {}) => {
+      const scopeToRowTenant = () => {
+        if (settings.currentTenant === 'AllTenants' && rowOriginal?.Tenant) {
+          settings.handleUpdate({
+            currentTenant: rowOriginal.Tenant,
+          })
+        }
+      }
+
+      if (action.noConfirm && action.customFunction) {
+        scopeToRowTenant()
+        action.customFunction(rowOriginal, action, {})
+        closeMenu()
+        return
+      }
+
+      // Handle custom component differently
+      if (typeof action.customComponent === 'function') {
+        scopeToRowTenant()
+        setCustomComponentData({ data: rowOriginal, action: action })
+        setCustomComponentVisible(true)
+        closeMenu()
+        return
+      }
+
+      // Standard dialog flow
+      setActionData({
+        data: rowOriginal,
+        action: action,
+        ready: true,
+      })
+      createDialog.handleOpen()
+      closeMenu()
+    },
+    [settings, createDialog]
+  )
+
+  // Open the extended-info offcanvas for a row, recording its position in the filtered
+  // row model so prev/next navigation works. Shared by the row menu, the mobile action
+  // sheet, and card taps.
+  const openRowOffCanvas = useCallback((rowOriginal) => {
+    setOffCanvasData(rowOriginal)
+    const filteredRowsArray = table.getFilteredRowModel().rows
+    const indexInFiltered = filteredRowsArray.findIndex(
+      (r) => r.original === rowOriginal
+    )
+    setOffCanvasRowIndex(indexInFiltered >= 0 ? indexInFiltered : 0)
+    setOffcanvasVisible(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Memoize renderRowActionMenuItems to avoid re-creating on each render.
   const renderRowActionMenuItems = useMemo(() => {
     if (actions) {
@@ -801,43 +873,7 @@ export const CippDataTable = (props) => {
             <MenuItem
               sx={{ color: action.color }}
               key={`actions-list-row-${index}`}
-              onClick={() => {
-                const scopeToRowTenant = () => {
-                  if (
-                    settings.currentTenant === 'AllTenants' &&
-                    row.original?.Tenant
-                  ) {
-                    settings.handleUpdate({
-                      currentTenant: row.original.Tenant,
-                    })
-                  }
-                }
-
-                if (action.noConfirm && action.customFunction) {
-                  scopeToRowTenant()
-                  action.customFunction(row.original, action, {})
-                  closeMenu()
-                  return
-                }
-
-                // Handle custom component differently
-                if (typeof action.customComponent === 'function') {
-                  scopeToRowTenant()
-                  setCustomComponentData({ data: row.original, action: action })
-                  setCustomComponentVisible(true)
-                  closeMenu()
-                  return
-                }
-
-                // Standard dialog flow
-                setActionData({
-                  data: row.original,
-                  action: action,
-                  ready: true,
-                })
-                createDialog.handleOpen()
-                closeMenu()
-              }}
+              onClick={() => dispatchRowAction(action, row.original, closeMenu)}
               disabled={handleActionDisabled(row.original, action)}
             >
               <SvgIcon fontSize="small" sx={{ minWidth: '30px' }}>
@@ -851,14 +887,7 @@ export const CippDataTable = (props) => {
             key={`actions-list-row-more`}
             onClick={() => {
               closeMenu()
-              setOffCanvasData(row.original)
-              // Find the index of this row in the filtered rows
-              const filteredRowsArray = table.getFilteredRowModel().rows
-              const indexInFiltered = filteredRowsArray.findIndex(
-                (r) => r.original === row.original
-              )
-              setOffCanvasRowIndex(indexInFiltered >= 0 ? indexInFiltered : 0)
-              setOffcanvasVisible(true)
+              openRowOffCanvas(row.original)
             }}
           >
             <SvgIcon fontSize="small" sx={{ minWidth: '30px' }}>
@@ -875,13 +904,7 @@ export const CippDataTable = (props) => {
         <MenuItem
           onClick={() => {
             closeMenu()
-            setOffCanvasData(row.original)
-            const filteredRowsArray = table.getFilteredRowModel().rows
-            const indexInFiltered = filteredRowsArray.findIndex(
-              (r) => r.original === row.original
-            )
-            setOffCanvasRowIndex(indexInFiltered >= 0 ? indexInFiltered : 0)
-            setOffcanvasVisible(true)
+            openRowOffCanvas(row.original)
           }}
         >
           <ListItemIcon>
@@ -896,9 +919,9 @@ export const CippDataTable = (props) => {
   }, [
     actions,
     offCanvas,
-    settings.currentTenant,
+    dispatchRowAction,
+    openRowOffCanvas,
     handleActionDisabled,
-    createDialog,
   ])
 
   // Stable renderTopToolbar — memoized so MaterialReactTable doesn't re-create the toolbar
@@ -917,7 +940,7 @@ export const CippDataTable = (props) => {
               columnVisibility={columnVisibility}
               getRequestData={getRequestData}
               usedColumns={usedColumns}
-              usedData={memoizedData ?? []}
+              usedData={memoizedData ?? EMPTY_ARRAY}
               title={title}
               actions={actions}
               exportEnabled={exportEnabled}
@@ -977,7 +1000,7 @@ export const CippDataTable = (props) => {
       columnVisibility: sanitizedColumnVisibility,
     },
     columns: usedColumns,
-    data: memoizedData ?? [],
+    data: memoizedData ?? EMPTY_ARRAY,
     state: tableState,
     onSortingChange: handleSortingChange,
     onColumnFiltersChange: setColumnFilters,
@@ -994,9 +1017,40 @@ export const CippDataTable = (props) => {
     renderColumnFilterModeMenuItems: renderColumnFilterModeMenuItemsFn,
   })
 
+  // A card shows at most a title, subtitle, three chips and three detail rows, so on pages
+  // that never configured an offCanvas the rest of the row would be unreachable. Fall back
+  // to the columns the user has chosen to show, which is what the card was summarising.
+  const cardFallbackInfoFields = useMemo(() => {
+    if (offCanvas || !isCardView) return undefined
+    return table
+      .getVisibleLeafColumns()
+      .map((column) => column.id)
+      .filter((id) => !id.startsWith('mrt-'))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offCanvas, isCardView, table, columnVisibility, usedColumns])
+
   // Remove the useEffect that was resetting filters on table changes
   // The initial filter application is now handled by the columnFilters state
   // and the useEffect above that only triggers on actual filter prop changes
+
+  // Exiting mobile select mode clears the selection — "Done" means done.
+  const handleMobileSelectModeChange = useCallback(
+    (on) => {
+      setMobileSelectMode(on)
+      if (!on) {
+        table.toggleAllRowsSelected(false)
+      }
+    },
+    [table]
+  )
+
+  // Empty-state "Clear filters" in the card list. The full reset (graph filters,
+  // persisted slots) lives in the toolbar's filter sheet; this only clears what makes
+  // the current list empty.
+  const handleClearAllFilters = useCallback(() => {
+    table.resetGlobalFilter()
+    table.resetColumnFilters()
+  }, [table])
 
   useEffect(() => {
     if (onChange && table.getSelectedRowModel().rows) {
@@ -1024,9 +1078,97 @@ export const CippDataTable = (props) => {
     }
   }, [simpleColumns])
 
+  const selectModeActive = hasOnChange ? true : mobileSelectMode
+
   return (
     <>
-      {noCard ? (
+      {isCardView ? (
+        <Box data-testid="cipp-card-view">
+          {!hideTitle && (
+            <Box
+              sx={{
+                px: 1,
+                pt: 1,
+                pb: 0.5,
+                display: 'flex',
+                alignItems: 'baseline',
+                gap: 1,
+                minWidth: 0,
+              }}
+            >
+              <Typography variant="h6" noWrap sx={{ minWidth: 0 }}>
+                {title}
+              </Typography>
+              {Array.isArray(usedData) && !showSkeletons && (
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ flexShrink: 0 }}
+                >
+                  {table.getFilteredRowModel().rows.length} results
+                </Typography>
+              )}
+            </Box>
+          )}
+          {!Array.isArray(usedData) && usedData ? (
+            <ResourceUnavailable message={incorrectDataMessage} />
+          ) : (
+            <>
+              <CIPPTableToptoolbar
+                table={table}
+                api={api}
+                queryKey={queryKey}
+                simpleColumns={simpleColumns}
+                data={data}
+                columnVisibility={columnVisibility}
+                getRequestData={getRequestData}
+                usedColumns={usedColumns}
+                usedData={memoizedData ?? EMPTY_ARRAY}
+                title={title}
+                actions={actions}
+                exportEnabled={exportEnabled}
+                refreshFunction={refreshFunction}
+                setColumnVisibility={setColumnVisibility}
+                filters={filters}
+                queryKeys={queryKey ? queryKey : title}
+                graphFilterData={graphFilterData}
+                setGraphFilterData={setGraphFilterData}
+                setConfiguredSimpleColumns={setConfiguredSimpleColumns}
+                queueMetadata={getRequestData.data?.pages?.[0]?.Metadata}
+                isInDialog={isInDialog}
+                showBulkExportAction={showBulkExportAction}
+                viewMode="cards"
+                selectMode={selectModeActive}
+                onSelectModeChange={
+                  hasOnChange ? undefined : handleMobileSelectModeChange
+                }
+                selectModeLocked={hasOnChange}
+              />
+              <CippMobileCardList
+                table={table}
+                actions={actions}
+                hasOffCanvas={!!offCanvas || Boolean(cardFallbackInfoFields?.length)}
+                onRowAction={dispatchRowAction}
+                onMoreInfo={openRowOffCanvas}
+                isActionDisabled={handleActionDisabled}
+                selectMode={selectModeActive}
+                cardButton={cardButton}
+                mobileCard={mobileCard}
+                fixedChrome={!isInDialog && !noCard}
+                onClearFilters={handleClearAllFilters}
+                isStreaming={getRequestData.isFetching && !showSkeletons}
+                queueMessage={queueMessage}
+              />
+            </>
+          )}
+          {getRequestData.isError && !getRequestData.isFetchNextPageError && (
+            <ResourceError
+              onReload={() => getRequestData.refetch()}
+              message={`Error Loading data:  ${getCippError(getRequestData.error)}`}
+            />
+          )}
+        </Box>
+      ) : noCard ? (
         <Scrollbar>
           {!Array.isArray(usedData) && usedData ? (
             <ResourceUnavailable message={incorrectDataMessage} />
@@ -1086,7 +1228,10 @@ export const CippDataTable = (props) => {
         visible={offcanvasVisible}
         onClose={() => setOffcanvasVisible(false)}
         extendedData={offCanvasData}
-        extendedInfoFields={offCanvas?.extendedInfoFields}
+        extendedInfoFields={offCanvas?.extendedInfoFields ?? cardFallbackInfoFields}
+        // The fallback's fields are table columns, so render them the way their cells
+        // do — links, copy chips and status icons rather than flattened text.
+        richFormatting={!offCanvas && Boolean(cardFallbackInfoFields?.length)}
         actions={actions}
         title={offCanvasData?.Name || offCanvas?.title || 'Extended Info'}
         children={
@@ -1113,6 +1258,10 @@ export const CippDataTable = (props) => {
         canNavigateDown={
           filteredRows && offCanvasRowIndex < filteredRows.length - 1
         }
+        navigationPosition={{
+          index: offCanvasRowIndex + 1,
+          total: filteredRows?.length ?? 0,
+        }}
         {...offCanvas}
       />
       {/* Render custom component */}
