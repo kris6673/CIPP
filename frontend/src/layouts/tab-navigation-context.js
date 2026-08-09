@@ -49,6 +49,9 @@ export const useTabNavigationValue = ({
   onNavigate,
   actions = [],
   enabled,
+  // HeaderedTabbedLayout wraps its children in a Container; TabbedLayout does not. Content
+  // that renders its own Container (CippFormPage) reads this so the two don't double up.
+  providesGutters = false,
 }) => {
   const [claims, setClaims] = useState([])
 
@@ -67,10 +70,11 @@ export const useTabNavigationValue = ({
       currentPath,
       onNavigate,
       actions,
+      providesGutters,
       claim,
       release,
       isClaimed: claims.length > 0,
     }),
-    [enabled, tabs, currentPath, onNavigate, actions, claim, release, claims.length]
+    [enabled, tabs, currentPath, onNavigate, actions, providesGutters, claim, release, claims.length]
   )
 }

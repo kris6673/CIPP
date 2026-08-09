@@ -176,6 +176,24 @@ export const createComponents = () => {
         },
       },
     },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          // Below md a centred dialog wastes both screen edges and clips long forms, and
+          // there are ~70 dialogs in the app that never opted into fullScreen. Give them
+          // the full width and the full available height here rather than per call site.
+          // Height stays content-driven, so a two-line confirmation doesn't become an
+          // empty full screen. Dialogs that already pass fullScreen are unaffected.
+          "@media (max-width: 899.95px)": {
+            margin: 0,
+            width: "100%",
+            maxWidth: "100%",
+            maxHeight: "100%",
+            borderRadius: 0,
+          },
+        },
+      },
+    },
     MuiDialogActions: {
       styleOverrides: {
         root: {

@@ -228,7 +228,7 @@ export const CippMaintenanceBanner = ({ alert }) => {
       <Stack direction="row" spacing={1.5} alignItems="flex-start">
         <Icon fontSize="small" sx={{ color: solid ? 'inherit' : palette.main, mt: 0.25 }} />
 
-        <Stack
+        <Stack useFlexGap
           direction={{ xs: 'column', md: 'row' }}
           spacing={{ xs: 0.25, md: 1.5 }}
           alignItems={{ xs: 'flex-start', md: 'baseline' }}

@@ -186,7 +186,7 @@ export const CippMobileCardList = (props) => {
         {showSkeletons ? (
           Array.from({ length: 5 }, (_, i) => <SkeletonCard key={i} />)
         ) : totalFiltered === 0 ? (
-          <Box sx={{ py: 7, textAlign: "center" }}>
+          <Box sx={{ py: 5, textAlign: "center" }}>
             <SvgIcon sx={{ fontSize: 36, color: "text.secondary" }}>
               {queueMessage ? <Info /> : <SearchOff />}
             </SvgIcon>

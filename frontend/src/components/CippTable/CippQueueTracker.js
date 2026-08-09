@@ -257,7 +257,7 @@ export const CippQueueTracker = ({ queueId, queryKey, title, onQueueComplete }) 
                 />
               </Box>
 
-              <Stack direction="row" spacing={4} sx={{ flexWrap: "wrap" }}>
+              <Stack useFlexGap direction="row" columnGap={4} rowGap={1} sx={{ flexWrap: "wrap" }}>
                 <Typography variant="body2">
                   <strong>Total Tasks:</strong> {(persistentQueueData || queueData).TotalTasks || 0}
                 </Typography>

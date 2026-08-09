@@ -81,6 +81,7 @@ export const HeaderedTabbedLayout = (props) => {
     onNavigate: navigateToTab,
     actions: sheetActions,
     enabled: mdDown,
+    providesGutters: true,
   });
 
   return (

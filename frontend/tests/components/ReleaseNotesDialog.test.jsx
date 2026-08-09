@@ -55,18 +55,36 @@ beforeEach(() => {
 })
 
 describe('ReleaseNotesDialog', () => {
-  it('opens on the running hotfix release rather than its .0 base release', async () => {
+  // A hotfix release body is only the delta since the feature release, so opening on it tells
+  // the user almost nothing. Display the newest vX.Y.0 instead — dismissal still tracks the
+  // running tag, which is what the reopen-forever bug hinged on (see the next test).
+  it('opens on the newest .0 release, not on a hotfix', async () => {
     renderWithProviders(<ReleaseNotesDialog />)
 
-    expect(await screen.findByText('Release notes for v10.8.2 - Hotfix')).toBeInTheDocument()
-    expect(screen.getByText('Notes for the hotfix that is actually running')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Release notes for v10.9.0 - Something Newer')
+    ).toBeInTheDocument()
+    expect(screen.queryByText('Notes for the hotfix that is actually running')).toBeNull()
+  })
+
+  it('still lets you pick a hotfix release from the picker', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<ReleaseNotesDialog />)
+    await screen.findByText('Release notes for v10.9.0 - Something Newer')
+
+    await user.click(screen.getByRole('combobox'))
+    await user.click(await screen.findByText('v10.8.2 - Hotfix (v10.8.2)'))
+
+    expect(
+      await screen.findByText('Notes for the hotfix that is actually running')
+    ).toBeInTheDocument()
   })
 
   it('stays dismissed on reload after "Don\'t show until next release"', async () => {
     const user = userEvent.setup()
 
     const { unmount } = renderWithProviders(<ReleaseNotesDialog />)
-    await screen.findByText('Release notes for v10.8.2 - Hotfix')
+    await screen.findByText('Release notes for v10.9.0 - Something Newer')
     await user.click(screen.getByRole('button', { name: "Don't show until next release" }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
 

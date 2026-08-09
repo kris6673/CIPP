@@ -134,13 +134,28 @@ class MarkdownErrorBoundary extends Component {
   }
 }
 
+// Which release the dialog *shows*. Hotfix and maintenance builds (v10.8.1, v10.8.2) carry
+// only the delta since the feature release, so opening on one tells the user almost nothing
+// about what changed. Default to the newest vX.Y.0 instead; the picker still lists every
+// release, and dismissal keeps tracking the exact running tag (see buildReleaseMetadata) so
+// this can't reintroduce the dialog-reopens-forever bug.
+const isFeatureRelease = (tag) => /^v?\d+\.\d+\.0$/.test(String(tag ?? ''))
+
+const pickDisplayRelease = (catalog, releaseMeta) =>
+  catalog.find((release) => isFeatureRelease(release.releaseTag)) ||
+  catalog.find((release) => release.releaseTag === releaseMeta.releaseTag) ||
+  catalog.find((release) => release.releaseTag === releaseMeta.baseTag) ||
+  catalog[0]
+
 export const ReleaseNotesDialog = forwardRef((_props, ref) => {
   const releaseMeta = useMemo(() => buildReleaseMetadata(packageInfo.version), [])
   const [isEligible, setIsEligible] = useState(false)
   const [open, setOpen] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   const [manualOpenRequested, setManualOpenRequested] = useState(false)
-  const [selectedReleaseTag, setSelectedReleaseTag] = useState(releaseMeta.releaseTag)
+  // Left unset until the catalog loads so pickDisplayRelease chooses; seeding it with
+  // the running tag meant a hotfix build always displayed its own thin release notes.
+  const [selectedReleaseTag, setSelectedReleaseTag] = useState(null)
   const hasOpenedRef = useRef(false)
 
   useEffect(() => {
@@ -148,7 +163,8 @@ export const ReleaseNotesDialog = forwardRef((_props, ref) => {
   }, [releaseMeta.releaseTag])
 
   useEffect(() => {
-    setSelectedReleaseTag(releaseMeta.releaseTag)
+    // New build -> re-pick from the catalog rather than pinning to this build's tag
+    setSelectedReleaseTag(null)
   }, [releaseMeta.releaseTag])
 
   useEffect(() => {
@@ -191,17 +207,14 @@ export const ReleaseNotesDialog = forwardRef((_props, ref) => {
     }
 
     if (!selectedReleaseTag) {
-      setSelectedReleaseTag(releaseCatalog[0].releaseTag)
+      setSelectedReleaseTag(pickDisplayRelease(releaseCatalog, releaseMeta)?.releaseTag)
       return
     }
 
     const hasSelected = releaseCatalog.some((release) => release.releaseTag === selectedReleaseTag)
 
     if (!hasSelected) {
-      const fallbackRelease =
-        releaseCatalog.find((release) => release.releaseTag === releaseMeta.releaseTag) ||
-        releaseCatalog.find((release) => release.releaseTag === releaseMeta.baseTag) ||
-        releaseCatalog[0]
+      const fallbackRelease = pickDisplayRelease(releaseCatalog, releaseMeta)
       if (fallbackRelease) {
         setSelectedReleaseTag(fallbackRelease.releaseTag)
       }
@@ -390,7 +403,13 @@ export const ReleaseNotesDialog = forwardRef((_props, ref) => {
             sx={{ minWidth: { xs: '100%', sm: 260 }, maxWidth: { xs: '100%', sm: 320 } }}
             value={selectedReleaseValue}
           />
-          <Button onClick={toggleExpanded} size="small" variant="outlined">
+          <Button
+            onClick={toggleExpanded}
+            size="small"
+            variant="outlined"
+            // Below md the dialog already fills the screen, so there is nothing to expand into
+            sx={{ display: { xs: 'none', md: 'inline-flex' } }}
+          >
             {isExpanded ? 'Shrink' : 'Expand'}
           </Button>
         </Stack>
@@ -423,8 +442,25 @@ export const ReleaseNotesDialog = forwardRef((_props, ref) => {
             <Box
               sx={{
                 flexGrow: 1,
-                maxHeight: isExpanded ? 'calc(100vh - 260px)' : 600,
+                // dvh tracks the visible viewport; 100vh over-reports it on mobile browsers
+                // with collapsing chrome, so the notes ran past the bottom of the screen.
+                maxHeight: isExpanded
+                  ? { xs: 'calc(100dvh - 200px)', md: 'calc(100vh - 260px)' }
+                  : 600,
                 overflowY: 'auto',
+                // Release notes are GitHub markdown: long URLs, commit SHAs and fenced code
+                // are single unbreakable tokens that otherwise widen the dialog and push the
+                // text off the right edge. Wrap prose; let code and tables scroll themselves.
+                overflowX: 'hidden',
+                overflowWrap: 'anywhere',
+                '& pre': {
+                  maxWidth: '100%',
+                  overflowX: 'auto',
+                  whiteSpace: 'pre',
+                  overflowWrap: 'normal',
+                },
+                '& table': { display: 'block', maxWidth: '100%', overflowX: 'auto' },
+                '& img': { maxWidth: '100%', height: 'auto' },
               }}
             >
               <MarkdownErrorBoundary
@@ -471,13 +507,16 @@ export const ReleaseNotesDialog = forwardRef((_props, ref) => {
       </DialogContent>
       <DialogActions
         sx={{
-          alignItems: 'center',
+          alignItems: { xs: 'stretch', md: 'center' },
           display: 'flex',
+          // Stacked on phones with the primary dismissal last, so it sits in thumb reach
+          flexDirection: { xs: 'column', md: 'row' },
           flexWrap: 'wrap',
           gap: 1,
           justifyContent: 'space-between',
-          px: 3,
+          px: { xs: 2, md: 3 },
           py: 2,
+          '& .MuiButton-root': { minHeight: { xs: 44, md: 'auto' } },
         }}
       >
         <Button
@@ -490,11 +529,13 @@ export const ReleaseNotesDialog = forwardRef((_props, ref) => {
           View release notes on GitHub
         </Button>
         <Stack
-          alignItems="center"
-          direction="row"
+          useFlexGap
+          alignItems={{ xs: 'stretch', md: 'center' }}
+          direction={{ xs: 'column', md: 'row' }}
           flexWrap="wrap"
           gap={1}
           justifyContent="flex-end"
+          sx={{ width: { xs: '100%', md: 'auto' } }}
         >
           <Button
             onClick={handleDismissPermanently}

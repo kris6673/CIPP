@@ -391,7 +391,7 @@ export const AllTenantsTrendChart = ({
 
 /** Band heading that separates the dashboard into Portfolio / Security / Operations. */
 export const AllTenantsBandHeading = ({ title, description }) => (
-  <Stack
+  <Stack useFlexGap
     direction="row"
     alignItems="baseline"
     spacing={1.5}

@@ -53,7 +53,7 @@ export const CippBannerListCard = (props) => {
       <Stack spacing={3} {...other}>
         {[...Array(1)].map((_, index) => (
           <Card key={index}>
-            <Stack direction="row" flexWrap="wrap" justifyContent="space-between" sx={{ p: 3 }}>
+            <Stack useFlexGap direction="row" flexWrap="wrap" justifyContent="space-between" sx={{ p: 3 }}>
               <Stack direction="row" spacing={2} alignItems="center">
                 <Box>
                   <Skeleton variant="text" width={80} />

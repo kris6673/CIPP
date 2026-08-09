@@ -564,7 +564,7 @@ export const CippAppTemplateDrawer = ({
                 formControl={formControl}
               />
             </Grid>
-            <Grid size={{ xs: 5 }}>
+            <Grid size={{ xs: 12 }}>
               <Button
                 onClick={() => searchApp(formControl.getValues('searchQuery'), 'StoreApp')}
                 disabled={winGetSearchResults.isPending}
@@ -639,7 +639,7 @@ export const CippAppTemplateDrawer = ({
                 formControl={formControl}
               />
             </Grid>
-            <Grid size={{ xs: 5 }}>
+            <Grid size={{ xs: 12 }}>
               <Button
                 onClick={() => searchApp(formControl.getValues('searchQuery'), 'choco')}
                 disabled={ChocosearchResults.isPending}

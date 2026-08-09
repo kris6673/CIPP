@@ -338,7 +338,7 @@ export const Layout = (props) => {
               <Container maxWidth={false}>
                 <CippBreadcrumbNav mode="hierarchical" />
                 <Grid container spacing={3}>
-                  <Grid size={6}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
                     <CippImageCard
                       title="Not supported"
                       imageUrl="/assets/illustrations/undraw_website_ij0l.svg"

@@ -5,6 +5,7 @@ import PropTypes from "prop-types";
 import { Box, Divider, InputAdornment, OutlinedInput, Stack, SwipeableDrawer, Typography } from "@mui/material";
 import { Search } from "@mui/icons-material";
 import { Logo } from "../components/logo";
+import { CippSponsor } from "../components/CippComponents/CippSponsor";
 import { Scrollbar } from "../components/scrollbar";
 import { paths } from "../paths";
 import { MobileNavItem } from "./mobile-nav-item";
@@ -128,6 +129,10 @@ export const MobileNav = (props) => {
       PaperProps={{
         sx: {
           width: MOBILE_NAV_WIDTH,
+          // Column layout so the sponsor footer pins to the bottom and the menu scrolls
+          // between it and the sticky header, rather than the footer riding the list.
+          display: "flex",
+          flexDirection: "column",
         },
       }}
       variant="temporary"
@@ -165,7 +170,8 @@ export const MobileNav = (props) => {
       </Box>
       <Scrollbar
         sx={{
-          height: "100%",
+          flexGrow: 1,
+          minHeight: 0,
           "& .simplebar-content": {
             height: "100%",
           },
@@ -178,7 +184,7 @@ export const MobileNav = (props) => {
             flexDirection: "column",
             height: "100%",
             px: 2,
-            pb: "calc(env(safe-area-inset-bottom) + 16px)",
+            pb: 1,
           }}
         >
           <Box
@@ -212,6 +218,19 @@ export const MobileNav = (props) => {
           </Box>
         </Box>
       </Scrollbar>
+      {/* Pinned below the scrolling menu rather than at the end of it, so it stays visible
+          without the long nav list pushing it off-screen. Compact: the drawer's vertical
+          space belongs to navigation. */}
+      <Box
+        sx={{
+          flexShrink: 0,
+          px: 2,
+          pb: "calc(env(safe-area-inset-bottom) + 8px)",
+          bgcolor: "background.default",
+        }}
+      >
+        <CippSponsor compact />
+      </Box>
     </SwipeableDrawer>
   );
 };

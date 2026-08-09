@@ -74,7 +74,7 @@ export const TenantMetricsGrid = ({ data, isLoading }) => {
       {metrics.map((metric) => {
         const IconComponent = metric.icon;
         return (
-          <Grid key={metric.label} size={{ xs: 6 }}>
+          <Grid key={metric.label} size={{ xs: 12 }}>
             <Tooltip
               title={`View ${metric.value.toLocaleString()} ${metric.label.toLowerCase()}`}
               arrow

@@ -774,7 +774,7 @@ export const CippDataTable = (props) => {
   const renderEmptyRowsFallback = useCallback(
     ({ table }) =>
       queueMessage ? (
-        <Box sx={{ py: 4 }}>
+        <Box sx={{ py: { xs: 2, md: 4 } }}>
           <center>
             <Info /> {queueMessage}
           </center>

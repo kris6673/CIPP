@@ -81,7 +81,7 @@ const Page = () => {
 
     if (daysDifference > 10) {
       return (
-        <Grid size={7}>
+        <Grid size={{ xs: 12, md: 7 }}>
           <Alert severity="warning">
             You have selected a date range of {Math.ceil(daysDifference)} days. Large date ranges
             may cause timeouts or errors due to the amount of data being processed. Consider

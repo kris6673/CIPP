@@ -1,9 +1,15 @@
 import { ResponsiveSankey } from "@nivo/sankey";
 import { useSettings } from "../../hooks/use-settings";
+import { useIsMobileLayout } from "../../hooks/use-breakpoint";
 
 export const CippSankey = ({ data, onNodeClick, onLinkClick }) => {
   const settings = useSettings();
   const isDark = settings.currentTheme?.value === "dark";
+  // A sankey is three columns of nodes plus their labels. At desktop widths the labels sit
+  // horizontally inside an 18px-thick node and still read; on a ~350px card they overrun the
+  // node and collide with the links. Narrow screens get thinner nodes, tighter spacing and
+  // labels rotated to run along the node instead of across the chart.
+  const isMobile = useIsMobileLayout();
 
   const theme = {
     tooltip: {
@@ -19,7 +25,7 @@ export const CippSankey = ({ data, onNodeClick, onLinkClick }) => {
     },
     labels: {
       text: {
-        fontSize: 12,
+        fontSize: isMobile ? 9 : 12,
       },
     },
   };
@@ -36,14 +42,18 @@ export const CippSankey = ({ data, onNodeClick, onLinkClick }) => {
       <ResponsiveSankey
         data={data}
         theme={theme}
-        margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+        margin={
+          isMobile
+            ? { top: 6, right: 4, bottom: 6, left: 4 }
+            : { top: 10, right: 10, bottom: 10, left: 10 }
+        }
         align="justify"
         colors={(node) => node.nodeColor}
         label={(node) => node.label ?? node.id}
         nodeOpacity={1}
         nodeHoverOthersOpacity={0.35}
-        nodeThickness={18}
-        nodeSpacing={24}
+        nodeThickness={isMobile ? 10 : 18}
+        nodeSpacing={isMobile ? 12 : 24}
         nodeBorderWidth={0}
         nodeBorderColor={{
           from: "color",
@@ -56,8 +66,8 @@ export const CippSankey = ({ data, onNodeClick, onLinkClick }) => {
         linkBlendMode={isDark ? "lighten" : "multiply"}
         enableLinkGradient={true}
         labelPosition="inside"
-        labelOrientation="horizontal"
-        labelPadding={16}
+        labelOrientation={isMobile ? "vertical" : "horizontal"}
+        labelPadding={isMobile ? 6 : 16}
         labelTextColor={isDark ? "#ffffff" : "#000000"}
         sort="input"
         legends={[]}

@@ -25,7 +25,7 @@ const CippPageCard = (props) => {
       <Box
         sx={{
           flexGrow: 1,
-          pb: 4,
+          pb: { xs: 2, md: 4 },
         }}
       >
         <Container maxWidth={cardSize}>

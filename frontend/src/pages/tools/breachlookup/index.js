@@ -62,7 +62,7 @@ const Page = () => {
 
               <CippButtonCard title="Breach lookup">
                 <Grid container spacing={2}>
-                  <Grid size={{ xs: 8 }}>
+                  <Grid size={{ xs: 12 }}>
                     <CippFormComponent
                       formControl={formControl}
                       name="account"
@@ -71,7 +71,7 @@ const Page = () => {
                       required
                     />
                   </Grid>
-                  <Grid size={{ xs: 4 }}>
+                  <Grid size={{ xs: 12 }}>
                     <Button
                       type="submit"
                       onClick={() => getGeoIP.refetch()}
@@ -95,7 +95,7 @@ const Page = () => {
             </Grid>
           )}
           {getGeoIP.isFetching ? (
-            <Grid size={{ xs: 8 }}>
+            <Grid size={{ xs: 12 }}>
               <CippButtonCard title="Fetching Results">
                 <Grid container spacing={2}>
                   <Grid size={{ xs: 12 }} textAlign="center">
@@ -107,7 +107,7 @@ const Page = () => {
           ) : getGeoIP.data ? (
             <>
               {getGeoIP.data.length === 0 && (
-                <Grid size={{ xs: 8 }}>
+                <Grid size={{ xs: 12 }}>
                   <CippButtonCard title="No breaches detected">
                     <Grid container spacing={2}>
                       <Grid size={{ xs: 12 }}>
@@ -120,7 +120,7 @@ const Page = () => {
                 </Grid>
               )}
               {getGeoIP.data?.map((breach, index) => (
-                <Grid key={index} spacing={2} size={{ xs: 3 }}>
+                <Grid key={index} spacing={2} size={{ xs: 12 }}>
                   <CippButtonCard
                     cardSx={{ display: "flex", flexDirection: "column", height: "100%" }}
                     title={<>{breach.Title}</>}
@@ -214,7 +214,7 @@ const Page = () => {
           ) : (
             <>
               {getGeoIP.isSuccess && (
-                <Grid size={{ xs: 8 }}>
+                <Grid size={{ xs: 12 }}>
                   <CippButtonCard title="No breaches detected">
                     <Grid container spacing={2}>
                       <Grid size={{ xs: 12 }}>
@@ -227,7 +227,7 @@ const Page = () => {
                 </Grid>
               )}
               {getGeoIP.isError && (
-                <Grid size={{ xs: 8 }}>
+                <Grid size={{ xs: 12 }}>
                   <CippButtonCard title="Error">
                     <Grid container spacing={2}>
                       <Grid size={{ xs: 12 }}>
