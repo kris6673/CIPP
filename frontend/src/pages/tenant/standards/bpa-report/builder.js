@@ -264,14 +264,14 @@ const Page = () => {
                   <form onSubmit={handleSubmit(onSubmit)}>
                     <Grid container spacing={2}>
                       {/* Report Style - Full Width */}
-                      <Grid size={{ xs: 12 }}>
+                      <Grid size={{ xs: 12, sm: 6 }}>
                         <CippFormComponent
                           label="Card Name"
                           name={`Fields.${index}.FrontendFields.0.name`} // Corrected index
                           formControl={formControl}
                         />
                       </Grid>
-                      <Grid size={{ xs: 12 }}>
+                      <Grid size={{ xs: 12, sm: 6 }}>
                         <CippFormComponent
                           label="Card Description"
                           name={`Fields.${index}.FrontendFields.0.desc`} // Corrected index

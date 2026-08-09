@@ -88,7 +88,7 @@ const Page = () => {
     >
       <Container maxWidth={false}>
         <Grid container spacing={1}>
-          <Grid size={{ xs: 12 }}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <CippButtonCard
               title="Geo IP Check"
               cardSx={{ display: "flex", flexDirection: "column", height: "100%" }}

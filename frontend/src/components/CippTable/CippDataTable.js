@@ -424,7 +424,6 @@ export const CippDataTable = (props) => {
   const [offcanvasVisible, setOffcanvasVisible] = useState(false)
   const [offCanvasData, setOffCanvasData] = useState({})
   const [offCanvasRowIndex, setOffCanvasRowIndex] = useState(0)
-  const [filteredRows, setFilteredRows] = useState([])
   const [customComponentData, setCustomComponentData] = useState({})
   const [customComponentVisible, setCustomComponentVisible] = useState(false)
   const [actionData, setActionData] = useState({
@@ -749,12 +748,12 @@ export const CippDataTable = (props) => {
           }
 
           setOffCanvasData(row.original)
-          const filteredRowsArray = table?.getFilteredRowModel?.()?.rows
-          if (filteredRowsArray) {
-            const indexInFiltered = filteredRowsArray.findIndex(
+          const navigable = table?.getSortedRowModel?.()?.rows
+          if (navigable) {
+            const indexInList = navigable.findIndex(
               (r) => r.original === row.original
             )
-            setOffCanvasRowIndex(indexInFiltered >= 0 ? indexInFiltered : 0)
+            setOffCanvasRowIndex(indexInList >= 0 ? indexInList : 0)
           }
           setOffcanvasVisible(true)
         },
@@ -843,16 +842,15 @@ export const CippDataTable = (props) => {
     [settings, createDialog]
   )
 
-  // Open the extended-info offcanvas for a row, recording its position in the filtered
-  // row model so prev/next navigation works. Shared by the row menu, the mobile action
-  // sheet, and card taps.
+  // Open the extended-info offcanvas for a row, recording its position in the row model so
+  // prev/next navigation works. Shared by the row menu, the mobile action sheet, and card
+  // taps. The SORTED model is the one on screen — the filtered model is pre-sort, so a
+  // position taken from it stops matching the list the moment a column is sorted.
   const openRowOffCanvas = useCallback((rowOriginal) => {
     setOffCanvasData(rowOriginal)
-    const filteredRowsArray = table.getFilteredRowModel().rows
-    const indexInFiltered = filteredRowsArray.findIndex(
-      (r) => r.original === rowOriginal
-    )
-    setOffCanvasRowIndex(indexInFiltered >= 0 ? indexInFiltered : 0)
+    const navigable = table.getSortedRowModel().rows
+    const indexInList = navigable.findIndex((r) => r.original === rowOriginal)
+    setOffCanvasRowIndex(indexInList >= 0 ? indexInList : 0)
     setOffcanvasVisible(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -1051,6 +1049,24 @@ export const CippDataTable = (props) => {
       ? { extendedInfoFields: cardInfoFields, richFormatting: true }
       : {}
 
+  // The rows the drawer's Prev/Next walks, in the order they are on screen. Read live from
+  // the table on every render: this used to be mirrored into state by an effect keyed on
+  // filters and sorting, so the copy was taken once at mount — before the rows had arrived
+  // — and every table that loads its data asynchronously reported nothing to navigate.
+  const navigationRows = table.getSortedRowModel().rows
+  // Prefer the position of the row actually on show, so sorting or filtering while the
+  // drawer is open carries the counter with it. The stored index covers the case where the
+  // row has left the list entirely — a background refetch replaces every object, so
+  // identity alone would strand the position — and is clamped so a list that shrank under
+  // it can't report "6 of 2".
+  const derivedRowIndex = offcanvasVisible
+    ? navigationRows.findIndex((row) => row.original === offCanvasData)
+    : -1
+  const currentRowIndex =
+    derivedRowIndex >= 0
+      ? derivedRowIndex
+      : Math.min(offCanvasRowIndex, Math.max(navigationRows.length - 1, 0))
+
   // Remove the useEffect that was resetting filters on table changes
   // The initial filter application is now handled by the columnFilters state
   // and the useEffect above that only triggers on actual filter prop changes
@@ -1079,19 +1095,6 @@ export const CippDataTable = (props) => {
       onChange(table.getSelectedRowModel().rows.map((row) => row.original))
     }
   }, [table.getSelectedRowModel().rows])
-
-  useEffect(() => {
-    // Update filtered rows whenever table filtering/sorting changes
-    if (table && table.getFilteredRowModel) {
-      const rows = table.getFilteredRowModel().rows
-      setFilteredRows(rows.map((row) => row.original))
-    }
-  }, [
-    table,
-    table.getState().columnFilters,
-    table.getState().globalFilter,
-    table.getState().sorting,
-  ])
 
   useEffect(() => {
     //check if the simplecolumns are an array,
@@ -1255,31 +1258,29 @@ export const CippDataTable = (props) => {
         title={offCanvasData?.Name || offCanvas?.title || 'Extended Info'}
         children={
           offCanvas?.children
-            ? (row) => offCanvas.children(row, offCanvasRowIndex)
+            ? (row) => offCanvas.children(row, currentRowIndex)
             : undefined
         }
         customComponent={offCanvas?.customComponent}
         onNavigateUp={() => {
-          const newIndex = offCanvasRowIndex - 1
-          if (newIndex >= 0 && filteredRows && filteredRows[newIndex]) {
+          const newIndex = currentRowIndex - 1
+          if (newIndex >= 0 && navigationRows[newIndex]) {
             setOffCanvasRowIndex(newIndex)
-            setOffCanvasData(filteredRows[newIndex])
+            setOffCanvasData(navigationRows[newIndex].original)
           }
         }}
         onNavigateDown={() => {
-          const newIndex = offCanvasRowIndex + 1
-          if (filteredRows && newIndex < filteredRows.length) {
+          const newIndex = currentRowIndex + 1
+          if (navigationRows[newIndex]) {
             setOffCanvasRowIndex(newIndex)
-            setOffCanvasData(filteredRows[newIndex])
+            setOffCanvasData(navigationRows[newIndex].original)
           }
         }}
-        canNavigateUp={offCanvasRowIndex > 0}
-        canNavigateDown={
-          filteredRows && offCanvasRowIndex < filteredRows.length - 1
-        }
+        canNavigateUp={currentRowIndex > 0}
+        canNavigateDown={currentRowIndex < navigationRows.length - 1}
         navigationPosition={{
-          index: offCanvasRowIndex + 1,
-          total: filteredRows?.length ?? 0,
+          index: currentRowIndex + 1,
+          total: navigationRows.length,
         }}
         {...offCanvas}
         {...cardInfoOverride}

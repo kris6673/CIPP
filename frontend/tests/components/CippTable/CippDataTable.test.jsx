@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import { renderWithProviders } from '../../test-utils'
 import { CippDataTable } from '../../../src/components/CippTable/CippDataTable'
+import { resetOverlayHistory } from '../../../src/utils/overlay-history'
 
 const basicData = [
   { displayName: 'Alice Smith', mail: 'alice@contoso.com', department: 'IT', accountEnabled: true },
@@ -469,5 +470,136 @@ describe('CippDataTable card view without an offCanvas', () => {
     // the page's own drawer opens — the fallback never substitutes for a configured one
     await waitFor(() => expect(screen.getByText('User Details')).toBeInTheDocument())
     expect(screen.getAllByText(/Seattle/).length).toBeGreaterThan(0)
+  })
+})
+
+// The offcanvas walks the rows with Prev/Next and reports "N of M". Both come from the
+// table's row model, and both used to be read from a mirror of it kept in state.
+describe('CippDataTable offcanvas row navigation', () => {
+  // Deliberately unsorted: the display order and the arrival order differ.
+  const people = [
+    { displayName: 'Carol Williams', mail: 'carol@contoso.com' },
+    { displayName: 'Alice Smith', mail: 'alice@contoso.com' },
+    { displayName: 'Bob Johnson', mail: 'bob@contoso.com' },
+  ]
+
+  // The Prev/Next bar and the position caption only render below md.
+  const useMobileViewport = () => {
+    const cache = new Map()
+    window.matchMedia = (query) => {
+      if (!cache.has(query)) {
+        cache.set(query, {
+          matches: query.includes('max-width'),
+          media: query,
+          onchange: null,
+          addListener: () => {},
+          removeListener: () => {},
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          dispatchEvent: () => false,
+        })
+      }
+      return cache.get(query)
+    }
+  }
+
+  const Table = (props) => (
+    <CippDataTable
+      viewMode="cards"
+      simpleColumns={['displayName', 'mail']}
+      title="Users"
+      {...props}
+    />
+  )
+
+  // Rows land from the API after the table has already mounted — the normal case.
+  const AsyncTable = (props) => {
+    const [data, setData] = React.useState([])
+    return (
+      <>
+        <button type="button" onClick={() => setData(people)}>
+          Load rows
+        </button>
+        <Table data={data} {...props} />
+      </>
+    )
+  }
+
+  beforeEach(() => {
+    useMobileViewport()
+  })
+
+  afterEach(() => {
+    resetOverlayHistory()
+    delete window.matchMedia
+  })
+
+  it('counts rows that arrived after the table mounted', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<AsyncTable />)
+
+    await user.click(screen.getByRole('button', { name: 'Load rows' }))
+    await waitFor(() => expect(screen.getByText('Carol Williams')).toBeInTheDocument())
+    await user.click(screen.getByText('Carol Williams'))
+
+    expect(await screen.findByText('1 of 3')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /prev/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /next/i })).toBeEnabled()
+  })
+
+  it('numbers rows in the order they are shown, not the order they arrived', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(
+      <Table data={people} defaultSorting={[{ id: 'displayName', desc: false }]} />
+    )
+
+    // Sorted, Carol is last on screen — so she is the last row, with nowhere to go next.
+    await waitFor(() => expect(screen.getByText('Carol Williams')).toBeInTheDocument())
+    await user.click(screen.getByText('Carol Williams'))
+
+    expect(await screen.findByText('3 of 3')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /next/i })).toBeDisabled()
+  })
+
+  it('counts only the rows left after a search', async () => {
+    const user = userEvent.setup()
+    const withTwoBobs = [
+      ...people,
+      { displayName: 'Bob Marley', mail: 'bob.marley@contoso.com' },
+    ]
+    renderWithProviders(
+      <Table data={withTwoBobs} defaultSorting={[{ id: 'displayName', desc: false }]} />
+    )
+
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument())
+    await user.type(screen.getByRole('searchbox', { name: 'Search' }), 'bob')
+    await waitFor(() => expect(screen.queryByText('Alice Smith')).not.toBeInTheDocument())
+
+    await user.click(screen.getByText('Bob Marley'))
+
+    // the sorted model is built from the FILTERED rows, so the search narrows the walk
+    // too: two Bobs, not four people.
+    expect(await screen.findByText('2 of 2')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /next/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /prev/i })).toBeEnabled()
+  })
+
+  it('steps to the next row as displayed', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(
+      <Table data={people} defaultSorting={[{ id: 'displayName', desc: false }]} />
+    )
+
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument())
+    await user.click(screen.getByText('Alice Smith'))
+    expect(await screen.findByText('1 of 3')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /next/i }))
+
+    // Bob follows Alice on screen; Carol is where the raw arrival order would have landed.
+    expect(await screen.findByText('2 of 3')).toBeInTheDocument()
+    // scoped by the drawer's own heading — the toolbar renders a filter Drawer too
+    const drawer = screen.getByText('Extended Info').closest('.MuiDrawer-paper')
+    expect(within(drawer).getByText('bob@contoso.com')).toBeInTheDocument()
   })
 })

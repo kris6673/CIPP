@@ -68,7 +68,7 @@ export const CippDateRangeFilter = ({
             {formControl.watch("dateFilter") === "relative" && (
               <Grid size={{ xs: 12, md: 8 }}>
                 <Grid container spacing={2}>
-                  <Grid size={{ xs: 12 }}>
+                  <Grid size={{ xs: 12, md: 2 }}>
                     <CippFormComponent
                       fullWidth
                       type="number"
@@ -77,7 +77,7 @@ export const CippDateRangeFilter = ({
                       formControl={formControl}
                     />
                   </Grid>
-                  <Grid size={{ xs: 12 }}>
+                  <Grid size={{ xs: 12, md: 4 }}>
                     <CippFormComponent
                       fullWidth
                       type="autoComplete"

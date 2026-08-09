@@ -45,12 +45,56 @@ const openingTags = (source, name) => {
       if (char === "{") depth += 1;
       else if (char === "}") depth -= 1;
       else if (char === ">" && depth === 0) {
-        tags.push({ text: source.slice(match.index, i + 1), line: source.slice(0, match.index).split("\n").length });
+        const text = source.slice(match.index, i + 1);
+        const line = source.slice(0, match.index).split("\n").length;
+        tags.push({ text, line, endLine: line + text.split("\n").length - 1 });
         break;
       }
     }
   }
   return tags;
+};
+
+// Not every fixed split is a bug — a tile can be designed to sit two-up at 390px. Marking
+// the site opts it out, deliberately, in the source, next to the reason, where
+// `rg mobile-layout-ok` finds every one of them. Read from the RAW source because comments
+// are stripped before matching, and counted on the tag's own lines or the three above it,
+// since JSX has nowhere to put a comment between props.
+const MARKER = "mobile-layout-ok";
+const LOOKBACK = 3;
+
+const isExempt = (marked, tag) => {
+  for (let line = tag.line - LOOKBACK; line <= tag.endLine; line += 1) {
+    if (marked.has(line)) return true;
+  }
+  return false;
+};
+
+/** Grid splits that survive a phone, as `line reason` strings. */
+export const gridOffenders = (rawSource) => {
+  const source = stripComments(rawSource);
+  const marked = new Set();
+  rawSource.split("\n").forEach((text, index) => {
+    if (text.includes(MARKER)) marked.add(index + 1);
+  });
+
+  const offenders = [];
+  for (const tag of openingTags(source, "Grid")) {
+    if (isExempt(marked, tag)) continue;
+    const bare = tag.text.match(/\bsize=\{(\d+(?:\.\d+)?)\}/);
+    if (bare && Number(bare[1]) !== 12) {
+      offenders.push(`${tag.line} size={${bare[1]}}`);
+    }
+    const xs = tag.text.match(/\bsize=\{\{[^}]*?\bxs:\s*(\d+(?:\.\d+)?)/);
+    if (xs && Number(xs[1]) < 12) {
+      offenders.push(`${tag.line} xs: ${xs[1]}`);
+    }
+    // v1 props are silently inert under Grid v2 — the split never applied at all
+    if (/<Grid\s+(?!item\b)[^>]*\bxs=\{/.test(tag.text)) {
+      offenders.push(`${tag.line} legacy xs= prop (inert under Grid v2)`);
+    }
+  }
+  return offenders;
 };
 
 const files = walk(SRC);
@@ -61,27 +105,25 @@ describe("mobile layout patterns", () => {
   });
 
   it("declares no Grid column split that survives a phone", () => {
-    const offenders = [];
-    for (const file of files) {
-      const source = stripComments(fs.readFileSync(file, "utf8"));
-      for (const { text, line } of openingTags(source, "Grid")) {
-        const bare = text.match(/\bsize=\{(\d+(?:\.\d+)?)\}/);
-        if (bare && Number(bare[1]) !== 12) {
-          offenders.push(`${rel(file)}:${line} size={${bare[1]}}`);
-        }
-        const xs = text.match(/\bsize=\{\{[^}]*?\bxs:\s*(\d+(?:\.\d+)?)/);
-        if (xs && Number(xs[1]) < 12) {
-          offenders.push(`${rel(file)}:${line} xs: ${xs[1]}`);
-        }
-        // v1 props are silently inert under Grid v2 — the split never applied at all
-        if (/<Grid\s+(?!item\b)[^>]*\bxs=\{/.test(text)) {
-          offenders.push(`${rel(file)}:${line} legacy xs= prop (inert under Grid v2)`);
-        }
-      }
-    }
+    const offenders = files.flatMap((file) =>
+      gridOffenders(fs.readFileSync(file, "utf8")).map((offender) => `${rel(file)}:${offender}`)
+    );
     expect(offenders, `Use size={{ xs: 12, sm|md: N }} instead:\n${offenders.join("\n")}`).toEqual(
       []
     );
+  });
+
+  it("takes a marked split at its word", () => {
+    const split = "      <Grid size={{ xs: 6 }}>\n";
+    expect(gridOffenders(split)).toEqual(["1 xs: 6"]);
+    // on a line above, which is the only place JSX leaves room for one
+    expect(gridOffenders(`      // two-up by design: ${MARKER}\n${split}`)).toEqual([]);
+    // or among the props of a tag spanning several lines
+    expect(
+      gridOffenders(`      <Grid\n        size={{ xs: 6 }}\n        // ${MARKER}\n      >\n`)
+    ).toEqual([]);
+    // but a marker further up the file does not blanket the rest of it
+    expect(gridOffenders(`      // ${MARKER}\n\n\n\n\n${split}`)).toEqual(["6 xs: 6"]);
   });
 
   it("gives every wrapping Stack useFlexGap", () => {
