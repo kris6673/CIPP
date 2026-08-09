@@ -22,6 +22,7 @@ import { getMobileCardSlots } from "./util-mobile-card-slots";
 import { CippBottomSheet } from "../CippComponents/CippBottomSheet";
 import { CippPageActionsFab } from "../CippComponents/CippPageActionsFab";
 import { useTabFabClaim } from "../../layouts/tab-navigation-context";
+import { useSheetHandoff } from "../../hooks/use-sheet-handoff";
 
 // Mobile card pageSize ceiling: a desktop tablePageSize of 250/500 must not become
 // 250 unvirtualized cards. "Load more" grows pageSize from here in steps of LOAD_STEP.
@@ -100,6 +101,8 @@ export const CippMobileCardList = (props) => {
   } = props;
 
   const [actionSheetRow, setActionSheetRow] = useState(null);
+  // Row actions and More info both open a Modal — hand the sheet off rather than racing it
+  const rowSheet = useSheetHandoff(() => setActionSheetRow(null));
 
   // Select mode's bulk bar owns the bottom of the screen, so the page FAB steps aside. Hold
   // the claim through it anyway: a tabbed layout would otherwise drop its own FAB in behind
@@ -383,7 +386,8 @@ export const CippMobileCardList = (props) => {
       {/* Row actions sheet — same actions array, same dispatch as the desktop row menu */}
       <CippBottomSheet
         open={Boolean(actionSheetRow)}
-        onClose={() => setActionSheetRow(null)}
+        onClose={rowSheet.cancel}
+        onExited={rowSheet.handleExited}
         title={actionSheetRow ? (textValue(actionSheetRow, slots.primary) ?? "Row actions") : ""}
       >
         {actionSheetRow &&
@@ -393,10 +397,9 @@ export const CippMobileCardList = (props) => {
               <ListItemButton
                 key={`mobile-row-action-${index}`}
                 disabled={disabled}
-                onClick={() => {
-                  setActionSheetRow(null);
-                  onRowAction?.(action, actionSheetRow.original);
-                }}
+                onClick={() =>
+                  rowSheet.run(() => onRowAction?.(action, actionSheetRow.original))
+                }
                 sx={{ minHeight: 48, color: action.color }}
               >
                 <ListItemIcon sx={{ minWidth: 40 }}>
@@ -408,10 +411,7 @@ export const CippMobileCardList = (props) => {
           })}
         {actionSheetRow && hasOffCanvas && (
           <ListItemButton
-            onClick={() => {
-              setActionSheetRow(null);
-              onMoreInfo?.(actionSheetRow.original);
-            }}
+            onClick={() => rowSheet.run(() => onMoreInfo?.(actionSheetRow.original))}
             sx={{ minHeight: 48 }}
           >
             <ListItemIcon sx={{ minWidth: 40 }}>

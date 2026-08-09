@@ -262,6 +262,11 @@ export const createComponents = () => {
       styleOverrides: {
         input: {
           fontSize: 14,
+          // iOS Safari zooms the viewport when a focused input's text is under 16px, and
+          // never zooms back out. Touch devices get 16px; pointer devices keep 14.
+          "@media (pointer: coarse)": {
+            fontSize: 16,
+          },
           height: "40px", // Apply height only to single-line inputs
           "&.MuiInputBase-inputMultiline": {
             height: "unset", // Allow textareas to be flexible
@@ -299,6 +304,11 @@ export const createComponents = () => {
         input: {
           padding: "0 12px", // Adds padding to the left and right of the text
           fontSize: 14,
+          // iOS Safari zooms the viewport when a focused input's text is under 16px, and
+          // never zooms back out. Touch devices get 16px; pointer devices keep 14.
+          "@media (pointer: coarse)": {
+            fontSize: 16,
+          },
           height: "40px", // Height for single-line input fields only
           "&.MuiInputBase-inputMultiline": {
             height: "unset", // Exclude multiline inputs (textareas) from fixed height

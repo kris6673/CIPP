@@ -1017,17 +1017,39 @@ export const CippDataTable = (props) => {
     renderColumnFilterModeMenuItems: renderColumnFilterModeMenuItemsFn,
   })
 
-  // A card shows at most a title, subtitle, three chips and three detail rows, so on pages
-  // that never configured an offCanvas the rest of the row would be unreachable. Fall back
-  // to the columns the user has chosen to show, which is what the card was summarising.
-  const cardFallbackInfoFields = useMemo(() => {
-    if (offCanvas || !isCardView) return undefined
-    return table
+  // A card shows at most a title, subtitle, three chips and three detail rows, so the rest
+  // of the row has to live in the drawer. On a page with no offCanvas that means every
+  // column the user has chosen to show; on a page that configured one, its curated fields
+  // come first and the remaining visible columns are appended rather than dropped — on
+  // desktop those columns are still on screen in the table, on mobile they are not.
+  const cardInfoFields = useMemo(() => {
+    if (!isCardView) return undefined
+    const visible = table
       .getVisibleLeafColumns()
       .map((column) => column.id)
       .filter((id) => !id.startsWith('mrt-'))
+    const curated = offCanvas?.extendedInfoFields
+    if (!curated?.length) return visible
+    // Curated order wins; dedupe case-insensitively across both lists, and within the
+    // curated list itself, so a field can't be shown twice.
+    const seen = new Set()
+    return [...curated, ...visible].filter((id) => {
+      if (typeof id !== 'string') return false
+      const key = id.toLowerCase()
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [offCanvas, isCardView, table, columnVisibility, usedColumns])
+
+  // Applied after the {...offCanvas} spread below, which carries the page's own
+  // extendedInfoFields and would otherwise overwrite the merged list. Card view renders
+  // them the way the table cells do, since the appended entries are columns.
+  const cardInfoOverride =
+    isCardView && cardInfoFields?.length
+      ? { extendedInfoFields: cardInfoFields, richFormatting: true }
+      : {}
 
   // Remove the useEffect that was resetting filters on table changes
   // The initial filter application is now handled by the columnFilters state
@@ -1147,7 +1169,7 @@ export const CippDataTable = (props) => {
               <CippMobileCardList
                 table={table}
                 actions={actions}
-                hasOffCanvas={!!offCanvas || Boolean(cardFallbackInfoFields?.length)}
+                hasOffCanvas={!!offCanvas || Boolean(cardInfoFields?.length)}
                 onRowAction={dispatchRowAction}
                 onMoreInfo={openRowOffCanvas}
                 isActionDisabled={handleActionDisabled}
@@ -1228,10 +1250,7 @@ export const CippDataTable = (props) => {
         visible={offcanvasVisible}
         onClose={() => setOffcanvasVisible(false)}
         extendedData={offCanvasData}
-        extendedInfoFields={offCanvas?.extendedInfoFields ?? cardFallbackInfoFields}
-        // The fallback's fields are table columns, so render them the way their cells
-        // do — links, copy chips and status icons rather than flattened text.
-        richFormatting={!offCanvas && Boolean(cardFallbackInfoFields?.length)}
+        extendedInfoFields={offCanvas?.extendedInfoFields}
         actions={actions}
         title={offCanvasData?.Name || offCanvas?.title || 'Extended Info'}
         children={
@@ -1263,6 +1282,7 @@ export const CippDataTable = (props) => {
           total: filteredRows?.length ?? 0,
         }}
         {...offCanvas}
+        {...cardInfoOverride}
       />
       {/* Render custom component */}
       {customComponentVisible &&

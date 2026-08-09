@@ -202,6 +202,7 @@ describe("CippReportToolbar", () => {
     const sheet = await openActionSheet(user);
     await user.click(sheet.getByText("Reload suite list"));
 
-    expect(apiState.refetch).toHaveBeenCalled();
+    // the sheet hands off on its exit transition, so the call lands a beat later
+    await waitFor(() => expect(apiState.refetch).toHaveBeenCalled());
   });
 });

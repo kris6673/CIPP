@@ -1,5 +1,5 @@
 import React from 'react'
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import { renderWithProviders } from '../../test-utils'
@@ -404,6 +404,51 @@ describe('CippDataTable card view without an offCanvas', () => {
     // rendered on the card, without opening the drawer
     const link = await screen.findByRole('link', { name: /open portal/i })
     expect(link).toHaveAttribute('href', 'https://contoso-admin.sharepoint.com')
+  })
+
+  it('merges the page offCanvas fields with the remaining visible columns', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(
+      <CippDataTable
+        viewMode="cards"
+        data={wideData}
+        simpleColumns={columns}
+        title="Users"
+        // curated list omits jobTitle and city, which the table would still show on desktop
+        offCanvas={{ title: 'User Details', extendedInfoFields: ['mail', 'department'] }}
+      />
+    )
+
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument())
+    await user.click(screen.getByText('Alice Smith'))
+    await waitFor(() => expect(screen.getByText('User Details')).toBeInTheDocument())
+
+    // curated fields present, and the ones it left out are appended rather than dropped
+    expect(screen.getAllByText(/alice@contoso\.com/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Engineer/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Seattle/).length).toBeGreaterThan(0)
+  })
+
+  it('does not repeat a field that appears in both lists', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(
+      <CippDataTable
+        viewMode="cards"
+        data={[{ displayName: 'Alice Smith', department: 'Engineering' }]}
+        simpleColumns={['displayName', 'department']}
+        title="Users"
+        offCanvas={{ title: 'User Details', extendedInfoFields: ['department', 'department'] }}
+      />
+    )
+
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument())
+    await user.click(screen.getByText('Alice Smith'))
+    await waitFor(() => expect(screen.getByText('User Details')).toBeInTheDocument())
+
+    // scoped to the drawer — the card behind it renders its own Department row
+    const drawer = screen.getByText('User Details').closest('.MuiDrawer-paper')
+    expect(drawer).not.toBeNull()
+    expect(within(drawer).getAllByText('Department').length).toBe(1)
   })
 
   it('leaves a page-supplied offCanvas in charge', async () => {

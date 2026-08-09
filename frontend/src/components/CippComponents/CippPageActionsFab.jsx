@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSheetHandoff } from '../../hooks/use-sheet-handoff'
 import {
   Divider,
   Fab,
@@ -43,6 +44,7 @@ export const CippPageActionsFab = (props) => {
   } = props
 
   const [open, setOpen] = useState(false)
+  const sheet = useSheetHandoff(() => setOpen(false))
   const tabNav = useTabNavigation()
   const showTabs = Boolean(tabNav?.enabled && tabNav.tabs?.length)
   // A tabbed layout may own page-level actions too (HeaderedTabbedLayout's ActionsMenu);
@@ -74,7 +76,8 @@ export const CippPageActionsFab = (props) => {
       </Fab>
       <CippBottomSheet
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={sheet.cancel}
+        onExited={sheet.handleExited}
         title={resolvedTitle}
         {...sheetProps}
       >
@@ -134,10 +137,7 @@ export const CippPageActionsFab = (props) => {
                   key={action.label ?? index}
                   disabled={action.disabled}
                   sx={{ minHeight: 48, color: action.color }}
-                  onClick={() => {
-                    setOpen(false)
-                    action.onClick?.()
-                  }}
+                  onClick={() => sheet.run(action.onClick)}
                 >
                   {action.icon && (
                     <ListItemIcon sx={{ minWidth: 40, color: action.color }}>

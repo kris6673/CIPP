@@ -27,6 +27,7 @@ import CippFormComponent from './CippFormComponent'
 import { CippAddTestReportDrawer } from './CippAddTestReportDrawer'
 import { CippApiDialog } from './CippApiDialog'
 import { CippBottomSheet } from './CippBottomSheet'
+import { useSheetHandoff } from '../../hooks/use-sheet-handoff'
 
 export const CippReportToolbar = () => {
   const settings = useSettings()
@@ -37,6 +38,8 @@ export const CippReportToolbar = () => {
   const [deleteDialog, setDeleteDialog] = useState({ open: false })
   const [refreshDialog, setRefreshDialog] = useState({ open: false })
   const [actionSheetOpen, setActionSheetOpen] = useState(false)
+  // Every row here opens a drawer or dialog — let the sheet close first
+  const actionSheet = useSheetHandoff(() => setActionSheetOpen(false))
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false)
   const [editDrawerOpen, setEditDrawerOpen] = useState(false)
 
@@ -224,16 +227,14 @@ export const CippReportToolbar = () => {
         <>
           <CippBottomSheet
             open={actionSheetOpen}
-            onClose={() => setActionSheetOpen(false)}
+            onClose={actionSheet.cancel}
+            onExited={actionSheet.handleExited}
             title="Test suite actions"
           >
             <List sx={{ py: 0 }}>
               <ListItemButton
                 sx={{ minHeight: 48 }}
-                onClick={() => {
-                  setActionSheetOpen(false)
-                  setCreateDrawerOpen(true)
-                }}
+                onClick={() => actionSheet.run(() => setCreateDrawerOpen(true))}
               >
                 <ListItemIcon sx={{ minWidth: 40 }}>
                   <Add fontSize="small" />
@@ -242,10 +243,7 @@ export const CippReportToolbar = () => {
               </ListItemButton>
               <ListItemButton
                 sx={{ minHeight: 48 }}
-                onClick={() => {
-                  setActionSheetOpen(false)
-                  openRefreshDialog()
-                }}
+                onClick={() => actionSheet.run(() => openRefreshDialog())}
               >
                 <ListItemIcon sx={{ minWidth: 40 }}>
                   <RefreshIcon fontSize="small" />
@@ -255,10 +253,7 @@ export const CippReportToolbar = () => {
               <ListItemButton
                 sx={{ minHeight: 48 }}
                 disabled={!selectedCustomReport}
-                onClick={() => {
-                  setActionSheetOpen(false)
-                  setEditDrawerOpen(true)
-                }}
+                onClick={() => actionSheet.run(() => setEditDrawerOpen(true))}
               >
                 <ListItemIcon sx={{ minWidth: 40 }}>
                   <Edit fontSize="small" />
@@ -274,10 +269,7 @@ export const CippReportToolbar = () => {
               <ListItemButton
                 sx={{ minHeight: 48, color: 'error.main' }}
                 disabled={isBuiltIn}
-                onClick={() => {
-                  setActionSheetOpen(false)
-                  openDeleteDialog()
-                }}
+                onClick={() => actionSheet.run(() => openDeleteDialog())}
               >
                 <ListItemIcon sx={{ minWidth: 40, color: 'error.main' }}>
                   <DeleteIcon fontSize="small" />
@@ -289,10 +281,7 @@ export const CippReportToolbar = () => {
               </ListItemButton>
               <ListItemButton
                 sx={{ minHeight: 48 }}
-                onClick={() => {
-                  setActionSheetOpen(false)
-                  handleRefresh()
-                }}
+                onClick={() => actionSheet.run(() => handleRefresh())}
               >
                 <ListItemIcon sx={{ minWidth: 40 }}>
                   <Sync fontSize="small" />

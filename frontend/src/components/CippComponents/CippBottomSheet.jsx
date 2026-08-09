@@ -3,12 +3,15 @@ import { Box, Drawer, Typography } from "@mui/material";
 // Mobile bottom sheet — the house rule for the mobile surface is that anything rendered
 // as a Menu on desktop becomes one of these: predictable position, 44px+ rows, thumb reach.
 export const CippBottomSheet = (props) => {
-  const { open, onClose, title, children, footer, ...other } = props;
+  const { open, onClose, title, children, footer, onExited, SlideProps, ...other } = props;
   return (
     <Drawer
       anchor="bottom"
       open={open}
       onClose={onClose}
+      // Drawer's transition is a Slide; onExited fires once this sheet is fully gone, which
+      // is the only safe moment to open another Modal on top (see useSheetHandoff).
+      SlideProps={{ ...SlideProps, onExited }}
       // Above the modal layer, like a Menu would be: sheets are transient pickers, and the
       // tables that spawn them can live inside Dialogs (popout tables) — a stock Drawer's
       // z-index (1200) would open the sheet BEHIND the 1300 Dialog that launched it.

@@ -32,6 +32,7 @@ import {
 } from "@mui/icons-material";
 import { getCippTranslation } from "../../utils/get-cipp-translation";
 import { CippBottomSheet } from "../CippComponents/CippBottomSheet";
+import { useSheetHandoff } from "../../hooks/use-sheet-handoff";
 
 // Presentational mobile controls for the card list. All filter/sort/visibility state and
 // handlers are owned by CIPPTableToptoolbar (the same instance the desktop toolbar uses),
@@ -70,6 +71,10 @@ export const CippMobileTableControls = (props) => {
   const [sortOpen, setSortOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
+  // Graph filters, the API-response drawer and bulk dialogs are all Modals; let the sheet
+  // finish closing before they mount (see useSheetHandoff).
+  const filterSheet = useSheetHandoff(() => setFilterOpen(false));
+  const bulkSheet = useSheetHandoff(() => setBulkOpen(false));
 
   const sorting = table.getState().sorting ?? [];
   const sortableColumns = table
@@ -234,7 +239,8 @@ export const CippMobileTableControls = (props) => {
       {/* Filter sheet — presets first, then card fields, then table utilities */}
       <CippBottomSheet
         open={filterOpen}
-        onClose={() => setFilterOpen(false)}
+        onClose={filterSheet.cancel}
+        onExited={filterSheet.handleExited}
         title="Filters"
         footer={
           <Button fullWidth variant="contained" sx={{ minHeight: 44 }} onClick={() => setFilterOpen(false)}>
@@ -291,10 +297,7 @@ export const CippMobileTableControls = (props) => {
         </ListItemButton>
         {onEditGraphFilters && (
           <ListItemButton
-            onClick={() => {
-              setFilterOpen(false);
-              onEditGraphFilters();
-            }}
+            onClick={() => filterSheet.run(onEditGraphFilters)}
             sx={{ minHeight: 48 }}
           >
             <ListItemIcon sx={{ minWidth: 40 }}>
@@ -320,10 +323,7 @@ export const CippMobileTableControls = (props) => {
           </>
         )}
         <ListItemButton
-          onClick={() => {
-            setFilterOpen(false);
-            onViewApiResponse();
-          }}
+          onClick={() => filterSheet.run(onViewApiResponse)}
           sx={{ minHeight: 48 }}
         >
           <ListItemIcon sx={{ minWidth: 40 }}>
@@ -402,17 +402,15 @@ export const CippMobileTableControls = (props) => {
       {/* Bulk actions sheet — the same customBulkActions + dispatch as the desktop menu */}
       <CippBottomSheet
         open={bulkOpen}
-        onClose={() => setBulkOpen(false)}
+        onClose={bulkSheet.cancel}
+        onExited={bulkSheet.handleExited}
         title={`${selectedCount} selected · Bulk actions`}
       >
         {customBulkActions.map((action, index) => (
           <ListItemButton
             key={`mobile-bulk-${index}`}
             disabled={action.disabled}
-            onClick={() => {
-              setBulkOpen(false);
-              onBulkAction(action);
-            }}
+            onClick={() => bulkSheet.run(() => onBulkAction(action))}
             sx={{ minHeight: 48 }}
           >
             <ListItemIcon sx={{ minWidth: 40 }}>
