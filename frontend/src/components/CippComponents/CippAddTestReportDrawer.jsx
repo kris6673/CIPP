@@ -262,7 +262,7 @@ export const CippAddTestReportDrawer = ({
         >
           {/* Test Suite Details Section */}
           <Grid size={12}>
-            <Paper sx={{ p: 3, backgroundColor: 'background.default' }}>
+            <Paper sx={{ p: { xs: 2, md: 3 }, backgroundColor: 'background.default' }}>
               <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
                 Test Suite Details
               </Typography>

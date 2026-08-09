@@ -71,6 +71,29 @@ export const createComponents = () => {
         disableRipple: true,
       },
     },
+    MuiAccordionDetails: {
+      styleOverrides: {
+        // An accordion is almost always nested inside a card that already pays for gutters,
+        // and its own content usually adds a third layer. Halve the horizontal padding on a
+        // phone so the innermost text is not reading through 70px of chrome.
+        root: {
+          "@media (max-width: 899.95px)": {
+            paddingLeft: 8,
+            paddingRight: 8,
+          },
+        },
+      },
+    },
+    MuiAccordionSummary: {
+      styleOverrides: {
+        root: {
+          "@media (max-width: 899.95px)": {
+            paddingLeft: 8,
+            paddingRight: 8,
+          },
+        },
+      },
+    },
     MuiCardActions: {
       styleOverrides: {
         root: {
@@ -78,6 +101,10 @@ export const createComponents = () => {
           paddingLeft: 24,
           paddingRight: 24,
           paddingTop: 16,
+          "@media (max-width: 899.95px)": {
+            paddingLeft: 16,
+            paddingRight: 16,
+          },
         },
       },
     },
@@ -88,6 +115,13 @@ export const createComponents = () => {
           paddingLeft: 24,
           paddingRight: 24,
           paddingTop: 20,
+          // 48px of the 390 a phone has is 12% of the screen spent on one card's gutters,
+          // and cards nest — a card inside an accordion inside a page card pays it three
+          // times over. Vertical padding is left alone; it isn't what runs out.
+          "@media (max-width: 899.95px)": {
+            paddingLeft: 16,
+            paddingRight: 16,
+          },
         },
       },
     },
@@ -98,6 +132,11 @@ export const createComponents = () => {
           paddingLeft: 24,
           paddingRight: 24,
           paddingTop: 16,
+          // Matches MuiCardContent, or the header would sit inset from its own card body.
+          "@media (max-width: 899.95px)": {
+            paddingLeft: 16,
+            paddingRight: 16,
+          },
         },
         subheader: {
           fontSize: 14,
