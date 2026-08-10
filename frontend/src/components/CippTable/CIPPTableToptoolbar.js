@@ -302,18 +302,23 @@ export const CIPPTableToptoolbar = React.memo(
         return
       }
 
+      // Runs before any state change: setting ready:true first mounts CippApiDialog with
+      // api.noConfirm true, and its mount effect auto-submits into the same customFunction
+      // being called here — every selected row's action fired twice.
+      if (action?.noConfirm && action.customFunction) {
+        eligibleRows.forEach((row) => action.customFunction(row.original.original, action, {}))
+        // Deliberately no closeMenu() here — that matches the behaviour this branch had
+        // before; the only thing being fixed is the duplicate invocation.
+        return
+      }
+
       setActionData({
         data: selectedData,
         action: action,
         ready: true,
       })
-
-      if (action?.noConfirm && action.customFunction) {
-        eligibleRows.map((row) => action.customFunction(row.original.original, action, {}))
-      } else {
-        createDialog.handleOpen()
-        closeMenu()
-      }
+      createDialog.handleOpen()
+      closeMenu()
     }
 
     // Track if we've restored filters for this page to prevent infinite loops

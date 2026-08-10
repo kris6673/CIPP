@@ -5,7 +5,6 @@ import PropTypes from "prop-types";
 import ArrowLeftIcon from "@heroicons/react/24/outline/ArrowLeftIcon";
 import {
   Box,
-  Button,
   Container,
   Divider,
   Skeleton,
@@ -30,6 +29,9 @@ export const HeaderedTabbedLayout = (props) => {
     subtitle,
     actions,
     actionsData,
+    // Without this the dispatch falls back to CippApiDialog's hardcoded title, so a header
+    // action mutates successfully and never invalidates the page query.
+    queryKeys,
     isFetching = false,
     backUrl,
   } = props;
@@ -60,19 +62,24 @@ export const HeaderedTabbedLayout = (props) => {
   // Below md the tab row scrolls horizontally and still hides tabs off the right edge, so
   // navigation moves into the bottom sheet of whichever FAB owns the corner — and the
   // header's Actions menu goes with it, since it gets clipped at that width too.
-  const actionsDispatch = useActionsDispatch({ actions, data: actionsData });
+  const actionsDispatch = useActionsDispatch({ actions, data: actionsData, queryKeys });
+  // No isFetching term: the desktop menu's equivalent `disabled` prop is swallowed by
+  // ActionsMenu's unspread ...other, so including it here greyed out every action on mobile
+  // during a background refetch while desktop left them clickable. Actions operate on
+  // stale-but-present data quite happily; aligning down keeps the two surfaces identical
+  // without changing desktop.
+  const { visibleActions, isDisabled, dispatch } = actionsDispatch;
   const sheetActions = useMemo(
     () =>
       mdDown
-        ? actionsDispatch.visibleActions.map((action) => ({
+        ? visibleActions.map((action) => ({
             label: action.label,
             icon: action.icon ? <SvgIcon fontSize="small">{action.icon}</SvgIcon> : null,
-            disabled: isFetching || actionsDispatch.isDisabled(action),
-            onClick: () => actionsDispatch.dispatch(action),
+            disabled: isDisabled(action),
+            onClick: () => dispatch(action),
           }))
         : [],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [mdDown, actions, actionsData, isFetching]
+    [mdDown, visibleActions, isDisabled, dispatch]
   );
 
   const tabNavValue = useTabNavigationValue({
@@ -196,7 +203,10 @@ export const HeaderedTabbedLayout = (props) => {
           </Stack>
         </Container>
       </Box>
-      {mdDown && actionsDispatch.dialog}
+      {/* Not gated on mdDown: crossing the breakpoint with a dialog open — a rotate, or a
+          tablet at 900px — would unmount it mid-request, taking CippApiResults with it.
+          The hook already renders nothing until an action is dispatched. */}
+      {actionsDispatch.dialog}
       {/* Only when no page FAB claimed the corner — otherwise the tabs ride in that sheet */}
       {mdDown && tabOptions.length > 0 && !tabNavValue.isClaimed && (
         <CippPageActionsFab ariaLabel="Views" claimTabCorner={false} />

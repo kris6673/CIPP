@@ -502,6 +502,17 @@ export const createComponents = () => {
         },
       },
     },
+    MuiTooltip: {
+      defaultProps: {
+        // MUI's Tooltip attaches no touchmove and no scroll listener, so a press held
+        // through a scroll opens the tooltip after 700ms and nothing is scheduled to close
+        // it until the finger lifts — it rides the page as you drag. A tooltip is a hover
+        // affordance and touch has no hover, so the long-press variant is not worth the
+        // defect. Sites that genuinely want one opt back in with disableTouchListener={false}
+        // (CippJSONView's field descriptions are the only one).
+        disableTouchListener: true,
+      },
+    },
     MuiTextField: {
       defaultProps: {
         variant: "filled",
