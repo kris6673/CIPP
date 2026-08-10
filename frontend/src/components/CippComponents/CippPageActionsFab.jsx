@@ -91,17 +91,29 @@ export const CippPageActionsFab = (props) => {
             p: restackButtons ? 2 : 0,
             ...(restackButtons && {
               '& > * ': { width: '100%' },
-              '& .MuiBox-root': {
+              // A cardButton is as often a Stack as a Box (autopilot's three import
+              // buttons are a `direction="row"` Stack). Matching only Box left those in a
+              // row while the rule below stretched each button to 100% — three full-width
+              // buttons side by side, running off the sheet.
+              '& .MuiBox-root, & .MuiStack-root': {
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'stretch',
                 gap: 1,
               },
+              // Stack's `spacing` compiles to margin-left between children, which survives
+              // the flip to a column and would indent every row after the first.
+              '& .MuiStack-root > *': { marginLeft: 0, marginTop: 0 },
               '& .MuiButton-root': {
                 width: '100%',
                 justifyContent: 'flex-start',
                 minHeight: 44,
               },
+              // Text buttons default to the primary accent, which on the sheet's paper
+              // reads as orange-on-grey and doesn't match the ListItemButton rows below
+              // them. Contained and outlined buttons keep their colour — those are
+              // deliberate calls to action, not list rows.
+              '& .MuiButton-text': { color: 'text.primary' },
             }),
           }}
           onClick={(event) => {

@@ -82,7 +82,7 @@ export const Layout = (props) => {
   // showBreadcrumb: the error routes opt out — there is no trail to a page that
   // doesn't exist or just crashed, and the bookmark button lives in there too.
   const { children, allTenantsSupport = true, showBreadcrumb = true } = props
-  const mdDown = useMediaQuery((theme) => theme.breakpoints.down('md'))
+  const lgDown = useMediaQuery((theme) => theme.breakpoints.down('lg'))
   const settings = useSettings()
   const mobileNav = useMobileNav()
   const [fetchingVisible, setFetchingVisible] = useState([])
@@ -308,7 +308,7 @@ export const Layout = (props) => {
       {hideSidebar === false && (
         <>
           <TopNav onNavOpen={mobileNav.handleOpen} openNav={mobileNav.open} />
-          {mdDown && (
+          {lgDown && (
             <MobileNav
               items={menuItems}
               onClose={mobileNav.handleClose}
@@ -316,7 +316,7 @@ export const Layout = (props) => {
               open={mobileNav.open}
             />
           )}
-          {!mdDown && <SideNav items={menuItems} onPin={handleNavPin} pinned={!!settings.pinNav} />}
+          {!lgDown && <SideNav items={menuItems} onPin={handleNavPin} pinned={!!settings.pinNav} />}
         </>
       )}
       <LayoutRoot

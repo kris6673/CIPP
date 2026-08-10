@@ -2,7 +2,7 @@ import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Button, Drawer, ListItemButton, MenuItem, Typography } from "@mui/material";
+import { Button, Drawer, ListItemButton, MenuItem, Stack, Typography } from "@mui/material";
 import { CippPageActionsFab } from "../../../src/components/CippComponents/CippPageActionsFab";
 import { renderWithProviders } from "../../test-utils";
 
@@ -29,6 +29,58 @@ describe("CippPageActionsFab", () => {
     expect(screen.getByText("Sheet content")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Do a thing" })).toBeInTheDocument();
     expect(screen.getByText("Actions")).toBeInTheDocument();
+  });
+
+  // A cardButton laid out for a desktop CardHeader is as often a Stack as a Box. Matching
+  // only Box left the row intact while every button was stretched to 100%, so three import
+  // buttons ran off the side of the sheet.
+  it("restacks a row of buttons that arrived as a Stack", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <CippPageActionsFab>
+        <Stack direction="row" spacing={1}>
+          <Button>Sheet content</Button>
+          <Button>Import from CSV</Button>
+          <Button>Manual Import</Button>
+        </Stack>
+      </CippPageActionsFab>
+    );
+    await openSheet(user);
+
+    const row = screen.getByText("Manual Import").closest(".MuiStack-root");
+    const styles = window.getComputedStyle(row);
+    expect(styles.flexDirection).toBe("column");
+    // Stack's spacing is a margin-left that would survive the flip and indent each row
+    const button = screen.getByText("Manual Import").closest("button");
+    expect(window.getComputedStyle(button).marginLeft).toBe("0px");
+  });
+
+  // The sheet's paper is grey; a text button's default primary accent reads as
+  // orange-on-grey and doesn't match the list rows underneath it.
+  it("neutralises text buttons without flattening the branded ones", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <>
+        <Button>Untouched</Button>
+        <CippPageActionsFab>
+          <Stack direction="row" spacing={1}>
+            <Button>Sheet content</Button>
+            <Button variant="contained">Add User</Button>
+          </Stack>
+        </CippPageActionsFab>
+      </>
+    );
+    await openSheet(user);
+
+    // Compared against the same button outside the sheet, so the assertion fails if the
+    // override goes away rather than merely describing MUI's defaults.
+    const inSheet = screen.getByText("Sheet content").closest("button");
+    const outside = screen.getByText("Untouched").closest("button");
+    expect(window.getComputedStyle(inSheet).color).not.toBe(
+      window.getComputedStyle(outside).color
+    );
+    // a deliberate call to action keeps its branding
+    expect(screen.getByText("Add User").closest("button").className).toMatch(/containedPrimary/);
   });
 
   it("uses custom title and aria-label", async () => {

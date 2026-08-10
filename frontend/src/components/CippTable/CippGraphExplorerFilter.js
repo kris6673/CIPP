@@ -795,7 +795,11 @@ const CippGraphExplorerFilter = ({
             <Stack spacing={2}>
               <CippApiResults apiObject={savePresetApi} />
               {component === 'accordion' ? (
-                <Stack spacing={1.5} direction="row" sx={{ display: 'flex', alignItems: 'center' }}>
+                <Stack
+                  spacing={1.5}
+                  direction={{ xs: 'column', md: 'row' }}
+                  sx={{ display: 'flex', alignItems: { xs: 'stretch', md: 'center' } }}
+                >
                   <Button
                     variant="contained"
                     color="primary"

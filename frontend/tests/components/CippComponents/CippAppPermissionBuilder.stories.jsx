@@ -3,6 +3,7 @@ import { http, HttpResponse } from 'msw'
 import { within, expect, waitFor } from 'storybook/test'
 import { Box } from '@mui/material'
 import { useForm } from 'react-hook-form'
+import { shrinkToPhoneViewport } from '../../viewport'
 import CippAppPermissionBuilder from '../../../src/components/CippComponents/CippAppPermissionBuilder'
 
 // The summary row carries a 36-character app id, so this is where the overflow shows up.
@@ -26,19 +27,6 @@ const handlers = [
     )
   }),
 ]
-
-// Only the vitest browser runner can resize the iframe, and importing its context at module
-// scope throws in the Storybook app itself ("can be imported only inside the Browser Mode"),
-// which breaks the story for anyone opening it. Ask for it lazily and carry on without it.
-const shrinkToPhoneViewport = async () => {
-  try {
-    const { page } = await import('@vitest/browser/context')
-    await page.viewport(390, 844)
-    return true
-  } catch {
-    return false
-  }
-}
 
 const Harness = (props) => {
   const formControl = useForm({ mode: 'onChange', defaultValues: { servicePrincipal: null } })
