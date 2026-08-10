@@ -7,7 +7,7 @@ import { getIconByName } from '../utils/icon-registry'
 import { useSettings } from '../hooks/use-settings'
 import { useIsMobileLayout } from '../hooks/use-breakpoint'
 import { TabNavigationContext, useTabNavigationValue } from './tab-navigation-context'
-import { CippPageActionsFab } from '../components/CippComponents/CippPageActionsFab'
+import { CippTabPicker } from '../components/CippComponents/CippTabPicker'
 
 export const TabbedLayout = (props) => {
   const { tabOptions, children } = props
@@ -56,7 +56,9 @@ export const TabbedLayout = (props) => {
   const currentTab = visibleTabs.find((option) => option.path === pathname)
 
   // Below md the tab row scrolls horizontally and still hides tabs off the right edge, so
-  // navigation moves into the bottom sheet of whichever FAB owns the corner.
+  // navigation collapses to a picker. Where the page already draws a heading — a card
+  // list's "Relationships · 1,284 results" — that heading becomes the picker instead;
+  // this layout supplies a row of its own only when nothing claimed the slot.
   const isMobile = useIsMobileLayout()
   const tabNavValue = useTabNavigationValue({
     tabs: visibleTabs,
@@ -75,6 +77,11 @@ export const TabbedLayout = (props) => {
         }}
       >
         <Stack spacing={2}>
+          {isMobile && !tabNavValue.isTabSlotClaimed && (
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 2, pt: 1 }}>
+              <CippTabPicker claimSlot={false} />
+            </Box>
+          )}
           {!isMobile && (
             <Box sx={{ ml: 3 }}>
               <Tabs
@@ -110,10 +117,6 @@ export const TabbedLayout = (props) => {
           {children}
         </Stack>
       </Box>
-      {/* Only when no page FAB claimed the corner — otherwise the tabs ride in that sheet */}
-      {isMobile && visibleTabs.length > 0 && !tabNavValue.isClaimed && (
-        <CippPageActionsFab ariaLabel="Views" claimTabCorner={false} />
-      )}
     </TabNavigationContext.Provider>
   )
 }

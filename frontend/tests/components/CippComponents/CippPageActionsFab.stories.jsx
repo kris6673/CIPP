@@ -22,18 +22,23 @@ const TABS = [
   { label: 'Configuration Backup', path: '/tenant/manage/backup', icon: 'Backup' },
 ]
 
-// Stands in for a tabbed layout: below md those layouts hand their tabs to whichever FAB
-// owns the corner rather than rendering a scrollable tab bar or a second FAB.
-const withTabs = (Story) => (
+const LAYOUT_ACTIONS = [{ label: 'Reset Password', onClick: () => {} }]
+
+// Stands in for a headered tabbed layout: below md its header Actions menu is clipped, so
+// those actions ride in whichever FAB owns the corner. Its tabs do not — those live in the
+// title row (CippTabPicker), which is why this sheet never shows a "Views" section.
+const withLayoutActions = (Story) => (
   <TabNavigationContext.Provider
     value={{
       enabled: true,
       tabs: TABS,
       currentPath: '/tenant/manage/edit',
       onNavigate: () => {},
+      actions: LAYOUT_ACTIONS,
       claim: () => {},
       release: () => {},
-      isClaimed: false,
+      isTabSlotClaimed: false,
+      isActionSlotClaimed: false,
     }}
   >
     <Story />
@@ -173,11 +178,11 @@ export const DashboardSections = {
   },
 }
 
-// Under a tabbed layout the sheet carries both the page's own action and the layout's
-// views. Every page-actions FAB uses the same neutral glyph — a "+" only ever told the
-// truth on pages whose sheet creates things.
-export const MixedActionsAndViews = {
-  decorators: [withTabs],
+// Under a headered tabbed layout the sheet carries the page's own action and the layout's
+// header actions, labelled as two sections. Every page-actions FAB uses the same neutral
+// glyph — a "+" only ever told the truth on pages whose sheet creates things.
+export const PageAndLayoutActions = {
+  decorators: [withLayoutActions],
   render: () => (
     <CippPageActionsFab>
       <Button variant="contained" startIcon={<Add />}>
@@ -194,29 +199,18 @@ export const MixedActionsAndViews = {
       expect(within(fab).getByTestId('MoreHorizIcon')).toBeInTheDocument()
     })
 
-    await step('one sheet holds the page action and the views', async () => {
+    await step('one sheet holds both kinds of action', async () => {
       await userEvent.click(body.getByRole('button', { name: 'Page actions' }))
-      await waitFor(() => expect(body.getByText('Views')).toBeInTheDocument())
+      await waitFor(() => expect(body.getByText('Actions')).toBeInTheDocument())
       expect(body.getByRole('button', { name: 'Add Variable' })).toBeInTheDocument()
-      expect(body.getByText('Manage Drift')).toBeInTheDocument()
+      expect(body.getByText('Reset Password')).toBeInTheDocument()
     })
 
-    await step('the current view is checked', async () => {
-      const current = body.getByText('Edit Tenant').closest('[role="button"]')
-      expect(current).toHaveClass('Mui-selected')
-    })
-  },
-}
-
-// Nothing else claimed the corner, so the layout supplies the FAB itself: views only.
-export const ViewsOnly = {
-  decorators: [withTabs],
-  render: () => <CippPageActionsFab ariaLabel="Views" claimTabCorner={false} />,
-  play: async ({ step }) => {
-    const body = within(document.body)
-    await step('sheet lists just the views', async () => {
-      await userEvent.click(body.getByRole('button', { name: 'Views' }))
-      await waitFor(() => expect(body.getByText('Configuration Backup')).toBeInTheDocument())
+    // Destinations moved to the title row; a FAB is for a screen's primary action.
+    await step('and no destinations', async () => {
+      expect(body.queryByText('Views')).toBeNull()
+      expect(body.queryByText('Manage Drift')).toBeNull()
+      expect(body.queryByText('Configuration Backup')).toBeNull()
     })
   },
 }

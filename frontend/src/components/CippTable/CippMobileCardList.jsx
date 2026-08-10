@@ -21,7 +21,7 @@ import { renderUrlValue } from "../../utils/render-url-value";
 import { getMobileCardSlots } from "./util-mobile-card-slots";
 import { CippBottomSheet } from "../CippComponents/CippBottomSheet";
 import { CippPageActionsFab } from "../CippComponents/CippPageActionsFab";
-import { useTabFabClaim } from "../../layouts/tab-navigation-context";
+import { ACTION_SLOT, useSlotClaim } from "../../layouts/tab-navigation-context";
 import { useSheetHandoff } from "../../hooks/use-sheet-handoff";
 
 // Mobile card pageSize ceiling: a desktop tablePageSize of 250/500 must not become
@@ -105,9 +105,9 @@ export const CippMobileCardList = (props) => {
   const rowSheet = useSheetHandoff(() => setActionSheetRow(null));
 
   // Select mode's bulk bar owns the bottom of the screen, so the page FAB steps aside. Hold
-  // the claim through it anyway: a tabbed layout would otherwise drop its own FAB in behind
-  // the bulk bar. Tabs come back with the FAB when selection ends.
-  useTabFabClaim(fixedChrome && selectMode);
+  // the corner through it anyway: a headered layout would otherwise drop its actions FAB in
+  // behind the bulk bar. Navigation is unaffected — the tab picker is in the title row.
+  useSlotClaim(ACTION_SLOT, fixedChrome && selectMode);
 
   // A desktop tablePageSize above the cap would render that many unvirtualized cards.
   useEffect(() => {

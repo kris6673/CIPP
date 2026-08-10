@@ -33,6 +33,10 @@ import { isEqual } from 'lodash' // Import lodash for deep comparison
 import { useLicenseBackfill } from '../../hooks/use-license-backfill'
 import { useTableViewMode } from '../../hooks/use-breakpoint'
 import { CippMobileCardList } from './CippMobileCardList'
+import {
+  CippTabPicker,
+  useTabPickerAvailable,
+} from '../CippComponents/CippTabPicker'
 
 // Resolve dot-delimited property paths against arbitrary data objects.
 const getNestedValue = (source, path) => {
@@ -1105,6 +1109,15 @@ export const CippDataTable = (props) => {
 
   const selectModeActive = hasOnChange ? true : mobileSelectMode
 
+  // Under a tabbed layout the card view's heading and the current tab are usually the same
+  // word, so the heading becomes the tab picker rather than sitting under a second copy of
+  // itself. Claiming the slot is what tells the layout not to supply a row of its own.
+  // A dialog's table is not the page, so it never claims. Unlike the FAB this replaced, the
+  // heading is drawn in select mode too — that is where navigation used to disappear.
+  const tabPickerAvailable = useTabPickerAvailable()
+  const headingIsTabPicker =
+    isCardView && !hideTitle && !isInDialog && tabPickerAvailable
+
   return (
     <>
       {isCardView ? (
@@ -1121,9 +1134,13 @@ export const CippDataTable = (props) => {
                 minWidth: 0,
               }}
             >
-              <Typography variant="h6" noWrap sx={{ minWidth: 0 }}>
-                {title}
-              </Typography>
+              {headingIsTabPicker ? (
+                <CippTabPicker variant="heading" label={title} sx={{ minWidth: 0 }} />
+              ) : (
+                <Typography variant="h6" noWrap sx={{ minWidth: 0 }}>
+                  {title}
+                </Typography>
+              )}
               {Array.isArray(usedData) && !showSkeletons && (
                 <Typography
                   variant="caption"

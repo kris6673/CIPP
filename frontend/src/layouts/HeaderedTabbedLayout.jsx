@@ -15,11 +15,12 @@ import {
   Typography,
 } from "@mui/material";
 import { ActionsMenu } from "../components/actions-menu";
-import { useMediaQuery } from "@mui/material";
 import { getIconByName } from "../utils/icon-registry";
+import { useIsMobileLayout } from "../hooks/use-breakpoint";
 import { useActionsDispatch } from "../hooks/use-actions-dispatch";
 import { TabNavigationContext, useTabNavigationValue } from "./tab-navigation-context";
 import { CippPageActionsFab } from "../components/CippComponents/CippPageActionsFab";
+import { CippTabPicker } from "../components/CippComponents/CippTabPicker";
 
 export const HeaderedTabbedLayout = (props) => {
   const {
@@ -36,7 +37,9 @@ export const HeaderedTabbedLayout = (props) => {
     backUrl,
   } = props;
 
-  const mdDown = useMediaQuery((theme) => theme.breakpoints.down("md"));
+  // The shared hook rather than an inline useMediaQuery: same threshold, but only this one is
+  // mockable, and jsdom has no width-based matchMedia to drive the mobile branch with.
+  const mdDown = useIsMobileLayout();
   const router = useRouter();
   const pathname = usePathname();
   const queryParams = router.query;
@@ -60,8 +63,8 @@ export const HeaderedTabbedLayout = (props) => {
   const currentTab = tabOptions.find((option) => option.path === pathname);
 
   // Below md the tab row scrolls horizontally and still hides tabs off the right edge, so
-  // navigation moves into the bottom sheet of whichever FAB owns the corner — and the
-  // header's Actions menu goes with it, since it gets clipped at that width too.
+  // navigation collapses to a picker in the title row — the one part of that row that is
+  // empty at this width, since the Actions menu gets clipped here and moves to the FAB.
   const actionsDispatch = useActionsDispatch({ actions, data: actionsData, queryKeys });
   // No isFetching term: the desktop menu's equivalent `disabled` prop is swallowed by
   // ActionsMenu's unspread ...other, so including it here greyed out every action on mobile
@@ -111,7 +114,10 @@ export const HeaderedTabbedLayout = (props) => {
                 justifyContent="space-between"
                 spacing={1}
               >
-                <Stack spacing={1}>
+                {/* minWidth: 0 so a long tenant/entity name wraps in the space the picker
+                    leaves rather than pushing it off the right edge of the row. Scoped to
+                    the picker's own breakpoint — above md this row is unchanged. */}
+                <Stack spacing={1} sx={{ minWidth: { xs: 0, md: "auto" } }}>
                   <Stack
                     alignItems="center"
                     direction="row"
@@ -152,8 +158,15 @@ export const HeaderedTabbedLayout = (props) => {
                     )
                   )}
                 </Stack>
-                {!mdDown && actions && actions.length > 0 && (
-                  <ActionsMenu actions={actions} data={actionsData} disabled={isFetching} />
+                {/* The right half of this row is free below md, which is where the tab picker
+                    goes. Above md it belongs to the Actions menu, as it always did. */}
+                {mdDown ? (
+                  <CippTabPicker />
+                ) : (
+                  actions &&
+                  actions.length > 0 && (
+                    <ActionsMenu actions={actions} data={actionsData} disabled={isFetching} />
+                  )
                 )}
               </Stack>
               {!mdDown && (
@@ -207,9 +220,10 @@ export const HeaderedTabbedLayout = (props) => {
           tablet at 900px — would unmount it mid-request, taking CippApiResults with it.
           The hook already renders nothing until an action is dispatched. */}
       {actionsDispatch.dialog}
-      {/* Only when no page FAB claimed the corner — otherwise the tabs ride in that sheet */}
-      {mdDown && tabOptions.length > 0 && !tabNavValue.isClaimed && (
-        <CippPageActionsFab ariaLabel="Views" claimTabCorner={false} />
+      {/* Actions only, and only when no page FAB claimed the corner — otherwise they ride in
+          that sheet. Tabs are in the title row and never come down here. */}
+      {mdDown && sheetActions.length > 0 && !tabNavValue.isActionSlotClaimed && (
+        <CippPageActionsFab ariaLabel="Page actions" claimActionCorner={false} />
       )}
     </TabNavigationContext.Provider>
   );

@@ -12,9 +12,9 @@ import {
 } from '@mui/material'
 import { MoreHoriz } from '@mui/icons-material'
 import { CippBottomSheet } from './CippBottomSheet'
-import { CippTabNavigationSection } from './CippTabNavigationSection'
 import {
-  useTabFabClaim,
+  ACTION_SLOT,
+  useSlotClaim,
   useTabNavigation,
 } from '../../layouts/tab-navigation-context'
 
@@ -24,40 +24,37 @@ import {
 // CardHeader are restacked vertically at full width; purpose-built sheet content (list
 // rows) should pass restackButtons={false}.
 //
-// Under a tabbed layout the sheet also carries that layout's tabs, and claims the corner
-// so the layout doesn't add a second FAB of its own.
+// Actions only — a tabbed layout's destinations live in CippTabPicker, in the content
+// flow. This FAB does claim the corner so a headered layout hands its page actions here
+// rather than adding a second FAB of its own.
 export const CippPageActionsFab = (props) => {
   const {
     title,
     // One glyph for every page-actions FAB. A "+" only ever told the truth on pages whose
-    // sheet creates things — on a report page the single action is a sync, and under a
-    // tabbed layout the sheet also holds views. MoreVert is the row kebab, so the FAB
-    // takes the horizontal variant.
+    // sheet creates things — on a report page the single action is a sync. MoreVert is the
+    // row kebab, so the FAB takes the horizontal variant.
     icon = <MoreHoriz />,
     ariaLabel = 'Page actions',
     restackButtons = true,
     sheetProps,
     // The tabbed layout's own fallback FAB must not claim the corner it is filling —
-    // claiming would flip isClaimed, unmount it, release, and loop.
-    claimTabCorner = true,
+    // claiming would flip isActionSlotClaimed, unmount it, release, and loop.
+    claimActionCorner = true,
     children,
   } = props
 
   const [open, setOpen] = useState(false)
   const sheet = useSheetHandoff(() => setOpen(false))
   const tabNav = useTabNavigation()
-  const showTabs = Boolean(tabNav?.enabled && tabNav.tabs?.length)
   // A tabbed layout may own page-level actions too (HeaderedTabbedLayout's ActionsMenu);
   // they belong in this sheet rather than in a cramped header menu.
   const layoutActions = (tabNav?.enabled && tabNav.actions) || []
-  useTabFabClaim(claimTabCorner)
-
-  const hasOwnActions = Boolean(children) || layoutActions.length > 0
+  useSlotClaim(ACTION_SLOT, claimActionCorner)
 
   // With both kinds of content the sections label themselves, so a sheet title would only
   // repeat one of them; a single-purpose sheet takes the heading instead of a subheader.
-  const sectioned = hasOwnActions && showTabs
-  const resolvedTitle = title ?? (sectioned ? undefined : showTabs ? 'Views' : 'Actions')
+  const sectioned = Boolean(children) && layoutActions.length > 0
+  const resolvedTitle = title ?? (sectioned ? undefined : 'Actions')
 
   return (
     <>
@@ -126,15 +123,6 @@ export const CippPageActionsFab = (props) => {
         >
           {children}
         </Stack>
-        {showTabs && (
-          <>
-            {children ? <Divider sx={{ my: 0.5 }} /> : null}
-            <CippTabNavigationSection
-              title={sectioned ? 'Views' : null}
-              onNavigate={() => setOpen(false)}
-            />
-          </>
-        )}
         {layoutActions.length > 0 && (
           <>
             {sectioned ? <Divider sx={{ my: 0.5 }} /> : null}
