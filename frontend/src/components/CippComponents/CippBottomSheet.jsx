@@ -1,20 +1,25 @@
-import { Box, Drawer, Typography } from "@mui/material";
+import { Box, SwipeableDrawer, Typography } from "@mui/material";
+
+// SwipeableDrawer requires onOpen; these sheets are only ever opened programmatically.
+const noop = () => {};
 
 // Mobile bottom sheet — the house rule for the mobile surface is that anything rendered
 // as a Menu on desktop becomes one of these: predictable position, 44px+ rows, thumb reach.
 export const CippBottomSheet = (props) => {
-  const { open, onClose, title, children, footer, onExited, SlideProps, ...other } = props;
+  const { open, onClose, title, children, footer, onExited, SlideProps, ModalProps, ...other } =
+    props;
   return (
-    <Drawer
+    <SwipeableDrawer
       anchor="bottom"
       open={open}
       onClose={onClose}
-      // Drawer's transition is a Slide; onExited fires once this sheet is fully gone, which
-      // is the only safe moment to open another Modal on top (see useSheetHandoff).
+      onOpen={noop}
+      disableSwipeToOpen
+      ModalProps={{
+        keepMounted: false,
+        ...ModalProps,
+      }}
       SlideProps={{ ...SlideProps, onExited }}
-      // Above the modal layer, like a Menu would be: sheets are transient pickers, and the
-      // tables that spawn them can live inside Dialogs (popout tables) — a stock Drawer's
-      // z-index (1200) would open the sheet BEHIND the 1300 Dialog that launched it.
       sx={{ zIndex: (theme) => theme.zIndex.modal + 1 }}
       PaperProps={{
         sx: {
@@ -71,6 +76,6 @@ export const CippBottomSheet = (props) => {
           {footer}
         </Box>
       )}
-    </Drawer>
+    </SwipeableDrawer>
   );
 };

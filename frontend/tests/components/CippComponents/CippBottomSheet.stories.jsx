@@ -10,6 +10,7 @@ import {
   Typography,
 } from '@mui/material'
 import { CippBottomSheet } from '../../../src/components/CippComponents/CippBottomSheet'
+import { shrinkToPhoneViewport } from '../../viewport'
 
 // The mobile stand-in for a desktop Menu: every place the app opens a Menu on a pointer
 // device opens one of these below md instead.
@@ -128,5 +129,64 @@ export const OverADialog = {
       const dialogZ = Number(window.getComputedStyle(dialogRoot).zIndex)
       expect(sheetZ).toBeGreaterThan(dialogZ)
     })
+  },
+}
+
+// The grab handle used to be decoration — a 36x4 bar that promised a gesture nothing
+// implemented. Only a real browser can settle whether the drag works: jsdom has no layout,
+// so the paper's height is 0 and the swipe distance the gesture is measured against is
+// meaningless there.
+export const DragHandleDismisses = {
+  render: () => (
+    <SheetHarness title="Row actions">
+      <List sx={{ py: 0 }}>{actionRows}</List>
+    </SheetHarness>
+  ),
+  play: async ({ canvasElement }) => {
+    const onAPhone = await shrinkToPhoneViewport()
+    const canvas = within(canvasElement)
+    const body = within(document.body)
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Open sheet' }))
+    await body.findByText('Reset password')
+    if (!onAPhone) return
+
+    const paper = document.querySelector('.MuiDrawer-paper')
+    const handle = paper.firstElementChild
+    const start = handle.getBoundingClientRect()
+
+    // A real touch drag down the screen, starting on the handle.
+    const at = (clientY) =>
+      new Touch({
+        identifier: 1,
+        target: handle,
+        clientX: start.x + start.width / 2,
+        clientY,
+      })
+    // Dispatched ON the handle and left to bubble: MUI reads event.target to decide the
+    // gesture started inside the paper, so firing at the document would bail immediately.
+    const fire = (type, clientY) =>
+      handle.dispatchEvent(
+        new TouchEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          touches: type === 'touchend' ? [] : [at(clientY)],
+          changedTouches: [at(clientY)],
+        })
+      )
+
+    // MUI flags "maybe swiping" in React state on touchstart and ignores moves until that
+    // has been applied, so the gesture has to be spread across ticks like a real one.
+    const tick = () => new Promise((resolve) => setTimeout(resolve, 30))
+    const from = start.y + start.height / 2
+    fire('touchstart', from)
+    await tick()
+    for (const dy of [20, 60, 120, 200, 260]) {
+      fire('touchmove', from + dy)
+      await tick()
+    }
+    fire('touchend', from + 260)
+
+    await waitFor(() => expect(body.queryByText('Reset password')).not.toBeInTheDocument())
   },
 }
