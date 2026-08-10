@@ -9,37 +9,26 @@ import {
 } from 'react'
 
 /**
- * Lets a tabbed layout hand its tab list — and, on the headered variant, its page actions — to
- * whichever surface is better placed to render them on mobile.
+ * Lets a tabbed layout publish its tab list — and, on the headered variant, its page actions.
  *
  * Below md the scrollable tab row costs a band of vertical space and still hides tabs off the
- * right edge, so navigation collapses to a picker instead. Two different bits of screen are
- * contested, and they are contested independently:
+ * right edge, so navigation collapses to a picker in the content flow (CippTabPicker). That
+ * picker is always drawn by the layout, so there is nothing to negotiate over it.
  *
- *   TAB_SLOT     the mobile title row. A page that already draws a heading (a card list's
- *                "Users · 1,284 results") turns that heading into the picker rather than
- *                stacking a second copy of the same word above it.
- *   ACTION_SLOT  the bottom-right FAB corner, which fits exactly one FAB. About a quarter of
- *                tabbed pages already grow one from a table's `cardButton`, so a headered
- *                layout hands its actions to that FAB instead of adding another.
- *
- * A layout fills either slot itself only when nothing else has claimed it.
+ * The FAB corner is different: it fits exactly one FAB, and about a quarter of tabbed pages
+ * already grow one from a table's `cardButton`. A headered layout therefore hands its actions
+ * to that FAB rather than adding a second one — hence the claim registry below.
  */
 export const TabNavigationContext = createContext(null)
 
-export const TAB_SLOT = 'tabs'
-export const ACTION_SLOT = 'actions'
-
 export const useTabNavigation = () => useContext(TabNavigationContext)
 
-const EMPTY_CLAIMS = {}
-
 /**
- * Claims `slot` while `active`. A claimant takes responsibility for making that slot's content
- * reachable — the card list, for instance, holds the action corner through select mode, when its
- * bulk bar owns the bottom of the screen and no FAB may be drawn there.
+ * Claims the bottom-right corner while `active`. A claimant takes responsibility for making
+ * the layout's actions reachable — or for deliberately withholding them, as the card list does
+ * while its select-mode bulk bar owns the bottom of the screen.
  */
-export const useSlotClaim = (slot, active) => {
+export const useActionCornerClaim = (active) => {
   const context = useContext(TabNavigationContext)
   const claimId = useId()
   const claim = context?.claim
@@ -47,9 +36,9 @@ export const useSlotClaim = (slot, active) => {
 
   useEffect(() => {
     if (!active || !claim || !release) return undefined
-    claim(slot, claimId)
-    return () => release(slot, claimId)
-  }, [slot, active, claim, release, claimId])
+    claim(claimId)
+    return () => release(claimId)
+  }, [active, claim, release, claimId])
 }
 
 /**
@@ -66,22 +55,14 @@ export const useTabNavigationValue = ({
   // that renders its own Container (CippFormPage) reads this so the two don't double up.
   providesGutters = false,
 }) => {
-  const [claims, setClaims] = useState(EMPTY_CLAIMS)
+  const [claims, setClaims] = useState([])
 
-  const claim = useCallback((slot, id) => {
-    setClaims((prev) => {
-      const ids = prev[slot] ?? []
-      if (ids.includes(id)) return prev
-      return { ...prev, [slot]: [...ids, id] }
-    })
+  const claim = useCallback((id) => {
+    setClaims((prev) => (prev.includes(id) ? prev : [...prev, id]))
   }, [])
 
-  const release = useCallback((slot, id) => {
-    setClaims((prev) => {
-      const ids = prev[slot]
-      if (!ids?.includes(id)) return prev
-      return { ...prev, [slot]: ids.filter((claimId) => claimId !== id) }
-    })
+  const release = useCallback((id) => {
+    setClaims((prev) => prev.filter((claimId) => claimId !== id))
   }, [])
 
   return useMemo(
@@ -94,9 +75,18 @@ export const useTabNavigationValue = ({
       providesGutters,
       claim,
       release,
-      isTabSlotClaimed: (claims[TAB_SLOT]?.length ?? 0) > 0,
-      isActionSlotClaimed: (claims[ACTION_SLOT]?.length ?? 0) > 0,
+      isActionCornerClaimed: claims.length > 0,
     }),
-    [enabled, tabs, currentPath, onNavigate, actions, providesGutters, claim, release, claims]
+    [
+      enabled,
+      tabs,
+      currentPath,
+      onNavigate,
+      actions,
+      providesGutters,
+      claim,
+      release,
+      claims.length,
+    ]
   )
 }

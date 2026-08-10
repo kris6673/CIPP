@@ -56,9 +56,9 @@ export const TabbedLayout = (props) => {
   const currentTab = visibleTabs.find((option) => option.path === pathname)
 
   // Below md the tab row scrolls horizontally and still hides tabs off the right edge, so
-  // navigation collapses to a picker. Where the page already draws a heading — a card
-  // list's "Relationships · 1,284 results" — that heading becomes the picker instead;
-  // this layout supplies a row of its own only when nothing claimed the slot.
+  // navigation collapses to a full-width picker in the slot the tab bar occupied. Always the
+  // layout's own row: a picker that sometimes annexes a heading somewhere on the page and
+  // sometimes doesn't is a control you have to go looking for.
   const isMobile = useIsMobileLayout()
   const tabNavValue = useTabNavigationValue({
     tabs: visibleTabs,
@@ -77,9 +77,9 @@ export const TabbedLayout = (props) => {
         }}
       >
         <Stack spacing={2}>
-          {isMobile && !tabNavValue.isTabSlotClaimed && (
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 2, pt: 1 }}>
-              <CippTabPicker claimSlot={false} />
+          {isMobile && (
+            <Box sx={{ px: 2, pt: 1 }}>
+              <CippTabPicker />
             </Box>
           )}
           {!isMobile && (

@@ -30,8 +30,7 @@ const withTabs =
         actions: [],
         claim: () => {},
         release: () => {},
-        isTabSlotClaimed: false,
-        isActionSlotClaimed: false,
+        isActionCornerClaimed: false,
       }}
     >
       <Story />
@@ -44,26 +43,13 @@ export default {
   tags: ['autodocs'],
 }
 
-// The HeaderedTabbedLayout title row, reproduced: heading left, picker right. jsdom cannot
-// answer this one — it has no layout engine, so scrollWidth is always 0 there.
-export const TitleRowAtPhoneWidth = {
+// The default, and what every tabbed page gets: one full-width control in the slot the
+// desktop tab bar occupied. Same control, same place, every page.
+export const BlockAtPhoneWidth = {
   decorators: [withTabs()],
   render: () => (
-    <Box data-testid="title-row-host" sx={{ px: 2 }}>
-      <Stack
-        alignItems="flex-start"
-        direction="row"
-        justifyContent="space-between"
-        spacing={1}
-      >
-        <Stack spacing={1} sx={{ minWidth: 0 }}>
-          <Typography variant="h6">Contoso Manufacturing Holdings GmbH</Typography>
-          <Typography variant="body2" color="text.secondary">
-            4,182 users · M365 E5
-          </Typography>
-        </Stack>
-        <CippTabPicker />
-      </Stack>
+    <Box data-testid="block-host" sx={{ px: 2 }}>
+      <CippTabPicker />
     </Box>
   ),
   play: async ({ canvasElement, step }) => {
@@ -72,26 +58,58 @@ export const TitleRowAtPhoneWidth = {
     const picker = canvas.getByRole('button', { name: /switch view/i })
 
     await step('the trigger names the current view', async () => {
-      await expect(picker).toHaveAccessibleName(
-        'Policies and Settings Deployed switch view'
-      )
+      await expect(picker).toHaveAccessibleName('Policies and Settings Deployed switch view')
     })
 
     if (!onAPhone) return
 
-    await step('the longest label in the app does not widen the row', async () => {
+    await step('the longest label in the app fits without widening the page', async () => {
+      const host = canvasElement.querySelector('[data-testid="block-host"]')
+      await waitFor(() => expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth))
+      // full width of the gutter box, so the control is unmistakably a control
+      const style = getComputedStyle(host)
+      const content =
+        host.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+      await expect(picker.getBoundingClientRect().width).toBeGreaterThan(content - 1)
+    })
+
+    await step('the chevron stays pinned to the right edge', async () => {
+      const chevron = picker.querySelector('svg:last-of-type')
+      const gap = picker.getBoundingClientRect().right - chevron.getBoundingClientRect().right
+      await expect(gap).toBeLessThan(20)
+    })
+  },
+}
+
+// The one exception: HeaderedTabbedLayout's title row is empty on its right half below md,
+// so the picker rides there and navigation costs no vertical space at all.
+export const CompactInTitleRow = {
+  decorators: [withTabs()],
+  render: () => (
+    <Box data-testid="title-row-host" sx={{ px: 2 }}>
+      <Stack alignItems="center" direction="row" justifyContent="space-between" spacing={1}>
+        <Stack spacing={1} sx={{ minWidth: 0 }}>
+          <Typography variant="h6" noWrap>
+            Contoso Manufacturing Holdings GmbH
+          </Typography>
+        </Stack>
+        <CippTabPicker variant="compact" />
+      </Stack>
+    </Box>
+  ),
+  play: async ({ canvasElement, step }) => {
+    const onAPhone = await shrinkToPhoneViewport()
+    if (!onAPhone) return
+    const canvas = within(canvasElement)
+    const picker = canvas.getByRole('button', { name: /switch view/i })
+
+    await step('a 30-char label beside a long title does not widen the row', async () => {
       const host = canvasElement.querySelector('[data-testid="title-row-host"]')
       await waitFor(() => expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth))
       // and it stays a control rather than eating the heading's half of the row
       await expect(picker.getBoundingClientRect().width).toBeLessThanOrEqual(
         host.clientWidth / 2 + 1
       )
-    })
-
-    await step('the chevron stays pinned to the right edge', async () => {
-      const chevron = picker.querySelector('svg:last-of-type')
-      const gap = picker.getBoundingClientRect().right - chevron.getBoundingClientRect().right
-      await expect(gap).toBeLessThan(16)
     })
   },
 }
@@ -110,35 +128,32 @@ export const SingleTabRendersNothing = {
   },
 }
 
-// On table pages the current tab and the page heading are the same word, so the heading is
-// the trigger rather than sitting under a second copy of itself.
-export const HeadingVariant = {
+export const OpensTheSheet = {
   decorators: [withTabs('/tenant/manage/edit')],
   render: () => (
-    <Box sx={{ px: 2, display: 'flex', alignItems: 'baseline', gap: 1 }}>
-      <CippTabPicker variant="heading" label="Relationships" />
-      <Typography variant="caption" color="text.secondary">
-        1,284 results
-      </Typography>
+    <Box sx={{ px: 2 }}>
+      <CippTabPicker />
     </Box>
   ),
   play: async ({ canvasElement, step }) => {
     const canvas = within(canvasElement)
 
-    await step('the heading is the trigger', async () => {
-      const picker = canvas.getByRole('button', { name: /switch view/i })
-      await expect(picker).toHaveTextContent('Relationships')
-      // named for where you'd go, labelled for where you are
-      await expect(picker).toHaveAccessibleName(
-        'Relationships switch view, currently Edit Tenant'
-      )
-    })
+    // The trigger names the current view and so does its row in the sheet — scope to the
+    // sheet, or every current-tab query matches twice.
+    let sheet
 
-    await step('it opens the same sheet', async () => {
+    await step('every destination is a full-width row, none scrolled off an edge', async () => {
       await userEvent.click(canvas.getByRole('button', { name: /switch view/i }))
       const body = within(document.body)
-      await waitFor(() => expect(body.getByText('Configuration Backup')).toBeInTheDocument())
-      await expect(body.getByText('Views')).toBeInTheDocument()
+      await waitFor(() => expect(body.getByText('Views')).toBeInTheDocument())
+      sheet = within(body.getByText('Views').closest('.MuiDrawer-paper'))
+      await expect(sheet.getByText('Configuration Backup')).toBeInTheDocument()
+      await expect(sheet.getByText('Policies and Settings Deployed')).toBeInTheDocument()
+    })
+
+    await step('the current view is checked', async () => {
+      const current = sheet.getByText('Edit Tenant').closest('[role="button"]')
+      await expect(current).toHaveClass('Mui-selected')
     })
   },
 }

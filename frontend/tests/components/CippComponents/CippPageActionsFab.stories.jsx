@@ -37,8 +37,7 @@ const withLayoutActions = (Story) => (
       actions: LAYOUT_ACTIONS,
       claim: () => {},
       release: () => {},
-      isTabSlotClaimed: false,
-      isActionSlotClaimed: false,
+      isActionCornerClaimed: false,
     }}
   >
     <Story />

@@ -13,8 +13,7 @@ import {
 import { MoreHoriz } from '@mui/icons-material'
 import { CippBottomSheet } from './CippBottomSheet'
 import {
-  ACTION_SLOT,
-  useSlotClaim,
+  useActionCornerClaim,
   useTabNavigation,
 } from '../../layouts/tab-navigation-context'
 
@@ -38,7 +37,7 @@ export const CippPageActionsFab = (props) => {
     restackButtons = true,
     sheetProps,
     // The tabbed layout's own fallback FAB must not claim the corner it is filling —
-    // claiming would flip isActionSlotClaimed, unmount it, release, and loop.
+    // claiming would flip isActionCornerClaimed, unmount it, release, and loop.
     claimActionCorner = true,
     children,
   } = props
@@ -49,7 +48,7 @@ export const CippPageActionsFab = (props) => {
   // A tabbed layout may own page-level actions too (HeaderedTabbedLayout's ActionsMenu);
   // they belong in this sheet rather than in a cramped header menu.
   const layoutActions = (tabNav?.enabled && tabNav.actions) || []
-  useSlotClaim(ACTION_SLOT, claimActionCorner)
+  useActionCornerClaim(claimActionCorner)
 
   // With both kinds of content the sections label themselves, so a sheet title would only
   // repeat one of them; a single-purpose sheet takes the heading instead of a subheader.

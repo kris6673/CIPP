@@ -39,7 +39,6 @@ vi.mock("../../src/api/ApiCall", () => ({
 
 import { TabbedLayout } from "../../src/layouts/TabbedLayout";
 import { CippPageActionsFab } from "../../src/components/CippComponents/CippPageActionsFab";
-import { CippTabPicker } from "../../src/components/CippComponents/CippTabPicker";
 import { CippDataTable } from "../../src/components/CippTable/CippDataTable";
 
 const tabOptions = [
@@ -152,18 +151,26 @@ describe("TabbedLayout", () => {
     expect(sheet.queryByText("Diagnostics")).not.toBeInTheDocument();
   });
 
-  // On a table page the current tab and the page heading say the same word, so the heading
-  // becomes the picker rather than sitting under a second copy of itself.
-  it("stands aside when the page claims the title slot", async () => {
+  // One control, one place, on every tabbed page — never annexing a heading that happens to
+  // be nearby on some page types and not others.
+  it("draws exactly one picker, in its own row, whatever the page renders", async () => {
     layoutState.isMobile = true;
+    layoutState.viewMode = "cards";
     renderWithProviders(
       <TabbedLayout tabOptions={tabOptions}>
-        <CippTabPicker variant="heading" label="Relationships" />
+        <CippDataTable
+          viewMode="cards"
+          title="Relationships"
+          data={[{ displayName: "Fabrikam Inc" }]}
+          simpleColumns={["displayName"]}
+        />
       </TabbedLayout>
     );
 
-    await waitFor(() => expect(queryPickers()).toHaveLength(1));
-    expect(picker()).toHaveTextContent("Relationships");
+    await waitFor(() => expect(screen.getByText("Relationships")).toBeInTheDocument());
+    expect(queryPickers()).toHaveLength(1);
+    // the page's own heading is still a heading, not a control
+    expect(picker()).not.toHaveTextContent("Relationships");
   });
 
   // Destinations used to ride in this sheet. A FAB is for a screen's primary action.
@@ -214,9 +221,7 @@ describe("TabbedLayout", () => {
       </TabbedLayout>
     );
 
-    // the table's heading is the picker, so the layout supplies none
     await waitFor(() => expect(queryPickers()).toHaveLength(1));
-    expect(picker()).toHaveTextContent("Relationships");
 
     await user.click(screen.getByRole("button", { name: /^Select$/ }));
     await waitFor(() =>

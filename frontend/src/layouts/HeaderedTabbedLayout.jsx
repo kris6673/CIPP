@@ -94,6 +94,56 @@ export const HeaderedTabbedLayout = (props) => {
     providesGutters: true,
   });
 
+  const subtitleBlock = isFetching ? (
+    <Skeleton variant="text" width={200} />
+  ) : (
+    subtitle && (
+      // useFlexGap: Stack's default spacing is a margin-left between children, which every
+      // wrapped row inherits — that margin is why the icon/chip pairs sat indented from the
+      // title above them. Gap applies to both axes, so the row gap is set separately or the
+      // stacked pairs end up as far apart vertically as they are horizontally.
+      <Stack
+        alignItems="center"
+        flexWrap="wrap"
+        useFlexGap
+        direction="row"
+        sx={{ columnGap: 2, rowGap: 0.5, minWidth: 0 }}
+      >
+        {/* minWidth: 0 down the whole chain, and flexShrink: 0 on the icon. A copy-chip
+            already carries MUI's ellipsis and maxWidth: 100%, but flex items default to
+            min-width: auto, so every ancestor grew to fit instead of letting it truncate —
+            which is how a guest UPN (user_domain.onmicrosoft.com#EXT#@tenant...) ran off the
+            right edge of the screen. */}
+        {subtitle.map((item, index) =>
+          item.component ? (
+            <Box key={index} sx={{ minWidth: 0, maxWidth: "100%" }}>
+              {item.component}
+            </Box>
+          ) : (
+            <Stack
+              key={index}
+              alignItems="center"
+              direction="row"
+              spacing={1}
+              sx={{ minWidth: 0, maxWidth: "100%" }}
+            >
+              <SvgIcon fontSize="small" sx={{ flexShrink: 0 }}>
+                {item.icon}
+              </SvgIcon>
+              <Typography
+                color="text.secondary"
+                variant="body2"
+                sx={{ minWidth: 0, "& .MuiChip-root": { maxWidth: "100%" } }}
+              >
+                {item.text}
+              </Typography>
+            </Stack>
+          )
+        )}
+      </Stack>
+    )
+  );
+
   return (
     <TabNavigationContext.Provider value={tabNavValue}>
       <Box
@@ -108,66 +158,44 @@ export const HeaderedTabbedLayout = (props) => {
         <Container maxWidth="xl" sx={{ height: "100%", px: { xs: 2, md: 3 } }}>
           <Stack spacing={1} sx={{ height: "100%" }}>
             <Stack spacing={2}>
-              <Stack
-                alignItems="flex-start"
-                direction="row"
-                justifyContent="space-between"
-                spacing={1}
-              >
-                {/* minWidth: 0 so a long tenant/entity name wraps in the space the picker
-                    leaves rather than pushing it off the right edge of the row. Scoped to
-                    the picker's own breakpoint — above md this row is unchanged. */}
-                <Stack spacing={1} sx={{ minWidth: { xs: 0, md: "auto" } }}>
-                  <Stack
-                    alignItems="center"
-                    direction="row"
-                    spacing={1}
-                    justifyContent="space-between"
-                  >
-                    <Typography variant={mdDown ? "h6" : "h4"}>{title}</Typography>
+              <Stack spacing={1}>
+                <Stack
+                  alignItems={mdDown ? "center" : "flex-start"}
+                  direction="row"
+                  justifyContent="space-between"
+                  spacing={1}
+                >
+                  {/* minWidth: 0 so a long tenant/entity name truncates in the space the
+                      picker leaves rather than pushing it off the right edge of the row.
+                      Scoped to the picker's own breakpoint — above md this is unchanged. */}
+                  <Stack spacing={1} sx={{ minWidth: { xs: 0, md: "auto" } }}>
+                    <Stack
+                      alignItems="center"
+                      direction="row"
+                      spacing={1}
+                      justifyContent="space-between"
+                    >
+                      <Typography variant={mdDown ? "h6" : "h4"} noWrap={mdDown}>
+                        {title}
+                      </Typography>
+                    </Stack>
+                    {!mdDown && subtitleBlock}
                   </Stack>
-                  {isFetching ? (
-                    <Skeleton variant="text" width={200} />
+                  {/* The right half of this row is free below md, which is where the tab
+                      picker goes. Above md it belongs to the Actions menu, as it always did. */}
+                  {mdDown ? (
+                    <CippTabPicker variant="compact" />
                   ) : (
-                    subtitle && (
-                      // useFlexGap: Stack's default spacing is a margin-left between
-                      // children, which every wrapped row inherits — that margin is why the
-                      // icon/chip pairs sat indented from the title above them. Gap applies
-                      // to both axes, so the row gap is set separately or the stacked pairs
-                      // end up as far apart vertically as they are horizontally.
-                      <Stack
-                        alignItems="center"
-                        flexWrap="wrap"
-                        useFlexGap
-                        direction="row"
-                        sx={{ columnGap: 2, rowGap: 0.5 }}
-                      >
-                        {subtitle.map((item, index) =>
-                          item.component ? (
-                            <Box key={index}>{item.component}</Box>
-                          ) : (
-                            <Stack key={index} alignItems="center" direction="row" spacing={1}>
-                              <SvgIcon fontSize="small">{item.icon}</SvgIcon>
-                              <Typography color="text.secondary" variant="body2">
-                                {item.text}
-                              </Typography>
-                            </Stack>
-                          )
-                        )}
-                      </Stack>
+                    actions &&
+                    actions.length > 0 && (
+                      <ActionsMenu actions={actions} data={actionsData} disabled={isFetching} />
                     )
                   )}
                 </Stack>
-                {/* The right half of this row is free below md, which is where the tab picker
-                    goes. Above md it belongs to the Actions menu, as it always did. */}
-                {mdDown ? (
-                  <CippTabPicker />
-                ) : (
-                  actions &&
-                  actions.length > 0 && (
-                    <ActionsMenu actions={actions} data={actionsData} disabled={isFetching} />
-                  )
-                )}
+                {/* Below md the subtitle gets the full width instead of sharing the title's
+                    row: a UPN copy-chip squeezed beside a half-width picker has nowhere to go
+                    and runs off the right edge of the screen. */}
+                {mdDown && subtitleBlock}
               </Stack>
               {!mdDown && (
                 <div>
@@ -222,7 +250,7 @@ export const HeaderedTabbedLayout = (props) => {
       {actionsDispatch.dialog}
       {/* Actions only, and only when no page FAB claimed the corner — otherwise they ride in
           that sheet. Tabs are in the title row and never come down here. */}
-      {mdDown && sheetActions.length > 0 && !tabNavValue.isActionSlotClaimed && (
+      {mdDown && sheetActions.length > 0 && !tabNavValue.isActionCornerClaimed && (
         <CippPageActionsFab ariaLabel="Page actions" claimActionCorner={false} />
       )}
     </TabNavigationContext.Provider>

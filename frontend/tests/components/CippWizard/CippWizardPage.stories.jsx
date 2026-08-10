@@ -3,7 +3,7 @@ import { within, expect, userEvent, waitFor } from 'storybook/test'
 import { Typography } from '@mui/material'
 import CippWizardPage from '../../../src/components/CippWizard/CippWizardPage'
 import { CippWizardStepButtons } from '../../../src/components/CippWizard/CippWizardStepButtons'
-import { shrinkToPhoneViewport } from '../../viewport'
+import { shrinkToPhoneViewport, growToDesktopViewport } from '../../viewport'
 
 // A step that renders nothing but the shared button row — the layout under test is the
 // wizard shell, not any particular step's form.
@@ -41,8 +41,9 @@ export const PhoneWidth = {
     await canvas.findByText('Step content')
     if (!onAPhone) return
 
-    // the stepper is replaced, not merely restyled
-    expect(canvas.getByText('Step 1 of 5')).toBeInTheDocument()
+    // the stepper is replaced, not merely restyled. findBy, not getBy: useMediaQuery reacts to
+    // the resize on a later tick, and "Step content" is in both branches so it settles nothing
+    await canvas.findByText('Step 1 of 5')
     expect(canvasElement.querySelector('.MuiStepper-root')).toBeNull()
 
     // nothing in the card reaches past the screen
@@ -67,10 +68,12 @@ export const PhoneWidth = {
 export const DesktopWidth = {
   render: () => <CippWizardPage {...args} />,
   play: async ({ canvasElement }) => {
+    // Claim the width rather than inherit it — PhoneWidth shares this page and shrinks it.
+    await growToDesktopViewport()
     const canvas = within(canvasElement)
     await canvas.findByText('Step content')
 
-    expect(canvasElement.querySelector('.MuiStepper-root')).not.toBeNull()
+    await waitFor(() => expect(canvasElement.querySelector('.MuiStepper-root')).not.toBeNull())
     expect(canvas.queryByRole('progressbar')).toBeNull()
     expect(canvas.queryByText('Step 1 of 5')).toBeNull()
 
