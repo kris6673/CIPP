@@ -15,7 +15,7 @@ import {
   Typography,
 } from '@mui/material'
 import { Close, Download, PictureAsPdf, Settings } from '@mui/icons-material'
-import { PDFViewer } from '@react-pdf/renderer'
+import { CippPdfPreview } from './CippPdf/CippPdfPreview'
 import { CippOffCanvas } from './CippComponents/CippOffCanvas'
 import { useReportVariables } from './CippPdf/useReportVariables'
 import { useBrandingSettings } from './CippPdf/useBrandingSettings'
@@ -774,13 +774,15 @@ export const ShadowAIReportButton = ({ data, tenantName, disabled }) => {
           {/* Right Panel - PDF Preview */}
           <Box sx={{ flex: 1, height: '100%', minWidth: 0 }}>
             {reportDocument && (
-              <PDFViewer
-                key={`shadow-ai-pdf-viewer-${Date.now()}`}
+              <CippPdfPreview
+                viewerKey={`shadow-ai-pdf-viewer-${Date.now()}`}
+                title={`Shadow AI Report - ${tenantName}`}
+                fileName={`Shadow_AI_Report_${tenantName}.pdf`}
                 style={{ width: '100%', height: '100%', border: 'none' }}
                 showToolbar={true}
               >
                 {reportDocument}
-              </PDFViewer>
+              </CippPdfPreview>
             )}
           </Box>
         </DialogContent>

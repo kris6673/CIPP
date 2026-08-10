@@ -20,7 +20,8 @@ import {
 import { PictureAsPdf, Download, Close, Settings } from '@mui/icons-material'
 import { CippAutoComplete } from './CippComponents/CippAutocomplete'
 import { CippOffCanvas } from './CippComponents/CippOffCanvas'
-import { Document, Page, Text, View, PDFViewer, Image } from '@react-pdf/renderer'
+import { Document, Page, Text, View, Image } from '@react-pdf/renderer'
+import { CippPdfPreview } from './CippPdf/CippPdfPreview'
 import { useSettings } from '../hooks/use-settings'
 import { useSecureScore } from '../hooks/use-securescore'
 import { ApiGetCall } from '../api/ApiCall'
@@ -1915,8 +1916,10 @@ export const ExecutiveReportButton = (props) => {
                 </Typography>
               </Box>
             ) : reportDocument ? (
-              <PDFViewer
-                key={`pdf-viewer-${Date.now()}`} // Fix for react-pdf "Eo is not a function" error
+              <CippPdfPreview
+                viewerKey={`pdf-viewer-${Date.now()}`} // Fix for react-pdf "Eo is not a function" error
+                title={`Executive Report - ${tenantName}`}
+                fileName={`Executive_Report_${tenantName}.pdf`}
                 style={{
                   width: '100%',
                   height: '100%',
@@ -1925,7 +1928,7 @@ export const ExecutiveReportButton = (props) => {
                 showToolbar={true}
               >
                 {reportDocument}
-              </PDFViewer>
+              </CippPdfPreview>
             ) : (
               <Box
                 sx={{
