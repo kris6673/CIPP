@@ -1,14 +1,20 @@
 # MDO Alerts
 
-List Alerts shows summary of the number of alerts across your managed Microsoft 365 tenants plus a detailed list of the actual alerts. You can also set the state of these alerts and view them directly in the Microsoft portals
+Alerts raised by Microsoft Defender for Office 365 in the selected tenant, narrowed to that product so mail and collaboration threats are not buried among endpoint and identity alerts. Take an alert, move it through its statuses, and open it in the Defender portal when you need the full picture.
 
 ## Table Details
 
-The properties returned are for the Graph resource type `alert` with a filter of `serviceSource eq 'microsoftDefenderForOffice365'`. For more information on the properties please see the [Graph documentation](https://learn.microsoft.com/en-us/graph/api/resources/security-alert?view=graph-rest-1.0#properties).
+The properties returned are for the Graph resource type `alert`, filtered to `serviceSource eq 'microsoftDefenderForOffice365'`. For more information on the properties please see the [Graph documentation](https://learn.microsoft.com/en-us/graph/api/resources/security-alert?view=graph-rest-beta#properties).
+
+The Extended Info flyout goes considerably further than the table, adding the alert description and recommended actions, the evidence and affected resources behind it, the MITRE techniques matched, any named threat or actor, the detection source, and the first and last activity times.
+
+{% hint style="info" %}
+Selecting All Tenants queues a background job that collects alerts from every tenant, and the page tells you it is still loading. Come back in a few minutes for a complete list.
+{% endhint %}
 
 ## Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Assign to self</td><td>Opens a modal to confirm you want to assign the alert to yourself</td><td>true</td></tr><tr><td>Set status to active</td><td>Opens a modal to confirm you want to set the alert status to active</td><td>true</td></tr><tr><td>Set status to in progress</td><td>Opens a modal to confirm you want to set the alert status to in progress</td><td>true</td></tr><tr><td>Set status to resolved</td><td>Opens a modal to confirm you want to set the alert status to resolved</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Assign to self</td><td>Puts your name on the alert as its owner.</td><td>true</td></tr><tr><td>Set status to active</td><td>Moves the alert back into the active queue.</td><td>true</td></tr><tr><td>Set status to in progress</td><td>Marks the alert as being worked on.</td><td>true</td></tr><tr><td>Set status to resolved</td><td>Closes the alert.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 ***
 

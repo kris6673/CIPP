@@ -1,12 +1,18 @@
 # ActiveSync Devices
 
+This report lists every mobile device partnership registered against a mailbox in the selected tenant, one row per device. It shows what each device is, when it last synchronised, and whether Exchange Online currently allows or blocks it, so you can find stale partnerships and quarantined devices without opening Exchange Online PowerShell.
+
 ## Table Details
 
 The properties returned are for the Exchange Online PowerShell command `Get-MobileDevice`. For more information on the command please see the [Microsoft documentation](https://learn.microsoft.com/powershell/module/exchangepowershell/get-mobiledevice).
 
+**Device Access State** is the column the row actions work from, and is normally `Allowed`, `Blocked`, or `Quarantined`. CIPP adds one column of its own, **Sync Info Note**: where the row is Outlook for iOS or Android, it explains that those apps use modern authentication and do not report ActiveSync sync times, which is why their sync columns can look empty or out of date.
+
 ## Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Allow Device</td><td>Sets the selected device(s) to a allow ActiveSync</td><td>true</td></tr><tr><td>Block Device</td><td>Sets the selected device(s) to block ActiveSync</td><td>true</td></tr><tr><td>Delete Device</td><td>Deletes the selected device(s) ActiveSync by running the PowerShell command <a href="https://learn.microsoft.com/en-us/powershell/module/exchangepowershell/remove-mobiledevice?view=exchange-ps"><code>Remove-MobileDevice</code></a></td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Allow Device</td><td>Allows the device to synchronise with the mailbox. Greyed out where <strong>Device Access State</strong> is already <code>Allowed</code>.</td><td>true</td></tr><tr><td>Block Device</td><td>Stops the device synchronising with the mailbox. Greyed out where <strong>Device Access State</strong> is already <code>Blocked</code>.</td><td>true</td></tr><tr><td>Delete Device</td><td>Removes the device partnership from the mailbox entirely. This cannot be undone.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
+
+Each action confirms first, naming the device and the mailbox it belongs to. Allowing and blocking are settings on the mailbox rather than on the device, so a device that synchronises several mailboxes needs the action running against each of its rows.
 
 ***
 

@@ -75,6 +75,4 @@ If a tenant does not support one of the four list types, that type is skipped an
 
 ***
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}
