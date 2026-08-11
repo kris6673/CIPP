@@ -103,10 +103,6 @@ const MobileHandoff = ({ document, fileName, title, showDownload }) => {
           </Button>
         )}
       </Stack>
-
-      <Typography variant="caption" color="text.secondary" sx={{ maxWidth: 320 }}>
-        Opens in your phone's PDF viewer — a PDF embedded in a page can't be scrolled on iOS.
-      </Typography>
     </Stack>
   )
 }
