@@ -57,6 +57,30 @@ export const PickerOpen = {
       expect(body.getByText('Fabrikam Inc')).toBeInTheDocument()
       expect(body.getByText('All Tenants')).toBeInTheDocument()
     })
+
+    // Avatar's default colour is background.default, so setting only bgcolor leaves the
+    // globe a dark grey sitting on the accent. Real browser: read what actually painted.
+    await step('the All Tenants glyph contrasts with the accent behind it', async () => {
+      const avatar = body
+        .getByText('All Tenants')
+        .closest('[role="button"]')
+        .querySelector('.MuiAvatar-root')
+      const style = getComputedStyle(avatar)
+      expect(style.backgroundColor).not.toBe(style.color)
+
+      const luminance = (rgb) => {
+        const [r, g, b] = rgb.match(/\d+/g).map(Number)
+        const channel = (c) => {
+          const v = c / 255
+          return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+        }
+        return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+      }
+      const a = luminance(style.color)
+      const b = luminance(style.backgroundColor)
+      const contrast = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)
+      expect(contrast).toBeGreaterThan(3)
+    })
   },
 }
 

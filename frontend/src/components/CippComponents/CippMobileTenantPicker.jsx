@@ -224,7 +224,18 @@ export const CippMobileTenantPicker = () => {
                 onClick={() => selectTenant("AllTenants")}
                 sx={{ minHeight: 52, gap: 1.5 }}
               >
-                <Avatar sx={{ width: 34, height: 34, bgcolor: "primary.main" }}>
+                {/* Avatar's default colour is background.default, so setting only bgcolor
+                    left the glyph a dark grey sitting on the accent. getContrastText rather
+                    than contrastText: the accent is a mid orange, and white on it measures
+                    2.6:1 — below the 3:1 a 24px glyph needs. This picks the dark ink. */}
+                <Avatar
+                  sx={{
+                    width: 34,
+                    height: 34,
+                    bgcolor: "primary.main",
+                    color: (theme) => theme.palette.getContrastText(theme.palette.primary.main),
+                  }}
+                >
                   <Public fontSize="small" />
                 </Avatar>
                 <ListItemText
