@@ -1,4 +1,5 @@
 import { Box, SwipeableDrawer, Typography } from "@mui/material";
+import { useSwipeCloseTransition } from "../../hooks/use-swipe-close-transition";
 
 // SwipeableDrawer requires onOpen; these sheets are only ever opened programmatically.
 const noop = () => {};
@@ -8,18 +9,19 @@ const noop = () => {};
 export const CippBottomSheet = (props) => {
   const { open, onClose, title, children, footer, onExited, SlideProps, ModalProps, ...other } =
     props;
+  const swipeClose = useSwipeCloseTransition(open, onClose);
   return (
     <SwipeableDrawer
       anchor="bottom"
       open={open}
-      onClose={onClose}
+      onClose={swipeClose.onClose}
       onOpen={noop}
       disableSwipeToOpen
       ModalProps={{
         keepMounted: false,
         ...ModalProps,
       }}
-      SlideProps={{ ...SlideProps, onExited }}
+      SlideProps={{ ...SlideProps, ...swipeClose.transitionProps, onExited }}
       sx={{ zIndex: (theme) => theme.zIndex.modal + 1 }}
       PaperProps={{
         sx: {

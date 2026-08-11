@@ -11,6 +11,7 @@ import { paths } from "../paths";
 import { MobileNavItem } from "./mobile-nav-item";
 import { SideNavBookmarks } from "./side-nav-bookmarks";
 import { useSettings } from "../hooks/use-settings";
+import { useSwipeCloseTransition } from "../hooks/use-swipe-close-transition";
 
 // 80% of the viewport truncated third-level labels at 320px (256px) and was absurd at
 // 899px (719px). Cap it like a real nav drawer.
@@ -111,6 +112,7 @@ export const MobileNav = (props) => {
   const { open, onClose, onOpen, items } = props;
   const pathname = usePathname();
   const settings = useSettings();
+  const swipeClose = useSwipeCloseTransition(open, onClose);
   const [search, setSearch] = useState("");
   const showSidebarBookmarks = settings.bookmarkSidebar !== false;
 
@@ -123,9 +125,15 @@ export const MobileNav = (props) => {
   return (
     <SwipeableDrawer
       anchor="left"
-      onClose={onClose}
+      // MUI's default is `iOS`, so everywhere else a 20px fixed strip covers the left edge.
+      // A touch on it flips maybeSwiping (modal opens), and with no touchmove the end handler
+      // bails before onOpen/onClose, so the drawer animates in and back out. Swipe-to-close on
+      // the open drawer is a separate path and still works.
+      disableSwipeToOpen
+      onClose={swipeClose.onClose}
       onOpen={onOpen ?? (() => {})}
       open={open}
+      slotProps={{ transition: swipeClose.transitionProps }}
       PaperProps={{
         sx: {
           width: MOBILE_NAV_WIDTH,
