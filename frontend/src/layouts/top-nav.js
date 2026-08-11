@@ -328,7 +328,8 @@ export const TopNav = (props) => {
             </Box>
           )}
         </Stack>
-        <Stack alignItems="center" direction="row" spacing={mdDown ? 0.5 : 1.5}>
+        {/* 0.5 left the notification dot and the account avatar sharing the same few pixels */}
+        <Stack alignItems="center" direction="row" spacing={mdDown ? 1 : 1.5}>
           {!mdDown && (
             <Tooltip title="Search users & entities (Ctrl/Cmd+Shift+F)">
               <IconButton
