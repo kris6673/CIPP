@@ -9,6 +9,9 @@ import path from "node:path";
 //  1. <Grid size={N}> / size={{ xs: N }} with N < 12 holds a desktop column split at 390px.
 //  2. A Stack with flexWrap but no useFlexGap: MUI's `spacing` is a margin-left between
 //     children, and every wrapped row inherits it, so each new line starts indented.
+//  3. A dashboard card pinned to a pixel height. That height exists to level two columns of
+//     a desktop grid; below lg the grid is a single column, so it levels nothing and clips
+//     instead — the Secure Score card lost its whole stats row off the bottom edge.
 
 const SRC = path.resolve(__dirname, "../../src");
 
@@ -97,7 +100,27 @@ export const gridOffenders = (rawSource) => {
   return offenders;
 };
 
+/** Dashboard card wrappers pinned to a pixel height, as `line reason` strings. */
+export const pinnedHeightOffenders = (rawSource) => {
+  const source = stripComments(rawSource);
+  const marked = new Set();
+  rawSource.split("\n").forEach((text, index) => {
+    if (text.includes(MARKER)) marked.add(index + 1);
+  });
+
+  const offenders = [];
+  for (const tag of openingTags(source, "Box")) {
+    if (isExempt(marked, tag)) continue;
+    // `height: 450` — a bare number. `height: { xs: 'auto', lg: 450 }` is the fix, and
+    // minHeight/maxHeight are constraints rather than a pin, so both are left alone.
+    const pinned = tag.text.match(/[^a-zA-Z]height:\s*(\d+)\s*[,}]/);
+    if (pinned) offenders.push(`${tag.line} height: ${pinned[1]}`);
+  }
+  return offenders;
+};
+
 const files = walk(SRC);
+const dashboardFiles = files.filter((file) => rel(file).startsWith(path.join("pages", "dashboardv2")));
 
 describe("mobile layout patterns", () => {
   it("has files to check", () => {
@@ -124,6 +147,27 @@ describe("mobile layout patterns", () => {
     ).toEqual([]);
     // but a marker further up the file does not blanket the rest of it
     expect(gridOffenders(`      // ${MARKER}\n\n\n\n\n${split}`)).toEqual(["6 xs: 6"]);
+  });
+
+  it("pins no dashboard card to a pixel height", () => {
+    expect(dashboardFiles.length).toBeGreaterThan(0);
+    const offenders = dashboardFiles.flatMap((file) =>
+      pinnedHeightOffenders(fs.readFileSync(file, "utf8")).map(
+        (offender) => `${rel(file)}:${offender}`
+      )
+    );
+    expect(
+      offenders,
+      `Below lg the dashboard is one column, so a fixed height only clips. Use height: { xs: 'auto', lg: N }:\n${offenders.join("\n")}`
+    ).toEqual([]);
+  });
+
+  it("reads a pinned height only as a bare number", () => {
+    expect(pinnedHeightOffenders(`      <Box sx={{ height: 450 }}>\n`)).toEqual(["1 height: 450"]);
+    expect(pinnedHeightOffenders(`      <Box sx={{ height: { xs: 'auto', lg: 450 } }}>\n`)).toEqual([]);
+    expect(pinnedHeightOffenders(`      <Box sx={{ minHeight: 450 }}>\n`)).toEqual([]);
+    expect(pinnedHeightOffenders(`      <Box sx={{ height: '100%' }}>\n`)).toEqual([]);
+    expect(pinnedHeightOffenders(`      // ${MARKER}\n      <Box sx={{ height: 450 }}>\n`)).toEqual([]);
   });
 
   it("gives every wrapping Stack useFlexGap", () => {

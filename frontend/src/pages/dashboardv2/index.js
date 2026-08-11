@@ -375,14 +375,17 @@ const Page = () => {
                   height: '100%',
                 }}
               >
-                <Box sx={{ height: 450 }} data-tutorial="dashboard-secure-score">
+                {/* The fixed height exists to keep the two lg columns level. Below lg this is
+                    a single column, so it buys nothing and clips instead: the description wraps
+                    to more lines on a narrow card and the stats row falls off the bottom edge. */}
+                <Box sx={{ height: { xs: 'auto', lg: 450 } }} data-tutorial="dashboard-secure-score">
                   <SecureScoreCard
                     data={testsApi.data?.SecureScore}
                     isLoading={testsApi.isFetching}
                     sx={{ height: '100%' }}
                   />
                 </Box>
-                <Box sx={{ height: 450 }} data-tutorial="dashboard-auth-methods">
+                <Box sx={{ height: { xs: 'auto', lg: 450 } }} data-tutorial="dashboard-auth-methods">
                   <AuthMethodCard
                     data={testsApi.data?.MFAState}
                     isLoading={testsApi.isFetching}
@@ -402,14 +405,14 @@ const Page = () => {
                   height: '100%',
                 }}
               >
-                <Box sx={{ height: 450 }} data-tutorial="dashboard-mfa">
+                <Box sx={{ height: { xs: 'auto', lg: 450 } }} data-tutorial="dashboard-mfa">
                   <MFACard
                     data={testsApi.data?.MFAState}
                     isLoading={testsApi.isFetching}
                     sx={{ height: '100%' }}
                   />
                 </Box>
-                <Box sx={{ height: 450 }} data-tutorial="dashboard-licenses">
+                <Box sx={{ height: { xs: 'auto', lg: 450 } }} data-tutorial="dashboard-licenses">
                   <LicenseCard
                     data={testsApi.data?.LicenseData}
                     isLoading={testsApi.isFetching}
