@@ -243,6 +243,21 @@ export const createComponents = () => {
           "&>:not(:first-of-type)": {
             marginLeft: 16,
           },
+          "@media (max-width: 899.95px)": {
+            // 32px of side padding is a lot of a 390px screen.
+            paddingBottom: 16,
+            paddingLeft: 16,
+            paddingRight: 16,
+            paddingTop: 16,
+            // Spacing as gap, not margin-left. `:first-of-type` counts per element type, so an
+            // actions row of [caption div, button, button] gave the FIRST button no margin and
+            // the second 16px — invisible in a row, but once the row stacks on a phone the two
+            // buttons sit at different left edges and different widths. gap works either way.
+            gap: 8,
+            "&>:not(:first-of-type)": {
+              marginLeft: 0,
+            },
+          },
         },
       },
     },

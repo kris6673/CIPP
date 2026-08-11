@@ -27,6 +27,17 @@ describe("horizontal gutters on small screens", () => {
     }
   );
 
+  // `:first-of-type` counts per element type, so an actions row of [caption div, button,
+  // button] gave the first button no margin and the second 16px. Invisible in a row; once the
+  // row stacks on a phone the two buttons sit at different left edges and different widths.
+  it("spaces dialog actions with gap on a phone, not a margin the stack inherits", () => {
+    const actions = root("MuiDialogActions");
+    expect(actions["&>:not(:first-of-type)"].marginLeft).toBe(16);
+    expect(actions[MOBILE]?.["&>:not(:first-of-type)"]?.marginLeft).toBe(0);
+    expect(actions[MOBILE]?.gap).toBe(8);
+    expect(actions[MOBILE]?.paddingLeft).toBe(16);
+  });
+
   it("leaves vertical rhythm alone — width is what runs out, not height", () => {
     const content = root("MuiCardContent");
     expect(content.paddingTop).toBe(20);

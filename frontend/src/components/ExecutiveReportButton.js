@@ -1908,10 +1908,14 @@ export const ExecutiveReportButton = (props) => {
                   justifyContent: 'center',
                   height: '100%',
                   gap: 2,
+                  // Gutters and a measure: this pane is the full width of the screen below md,
+                  // where the second line is long enough to run edge to edge and break badly.
+                  px: 3,
+                  textAlign: 'center',
                 }}
               >
                 <Typography variant="h6">Loading Report Data...</Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="text.secondary" sx={{ maxWidth: '40ch' }}>
                   Fetching additional data for comprehensive report generation
                 </Typography>
               </Box>
