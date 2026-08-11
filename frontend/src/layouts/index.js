@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { usePathname } from 'next/navigation'
-import { Box, Container, Divider, Stack, useMediaQuery } from '@mui/material'
+import { Box, Container, Divider, Stack } from '@mui/material'
 import { styled } from '@mui/material/styles'
+import { useIsMobileLayout } from '../hooks/use-breakpoint'
 import { useSettings } from '../hooks/use-settings'
 import { Footer } from './footer'
 import { MobileNav } from './mobile-nav'
@@ -82,7 +83,8 @@ export const Layout = (props) => {
   // showBreadcrumb: the error routes opt out — there is no trail to a page that
   // doesn't exist or just crashed, and the bookmark button lives in there too.
   const { children, allTenantsSupport = true, showBreadcrumb = true } = props
-  const lgDown = useMediaQuery((theme) => theme.breakpoints.down('lg'))
+  // one gate for the swap: drawer, the hamburger that opens it (top-nav), the gutter below
+  const navCollapsed = useIsMobileLayout()
   const settings = useSettings()
   const mobileNav = useMobileNav()
   const [fetchingVisible, setFetchingVisible] = useState([])
@@ -308,7 +310,7 @@ export const Layout = (props) => {
       {hideSidebar === false && (
         <>
           <TopNav onNavOpen={mobileNav.handleOpen} openNav={mobileNav.open} />
-          {lgDown && (
+          {navCollapsed && (
             <MobileNav
               items={menuItems}
               onClose={mobileNav.handleClose}
@@ -316,13 +318,14 @@ export const Layout = (props) => {
               open={mobileNav.open}
             />
           )}
-          {!lgDown && <SideNav items={menuItems} onPin={handleNavPin} pinned={!!settings.pinNav} />}
+          {!navCollapsed && <SideNav items={menuItems} onPin={handleNavPin} pinned={!!settings.pinNav} />}
         </>
       )}
       <LayoutRoot
         sx={{
+          // same gate as the side nav above, padding for chrome that isn't there is a dead gutter
           pl: {
-            md: (hideSidebar ? '0' : offset) + 'px',
+            lg: (hideSidebar ? '0' : offset) + 'px',
           },
         }}
       >

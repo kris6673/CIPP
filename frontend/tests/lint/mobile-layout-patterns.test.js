@@ -170,6 +170,25 @@ describe("mobile layout patterns", () => {
     expect(pinnedHeightOffenders(`      // ${MARKER}\n      <Box sx={{ height: 450 }}>\n`)).toEqual([]);
   });
 
+  // Side nav, the drawer that replaces it, the hamburger that opens the drawer and the content
+  // gutter are four gates on one decision. Any of them declaring its own query lets them
+  // disagree, and a width with no side nav and no way to open the drawer has no nav at all.
+  it("keys layout chrome off the shared breakpoint hook, not its own media query", () => {
+    const offenders = [];
+    for (const name of ["index.js", "top-nav.js"]) {
+      const source = stripComments(fs.readFileSync(path.join(SRC, "layouts", name), "utf8"));
+      source.split("\n").forEach((line, i) => {
+        if (/useMediaQuery\(.*breakpoints\.(down|up|between)\(/.test(line)) {
+          offenders.push(`layouts/${name}:${i + 1}`);
+        }
+      });
+    }
+    expect(
+      offenders,
+      `Nav gates have to agree. Use useIsMobileLayout from hooks/use-breakpoint:\n${offenders.join("\n")}`
+    ).toEqual([]);
+  });
+
   it("gives every wrapping Stack useFlexGap", () => {
     const offenders = [];
     for (const file of files) {

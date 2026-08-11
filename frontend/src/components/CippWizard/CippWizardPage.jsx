@@ -38,7 +38,7 @@ const CippWizardPage = (props) => {
     ...other
   } = props;
 
-  const mdDown = useIsMobileLayout();
+  const isMobile = useIsMobileLayout();
   const [actionsEl, setActionsEl] = useState(null);
   const actionsRef = useCallback((el) => setActionsEl(el), []);
 
@@ -58,12 +58,12 @@ const CippWizardPage = (props) => {
         onClose={onClose}
         fullWidth
         maxWidth="xl"
-        fullScreen={mdDown}
+        fullScreen={isMobile}
         PaperProps={{
           sx: {
             display: "flex",
             flexDirection: "column",
-            ...(!mdDown && { height: "90vh" }),
+            ...(!isMobile && { height: "90vh" }),
           },
         }}
       >

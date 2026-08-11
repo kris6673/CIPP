@@ -39,7 +39,7 @@ export const HeaderedTabbedLayout = (props) => {
 
   // The shared hook rather than an inline useMediaQuery: same threshold, but only this one is
   // mockable, and jsdom has no width-based matchMedia to drive the mobile branch with.
-  const mdDown = useIsMobileLayout();
+  const isMobile = useIsMobileLayout();
   const router = useRouter();
   const pathname = usePathname();
   const queryParams = router.query;
@@ -74,7 +74,7 @@ export const HeaderedTabbedLayout = (props) => {
   const { visibleActions, isDisabled, dispatch } = actionsDispatch;
   const sheetActions = useMemo(
     () =>
-      mdDown
+      isMobile
         ? visibleActions.map((action) => ({
             label: action.label,
             icon: action.icon ? <SvgIcon fontSize="small">{action.icon}</SvgIcon> : null,
@@ -82,7 +82,7 @@ export const HeaderedTabbedLayout = (props) => {
             onClick: () => dispatch(action),
           }))
         : [],
-    [mdDown, visibleActions, isDisabled, dispatch]
+    [isMobile, visibleActions, isDisabled, dispatch]
   );
 
   const tabNavValue = useTabNavigationValue({
@@ -90,7 +90,7 @@ export const HeaderedTabbedLayout = (props) => {
     currentPath: pathname,
     onNavigate: navigateToTab,
     actions: sheetActions,
-    enabled: mdDown,
+    enabled: isMobile,
     providesGutters: true,
   });
 
@@ -160,7 +160,7 @@ export const HeaderedTabbedLayout = (props) => {
             <Stack spacing={2}>
               <Stack spacing={1}>
                 <Stack
-                  alignItems={mdDown ? "center" : "flex-start"}
+                  alignItems={isMobile ? "center" : "flex-start"}
                   direction="row"
                   justifyContent="space-between"
                   spacing={1}
@@ -175,15 +175,15 @@ export const HeaderedTabbedLayout = (props) => {
                       spacing={1}
                       justifyContent="space-between"
                     >
-                      <Typography variant={mdDown ? "h6" : "h4"} noWrap={mdDown}>
+                      <Typography variant={isMobile ? "h6" : "h4"} noWrap={isMobile}>
                         {title}
                       </Typography>
                     </Stack>
-                    {!mdDown && subtitleBlock}
+                    {!isMobile && subtitleBlock}
                   </Stack>
                   {/* The right half of this row is free below md, which is where the tab
                       picker goes. Above md it belongs to the Actions menu, as it always did. */}
-                  {mdDown ? (
+                  {isMobile ? (
                     <CippTabPicker variant="compact" />
                   ) : (
                     actions &&
@@ -195,9 +195,9 @@ export const HeaderedTabbedLayout = (props) => {
                 {/* Below md the subtitle gets the full width instead of sharing the title's
                     row: a UPN copy-chip squeezed beside a half-width picker has nowhere to go
                     and runs off the right edge of the screen. */}
-                {mdDown && subtitleBlock}
+                {isMobile && subtitleBlock}
               </Stack>
-              {!mdDown && (
+              {!isMobile && (
                 <div>
                   <Tabs
                     onChange={handleTabsChange}
@@ -232,7 +232,7 @@ export const HeaderedTabbedLayout = (props) => {
             </Stack>
             <Box
               sx={
-                !mdDown && {
+                !isMobile && {
                   flexGrow: 1,
                   overflow: "auto",
                   height: "calc(100vh - 350px)",
@@ -244,13 +244,13 @@ export const HeaderedTabbedLayout = (props) => {
           </Stack>
         </Container>
       </Box>
-      {/* Not gated on mdDown: crossing the breakpoint with a dialog open — a rotate, or a
+      {/* Not gated on isMobile: crossing the breakpoint with a dialog open — a rotate, or a
           tablet at 900px — would unmount it mid-request, taking CippApiResults with it.
           The hook already renders nothing until an action is dispatched. */}
       {actionsDispatch.dialog}
       {/* Actions only, and only when no page FAB claimed the corner — otherwise they ride in
           that sheet. Tabs are in the title row and never come down here. */}
-      {mdDown && sheetActions.length > 0 && !tabNavValue.isActionCornerClaimed && (
+      {isMobile && sheetActions.length > 0 && !tabNavValue.isActionCornerClaimed && (
         <CippPageActionsFab ariaLabel="Page actions" claimActionCorner={false} />
       )}
     </TabNavigationContext.Provider>
