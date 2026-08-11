@@ -26,7 +26,6 @@ import {
   Stack,
   SvgIcon,
   Tooltip,
-  useMediaQuery,
   Popover,
   List,
   ListItem,
@@ -35,6 +34,7 @@ import {
 } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import { Logo } from '../components/logo'
+import { useIsMobileLayout } from '../hooks/use-breakpoint'
 import { useSettings } from '../hooks/use-settings'
 import { useUserBookmarks } from '../hooks/use-user-bookmarks'
 import { paths } from '../paths'
@@ -54,7 +54,8 @@ export const TopNav = (props) => {
   const { onNavOpen } = props
   const settings = useSettings()
   const { bookmarks, setBookmarks } = useUserBookmarks()
-  const mdDown = useMediaQuery((theme) => theme.breakpoints.down('md'))
+  // same gate as the side nav in layouts/index.js, the hamburger below is the drawer's only opener
+  const navCollapsed = useIsMobileLayout()
   const showPopoverBookmarks = settings.bookmarkPopover === true
   const reorderMode = settings.bookmarkReorderMode || 'arrows'
   const locked = settings.bookmarkLocked ?? true
@@ -272,10 +273,10 @@ export const TopNav = (props) => {
         <Stack
           alignItems="center"
           direction="row"
-          spacing={mdDown ? 1 : 3}
-          sx={{ flex: 1, minWidth: 0, mr: mdDown ? 1 : 0 }}
+          spacing={navCollapsed ? 1 : 3}
+          sx={{ flex: 1, minWidth: 0, mr: navCollapsed ? 1 : 0 }}
           divider={
-            mdDown ? undefined : (
+            navCollapsed ? undefined : (
               <Divider
                 orientation="vertical"
                 sx={{
@@ -288,7 +289,7 @@ export const TopNav = (props) => {
         >
           {/* On phones the logo gives way to the tenant chip — the app's primary scoping
               control earns the space a 24px decorative link was using. */}
-          {!mdDown && (
+          {!navCollapsed && (
             <Box
               component={NextLink}
               href={paths.index}
@@ -301,7 +302,7 @@ export const TopNav = (props) => {
               <Logo />
             </Box>
           )}
-          {!mdDown && (
+          {!navCollapsed && (
             <Box data-tutorial="tenant-selector">
               <CippTenantSelector
                 ref={tenantSelectorRef}
@@ -310,7 +311,7 @@ export const TopNav = (props) => {
               />
             </Box>
           )}
-          {mdDown && (
+          {navCollapsed && (
             <IconButton
               color="inherit"
               onClick={onNavOpen}
@@ -322,14 +323,14 @@ export const TopNav = (props) => {
               </SvgIcon>
             </IconButton>
           )}
-          {mdDown && (
+          {navCollapsed && (
             <Box data-tutorial="tenant-selector" sx={{ flex: 1, minWidth: 0, display: 'flex' }}>
               <CippMobileTenantPicker />
             </Box>
           )}
         </Stack>
-        <Stack alignItems="center" direction="row" spacing={mdDown ? 0.5 : 1.5}>
-          {!mdDown && (
+        <Stack alignItems="center" direction="row" spacing={navCollapsed ? 0.5 : 1.5}>
+          {!navCollapsed && (
             <Tooltip title="Search users & entities (Ctrl/Cmd+Shift+F)">
               <IconButton
                 color="inherit"
@@ -340,14 +341,14 @@ export const TopNav = (props) => {
               </IconButton>
             </Tooltip>
           )}
-          {!mdDown && (
+          {!navCollapsed && (
             <IconButton color="inherit" onClick={handleThemeSwitch}>
               <SvgIcon color="action" fontSize="small">
                 {effectivePaletteMode === 'dark' ? <SunIcon /> : <MoonIcon />}
               </SvgIcon>
             </IconButton>
           )}
-          {!mdDown && (
+          {!navCollapsed && (
             <Tooltip title="Search pages (Ctrl/Cmd+K)">
               <IconButton
                 color="inherit"
@@ -649,18 +650,18 @@ export const TopNav = (props) => {
             open={universalSearchDialog.open}
             onClose={closeUniversalSearch}
             fullWidth
-            fullScreen={mdDown}
+            fullScreen={navCollapsed}
             maxWidth="md"
             sx={{
               '& .MuiDialog-container': {
                 alignItems: 'flex-start',
               },
               '& .MuiDialog-paper': {
-                mt: mdDown ? 0 : 8,
+                mt: navCollapsed ? 0 : 8,
               },
             }}
           >
-            <DialogTitle sx={{ px: mdDown ? 2 : 3, pt: 2, pb: 1 }}>
+            <DialogTitle sx={{ px: navCollapsed ? 2 : 3, pt: 2, pb: 1 }}>
               <Stack
                 direction="row"
                 alignItems="center"
@@ -671,7 +672,7 @@ export const TopNav = (props) => {
               >
                 <Stack direction="row" alignItems="center" spacing={0.5}>
                   {/* Fullscreen on mobile leaves no backdrop to tap — provide a close button */}
-                  {mdDown && (
+                  {navCollapsed && (
                     <IconButton
                       onClick={closeUniversalSearch}
                       aria-label="Close search"
@@ -682,7 +683,7 @@ export const TopNav = (props) => {
                   )}
                   <span>Universal Search</span>
                 </Stack>
-                {!mdDown && (
+                {!navCollapsed && (
                   <Typography variant="caption" color="text.secondary">
                     Pages: Ctrl/Cmd+K · Users: Ctrl/Cmd+Shift+F · Tenant: Ctrl/Cmd+Alt+K
                   </Typography>
