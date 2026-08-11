@@ -110,6 +110,7 @@ const CippBrandingReportPreview = ({ reportType = 'executive', brandingSettings 
       fileName="Branding_Preview.pdf"
       style={{ width: '100%', height: '100%', border: 'none' }}
       showToolbar={true}
+      showDownload
     >
       {document}
     </CippPdfPreview>

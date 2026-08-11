@@ -656,6 +656,7 @@ export const ReportBuilderPDF = ({
         fileName="Report.pdf"
         style={{ width: '100%', height: '100%', border: 'none' }}
         showToolbar={true}
+        showDownload
       >
         {document}
       </CippPdfPreview>

@@ -18,7 +18,7 @@ const formatSize = (bytes) => {
  * Both actions are real anchors rather than window.open in a click handler — a programmatic
  * open from an async callback is what mobile popup blockers exist to stop.
  */
-const MobileHandoff = ({ document, fileName, title }) => {
+const MobileHandoff = ({ document, fileName, title, showDownload }) => {
   const [instance] = usePDF({ document })
 
   if (instance.loading) {
@@ -88,16 +88,20 @@ const MobileHandoff = ({ document, fileName, title }) => {
         >
           Open report
         </Button>
-        <Button
-          component="a"
-          href={instance.url}
-          download={fileName ?? 'report.pdf'}
-          variant="outlined"
-          startIcon={<Download />}
-          sx={{ minHeight: 44 }}
-        >
-          Download
-        </Button>
+        {/* Off by default: six of the eight hosts already put a Download in their dialog
+            actions, and two of them side by side is what this looked like on a phone. */}
+        {showDownload && (
+          <Button
+            component="a"
+            href={instance.url}
+            download={fileName ?? 'report.pdf'}
+            variant="outlined"
+            startIcon={<Download />}
+            sx={{ minHeight: 44 }}
+          >
+            Download
+          </Button>
+        )}
       </Stack>
 
       <Typography variant="caption" color="text.secondary" sx={{ maxWidth: 320 }}>
@@ -110,16 +114,24 @@ const MobileHandoff = ({ document, fileName, title }) => {
 /**
  * Drop-in for `<PDFViewer>`: identical on desktop, a platform handoff below md.
  *
- * `fileName` names the download and `title` labels the card; both are mobile-only. `viewerKey`
- * is applied to the desktop iframe alone — one caller remounts it per render to dodge a
- * react-pdf error, and doing that on mobile would rebuild the blob on every render.
+ * `title` labels the card and `fileName` names the download; both are mobile-only, as is
+ * `showDownload` — pass it only where the host has no download action of its own. `viewerKey`
+ * is applied to the desktop iframe alone: one caller remounts it per render to dodge a
+ * react-pdf error, and doing that on mobile would rebuild the blob every render.
  */
 export const CippPdfPreview = (props) => {
-  const { children, fileName, title, viewerKey, ...viewerProps } = props
+  const { children, fileName, title, viewerKey, showDownload = false, ...viewerProps } = props
   const isMobile = useIsMobileLayout()
 
   if (isMobile) {
-    return <MobileHandoff document={children} fileName={fileName} title={title} />
+    return (
+      <MobileHandoff
+        document={children}
+        fileName={fileName}
+        title={title}
+        showDownload={showDownload}
+      />
+    )
   }
 
   return (

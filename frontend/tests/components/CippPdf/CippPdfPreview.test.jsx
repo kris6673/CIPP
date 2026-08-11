@@ -59,10 +59,11 @@ describe('CippPdfPreview', () => {
   // title/fileName/viewerKey are ours, not react-pdf's — forwarding them would land unknown
   // attributes on the iframe and warn.
   it('does not leak its own props onto the desktop viewer', () => {
-    render({ style: { border: 'none' }, showToolbar: true })
+    render({ style: { border: 'none' }, showToolbar: true, showDownload: true })
     expect(pdfState.viewerProps).not.toHaveProperty('title')
     expect(pdfState.viewerProps).not.toHaveProperty('fileName')
     expect(pdfState.viewerProps).not.toHaveProperty('viewerKey')
+    expect(pdfState.viewerProps).not.toHaveProperty('showDownload')
     expect(pdfState.viewerProps.showToolbar).toBe(true)
   })
 
@@ -81,9 +82,18 @@ describe('CippPdfPreview', () => {
     expect(open.tagName).toBe('A')
   })
 
-  it('offers a download named after the report', () => {
+  // Six of the eight hosts already put a Download in their dialog actions; showing one here
+  // as well is exactly the duplicate that appeared on a phone.
+  it('offers no download of its own by default', () => {
     layoutState.isMobile = true
     render()
+
+    expect(screen.queryByRole('link', { name: /download/i })).not.toBeInTheDocument()
+  })
+
+  it('offers a download named after the report where the host has none', () => {
+    layoutState.isMobile = true
+    render({ showDownload: true })
 
     const download = screen.getByRole('link', { name: /download/i })
     expect(download).toHaveAttribute('download', 'Executive_Report.pdf')
