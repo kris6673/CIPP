@@ -185,7 +185,22 @@ export const DragHandleDismisses = {
       fire('touchmove', from + dy)
       await tick()
     }
+    const draggedTo = new DOMMatrixReadOnly(getComputedStyle(paper).transform).m42
+    expect(draggedTo).toBeGreaterThan(100)
     fire('touchend', from + 260)
+
+    // The exit has to continue from where the finger let go. Slide probes the paper's
+    // untranslated position when the exit starts (Slide.js getTranslateValue), and the browser
+    // takes that probe as the transition's start, which puts the sheet back at full height for
+    // the length of the close.
+    const firstExitFrame = await new Promise((resolve) => {
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() =>
+          resolve(new DOMMatrixReadOnly(getComputedStyle(paper).transform).m42)
+        )
+      )
+    })
+    expect(firstExitFrame).toBeGreaterThan(draggedTo * 0.6)
 
     await waitFor(() => expect(body.queryByText('Reset password')).not.toBeInTheDocument())
   },
