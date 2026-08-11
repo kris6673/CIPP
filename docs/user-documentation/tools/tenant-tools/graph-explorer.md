@@ -84,6 +84,4 @@ Results render as a table with all the standard [table-features.md](../../shared
 A warning is displayed in place of the results if no tenant is selected. Choose a tenant and run the query again.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

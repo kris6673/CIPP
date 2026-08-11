@@ -34,6 +34,4 @@ Each onboarding runs through the same five steps in order.
 Onboarding also runs on a nightly schedule, so an approved invite is picked up automatically even if you never start the process by hand.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

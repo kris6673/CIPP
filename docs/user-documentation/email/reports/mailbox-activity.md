@@ -22,6 +22,4 @@ Microsoft 365 has a tenant-wide setting that conceals user names in usage report
 
 The fix is on the tenant, not in CIPP. Enabling the **Enable Usernames instead of pseudo anonymised names in reports** standard turns the setting off, after which the report needs running again to pick up real names.
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

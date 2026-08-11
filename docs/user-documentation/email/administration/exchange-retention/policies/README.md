@@ -16,6 +16,4 @@ The properties returned are for the Exchange Online PowerShell command `Get-Rete
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Edit Policy</td><td>Opens <a data-mention href="policy.md">policy.md</a></td><td>false</td></tr><tr><td>Delete Policy</td><td>Opens a modal to confirm you want to delete the policy. A policy that is still applied to at least one mailbox cannot be deleted, and the results panel tells you so, so move those mailboxes onto another policy first.</td><td>true</td></tr></tbody></table>
 
-***
-
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

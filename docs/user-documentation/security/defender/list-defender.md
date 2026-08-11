@@ -10,6 +10,4 @@ The properties returned are for the Graph resource type `managedDevice`. For mor
 Every managed device in the tenant is listed, not just Windows ones. The protection state is a Windows specific object, so devices on other platforms appear in the list with their Defender columns empty.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

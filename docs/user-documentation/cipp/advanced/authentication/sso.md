@@ -248,6 +248,4 @@ If you can still reach this page, use **Rotate Secret** to issue and store a new
 
 If you cannot sign in at all, use the reset described in [#resetting-sso-when-you-cannot-sign-in](sso.md#resetting-sso-when-you-cannot-sign-in "mention"). On a self-hosted instance, an administrator with access to the underlying Azure resources can alternatively retrieve or replace the stored SSO values directly in the instance's Key Vault and restart the container to restore access.
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

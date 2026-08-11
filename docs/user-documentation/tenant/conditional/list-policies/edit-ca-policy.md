@@ -111,6 +111,4 @@ Collapsed by default, since most policies do not use these.
 Test changes with the policy set to report only before enabling it, particularly when adding grant controls or narrowing the users the policy applies to. A policy that excludes no break-glass account can remove your own access to the tenant.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

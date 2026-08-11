@@ -88,6 +88,4 @@ The Actions card controls who your changes apply to and commits them.
 | User selector | Chooses whether the settings are saved for Current User or for All Users. Selecting a different option reloads the page's values to show the settings that apply to that scope. |
 | Save Changes  | Saves the settings for the selected scope. The button is unavailable while any required field is empty or invalid, and a message confirms the save or reports an error.         |
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

@@ -83,6 +83,4 @@ Any directory attributes added under [user-settings.md](../../../../shared-featu
 | Send results to Webhook / E-mail / PSA | Delivers the outcome of the scheduled edit to the notification channels configured for the tenant.                            |
 | Reference                              | Free text added to the notification title so the task can be recognised later.                                                |
 
-***
-
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

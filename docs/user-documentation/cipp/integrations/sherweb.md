@@ -188,6 +188,4 @@ Alerts are delivered by email, to your PSA, and by webhook, following your alert
 Matching relies on subscription and SKU IDs, and will improve as Sherweb exposes more SKU detail. Review the notifications from a notify-only period before trusting automated purchasing on your own catalogue.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

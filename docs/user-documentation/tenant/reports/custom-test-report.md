@@ -94,6 +94,4 @@ The output the test itself produced for this tenant. Custom tests can return eit
 
 The test's category and its description, rendered from the author's Markdown. Links here open in a new tab, so a well-written test can point directly at vendor documentation or an internal runbook.
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

@@ -286,6 +286,4 @@ The Microsoft 365 rich text field can render with cut-off tables or cramped form
 
 Special thanks to Luke Whitelock and his [HuduM365Automation](https://github.com/lwhitelock/HuduM365Automation) function app code.
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

@@ -21,6 +21,4 @@ The columns come from the saved template, so a column is empty where the templat
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Save to GitHub</td><td>Uploads the selected template to a community repository. You are asked for a <strong>Repository</strong>, listing only repositories CIPP can write to, and a <strong>Commit Message</strong>. Greyed out unless the GitHub integration is enabled.</td><td>true</td></tr><tr><td>Delete Template</td><td>Deletes the template from CIPP. Connection filter settings already applied from it in a tenant are not affected.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

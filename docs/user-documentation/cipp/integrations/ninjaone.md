@@ -172,6 +172,4 @@ In NinjaOne go to **Administration** > **Apps** > **Microsoft Defender**, open t
 CVE exceptions recorded in CIPP are applied before upload, both tenant-specific exceptions and those set for all tenants, so a suppressed CVE does not reappear in NinjaOne. If the expected scan group does not exist, that tenant's CVE upload is skipped and a warning is written to the CIPP logbook.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

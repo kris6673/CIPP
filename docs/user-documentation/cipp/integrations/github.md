@@ -77,6 +77,4 @@ Results from **Test** appear in a banner at the top of the page, with two contro
 | View Results     | Opens a table showing the results of the most recent attempt in full. |
 | Download Results | Downloads those results as a CSV file.                                |
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

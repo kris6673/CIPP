@@ -16,6 +16,4 @@ The policy and the rule are named after each other, so the new rule appears agai
 
 Templates are managed on [list-templates.md](../list-templates.md "mention").
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

@@ -30,6 +30,4 @@ The properties returned are for the Exchange Online PowerShell command `Get-Dist
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Edit Room List</td><td>Opens the <a data-mention href="edit.md">edit.md</a> page with the selected row's room list pre-populated.</td><td>false</td></tr><tr><td>Delete Room List</td><td>Deletes the selected room list. The rooms it contained are left in place. Asks for confirmation first.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

@@ -16,6 +16,4 @@ The properties returned are for the Graph resource type `group`, filtered to gro
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Edit Group</td><td>Opens the team's underlying Microsoft 365 group in the <a data-mention href="../../../identity/administration/groups/edit.md">edit.md</a> page, where its members, owners, and settings can be changed.</td><td>false</td></tr><tr><td>Delete Team</td><td>Deletes the selected team by deleting its underlying Microsoft 365 group, which takes the team's channels, SharePoint site, and shared mailbox with it. You are asked to confirm first. The group and its content stay recoverable for 30 days before being permanently removed.</td><td>true</td></tr></tbody></table>
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

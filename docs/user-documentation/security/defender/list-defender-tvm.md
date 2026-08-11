@@ -21,6 +21,4 @@ Software vulnerabilities found by Microsoft Defender across the selected tenant'
 Only **Affected Devices Count** and **Affected Devices** reflect every device behind a row. The remaining columns are taken from a single one of the grouped findings, so where a CVE spans more than one platform, vendor or software version, this table shows one of them rather than all of them. Treat those columns as an example of what the CVE was found on, not a complete picture.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

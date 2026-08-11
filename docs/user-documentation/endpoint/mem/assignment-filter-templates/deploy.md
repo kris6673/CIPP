@@ -30,6 +30,4 @@ Review the tenants and the filter, then submit.
 {% endstep %}
 {% endstepper %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

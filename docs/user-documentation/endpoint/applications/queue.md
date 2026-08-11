@@ -43,6 +43,4 @@ The queue is processed automatically every twelve hours, so items left alone wil
 A deployment queued for a single tenant is removed from this list once it has been processed. A deployment queued for All Tenants stays in the list permanently with a status of Deployed, and is reprocessed on every run so that tenants added later also receive the application. Deleting it is the only way to stop that.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

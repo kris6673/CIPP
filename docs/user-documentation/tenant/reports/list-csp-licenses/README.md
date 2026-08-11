@@ -33,6 +33,4 @@ This page requires the Sherweb integration to be enabled, and the tenant to be m
 These actions change what you are billed for and take effect against Sherweb immediately. There is no confirmation step beyond the prompt, and increases are purchases. Check the tenant's actual assignment counts on the list-licenses.md before reducing a subscription, since Sherweb does not know which licences are assigned in Microsoft 365.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

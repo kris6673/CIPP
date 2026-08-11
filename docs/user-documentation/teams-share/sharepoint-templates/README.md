@@ -38,6 +38,4 @@ The **Deploy Template** button in the panel queues the deployment, and only beco
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Edit Template</td><td>Opens the selected template in the same editor as <a data-mention href="add.md">add.md</a> so you can change its settings. Greyed out unless you have SharePoint admin write access.</td><td>false</td></tr><tr><td>Copy Template</td><td>Opens the editor pre-filled from the selected template so you can save it as a new template under a different name. Greyed out unless you have SharePoint admin write access.</td><td>false</td></tr><tr><td>Delete Template</td><td>Permanently removes the selected template. Greyed out unless you have SharePoint admin write access.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

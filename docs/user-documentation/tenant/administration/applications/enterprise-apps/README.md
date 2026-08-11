@@ -26,6 +26,4 @@ The password and certificate credential columns are included so that application
 Removing credentials, disabling, or deleting a service principal takes effect immediately and will break any integration currently authenticating as that application. Confirm what an application is used for before acting on it, particularly for applications published by your own or another partner organisation.
 {% endhint %}
 
-***
-
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

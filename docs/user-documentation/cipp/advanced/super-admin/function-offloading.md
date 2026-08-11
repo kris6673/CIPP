@@ -391,6 +391,4 @@ After setting up your additional function apps, make sure to enable CI/CD from t
 
 Using function offloading introduces a delay in starting background tasks. Background tasks are queued and run in 15 minute intervals (0,15,30,45).
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

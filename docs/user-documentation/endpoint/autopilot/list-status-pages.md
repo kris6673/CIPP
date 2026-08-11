@@ -43,6 +43,4 @@ After a successful submission the drawer stays open so the same settings can be 
 
 The properties returned are for the Graph resource type `deviceEnrollmentConfiguration`. For more information on the properties please see the [Graph documentation](https://learn.microsoft.com/en-us/graph/api/resources/intune-shared-deviceenrollmentconfiguration?view=graph-rest-beta#properties). The status page settings themselves come from the `windows10EnrollmentCompletionPageConfiguration` subtype, documented [here](https://learn.microsoft.com/en-us/graph/api/resources/intune-onboarding-windows10enrollmentcompletionpageconfiguration?view=graph-rest-beta#properties).
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

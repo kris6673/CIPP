@@ -16,6 +16,4 @@ The configuration is rendered below the fields so it can be read without working
 Configuration policies that reference this setting take its new value as soon as it is saved. A reusable setting exists precisely so that one change reaches every policy using it, so check how many policies reference it before changing the configuration.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

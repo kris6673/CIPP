@@ -133,6 +133,4 @@ Use **Add Named Location** to add an entry, and the delete icon on any entry to 
 A template deployed to a tenant is not linked to it afterwards. Editing the template later does not change policies already deployed from it, unless the template is applied through a standard, which redeploys on drift.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

@@ -22,6 +22,4 @@ Releasing and requesting release are mutually exclusive in Exchange, which is wh
 
 Once created, the policy appears on [README.md](README.md "mention"), where its permissions can be changed with the **Edit Policy** action. The global notification frequency, sender address, and branding are set separately from the **Edit Settings** button on that page.
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

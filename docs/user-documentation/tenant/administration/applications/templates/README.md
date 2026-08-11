@@ -42,6 +42,4 @@ Templates are held at partner level rather than per tenant, so this table shows 
 An enterprise app template references a permission set by ID rather than copying it, so editing that set changes what the template grants on its next deployment. Manifest templates cannot be saved while the captured manifest still contains secrets or certificates; remove those sections and save again.
 {% endhint %}
 
-***
-
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

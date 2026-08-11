@@ -53,6 +53,4 @@ The search runs against CIPP's cached copy of each tenant's escrowed key records
 The recovery key itself is not held in the cache. **Retrieve Key** fetches it live and shows it in plain text, and every retrieval is written to the CIPP audit log against the account that performed it.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

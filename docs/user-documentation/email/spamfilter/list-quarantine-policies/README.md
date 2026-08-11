@@ -62,6 +62,4 @@ Microsoft supplies a set of built-in policies alongside any you create yourself.
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Edit Policy</td><td>Opens a form for the end-user permissions and notification settings on the policy. <strong>Policy Name</strong> is shown but cannot be changed. Greyed out on built-in policies.</td><td>true</td></tr><tr><td>Delete Policy</td><td>Deletes the policy from the tenant. It is removed even where it is still in use, so check first that it is not referenced by an anti-phishing, anti-spam, anti-malware, or Safe Attachments policy. Greyed out on built-in policies.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

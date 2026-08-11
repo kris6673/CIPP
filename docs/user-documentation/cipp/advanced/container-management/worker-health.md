@@ -114,6 +114,4 @@ At the bottom of the page, a stacked bar shows how long each phase of the contai
 | BG Ready       | Reaching the point where the background pool can run jobs. |
 | Fully Ready    | The container becoming fully ready.                        |
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

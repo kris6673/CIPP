@@ -20,6 +20,4 @@ Intune refreshes this inventory roughly every seven days per device, counted fro
 
 To see which applications a particular device reports, use the Detected Applications section on [device.md](../mem/devices/device.md "mention").
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

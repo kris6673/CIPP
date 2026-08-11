@@ -30,6 +30,4 @@ Both actions confirm first, and both apply to mailbox backed recipients only. Ru
 Where **Is Dir Synced** is `Yes`, the entry is owned by on-premises Active Directory. Make the change on the on-premises object instead, or directory synchronisation will put the old value back.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

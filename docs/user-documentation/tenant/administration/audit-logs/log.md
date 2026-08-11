@@ -33,6 +33,4 @@ Everything else from the raw audit record, laid out as a property list. The exac
 
 Values are translated into readable text wherever CIPP has a mapping for them, so numeric result codes and internal identifiers appear as their meanings rather than their raw values. Properties that CIPP added while processing the alert are left out here, as they are already presented above.
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

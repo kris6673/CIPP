@@ -34,6 +34,4 @@ The button is hidden on pages whose address identifies a specific record, such a
 
 For managing your saved bookmarks, see [bookmarks.md](menu-bar/bookmarks.md "mention").
 
-***
-
 {% include "../../../.gitbook/includes/feature-request.md" %}

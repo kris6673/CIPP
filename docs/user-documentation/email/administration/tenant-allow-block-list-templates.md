@@ -76,6 +76,4 @@ When the standard remediates, it reads the tenant's current allow/block list for
 The standard adds entries and never removes them. An entry deleted from a template is not withdrawn from the tenants it was already deployed to, and an entry added by hand in the tenant is left alone.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

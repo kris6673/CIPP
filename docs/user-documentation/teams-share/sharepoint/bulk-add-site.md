@@ -28,6 +28,4 @@ Review the information for accuracy and select **Submit**.
 {% endstep %}
 {% endstepper %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

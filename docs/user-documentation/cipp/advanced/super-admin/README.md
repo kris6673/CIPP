@@ -10,6 +10,4 @@ As of version 8.0, users only need the \`superadmin\` role in order to access th
 Note that it may take some time for the role change to take effect.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

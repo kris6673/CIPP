@@ -120,6 +120,4 @@ The settings icon reveals additional options for the check. You can supply a spe
 * Check your permissions under **CIPP > Application Settings > Permissions** and review the Permissions Check results.
 * Make sure both CIPP-API and CIPP are fully up to date. There is extensive logging in the CIPP-API Function App.
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

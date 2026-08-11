@@ -119,6 +119,4 @@ You can review the available alerts embedded below or navigate to [https://resou
 
 {% @cipp-external-webpage-block/cyberdrain url="https://resources.cipp.app/?tab=alerts" fullWidth="true" %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

@@ -68,6 +68,4 @@ Review the tenant, the device list and the batch name, then submit. CIPP waits b
 * Group tags are only submitted when a new device batch is created. Adding devices to a batch name that already exists drops the group tag, and it will need setting afterwards with **Edit Group Tag** on the Autopilot Devices page.
 * Validation runs on manually entered rows only. A CSV is loaded without the duplicate, product key length or serial number companion checks being applied, so errors in a file surface as failures from Partner Center at the end rather than at import time.
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

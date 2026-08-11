@@ -99,6 +99,4 @@ The Extended Info flyout shows the policy's complete raw JSON, including conditi
 
 Every property of the policy is captured. Inclusions and exclusions are stored in a form CIPP can translate on redeployment, and everything else carries across, including named locations, authentication strengths, and session controls.
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

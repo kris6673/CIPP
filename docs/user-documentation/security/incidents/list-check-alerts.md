@@ -22,6 +22,4 @@ Each row is one page the plugin flagged on a user's machine, so the table tells 
 The user columns are named "potential" for a reason. They carry whatever identity the browser plugin believed it was seeing at the time, which is not an authenticated claim, so treat them as a lead to investigate rather than a confirmed identification.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

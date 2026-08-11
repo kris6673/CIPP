@@ -54,6 +54,4 @@ Opens an existing Safe Links policy and its rule together, so a change to the pr
 Changes to Safe Links policies and rules may take up to 6 hours to propagate throughout your organization.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

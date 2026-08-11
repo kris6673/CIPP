@@ -31,6 +31,4 @@ Risk state is held against the user rather than the individual detection, so mar
 Entra ID Protection needs Entra ID P2 licensing to report detections in full. Tenants without it see limited or no detection data, so an empty table means the feature is unavailable rather than that no risk was detected.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

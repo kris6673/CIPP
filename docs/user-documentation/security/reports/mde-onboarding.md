@@ -86,6 +86,4 @@ Under All Tenants the page becomes a table, one row per tenant.
 The connector being configured is a prerequisite, not a confirmation of full deployment. See [deployment.md](../defender/deployment.md "mention") for how to complete a full deployment.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

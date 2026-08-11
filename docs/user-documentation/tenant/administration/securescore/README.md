@@ -83,6 +83,4 @@ Marking a recommendation as resolved by a third party or as risk accepted change
 Defender controls cannot be updated from here at all. Microsoft only accepts status changes for those through the Microsoft Defender portal, so **Change Status** is disabled on those cards and the API rejects the change if it is attempted another way.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

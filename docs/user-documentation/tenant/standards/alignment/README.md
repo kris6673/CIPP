@@ -102,6 +102,4 @@ Selecting a row opens the Standard Tenant Summary flyout, which lists the tenant
 
 * There is currently a limitation with Conditional Access classic standards due to the complexity of comparing the standard settings against the Conditional Access response object. We hope to resolve this in a future update.
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

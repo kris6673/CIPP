@@ -76,6 +76,4 @@ Turning on **Add Organizer to Subject** while **Default Calendar Permission** is
 | Postal Code    | The postal code of the building.                                                                   |
 | Country/Region | The country or region the building is in, chosen from a list.                                      |
 
-***
-
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

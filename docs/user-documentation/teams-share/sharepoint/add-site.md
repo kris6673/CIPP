@@ -12,6 +12,4 @@ Creates a single new SharePoint site in the selected tenant. Every field on this
 | Template Name        | The kind of site to create: **Team (No Microsoft365 Group)** or **Communication**.             |
 | Site Design Template | The site design to apply when the site is created: **Blank**, **Showcase** or **Topic**.       |
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

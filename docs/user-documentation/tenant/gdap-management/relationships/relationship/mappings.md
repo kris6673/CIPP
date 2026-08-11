@@ -16,6 +16,4 @@ This tab shows how the roles approved on a GDAP relationship are actually assign
 An empty table on an active relationship means the roles have been approved but never assigned to a group, so nobody holds the access yet. Use the **Reset Role Mapping** action on the relationships list to apply a role template and create the assignments.
 {% endhint %}
 
-***
-
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

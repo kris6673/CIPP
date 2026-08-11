@@ -38,6 +38,4 @@ This list is scoped to the tenant selected in the tenant selector, and shows tha
 Only one template should be marked as the default for a given tenant. Where both a tenant-specific default and an All Tenants default exist, the tenant-specific one is applied.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

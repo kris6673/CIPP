@@ -41,6 +41,4 @@ In the results list, matching text is shown in bold, and each result is labelled
 Results for users, groups, applications and licences come from the CIPP reporting database, so they are only as current as the last cache run. A record created moments ago will not appear until the cache next refreshes. Licence searches are matched first against the Microsoft SKU catalogue built into CIPP, and fall back to cached data only when the catalogue has no match.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

@@ -150,6 +150,4 @@ Only the rules, rule changes, users and applications sections say how many rows 
 The report's check numbers run from 1 to 8 and do not line up with the page's 1 to 9, because Check 5: Sent Messages has no equivalent section in the report. If the message trace matters to the investigation, it only exists in the JSON export.
 {% endhint %}
 
-***
-
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

@@ -156,6 +156,4 @@ Leaving the page after uploading an image but before saving keeps the uploaded f
 Reset permanently deletes every logo and cover image you have uploaded, not just the active selection. There is no confirmation prompt and the files cannot be recovered. Presets survive a reset, but any preset pointing at a deleted image loses it. Keep copies of any custom artwork outside CIPP.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

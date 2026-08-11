@@ -54,6 +54,4 @@ Creates a new Safe Links policy and the rule that scopes it, in the tenant you c
 Changes to Safe Links policies and rules may take up to 6 hours to propagate throughout your organization.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

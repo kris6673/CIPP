@@ -4,6 +4,4 @@ Explore CIPP's standards in an easy to digest format using [https://standards.ci
 
 {% @cipp-external-webpage-block/cyberdrain url="https://standards.cipp.app/" fullWidth="true" %}
 
-***
-
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

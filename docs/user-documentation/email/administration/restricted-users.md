@@ -29,6 +29,4 @@ This typically indicates a compromised account. [Before unblocking, ensure you h
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Unblock User</td><td>Removes the sending restriction from the selected user so they can send email again. Unblocking can take up to an hour to take effect, and the account should be secured before it is unblocked.</td><td>true</td></tr></tbody></table>
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

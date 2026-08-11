@@ -48,6 +48,4 @@ A contact that already exists is skipped, not updated. Changing a template and d
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Save to GitHub</td><td>Saves the selected template(s) to a GitHub repository you have write access to, under a commit message you supply. Greyed out unless the GitHub integration is enabled.</td><td>true</td></tr><tr><td>Delete Template</td><td>Deletes the selected contact template(s). Contacts already created from the template are left in place in their tenants.</td><td>true</td></tr><tr><td>Edit Contact Template</td><td>Opens the <a data-mention href="edit.md">edit.md</a> page to allow you to adjust the template settings.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

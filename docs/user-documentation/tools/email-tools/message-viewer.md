@@ -66,6 +66,4 @@ The buttons alongside the message subject open the raw data behind the rendered 
 | Anti-Spam Report | Decodes the `X-Forefront-Antispam-Report` header into readable fields, covering the spam confidence level, the filtering verdict, the connecting IP address and its country, the reverse DNS of the sender, the bulk mail rating, and the protection policy category that applied. Values that map to a known meaning are expanded into a description rather than left as their raw code. Shown only on messages that passed through Exchange Online Protection, since Microsoft adds the header. |
 | View Source      | Opens a dialog containing the complete raw message exactly as it was loaded, headers and body together.                                                                                                                                                                                                                                                                                                                                                                                           |
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

@@ -18,6 +18,4 @@ For an explanation of what each tag type covers and what each retention action d
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Edit Tag</td><td>Opens <a data-mention href="tag.md">tag.md</a> for the selected tag.</td><td>false</td></tr><tr><td>Delete Tag</td><td>Opens a modal to confirm you want to delete the tag. A tag that is still linked to a retention policy cannot be deleted, and the results panel names the policies using it, so remove it from those policies first.</td><td>true</td></tr></tbody></table>
 
-***
-
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

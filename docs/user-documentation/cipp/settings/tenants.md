@@ -31,6 +31,4 @@ Several actions apply only to one kind of tenant, and none of them apply to your
 The **Force Refresh** button above the table re-reads tenant details and updates the list. Enter a default domain name or tenant ID to refresh a single tenant, or leave the field empty to refresh them all. This is also the way to make a tenant that is missing from the list reappear.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

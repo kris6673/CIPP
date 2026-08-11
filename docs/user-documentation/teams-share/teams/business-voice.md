@@ -32,6 +32,4 @@ A user needs a Teams Phone licence before a number can be assigned to them. Phon
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Assign User</td><td>Assigns a user or resource account to the phone number. The assignment is submitted for processing and may take a moment to complete; re-sync the report to see the updated status.</td><td>true</td></tr><tr><td>Unassign User</td><td>Removes the assignment from the phone number. The change is submitted for processing and may take a moment to complete; re-sync the report to see the updated status.</td><td>true</td></tr><tr><td>Set Emergency Location</td><td>Sets the emergency location for the number. Locations are listed by description, place name, or street address.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

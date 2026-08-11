@@ -65,6 +65,4 @@ The properties returned are for the Exchange Online PowerShell command `Get-Cont
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Edit Contact</td><td>Opens <a data-mention href="edit.md">edit.md</a> for the selected contact. Greyed out on a contact that is directory synced, which has to be changed at the source instead.</td><td>false</td></tr><tr><td>Set Source of Authority</td><td>Switches the contact between <code>Cloud Managed</code> and <code>On-Premises Managed</code>, so you can take over a synced contact in the cloud or hand it back to on-premises. The current setting is preselected, and handing a contact back does not show until the next directory sync cycle. Greyed out on a cloud-only contact, which has no on-premises counterpart to switch between.</td><td>true</td></tr><tr><td>Remove Contact</td><td>Deletes the mail contact from the tenant. Greyed out on a contact that is directory synced, which has to be removed at the source instead.</td><td>true</td></tr></tbody></table>
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}
