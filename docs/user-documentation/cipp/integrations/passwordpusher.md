@@ -89,6 +89,4 @@ Do not enable the **Force the default value?** option on a Password Pusher websi
 Password Pusher's own password generator policy applies only to the generator on its website, which is a convenience tool. It has no bearing on the passwords CIPP generates — those are controlled by CIPP's own password configuration.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

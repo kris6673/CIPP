@@ -69,6 +69,4 @@ The expiration action offers **Delete User** and **Disable User** for any grant.
 Notification channels only deliver if they are configured in CIPP's [notifications.md](../../../cipp/settings/notifications.md "mention") settings first. Selecting one that is not set up produces no notification rather than an error.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

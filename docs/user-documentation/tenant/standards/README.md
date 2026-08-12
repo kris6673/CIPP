@@ -118,6 +118,4 @@ Each standard is labelled with the level of change it introduces and its effect 
 Plans exist to implement more standardised options and settings. If there is a standard you want, see the Feature Requests section below.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

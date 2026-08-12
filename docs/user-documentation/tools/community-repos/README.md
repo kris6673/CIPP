@@ -75,6 +75,4 @@ The menu on each card carries the actions for that source.
 Removing a source only stops CIPP reading from it. Templates you have already imported are unaffected, and nothing is deleted on GitHub, including private repositories you own.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

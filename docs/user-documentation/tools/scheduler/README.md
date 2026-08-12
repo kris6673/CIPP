@@ -131,6 +131,4 @@ The same set of actions available on the table row: Run Now, Edit Job, Clone Job
 | Task Parameters       | The parameters passed to the task's command.                                                                                                                             |
 | Execution Results     | The history of the task's executions, with a count of how many entries are shown against the total and a search box for narrowing a long history.                        |
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

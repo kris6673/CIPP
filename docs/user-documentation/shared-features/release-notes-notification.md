@@ -31,6 +31,4 @@ These choices are stored in the browser you are using, so they apply to that bro
 Choosing **Remind me next time** or **Don't show until next release** also clears a previous **Don't show again**, so the notification is easy to reinstate without hunting through browser settings.
 {% endhint %}
 
-***
-
 {% include "../../../.gitbook/includes/feature-request.md" %}

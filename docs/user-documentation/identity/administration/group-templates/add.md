@@ -52,6 +52,4 @@ An example membership rule for a dynamic group, excluding guests and external us
 `(user.userPrincipalName -notContains "#EXT#@") -and (user.userType -ne "Guest")`
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

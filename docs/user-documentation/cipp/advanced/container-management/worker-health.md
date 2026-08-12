@@ -47,7 +47,7 @@ Two tables list every worker in the container: one for the HTTP pool, which hand
 
 ## Job Queue
 
-The Job Queue lists the background jobs known to the worker system, newest first. Two toggles above the table control what is loaded: a status toggle (All, Queued, Running, Completed, Failed, or Cancelled) and a load limit (500, 2k, 5k, or 10k).
+The Job Queue lists the background jobs known to the worker system, newest first. Queued jobs come from the durable job queue in table storage, so the list shows the full backlog of a large run — not just the handful of tasks the container has buffered for execution — and cancelling or reprioritizing a queued job takes effect even for work no container has picked up yet. Two toggles above the table control what is loaded: a status toggle (All, Queued, Running, Completed, Failed, or Cancelled) and a load limit (500, 2k, 5k, or 10k).
 
 The status toggle filters on the server, before the load limit is applied, so the limit applies to the selected status rather than to all jobs. This matters on a busy instance: with a large backlog of completed jobs, loading All would fill the entire limit with completed work and show no queued jobs at all. Select Queued to see the jobs still waiting to run, regardless of how much history sits behind them.
 
@@ -113,7 +113,5 @@ At the bottom of the page, a stacked bar shows how long each phase of the contai
 | HTTP Pool Full | Bringing the full HTTP worker pool online.                 |
 | BG Ready       | Reaching the point where the background pool can run jobs. |
 | Fully Ready    | The container becoming fully ready.                        |
-
-***
 
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

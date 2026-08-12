@@ -73,6 +73,4 @@ Lists the groups the device belongs to, including those it inherits through nest
 Group membership is read against the device's Entra ID object rather than its Intune record. A device that is not joined to Entra ID, such as one enrolled through a co-management or MDM-only path, reports no group memberships here even where it is managed by Intune. Only groups are listed, so directory roles and administrative units the device object belongs to are left out.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

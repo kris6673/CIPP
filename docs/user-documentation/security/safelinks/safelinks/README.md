@@ -68,6 +68,4 @@ Microsoft's preset security policies and the built-in protection policy are mana
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Edit Safe Links Policy</td><td>Opens the <a data-mention href="edit.md">edit.md</a> page for the selected policy.</td><td>false</td></tr><tr><td>Enable Rule</td><td>Switches the configuration on. Greyed out when it is already enabled.</td><td>true</td></tr><tr><td>Disable Rule</td><td>Switches the configuration off, leaving it in place but not applying. Greyed out when it is already disabled.</td><td>true</td></tr><tr><td>Set Priority</td><td>Changes the order the rule is evaluated in, prompting for the new priority number. Lower numbers are evaluated first, and the value must be at least 0.</td><td>false</td></tr><tr><td>Create template based on policy</td><td>Saves the selected policy and its rule as a Safe Links policy template, so it can be redeployed to other tenants.</td><td>false</td></tr><tr><td>Delete Rule</td><td>Permanently removes both the policy and the rule.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

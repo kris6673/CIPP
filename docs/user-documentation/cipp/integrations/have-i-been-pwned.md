@@ -69,6 +69,4 @@ A tenant breach search runs as a background job and can take up to 24 hours to c
 Have I Been Pwned rate-limits API requests according to your subscription tier. Where a lookup is rate-limited, CIPP reports this rather than failing outright, and the request needs retrying after the wait period. Accounts with no breach history return no results rather than an error, so an empty result is a genuine answer.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

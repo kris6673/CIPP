@@ -32,6 +32,4 @@ Editing a template does not change GDAP relationships that were created from it.
 Renaming the template named `CIPP Defaults` causes CIPP to prompt you to recreate it, since it checks for that exact name.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

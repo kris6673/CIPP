@@ -53,6 +53,4 @@ To import in bulk, tick the templates you want, or use the select-all checkbox t
 Where CIPP could not read one of your sources, a warning is shown above the results. The catalogue still lists everything it could reach, so a shorter than expected list is worth checking against those warnings before concluding a template is missing.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

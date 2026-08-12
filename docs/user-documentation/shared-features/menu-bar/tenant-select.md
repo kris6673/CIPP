@@ -72,6 +72,4 @@ The same flyout lists shortcuts for jumping straight to the tenant's Microsoft p
 
 Every portal other than **Manage Tenant** can be hidden from this list using the **Portal Links Configuration** settings described in [user-settings.md](user-settings.md "mention"), so you can shorten it to the portals you actually use.
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

@@ -23,6 +23,4 @@ The remaining properties, available from the column chooser and in the row flyou
 
 {% include "../../../../.gitbook/includes/intune-actions.md" %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

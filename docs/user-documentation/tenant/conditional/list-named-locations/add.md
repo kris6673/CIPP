@@ -32,6 +32,4 @@ A named location is either country-based or IP-based, never both. If you need to
 Creating the same named location across several tenants gives you locations that share a name but are separate objects, each with its own identifier. Later edits are per tenant, so if the underlying ranges change you will need to update each one, either from the named locations list or by creating a replacement here.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

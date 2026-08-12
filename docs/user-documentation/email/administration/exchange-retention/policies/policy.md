@@ -11,6 +11,4 @@ This page creates a retention policy, or opens an existing one for editing when 
 The tag list you submit replaces the policy's existing links rather than adding to them, so removing a tag from the selection removes it from the policy.
 {% endhint %}
 
-***
-
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

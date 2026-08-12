@@ -210,6 +210,4 @@ The query string below can be used as the basis of an AutoTask LiveLink, substit
 ```
 {% endcode %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

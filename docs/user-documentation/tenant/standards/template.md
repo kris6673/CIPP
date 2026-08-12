@@ -174,6 +174,4 @@ A **Clear** button appears once any filter is active.
 To see how Custom Variables and Tenant Groups can be combined to graduate tenants through standards, see [#using-custom-variables-to-manage-standards-templates](../../../demos/tutorials.md#using-custom-variables-to-manage-standards-templates "mention").
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

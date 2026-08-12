@@ -86,6 +86,4 @@ For deviations that come from an Intune template standard, a **Compare** button 
 | Differences table   | Lists each differing property with its Baseline and Tenant values, and whether the values differ or the setting exists on only one side. |
 | Full settings       | The complete configuration of both the baseline and the tenant policy, for reviewing settings the comparison treated as matching.        |
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

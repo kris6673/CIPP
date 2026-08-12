@@ -28,6 +28,4 @@ The activity, file count and storage figures come from Microsoft's usage reporti
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Add permissions to OneDrive</td><td>Grants another user access to the selected user's OneDrive. You pick the user to grant access to from a list of everyone in the tenant.</td><td>true</td></tr><tr><td>Remove permissions from OneDrive</td><td>Removes another user's access to the selected user's OneDrive. You pick the user to remove from a list of everyone in the tenant.</td><td>true</td></tr></tbody></table>
 
-***
-
 {% include "../../../.gitbook/includes/feature-request.md" %}

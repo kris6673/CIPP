@@ -33,6 +33,4 @@ Groups and users already targeted are shown by their object ID rather than their
 The **Sets the state for the request to setup Authenticator** standard writes the same campaign settings. Where that standard is applied to a tenant, changes made here are overwritten the next time it runs, so use one or the other rather than both.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

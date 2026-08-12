@@ -127,6 +127,4 @@ If Priya were also added to a second custom role granting **Endpoint: Read**, he
 Because `admin`/`superadmin` bypass custom roles, the most common pattern for scoped access is to map a base role (`editor` or `readonly`) to one Entra group and a custom role to another, then add users to **both** — the base role provides a safe ceiling and the custom role tailors it. Custom-roles-only assignments also work, but without a base-role ceiling they grant exactly what is defined, so review them carefully. See [Custom Roles](../../setup/setting-up-cipp/roles.md#custom-roles) for the full setup steps.
 {% endhint %}
 
-***
-
 {% include "../../../.gitbook/includes/feature-request.md" %}

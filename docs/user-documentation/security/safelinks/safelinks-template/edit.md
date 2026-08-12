@@ -63,6 +63,4 @@ Editing a template changes only what future deployments will create. Policies al
 The domain, group and recipient pickers read from the tenant you currently have selected, so a template scoped with them carries that tenant's objects. Where a template is meant for several customers, scope it after deployment rather than here, or keep the scoping to values that exist in every tenant you will deploy to.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

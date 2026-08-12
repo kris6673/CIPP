@@ -191,6 +191,4 @@ Every assignment action offers an assignment mode. **Append** keeps the existing
 Choosing the Uninstall intent creates an uninstall assignment, which will remove the application from the targeted devices rather than simply unassigning it.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

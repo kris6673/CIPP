@@ -89,6 +89,4 @@ Use **Add Variable** to create one. The name picker offers variables already def
 If you want to see how to combine Custom Variables and Tenant Groups to provide a way to "graduate" tenants through standards, see [#using-custom-variables-to-manage-standards-templates](../../../demos/tutorials.md#using-custom-variables-to-manage-standards-templates "mention").
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

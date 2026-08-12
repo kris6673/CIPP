@@ -103,6 +103,4 @@ Select **Save Settings** to store these options. Setting Check Interval to **Dis
 
 Note that if the container restarts for any reason, the latest image for the current release channel is pulled regardless of these settings.
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

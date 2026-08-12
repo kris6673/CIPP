@@ -27,6 +27,4 @@ This page creates a new contact template. Only the display name and email addres
 Note that the email box does not support Custom Variable inclusion at this time.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

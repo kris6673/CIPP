@@ -39,6 +39,4 @@ The properties returned are for the Graph resource type `signIn`. For more infor
 The flyout on this page shows the complete sign-in record as raw JSON rather than a summarised list of fields. That is where the detail an investigation needs sits, including the Conditional Access policies evaluated and their individual results, the device and client details, and the full authentication method breakdown.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

@@ -77,6 +77,4 @@ Permissions that appear in CIPP's curated set of risky permissions are marked wi
 The risky-permissions set is a deliberately short list of the permissions most useful to an attacker, and it concentrates on application permissions, so delegated scopes are rarely flagged. A permission without a chip has not been assessed rather than judged safe.
 {% endhint %}
 
-***
-
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

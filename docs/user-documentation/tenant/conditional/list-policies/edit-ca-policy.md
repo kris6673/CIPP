@@ -24,16 +24,22 @@ Defines who the policy applies to.
 | Include Directory Roles | Directory roles the policy targets, for scoping to administrators. |
 | Exclude Directory Roles | Directory roles exempt from the policy.                            |
 
-### Exclude Guests or External Users
+### Include or Exclude Guests or External Users
 
-| Field                          | Description                                                                                                                                                                                            |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| External User Types to Exclude | The categories of external user to exempt, such as service providers or B2B collaboration guests.                                                                                                      |
-| Tenant Scope                   | Whether the exclusion covers all external tenants or only named ones. Appears once an external user type is selected, and is only meaningful for genuinely external users rather than internal guests. |
-| External Tenant IDs            | The tenant GUIDs the exclusion applies to. Appears only when the scope is set to specific tenants.                                                                                                     |
+Two matching blocks, **Include Guests or External Users** and **Exclude Guests or External Users**, targeting people from outside the tenant by category rather than by naming individual accounts. The fields are the same on both sides.
+
+| Field                                    | Description                                                                                                                                                                                       |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| External User Types to Include / Exclude | The categories of external user the policy targets or exempts, such as service providers or B2B collaboration guests.                                                                             |
+| Tenant Scope                             | Whether the block covers all external tenants or only named ones. Appears once an external user type is selected, and is only meaningful for genuinely external users rather than internal guests. |
+| External Tenant IDs                      | The tenant GUIDs to scope to. Appears only when the scope is set to specific tenants.                                                                                                             |
 
 {% hint style="info" %}
 Excluding your own partner tenant here is what the **Add service provider exception to policy** action on the policy list does for you. Use that action rather than setting this by hand unless you need something more specific.
+{% endhint %}
+
+{% hint style="warning" %}
+Entra ID rejects an include block that is combined with `All`, `None` or `GuestsOrExternalUsers` under **Include Users**. The editor warns you as soon as the combination is set, but does not stop you saving it, so clear **Include Users** or drop the external user types first rather than waiting for Entra to refuse the save.
 {% endhint %}
 
 ## Cloud Apps or Actions
@@ -43,6 +49,16 @@ Excluding your own partner tenant here is what the **Add service provider except
 | Include Applications                 | The applications the policy targets.                                                       |
 | Exclude Applications                 | Applications exempt from the policy.                                                       |
 | User Actions (instead of cloud apps) | Targets a user action, such as registering security information, in place of applications. |
+| Authentication Context               | Authentication context references the policy protects, used in place of cloud apps.        |
+
+### Application Filter
+
+Targets applications by attribute rather than by name, which keeps the policy current as applications are added.
+
+| Field                   | Description                                                                                   |
+| ----------------------- | --------------------------------------------------------------------------------------------- |
+| Application Filter Mode | Whether applications matching the rule are included or excluded.                              |
+| Application Filter Rule | The filter expression, for example `application.customSecurityAttributes.App.Sensitivity -eq "High"`. |
 
 ## Conditions
 
@@ -78,6 +94,17 @@ Marked in the interface as requiring **Entra ID P2**.
 | ------------------------------------ | ------------------------------------------------------------------------------------ |
 | Authentication Flow Transfer Methods | The authentication transfer methods the policy applies to, such as device code flow. |
 
+### Workload Identities
+
+Marked in the interface as requiring **Workload Identities Premium**. Scopes the policy to service principals instead of users, which is what turns it into a workload identity policy. Leave these empty for an ordinary user policy.
+
+| Field                         | Description                                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------------------------ |
+| Include Service Principals    | The service principals the policy targets, either all of them or specific object IDs.          |
+| Exclude Service Principals    | Service principals exempt from the policy, by object ID.                                       |
+| Service Principal Filter Mode | Whether service principals matching the rule are included or excluded.                         |
+| Service Principal Filter Rule | The filter expression, for example `servicePrincipal.customSecurityAttributes.App.Tier -eq "1"`. |
+
 ## Grant Controls
 
 What the policy requires before granting access.
@@ -88,6 +115,9 @@ What the policy requires before granting access.
 | Built-in Controls              | The requirements to grant access, such as multifactor authentication or a compliant device. |
 | Authentication Strength Policy | An authentication strength policy to require in place of plain MFA.                         |
 | Terms of Use                   | Terms of use the user must accept.                                                          |
+| Custom Controls                | Legacy custom controls from an external identity provider, referenced by ID.                |
+
+A grant operator is required as soon as any of these carry a value, custom controls included.
 
 ## Session Controls
 
@@ -107,10 +137,12 @@ Collapsed by default, since most policies do not use these.
 | Persistence Mode                 | Whether sessions are always persistent or never persistent.                                                                    |
 | Disable Resilience Defaults      | Stops Entra extending existing sessions during an outage. Leaving resilience defaults on is the safer choice for most tenants. |
 
+{% hint style="info" %}
+Saving writes the policy as the editor shows it rather than merging with what the tenant already had. Anything you clear here, whether an exclusion, a platform condition or a session control, is cleared on the policy itself.
+{% endhint %}
+
 {% hint style="warning" %}
 Test changes with the policy set to report only before enabling it, particularly when adding grant controls or narrowing the users the policy applies to. A policy that excludes no break-glass account can remove your own access to the tenant.
 {% endhint %}
-
-***
 
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

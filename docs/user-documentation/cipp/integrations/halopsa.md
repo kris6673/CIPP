@@ -164,6 +164,4 @@ When **Consolidate Tickets** is enabled, CIPP records the ticket it raised for e
 
 When **Link Tickets to affected Users** is enabled, CIPP raises a separate ticket per affected user and matches them to a Halo contact within the mapped client, first on Microsoft Entra Object ID and then on email address or network login. Where no contact matches, the ticket is assigned to the client's General User and the affected user's UPN is included in the ticket body.
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

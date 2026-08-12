@@ -24,13 +24,19 @@ New templates default to a state of **Report-only**, so a template deployed with
 | Include Directory Roles | Directory roles the policy targets, for scoping to administrators. |
 | Exclude Directory Roles | Directory roles exempt from the policy.                            |
 
-### Exclude Guests or External Users
+### Include or Exclude Guests or External Users
 
-| Field                          | Description                                                                                                           |
-| ------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| External User Types to Exclude | The categories of external user to exempt, such as service providers or B2B collaboration guests.                     |
-| Tenant Scope                   | Whether the exclusion covers all external tenants or only named ones. Appears once an external user type is selected. |
-| External Tenant IDs            | The tenant GUIDs the exclusion applies to. Appears only when the scope is set to specific tenants.                    |
+Two matching blocks, **Include Guests or External Users** and **Exclude Guests or External Users**, targeting people from outside the tenant by category rather than by naming individual accounts. The fields are the same on both sides.
+
+| Field                                    | Description                                                                                                       |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| External User Types to Include / Exclude | The categories of external user the policy targets or exempts, such as service providers or B2B collaboration guests. |
+| Tenant Scope                             | Whether the block covers all external tenants or only named ones. Appears once an external user type is selected. |
+| External Tenant IDs                      | The tenant GUIDs to scope to. Appears only when the scope is set to specific tenants.                             |
+
+{% hint style="warning" %}
+Entra ID rejects an include block that is combined with `All`, `None` or `GuestsOrExternalUsers` under **Include Users**. The editor warns you as soon as the combination is set, but does not stop you saving the template, so the deployment is what fails.
+{% endhint %}
 
 ## Cloud Apps or Actions
 
@@ -39,6 +45,18 @@ New templates default to a state of **Report-only**, so a template deployed with
 | Include Applications                 | The applications the policy targets.                                                       |
 | Exclude Applications                 | Applications exempt from the policy.                                                       |
 | User Actions (instead of cloud apps) | Targets a user action, such as registering security information, in place of applications. |
+| Authentication Context               | Authentication context references the policy protects, used in place of cloud apps.        |
+
+Authentication contexts are matched in the target tenant by display name when the template is deployed, and one that does not exist yet is created there, so a context can be referenced without existing in every tenant first.
+
+### Application Filter
+
+Targets applications by attribute rather than by name, which keeps the policy current as applications are added.
+
+| Field                   | Description                                                                                           |
+| ----------------------- | ------------------------------------------------------------------------------------------------------- |
+| Application Filter Mode | Whether applications matching the rule are included or excluded.                                      |
+| Application Filter Rule | The filter expression, for example `application.customSecurityAttributes.App.Sensitivity -eq "High"`. |
 
 ## Conditions
 
@@ -76,6 +94,21 @@ These require **Entra ID P2**. Usage of these without proper licensing could ris
 | ------------------------------------ | ------------------------------------------------------------------------------------ |
 | Authentication Flow Transfer Methods | The authentication transfer methods the policy applies to, such as device code flow. |
 
+### Workload Identities
+
+{% hint style="warning" %}
+These require **Workload Identities Premium** in the target tenant. Usage of these without proper licensing could risk your client's tenant and your partner status.
+{% endhint %}
+
+Scopes the policy to service principals instead of users, which is what turns it into a workload identity policy. Leave these empty for an ordinary user policy. Service principals are referenced by object ID, which is tenant-specific, so a template using them is not portable between tenants in the way a user or group reference is.
+
+| Field                         | Description                                                                                      |
+| ----------------------------- | -------------------------------------------------------------------------------------------------- |
+| Include Service Principals    | The service principals the policy targets, either all of them or specific object IDs.            |
+| Exclude Service Principals    | Service principals exempt from the policy, by object ID.                                         |
+| Service Principal Filter Mode | Whether service principals matching the rule are included or excluded.                           |
+| Service Principal Filter Rule | The filter expression, for example `servicePrincipal.customSecurityAttributes.App.Tier -eq "1"`. |
+
 ## Grant Controls
 
 | Field                          | Description                                                                                 |
@@ -84,6 +117,9 @@ These require **Entra ID P2**. Usage of these without proper licensing could ris
 | Built-in Controls              | The requirements to grant access, such as multifactor authentication or a compliant device. |
 | Authentication Strength Policy | An authentication strength policy to require in place of plain MFA.                         |
 | Terms of Use                   | Terms of use the user must accept.                                                          |
+| Custom Controls                | Legacy custom controls from an external identity provider, referenced by ID.                |
+
+A grant operator is required as soon as any of these carry a value, custom controls included.
 
 ## Session Controls
 
@@ -132,7 +168,5 @@ Use **Add Named Location** to add an entry, and the delete icon on any entry to 
 {% hint style="info" %}
 A template deployed to a tenant is not linked to it afterwards. Editing the template later does not change policies already deployed from it, unless the template is applied through a standard, which redeploys on drift.
 {% endhint %}
-
-***
 
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

@@ -22,6 +22,4 @@ A Policy Source column is also available from the column chooser, and appears in
 
 {% include "../../../../.gitbook/includes/intune-actions.md" %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

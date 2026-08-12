@@ -66,6 +66,4 @@ Check the Usage column before deleting a group. A group that is still referenced
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Edit Group</td><td>Opens the edit.md page for the selected group, where you can change its name, description, and membership or rules.</td><td>false</td></tr><tr><td>Run Dynamic Rules</td><td>Forces an immediate re-evaluation of the group's membership rules rather than waiting for the next scheduled run. Only offered on groups with a dynamic group type. You are asked to confirm before the rules are run.</td><td>true</td></tr><tr><td>Delete Group</td><td>Permanently removes the selected group. You are asked to confirm before the group is deleted.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

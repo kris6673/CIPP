@@ -22,6 +22,4 @@ Contacts synchronised from on-premises Active Directory cannot be edited here an
 | Mobile Phone                    | The mobile phone for the contact. Clearing the box removes the number from the contact.                                                                                 |
 | Business Phone                  | The business phone for the contact. Clearing the box removes the number from the contact.                                                                               |
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

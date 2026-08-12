@@ -15,6 +15,4 @@ Use the **Map GDAP Roles** button to create new mappings via [add.md](add.md "me
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Add to Template</td><td>Adds the selected mapping to a role template. You can pick an existing template or type a new name to create one.</td><td>true</td></tr><tr><td>Delete Mapping</td><td>Removes the mapping from CIPP. The security group itself is not deleted and existing GDAP relationships are not changed.</td><td>true</td></tr></tbody></table>
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

@@ -45,6 +45,4 @@ Each row combines the room's mailbox with its location and facility details, so 
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Edit Room</td><td>Opens the <a data-mention href="edit.md">edit.md</a> page with the selected row's room pre-populated.</td><td>false</td></tr><tr><td>Edit permissions</td><td>Opens the <a data-mention href="../../../../identity/administration/users/user/exchange.md">exchange.md</a> page for the account behind the mailbox, where mailbox and calendar permissions are managed.</td><td>false</td></tr><tr><td>Block Sign In</td><td>Blocks sign-in for the selected room mailbox, so nobody can sign in as the room. Greyed out when sign-in is already blocked.</td><td>true</td></tr><tr><td>Unblock Sign In</td><td>Restores sign-in for the selected room mailbox. Greyed out unless sign-in is currently blocked.</td><td>true</td></tr><tr><td>Delete Room</td><td>Deletes the account behind the selected room mailbox, which removes the mailbox with it. Asks for confirmation first.</td><td>true</td></tr></tbody></table>
 
-***
-
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

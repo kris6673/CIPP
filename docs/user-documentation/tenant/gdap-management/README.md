@@ -36,6 +36,4 @@ Runs a set of diagnostic checks against your GDAP configuration and reports the 
 The **GDAP Setup** and **GDAP Check** cards are only shown to users who hold the `CIPP.AppSettings.Read` permission. The statistics bar and the **Add a Tenant** button are visible to everyone who can reach the page.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

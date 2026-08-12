@@ -30,6 +30,4 @@ A few rules govern roles on this page:
 * There must always be at least one superadmin. You cannot remove the superadmin role from a user if they are the only superadmin. To hand the role over, assign superadmin to another user first, then remove it from the original.
 * To grant access to users outside your partner tenant, either add them as guest users in your partner tenant and assign their roles here or enable multi-tenant mode on the CIPP SSO tab and add them to the list directly, without inviting them as guests.
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

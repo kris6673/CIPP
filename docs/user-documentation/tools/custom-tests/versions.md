@@ -35,6 +35,4 @@ The **Compare Test Versions** dialog shows what changed between the version you 
 
 **Markdown Result Template Diff** appears below it whenever either version carries a markdown template, and compares those in the same way. A test using the default output has no template and no second comparison.
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

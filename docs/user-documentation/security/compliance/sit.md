@@ -32,6 +32,4 @@ Opening a row's Extended Info flyout also looks up the rule pack behind the type
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Create template based on SIT</td><td>Saves the selected Sensitive Information Type as a template so it can be redeployed to other tenants.</td><td>false</td></tr><tr><td>Delete SIT</td><td>Permanently removes the selected Sensitive Information Type from the tenant.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

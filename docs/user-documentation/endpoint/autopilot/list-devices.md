@@ -32,6 +32,4 @@ The properties returned are for the Graph resource type `windowsAutopilotDeviceI
 Display names entered for **Rename Device** must be 15 characters or fewer, may contain only letters, numbers and hyphens, cannot contain spaces, and cannot be made up entirely of numbers. Group tags are limited to 128 characters. Both are validated in the browser and again by CIPP, so an invalid value is rejected rather than silently applied.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

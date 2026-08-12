@@ -30,6 +30,4 @@ This page lists the hosted content filter (anti-spam) policies in the selected t
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Create template based on rule</td><td>Saves the selected policy as a spam filter template, which then appears on <a data-mention href="../list-templates.md">list-templates.md</a>.</td><td>true</td></tr><tr><td>Enable Rule</td><td>Enables the content filter rule that applies the policy. Greyed out unless <strong>Rule State</strong> is <code>Disabled</code>.</td><td>true</td></tr><tr><td>Disable Rule</td><td>Disables the content filter rule that applies the policy, leaving the policy itself in place. Greyed out unless <strong>Rule State</strong> is <code>Enabled</code>.</td><td>true</td></tr><tr><td>Delete Rule</td><td>Deletes the content filter rule and the policy it applies. Both are removed, and this cannot be undone.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

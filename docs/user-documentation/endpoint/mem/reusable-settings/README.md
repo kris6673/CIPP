@@ -40,6 +40,4 @@ A Referencing Configuration Policy Count column is available from the column cho
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Edit Reusable Setting</td><td>Opens the setting for editing in edit.md.</td><td>false</td></tr><tr><td>Delete Reusable Setting</td><td>Deletes the reusable setting from the tenant. Configuration policies referencing it are left pointing at a setting that no longer exists.</td><td>true</td></tr><tr><td>Create Template from Setting</td><td>Saves the setting as a reusable settings template in CIPP, so the same setting can be deployed to other tenants.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

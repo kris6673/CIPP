@@ -20,6 +20,4 @@ Each row is one entry in the address list. **Add row** appends another and **Rem
 | Autoresolve | Whether the keyword is resolved to the addresses it currently points at.                                                                                                     |
 | Keyword     | The domain, IP address or address range the entry covers. Wildcards are allowed using the `*` character, and CIPP variables can be inserted so the value differs per tenant. |
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

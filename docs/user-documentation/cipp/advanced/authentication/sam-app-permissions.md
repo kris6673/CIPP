@@ -60,6 +60,4 @@ Consent already granted in a customer tenant is not withdrawn by resetting here.
 
 Directory role assignments for the same application are configured separately on [sam-app-roles.md](sam-app-roles.md "mention").
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

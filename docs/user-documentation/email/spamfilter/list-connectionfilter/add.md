@@ -16,6 +16,4 @@ Deploying updates the tenant's existing connection filter policy rather than add
 
 Templates are managed on [list-connectionfilter-templates.md](../list-connectionfilter-templates.md "mention").
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

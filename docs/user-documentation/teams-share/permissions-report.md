@@ -67,6 +67,4 @@ The Library Permissions table lists the individual permission assignments. Libra
 | Is Guest         | Whether the principal is an external (guest) user.                                                                                                                                                        |
 | Email            | The email address of the principal, where available.                                                                                                                                                      |
 
-***
-
 {% include "../../../.gitbook/includes/feature-request.md" %}

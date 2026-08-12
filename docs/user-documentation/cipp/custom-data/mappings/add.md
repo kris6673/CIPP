@@ -59,6 +59,4 @@ The form control CIPP renders follows the attribute's data type. Boolean attribu
 Reporting DB mappings synchronise on a daily schedule per tenant and depend on CIPP having cached data for that tenant. Values will not appear immediately after saving the mapping.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

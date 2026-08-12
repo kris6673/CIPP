@@ -63,6 +63,4 @@ A **Dynamic Distribution Group** goes further and ignores owners, members and th
 Group-based licensing requires the tenant to be licensed for Entra ID P1 or higher. Assigning licences through a group without the appropriate licensing is not compliant with Microsoft's licensing terms.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

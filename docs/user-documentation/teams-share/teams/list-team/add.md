@@ -11,6 +11,4 @@ Creates a new team in the selected tenant, using Microsoft's standard team templ
 | Select owner (must have a Teams license)    | The user who will be added to the team as its owner. Required, and at least one owner has to be set for the team to be created.     |
 | Team Visibility                             | **Private Team** means people can only join if an owner adds them. **Public Team** means anyone in the organisation can join it.     |
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

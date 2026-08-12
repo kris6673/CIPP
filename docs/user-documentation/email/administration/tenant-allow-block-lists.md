@@ -73,6 +73,4 @@ If a tenant does not support one of the four list types, that type is skipped an
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Remove</td><td>Removes the entry from the tenant's allow/block list. Removal is immediate and the entry cannot be recovered, so a block that is still needed has to be added again.</td><td>true</td></tr></tbody></table>
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

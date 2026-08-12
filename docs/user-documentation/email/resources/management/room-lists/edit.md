@@ -36,6 +36,4 @@ Emptying **Display Name**, **Description**, or **Mail Nickname** leaves the prev
 | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | Let people outside the organization email the room list | When on, senders outside the organisation can email the room list. When off, only internal senders can. |
 
-***
-
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

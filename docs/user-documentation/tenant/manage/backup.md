@@ -81,6 +81,4 @@ Restoring writes the selected components from a backup back into the tenant. The
 Overwriting replaces current settings with those in the backup rather than merging them. Where users are included in the restore, every property on the account is overwritten with the backed-up values. To protect a component, switch it off in Restore Settings or leave Overwrite existing entries off.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

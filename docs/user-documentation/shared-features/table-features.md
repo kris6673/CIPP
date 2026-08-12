@@ -165,6 +165,4 @@ Tables are paged, with a control at the foot of the table for moving between pag
 
 Only the rows and columns currently in view are rendered, which keeps large result sets responsive while scrolling.
 
-***
-
 {% include "../../../.gitbook/includes/feature-request.md" %}

@@ -85,6 +85,4 @@ The **Test Webhook** button asks Partner Center to deliver a test event and repo
 
 A failing test after a migration is the clearest symptom of the URL mismatch described above.
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

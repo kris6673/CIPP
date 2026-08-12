@@ -29,6 +29,4 @@
 Deleting a directory extension is permanent and affects every tenant, not just the one you are currently viewing. Check for mappings that reference the extension before removing it.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

@@ -39,6 +39,4 @@ Some templates cannot have their settings edited here:
 Settings the editor does not present as fields are left exactly as they were stored. Saving a template only changes the values bound to a field, so nothing else in the underlying policy is rewritten.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

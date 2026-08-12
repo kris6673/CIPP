@@ -26,6 +26,4 @@ The Extended Info flyout on this page is a **Connector Template Details** card s
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Save to GitHub</td><td>Commits the selected template to a GitHub repository you choose, using a commit message you supply. Greyed out unless the GitHub integration is set up and you have write access to at least one repository.</td><td>true</td></tr><tr><td>Delete Template</td><td>Removes the selected template from CIPP. Connectors already deployed from the template keep working and are not changed.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

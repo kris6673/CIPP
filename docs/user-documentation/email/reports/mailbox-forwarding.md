@@ -28,6 +28,4 @@ Where a mailbox has both an external and an internal forwarding address configur
 This report covers forwarding set on the mailbox itself. Forwarding created by an inbox rule is not shown here, so a mailbox that looks clean on this page can still be forwarding mail through a rule.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

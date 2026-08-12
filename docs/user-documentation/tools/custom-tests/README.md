@@ -55,6 +55,4 @@ Deleting a test removes all of its versions and cannot be undone. Where you only
 Only repositories you have write access to are offered when saving to GitHub. Where the list is empty, the repositories registered with your instance are all read-only, which includes the built-in CyberDrain ones.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

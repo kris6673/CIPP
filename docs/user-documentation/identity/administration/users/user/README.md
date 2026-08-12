@@ -119,6 +119,4 @@ Two cards list what the account belongs to, each showing a count in its header.
 
 The Intune managed devices registered to this user, matched on their user principal name. Each row shows the device name, operating system, OS version and management type, and the row action opens the device.md page. The card reports separately when the user has no managed devices and when the device lookup failed.
 
-***
-
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

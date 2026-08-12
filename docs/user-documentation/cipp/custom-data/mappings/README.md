@@ -29,6 +29,4 @@ You need at least one directory extension or schema extension before a mapping c
 Adding or deleting a Reporting DB mapping re-registers the scheduled synchronisation tasks, so no further action is needed to start or stop the daily sync.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

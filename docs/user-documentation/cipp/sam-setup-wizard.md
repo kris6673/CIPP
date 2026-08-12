@@ -98,6 +98,4 @@ This is how links elsewhere in CIPP drop you straight into the right place, such
 [gdap-invite-wizard.md](../../setup/installation/gdap-invite-wizard.md)
 {% endcontent-ref %}
 
-***
-
 {% include "../../../.gitbook/includes/feature-request.md" %}

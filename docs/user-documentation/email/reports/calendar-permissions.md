@@ -35,6 +35,4 @@ In the **By Calendar** grouping:
 
 The `Default` and `Anonymous` entries that every calendar carries are left out, so a calendar with no explicit delegate does not appear at all. The folder name is worth reading where a mailbox was created in another language, because the calendar folder is named in that language rather than being called Calendar.
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

@@ -68,6 +68,4 @@ Saving writes the row using its `PartitionKey` and `RowKey`, replacing any exist
 The `ETag` and `Timestamp` properties are managed by Azure Storage and are deliberately excluded from the editor. They cannot be set by hand.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

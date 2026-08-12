@@ -170,6 +170,4 @@ This module is created and maintained by a community member. With CIPP's rapid d
 
     After making changes, wait a minute or two before retrying authentication since propagation isn't always instant. If the error persists, try re-consenting to the app permissions.
 
-***
-
 {% include "../../.gitbook/includes/feature-request.md" %}

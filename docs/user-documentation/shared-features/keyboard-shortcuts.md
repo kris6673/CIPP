@@ -30,6 +30,4 @@ These shortcuts are active even while your cursor is in a text field, so pressin
 
 Breadcrumb entries can be reached with the Tab key and opened with either Enter or the space bar, so the trail can be navigated without a mouse.
 
-***
-
 {% include "../../../.gitbook/includes/feature-request.md" %}

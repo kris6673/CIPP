@@ -64,6 +64,4 @@ A full reset deletes every entry in the list, including licences you added yours
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Only Exclude from Alerts</td><td>Narrows the exclusion so the licence is ignored by alerts but still appears in reports and integration data.</td><td>true</td></tr><tr><td>Show in License Dropdowns</td><td>Makes the licence selectable in CIPP's licence pickers again. Only offered for licences currently hidden from them.</td><td>true</td></tr><tr><td>Hide from License Dropdowns</td><td>Removes the licence from CIPP's licence pickers. Only offered for licences currently shown in them.</td><td>true</td></tr><tr><td>Delete Exclusion</td><td>Removes the licence from the exclusion list, so it is counted and reported on again.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

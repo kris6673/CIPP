@@ -18,6 +18,4 @@ Every score runs from 0 to 100, where a higher score is healthier. A score of -1
 Devices only appear here once Endpoint Analytics has been enabled in the tenant and has collected enough data. An empty report usually means Endpoint Analytics has not been turned on rather than that no devices qualify.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

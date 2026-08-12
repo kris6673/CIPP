@@ -45,6 +45,4 @@ Microsoft returns the individual location lists on a retention policy empty, wit
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Create template based on policy</td><td>Saves the selected policy, and the first retention rule attached to it, as a retention policy template so it can be redeployed to other tenants.</td><td>false</td></tr><tr><td>Enable Policy</td><td>Switches the selected policy on. Greyed out when the policy is already enabled.</td><td>true</td></tr><tr><td>Disable Policy</td><td>Switches the selected policy off, leaving it in place but not retaining. Greyed out when the policy is already disabled.</td><td>true</td></tr><tr><td>Delete Policy</td><td>Permanently removes the selected policy and the rules belonging to it.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

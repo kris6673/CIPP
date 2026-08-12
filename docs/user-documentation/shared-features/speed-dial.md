@@ -24,6 +24,4 @@ The **Tutorials** option opens a list of guided walkthroughs that highlight part
 
 Your progress is tracked, with a count of how many tutorials you have completed shown at the foot of the list and completed entries marked. A reset control at the top of the dialog clears that progress so the tutorials can be taken again.
 
-***
-
 {% include "../../../.gitbook/includes/feature-request.md" %}

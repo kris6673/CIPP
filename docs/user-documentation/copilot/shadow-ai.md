@@ -130,6 +130,4 @@ Preset filters are available from the **Filters** button for **Sanctioned**, **U
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Mark as Company Sanctioned</td><td>Greyed out on a tool that is already sanctioned. Marks the tool sanctioned for the tenant so <strong>Risk</strong> reports as <code>Informational</code> and <strong>Status</strong> becomes <code>Sanctioned</code>. Refetches the report so cards, charts, and both tables update.</td><td>true</td></tr><tr><td>Remove Company Sanctioned Status</td><td>Greyed out on a tool that is not sanctioned. Removes the sanction so the catalogue risk level applies again and <strong>Status</strong> returns to <code>Unsanctioned</code>. Refetches the report.</td><td>true</td></tr><tr><td>Application Users</td><td>Opens a side drawer listing the application's per-user sign-in activity over the last 7 days: user principal name, display name, sign-in count, and last sign-in time. The data depends on the same Entra ID P1 sign-in enrichment.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../.gitbook/includes/feature-request.md" %}

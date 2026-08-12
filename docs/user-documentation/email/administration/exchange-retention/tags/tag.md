@@ -17,6 +17,4 @@ This page creates a retention tag, or opens an existing one for editing when you
 A tag on its own does nothing. It has to be added to a retention policy on [policy.md](../policies/policy.md "mention"), and that policy applied to a mailbox, before it affects any mail.
 {% endhint %}
 
-***
-
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

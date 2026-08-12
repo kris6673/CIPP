@@ -28,6 +28,4 @@ Use the [add.md](add.md "mention") button to generate more.
 GDAP relationships cannot be terminated once they have reached approval pending status, so deleting an invite here removes only CIPP's record of it. The pending relationship remains in Partner Center until the customer approves it or it lapses.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

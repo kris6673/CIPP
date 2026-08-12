@@ -20,6 +20,4 @@ The figures come from the Microsoft 365 Copilot usage reports in Microsoft Graph
 | Loop Active         | Number of people who actively used Copilot in Loop that day.                                                                        |
 | Copilot Chat Active | Number of people who actively used Copilot Chat that day.                                                                           |
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}
