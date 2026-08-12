@@ -29,7 +29,7 @@ Every check covers the seven days before the analysis ran, apart from the MFA de
 | Check 1: Mailbox Rules              | The inbox rules currently on the mailbox, and any rule created, changed, or removed in the last seven days. A rule that moves mail into an `RSS` folder raises a potential breach message, as it is a long-standing trick for hiding replies. Rules whose names match a recent audit event are marked as changed in the last seven days and sorted to the top. Each change lists the IP address it was made from and, where the IP can be located, the country. |
 | Check 2: Recently added users       | Accounts created in the tenant during the window, listed with their creation date.                                                                                                                                                                                                                                                                                                                                                                          |
 | Check 3: New Applications           | Service principals registered during the window, plus every application in the tenant — of any age — that matches CIPP's catalog of known-malicious applications. A catalog match is sorted to the top, named with its catalog entry, and raises a potential breach message, because consent-based access survives a password reset.                                                                                                                        |
-| Check 4: Mailbox permission changes | Mailbox permission and delegation changes across the tenant, listed with who made the change, the operation, and the rights involved. Covers permissions being added or removed, calendar delegation updates, and folder permission grants.                                                                                                                                                                                                                 |
+| Check 4: Mailbox permission changes | Mailbox permission and delegation changes across the tenant, listed with who made the change, the operation, and the rights involved. Covers permissions being added or removed, calendar delegation updates, and folder permission grants. Changes that target the investigated mailbox are flagged and sorted to the top.                                                                                                                                  |
 | Check 5: Sent Messages              | Messages sent by the mailbox during the window, from the message trace, with the subject, recipient, delivery status, time received, the originating IP address, and the country that IP locates to. The check also looks for mass-mail patterns: a subject sent as five or more separate messages or reaching twenty or more recipients, and bursts of ten or more messages or thirty or more recipients inside ten minutes. Both are how a compromised mailbox spreads phishing. |
 | Check 6: MFA Devices                | The authentication methods registered on the account, other than its password, listed with the method type, name, and registration date. Methods registered in the last seven days are flagged and sorted to the top, and an account with no methods at all is called out rather than shown as an empty list.                                                                                                                                              |
 | Check 7: Password Changes           | Accounts across the tenant whose password changed during the window, listed with the change time.                                                                                                                                                                                                                                                                                                                                                           |
@@ -53,6 +53,7 @@ Check 10 and the flags scattered through the other checks come from one comparis
 * Sign-ins carry their own location in the sign-in log, so those need no lookup.
 * The client IPs behind inbox rule changes, safelist changes, sharing changes, and sent messages are geo-located through CIPP's GeoIP service, which caches results, so repeated runs do not repeat lookups.
 * A row only counts as foreign when both sides are known. No assigned usage location, an IP that cannot be located, or a private address means the row is left unflagged, not counted against the user.
+* Foreign sign-ins are split into successful and failed. Failed attempts from other countries are the constant background of password spray and are listed for context only; a successful foreign sign-in is the one that proves access and feeds the threat score.
 
 When the account has no usage location assigned, the card says the comparison is unavailable and still lists the countries seen, for manual review.
 
@@ -124,15 +125,16 @@ The **Threat Assessment** banner on the executive summary is a total of fixed po
 | An application matching the known-malicious catalog          | 5      |
 | One or more inbox rules on the mailbox                       | 3      |
 | One or more inbox rule changes in the window                 | 3      |
-| One or more sign-ins from outside the usage location         | 3      |
+| A successful sign-in from outside the usage location         | 3      |
 | A rule, safelist, sharing, or sent-mail action from a foreign IP | 3   |
 | An anonymous sharing link created or changed in the window    | 3      |
 | A mass-mail pattern (repeated subjects or send bursts)        | 3      |
-| One or more mailbox permission changes                       | 2      |
-| One or more new applications                                 | 2      |
+| A permission change targeting the investigated mailbox        | 2      |
 | One or more changes to the trusted or blocked senders list   | 2      |
 | An MFA method registered in the window                       | 2      |
 | An Intune device enrolled in the window                      | 2      |
+| Permission changes elsewhere in the tenant only               | 1      |
+| One or more new applications                                 | 1      |
 | More than five new users                                     | 1      |
 
 Seven points or more reads as **High**, four to six as **Medium**, and anything below that as **Low**.
@@ -142,11 +144,11 @@ Scoring counts findings, not volume. A mailbox holding a single ordinary inbox r
 {% endhint %}
 
 {% hint style="warning" %}
-New users and mailbox permission changes are tenant-wide checks, so activity that has nothing to do with this mailbox can raise the level on an otherwise quiet account. The same goes for foreign sign-ins on an account whose usage location was never set correctly.
+New users, new applications, and permission changes are tenant-wide checks, but each carries a single point unless a permission change targets the investigated mailbox — tenant churn nudges the score rather than driving it. A wrongly-set usage location, on the other hand, can add three points through a perfectly normal successful sign-in, so check the assigned location before trusting a foreign-sign-in score.
 {% endhint %}
 
 {% hint style="danger" %}
-Password changes carry no weight, and the MFA and Intune lists only score for registrations and enrolments inside the window — long-standing methods and devices do not move the banner however unfamiliar they look. Sent messages score only when one left from a foreign IP. A Low is a summary of what scored, not an all-clear; read the checks.
+Password changes carry no weight, and the MFA and Intune lists only score for registrations and enrolments inside the window — long-standing methods and devices do not move the banner however unfamiliar they look. Sent messages score only for a foreign-IP send or a mass-mail pattern. Failed sign-ins from foreign countries score nothing either: password spray hits every internet-facing tenant, so only a successful foreign sign-in counts, though the failures still show in Check 10. A Low is a summary of what scored, not an all-clear; read the checks.
 {% endhint %}
 
 ### What the Report Leaves Out
