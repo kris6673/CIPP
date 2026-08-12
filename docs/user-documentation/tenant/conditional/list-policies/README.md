@@ -37,7 +37,7 @@ Conditional Access policies reference users, groups, and named locations by GUID
 | Conditional Access Parameters                             | The raw policy JSON, populated from the selected template and editable before deployment.                                        |
 | How should groups and users be handled?                   | Controls how user and group references are translated. See below.                                                                |
 | Policy State                                              | Deploy the policy as enabled, disabled, or report only, or leave the template's own state unchanged.                             |
-| Overwrite Existing Policy                                 | Replaces a policy of the same name in the target tenant rather than failing.                                                     |
+| Overwrite Existing Policy                                 | Replaces a policy of the same name in the target tenant rather than failing. The policy is returned to the template in full, so anything changed in the tenant since the last deployment, such as an extra excluded group or a platform condition, is removed. |
 | Disable Security Defaults if enabled when creating policy | Turns off Security Defaults in the target tenant, which otherwise blocks Conditional Access from taking effect.                  |
 | Create groups if they do not exist                        | Creates any group named in the template that is missing from the target tenant. Only available when translating by display name. |
 
@@ -54,7 +54,7 @@ Conditional Access policies reference users, groups, and named locations by GUID
 {% endhint %}
 
 {% hint style="info" %}
-Standards deploy Conditional Access templates using the display-name translation, which is why standards-driven deployments are portable across tenants without any extra configuration. Use a standard rather than this drawer when you want the policy re-applied automatically on drift.
+Standards deploy Conditional Access templates using the display-name translation, which is why standards-driven deployments are portable across tenants without any extra configuration. Use a standard rather than this drawer when you want the policy re-applied automatically on drift. A standard reapplies the template the same way an overwrite does, so a policy edited in the tenant is put back the way the template describes it rather than keeping both sets of changes.
 {% endhint %}
 
 ## Table Details

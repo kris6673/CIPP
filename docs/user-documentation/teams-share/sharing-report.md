@@ -8,11 +8,17 @@ The report reads from cached scans rather than querying SharePoint and OneDrive 
 
 | Control       | Description                                                                                                                                                                                                                                                                                 |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Sync data     | Queues scans of the tenant's SharePoint sites and OneDrive accounts for sharing links, together with SharePoint and OneDrive usage data. Scanning every drive can take a while on large tenants. Progress is shown next to the button, and the report refreshes itself once the scans finish. |
+| Sync data     | Queues scans of the tenant's SharePoint sites and OneDrive accounts for sharing links, together with SharePoint and OneDrive usage data. Scanning every drive can take a while on large tenants, particularly the first time. Progress is shown next to the button, and the report refreshes itself once the scans finish. |
 | Refresh       | The refresh icon reloads the report from the cached data without running a new scan. Use it when a scan has finished elsewhere, or when someone else has refreshed the cache.                                                                                                                |
 | Export Report | Opens a preview of the report as a PDF, which you can then download. Greyed out until the report has data.                                                                                                                                                                                   |
 
-The time of the last scan is shown as "Last data refresh."
+The time of the last completed scan is shown as "Last data refresh."
+
+Results are written as the scan works through the tenant, so the report fills in site by site rather than staying empty until every drive has been read. Refreshing part-way through shows what has been scanned so far, and the totals settle once the scan finishes.
+
+The first scan of a tenant reads every drive in full. Later syncs collect only what has changed since the previous one, so they finish considerably faster, and a full rescan is run periodically to catch anything a change-only pass would miss. A scan interrupted before it finishes, by a timeout on a large tenant for example, picks up where it stopped rather than starting the tenant over.
+
+Sites that could not be read keep the links an earlier scan found for them rather than dropping out of the report, so those rows may be out of date. Links belonging to sites or libraries that no longer exist in the tenant are removed once the scan finishes.
 
 ## Summary
 

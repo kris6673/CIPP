@@ -84,7 +84,7 @@ Renders a sample cover page using your current logo, cover image, colours, cover
 **Report Type Preview** switches the sample between the report types CIPP produces, each of which uses a different title and subtitle layout. **Preview full report** replaces the cover mock-up with a rendering of the real report document against sample data, which you can page through to see how colours, tables, charts and the footer land on content pages. **Show cover only** returns to the lighter cover preview.
 
 {% hint style="info" %}
-The preview reflects the unsaved state of the editor, so a colour or footer can be judged before it is committed. The sample figures exist only in the preview. A report run against a tenant with no data still shows that it has none.
+The preview reflects the unsaved state of the editor, so a colour or footer can be judged before it is committed. Variables are shown resolved rather than as tokens, using a sample tenant name and the report type currently selected, so `%tenantname%` reads the way it will on a real report. The sample figures exist only in the preview. A report run against a tenant with no data still shows that it has none.
 {% endhint %}
 
 ## Colors
@@ -134,13 +134,19 @@ Controls the strip at the bottom of every report page.
 
 Both text fields accept replacement variables. Typing `%` offers CIPP's variable list, and reports add `%reportname%` and `%reportdate%` on top of it. Matching is not case sensitive, and a variable CIPP cannot resolve is left written as typed rather than blanked, which is what tells you it was mistyped.
 
+The 200 character limit applies to the finished text as well as to the wording you type. Text that grows past it once the variables are filled in, typically because of a long tenant name, is trimmed to fit rather than printed past the edge of the page.
+
 {% hint style="info" %}
 Report templates can override the footer or switch it off for an individual report.
 {% endhint %}
 
 ## Watermark
 
-Draws text diagonally across every page of a report, the cover included, at low opacity. Typical wording is DRAFT or CONFIDENTIAL. Text is limited to 40 characters, and **Show watermark** switches it off without losing the wording.
+Draws text diagonally across every page of a report, the cover included, at low opacity. A fixed mark such as DRAFT or CONFIDENTIAL is typical. **Show watermark** switches it off without losing the wording, so entering text is enough to make it appear.
+
+The field takes replacement variables in the same way the footer does. Typing `%` offers CIPP's variable list plus `%reportname%` and `%reportdate%`, so `%tenantname%` stamps each report with the client it was run for.
+
+Text is limited to 40 characters. The limit applies to the finished mark as well as to the wording you type, so a tenant name that resolves longer than that is trimmed rather than stretched across the page.
 
 ## Saving and Resetting
 
