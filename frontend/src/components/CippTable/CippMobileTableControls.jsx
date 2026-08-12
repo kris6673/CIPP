@@ -3,35 +3,31 @@ import {
   Badge,
   Box,
   Button,
-  Checkbox,
-  Chip,
   Divider,
-  IconButton,
-  InputAdornment,
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  ListSubheader,
-  OutlinedInput,
-  Stack,
   SvgIcon,
   Typography,
 } from "@mui/material";
 import {
+  ModernSearchContainer,
+  ModernSearchInput,
+  ModernButton,
+  ModernIconButton,
+} from "./toolbar-primitives";
+import {
   ArrowDownward,
   ArrowUpward,
-  Check,
-  FilterList,
+  MoreVert,
   RestartAlt,
   Search,
   SwapVert,
-  Sync,
-  DataObject,
-  FileDownload,
-  PictureAsPdf,
+  TableChart,
 } from "@mui/icons-material";
 import { getCippTranslation } from "../../utils/get-cipp-translation";
 import { CippBottomSheet } from "../CippComponents/CippBottomSheet";
+import { CippTableFilterSheet } from "./CippTableFilterSheet";
 import { useSheetHandoff } from "../../hooks/use-sheet-handoff";
 
 // Presentational mobile controls for the card list. All filter/sort/visibility state and
@@ -48,6 +44,7 @@ export const CippMobileTableControls = (props) => {
     selectMode = false,
     onSelectModeChange,
     selectModeLocked = false,
+    onViewToggle,
     customBulkActions = [],
     onBulkAction,
     graphPresetItems = [],
@@ -66,6 +63,7 @@ export const CippMobileTableControls = (props) => {
     onViewApiResponse,
     fixedChrome = true,
     queueTracker,
+    dataSourceControls,
   } = props;
 
   const [sortOpen, setSortOpen] = useState(false);
@@ -97,26 +95,6 @@ export const CippMobileTableControls = (props) => {
   const totalCount = table.getFilteredRowModel().rows.length;
   const enabledBulkActions = customBulkActions.filter((action) => !action.disabled);
 
-  const renderPresetChips = (items, layer) => (
-    <Stack direction="row" useFlexGap flexWrap="wrap" spacing={1} sx={{ px: 2.25, py: 1 }}>
-      {items.map((filter) => {
-        const key = presetKey(filter);
-        const active = activeFilters[layer]?.id === key;
-        return (
-          <Chip
-            key={key}
-            label={filter.filterName}
-            color={active ? "primary" : "default"}
-            variant={active ? "filled" : "outlined"}
-            icon={active ? <Check /> : undefined}
-            onClick={() => onPresetClick(filter)}
-            sx={{ height: 36, borderRadius: 999 }}
-          />
-        );
-      })}
-    </Stack>
-  );
-
   return (
     <>
       <Box
@@ -128,67 +106,61 @@ export const CippMobileTableControls = (props) => {
           gap: 1,
           px: 1,
           py: 1,
-          bgcolor: "background.default",
+          // matches the card-view paper surface it sticks over
+          bgcolor: "background.paper",
           borderBottom: 1,
           borderColor: "divider",
         }}
       >
-        <OutlinedInput
-          fullWidth
-          type="search"
-          placeholder="Search…"
-          value={searchValue}
-          onChange={onSearchChange}
-          inputProps={{ enterKeyHint: "search", "aria-label": "Search" }}
-          startAdornment={
-            <InputAdornment position="start">
-              <Search fontSize="small" />
-            </InputAdornment>
-          }
-          sx={{ minHeight: 44, flex: 1, minWidth: 0 }}
-        />
+        <ModernSearchContainer elevation={0} sx={{ height: 44, flex: 1, minWidth: 0 }}>
+          <Search fontSize="small" sx={{ color: "text.secondary" }} />
+          <ModernSearchInput
+            type="search"
+            placeholder="Search…"
+            value={searchValue}
+            onChange={onSearchChange}
+            inputProps={{ enterKeyHint: "search", "aria-label": "Search" }}
+          />
+        </ModernSearchContainer>
         {selectionEnabled && !selectModeLocked && (
-          <Button
-            variant="outlined"
-            color="inherit"
+          <ModernButton
             onClick={() => onSelectModeChange?.(!selectMode)}
-            sx={{ minHeight: 44, flexShrink: 0, px: 1.5, borderColor: "divider" }}
+            sx={{ height: 44, flexShrink: 0 }}
           >
             {selectMode ? "Cancel" : "Select"}
-          </Button>
+          </ModernButton>
         )}
-        <IconButton
+        <ModernIconButton
           aria-label="Sort"
           onClick={() => setSortOpen(true)}
-          sx={{
-            minWidth: 44,
-            minHeight: 44,
-            border: 1,
-            borderColor: sorting.length ? "primary.main" : "divider",
-            borderRadius: 1,
-            color: sorting.length ? "primary.main" : "inherit",
-            flexShrink: 0,
-          }}
+          sx={sorting.length ? { borderColor: "primary.main", color: "primary.main" } : undefined}
         >
           <SwapVert fontSize="small" />
-        </IconButton>
-        <IconButton
-          aria-label="Filters"
+        </ModernIconButton>
+        {/* kebab, the sheet is a grab-bag (presets, fields, export, refresh), not just filters */}
+        <ModernIconButton
+          aria-label="Table options"
           onClick={() => setFilterOpen(true)}
-          sx={{
-            minWidth: 44,
-            minHeight: 44,
-            border: 1,
-            borderColor: activeSlotCount > 0 ? "primary.main" : "divider",
-            borderRadius: 1,
-            color: activeSlotCount > 0 ? "primary.main" : "inherit",
-            flexShrink: 0,
-          }}
+          sx={
+            activeSlotCount > 0
+              ? { borderColor: "primary.main", color: "primary.main" }
+              : undefined
+          }
         >
           <Badge badgeContent={activeSlotCount} color="primary">
-            <FilterList fontSize="small" />
+            <MoreVert fontSize="small" />
           </Badge>
-        </IconButton>
+        </ModernIconButton>
+        {onViewToggle && (
+          <ModernIconButton
+            aria-label="Toggle table view"
+            aria-pressed={false}
+            onClick={onViewToggle}
+          >
+            {/* destination icon: tapping here opens the table */}
+            <TableChart fontSize="small" />
+          </ModernIconButton>
+        )}
       </Box>
       {queueTracker && <Box sx={{ px: 1.5, py: 0.5 }}>{queueTracker}</Box>}
 
@@ -237,114 +209,28 @@ export const CippMobileTableControls = (props) => {
       </CippBottomSheet>
 
       {/* Filter sheet — presets first, then card fields, then table utilities */}
-      <CippBottomSheet
+      <CippTableFilterSheet
         open={filterOpen}
         onClose={filterSheet.cancel}
         onExited={filterSheet.handleExited}
-        title="Filters"
-        footer={
-          <Button fullWidth variant="contained" sx={{ minHeight: 44 }} onClick={() => setFilterOpen(false)}>
-            Done
-          </Button>
-        }
-      >
-        {tablePresetItems.length > 0 && (
-          <>
-            <ListSubheader disableSticky sx={{ bgcolor: "transparent" }}>
-              Presets
-            </ListSubheader>
-            {renderPresetChips(tablePresetItems, "table")}
-          </>
-        )}
-        {graphPresetItems.length > 0 && (
-          <>
-            <ListSubheader disableSticky sx={{ bgcolor: "transparent" }}>
-              Graph filters
-            </ListSubheader>
-            {renderPresetChips(graphPresetItems, "graph")}
-          </>
-        )}
-        {columnItems.length > 0 && (
-          <>
-            <ListSubheader disableSticky sx={{ bgcolor: "transparent" }}>
-              Fields shown
-            </ListSubheader>
-            {columnItems.map((column) => (
-              <ListItemButton
-                key={column.id}
-                dense
-                onClick={() => onToggleColumn(column.id, column.visible)}
-                sx={{ minHeight: 44, py: 0 }}
-              >
-                <Checkbox checked={column.visible} size="small" sx={{ mr: 1 }} tabIndex={-1} />
-                <ListItemText primary={getCippTranslation(column.id)} />
-              </ListItemButton>
-            ))}
-          </>
-        )}
-        <Divider sx={{ my: 1 }} />
-        <ListItemButton
-          onClick={() => {
-            onResetFilters();
-            setFilterOpen(false);
-          }}
-          sx={{ minHeight: 48 }}
-        >
-          <ListItemIcon sx={{ minWidth: 40 }}>
-            <RestartAlt fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="Reset all filters" />
-        </ListItemButton>
-        {onEditGraphFilters && (
-          <ListItemButton
-            onClick={() => filterSheet.run(onEditGraphFilters)}
-            sx={{ minHeight: 48 }}
-          >
-            <ListItemIcon sx={{ minWidth: 40 }}>
-              <FilterList fontSize="small" />
-            </ListItemIcon>
-            <ListItemText primary="Edit graph filters" />
-          </ListItemButton>
-        )}
-        {exportEnabled && (
-          <>
-            <ListItemButton onClick={onExportCsv} sx={{ minHeight: 48 }}>
-              <ListItemIcon sx={{ minWidth: 40 }}>
-                <FileDownload fontSize="small" />
-              </ListItemIcon>
-              <ListItemText primary="Export to CSV" />
-            </ListItemButton>
-            <ListItemButton onClick={onExportPdf} sx={{ minHeight: 48 }}>
-              <ListItemIcon sx={{ minWidth: 40 }}>
-                <PictureAsPdf fontSize="small" />
-              </ListItemIcon>
-              <ListItemText primary="Export to PDF" />
-            </ListItemButton>
-          </>
-        )}
-        <ListItemButton
-          onClick={() => filterSheet.run(onViewApiResponse)}
-          sx={{ minHeight: 48 }}
-        >
-          <ListItemIcon sx={{ minWidth: 40 }}>
-            <DataObject fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="View API response" />
-        </ListItemButton>
-        <ListItemButton
-          disabled={isRefreshing}
-          onClick={() => {
-            onRefresh();
-            setFilterOpen(false);
-          }}
-          sx={{ minHeight: 48 }}
-        >
-          <ListItemIcon sx={{ minWidth: 40 }}>
-            <Sync fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary={isRefreshing ? "Refreshing…" : "Refresh data"} />
-        </ListItemButton>
-      </CippBottomSheet>
+        run={filterSheet.run}
+        tablePresetItems={tablePresetItems}
+        graphPresetItems={graphPresetItems}
+        activeFilters={activeFilters}
+        presetKey={presetKey}
+        onPresetClick={onPresetClick}
+        columnItems={columnItems}
+        onToggleColumn={onToggleColumn}
+        onResetFilters={onResetFilters}
+        onEditGraphFilters={onEditGraphFilters}
+        exportEnabled={exportEnabled}
+        onExportCsv={onExportCsv}
+        onExportPdf={onExportPdf}
+        onViewApiResponse={onViewApiResponse}
+        onRefresh={onRefresh}
+        isRefreshing={isRefreshing}
+        dataSourceControls={dataSourceControls}
+      />
 
       {/* Bulk action bar — bottom, in thumb reach, instead of the desktop top-toolbar strip */}
       {selectMode && selectionEnabled && (

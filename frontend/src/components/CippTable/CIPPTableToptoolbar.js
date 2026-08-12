@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import {
+  Badge,
   Box,
   Button,
   Menu,
@@ -11,8 +13,6 @@ import {
   IconButton,
   Tooltip,
   Typography,
-  InputBase,
-  Paper,
   Checkbox,
   SvgIcon,
   Dialog,
@@ -33,12 +33,12 @@ import {
   Check as CheckIcon,
   MoreVert as MoreVertIcon,
   Fullscreen as FullscreenIcon,
+  ViewAgenda,
 } from '@mui/icons-material'
 import {
   ExclamationCircleIcon,
   ChevronDownIcon,
 } from '@heroicons/react/24/outline'
-import { styled, alpha } from '@mui/material/styles'
 import { PDFExportButton, exportRowsToPdf } from '../pdfExportButton'
 import { CSVExportButton, exportRowsToCsv } from '../csvExportButton'
 import { getCippTranslation } from '../../utils/get-cipp-translation'
@@ -57,91 +57,15 @@ import GraphExplorerPresets from '../../data/GraphExplorerPresets.json'
 import CippGraphExplorerFilter from './CippGraphExplorerFilter'
 import { Stack } from '@mui/system'
 import { CippMobileTableControls } from './CippMobileTableControls'
+import { CippTableFilterSheet } from './CippTableFilterSheet'
+import { useSheetHandoff } from '../../hooks/use-sheet-handoff'
 
-// Styled components for modern design
-const ModernSearchContainer = styled(Paper)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  width: '100%',
-  maxWidth: '300px',
-  minWidth: '200px',
-  height: '40px',
-  backgroundColor: theme.palette.mode === 'dark' ? '#2A2D3A' : '#F8F9FA',
-  border: `1px solid ${theme.palette.mode === 'dark' ? '#404040' : '#E0E0E0'}`,
-  borderRadius: '8px',
-  padding: '0 12px',
-  '&:hover': {
-    borderColor: theme.palette.primary.main,
-  },
-  '&:focus-within': {
-    borderColor: theme.palette.primary.main,
-    boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`,
-  },
-  [theme.breakpoints.down('md')]: {
-    minWidth: '0',
-    maxWidth: 'none',
-    flex: 1,
-  },
-}))
-
-const ModernSearchInput = styled(InputBase)(({ theme }) => ({
-  marginLeft: theme.spacing(1),
-  flex: 1,
-  fontSize: '14px',
-  '& .MuiInputBase-input': {
-    padding: '8px 0',
-    '&::placeholder': {
-      color: theme.palette.text.secondary,
-      opacity: 0.7,
-    },
-  },
-}))
-
-const ModernButton = styled(Button)(({ theme }) => ({
-  height: '40px',
-  borderRadius: '8px',
-  textTransform: 'none',
-  fontWeight: 500,
-  fontSize: '14px',
-  padding: '8px 16px',
-  backgroundColor: theme.palette.mode === 'dark' ? '#2A2D3A' : '#F8F9FA',
-  border: `1px solid ${theme.palette.mode === 'dark' ? '#404040' : '#E0E0E0'}`,
-  color: theme.palette.text.primary,
-  minWidth: 'auto',
-  whiteSpace: 'nowrap',
-  '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? '#363A4A' : '#F0F0F0',
-    borderColor: theme.palette.primary.main,
-  },
-  '& .MuiButton-startIcon': {
-    marginRight: '8px',
-  },
-  '& .MuiButton-endIcon': {
-    marginLeft: '8px',
-  },
-  [theme.breakpoints.down('md')]: {
-    padding: '8px 12px',
-    fontSize: '13px',
-    '& .MuiButton-startIcon': {
-      marginRight: '6px',
-    },
-    '& .MuiButton-endIcon': {
-      marginLeft: '6px',
-    },
-  },
-  [theme.breakpoints.down('sm')]: {
-    padding: '8px 10px',
-    fontSize: '12px',
-    '& .MuiButton-startIcon': {
-      marginRight: '4px',
-    },
-    '& .MuiButton-endIcon': {
-      marginLeft: '4px',
-    },
-  },
-}))
-
-const RefreshButton = styled(IconButton)(({ theme }) => ({}))
+import {
+  ModernSearchContainer,
+  ModernSearchInput,
+  ModernButton,
+  RefreshButton,
+} from './toolbar-primitives'
 
 export const CIPPTableToptoolbar = React.memo(
   ({
@@ -173,13 +97,31 @@ export const CIPPTableToptoolbar = React.memo(
     selectMode = false,
     onSelectModeChange,
     selectModeLocked = false,
+    onViewToggle,
+    tableViewActive = false,
+    showReturnToCards = false,
+    // when set, the selection count + Bulk Actions button portal into this node
+    // (the Card header's slot) rather than rendering inline in the toolbar
+    bulkActionsSlot = null,
+    // Live/Cached data-source controls, rendered in the mobile Table options sheet
+    dataSourceControls,
+    // Owned by CippDataTable: this toolbar mounts as two alternating instances (the cards
+    // branch and the renderTopToolbar branch), so state that must survive the cards<->table
+    // flip is passed down as props rather than kept in local useState/useRef here.
+    activeFilters = { graph: null, table: null },
+    setActiveFilters,
+    searchValue = '',
+    setSearchValue,
+    restoredFiltersRef,
   }) => {
     const popover = usePopover()
     const [filtersAnchor, setFiltersAnchor] = useState(null)
     const [columnsAnchor, setColumnsAnchor] = useState(null)
     const [exportAnchor, setExportAnchor] = useState(null)
     const [actionMenuAnchor, setActionMenuAnchor] = useState(null)
-    const [searchValue, setSearchValue] = useState('')
+    const [mobileFilterSheetOpen, setMobileFilterSheetOpen] = useState(false)
+    // table branch's own handoff instance — the cards branch (CippMobileTableControls) owns a separate one
+    const mobileFilterSheet = useSheetHandoff(() => setMobileFilterSheetOpen(false))
 
     const mdDown = useMediaQuery((theme) => theme.breakpoints.down('md'))
     const settings = useSettings()
@@ -200,13 +142,8 @@ export const CIPPTableToptoolbar = React.memo(
     const [originalSimpleColumns, setOriginalSimpleColumns] =
       useState(simpleColumns)
     const [filterCanvasVisible, setFilterCanvasVisible] = useState(false)
-    const [activeFilters, setActiveFilters] = useState({
-      graph: null,
-      table: null,
-    })
     const presetKey = (filter) => filter?.id ?? filter?.filterName
     const pageName = router.pathname.split('/').slice(1).join('/')
-    const currentTenant = settings?.currentTenant
     const [useCompactMode, setUseCompactMode] = useState(false)
     const toolbarRef = useRef(null)
     const leftContainerRef = useRef(null)
@@ -321,42 +258,11 @@ export const CIPPTableToptoolbar = React.memo(
       closeMenu()
     }
 
-    // Track if we've restored filters for this page to prevent infinite loops
-    const restoredFiltersRef = useRef(new Set())
-
-    useEffect(() => {
-      //if usedData changes, deselect all rows
-      table.toggleAllRowsSelected(false)
-    }, [usedData])
-
-    // Sync currentEffectiveQueryKey with queryKey prop changes (e.g., tenant changes)
+    // Sync currentEffectiveQueryKey with queryKey prop changes (e.g., tenant changes) — a
+    // plain re-derivation from the same props this instance was given, harmless on remount
     useEffect(() => {
       setCurrentEffectiveQueryKey(queryKey || title)
-      // Clear active filter name when query key changes (page load, tenant change, etc.)
-      setActiveFilters({ graph: null, table: null })
     }, [queryKey, title])
-
-    //if the currentTenant Switches, remove Graph filters
-    useEffect(() => {
-      if (currentTenant) {
-        setGraphFilterData({})
-        // Clear active filter name when tenant changes
-        setActiveFilters({ graph: null, table: null })
-        // Clear restoration tracking so saved filters can be re-applied
-        const restorationKey = `${pageName}-graph`
-        restoredFiltersRef.current.delete(restorationKey)
-      }
-    }, [currentTenant, pageName])
-
-    //useEffect to set the column visibility to the preferred columns if they exist
-    useEffect(() => {
-      if (
-        settings?.columnDefaults?.[pageName] &&
-        Object.keys(settings?.columnDefaults?.[pageName]).length > 0
-      ) {
-        setColumnVisibility(settings?.columnDefaults?.[pageName])
-      }
-    }, [settings?.columnDefaults?.[pageName], router, usedColumns])
 
     useEffect(() => {
       setOriginalSimpleColumns(simpleColumns)
@@ -435,11 +341,6 @@ export const CIPPTableToptoolbar = React.memo(
       queryKey,
       title,
     ])
-
-    // Clear restoration tracking when page changes
-    useEffect(() => {
-      restoredFiltersRef.current.clear()
-    }, [pageName])
 
     // Detect overflow and switch to compact mode
     useEffect(() => {
@@ -990,6 +891,72 @@ export const CIPPTableToptoolbar = React.memo(
       </MenuItem>
     )
 
+    // count + button share this gate whether rendered inline or portaled into the header
+    const bulkActionsContent = (
+      <>
+        {(table.getIsAllRowsSelected() || table.getIsSomeRowsSelected()) && (
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+              fontSize: { xs: '12px', md: '14px' },
+              whiteSpace: 'nowrap',
+              mr: 1,
+            }}
+          >
+            {table.getSelectedRowModel().rows.length} rows selected
+          </Typography>
+        )}
+
+        {showBulkActionsButton && (
+          <Button
+            onClick={popover.handleOpen}
+            ref={popover.anchorRef}
+            startIcon={
+              <SvgIcon fontSize="small">
+                <ChevronDownIcon />
+              </SvgIcon>
+            }
+            variant="outlined"
+            size="small"
+            sx={{
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
+              minWidth: 'auto',
+              height: '32px',
+              fontSize: { xs: '12px', md: '14px' },
+              mr: 1,
+            }}
+          >
+            Bulk Actions
+          </Button>
+        )}
+      </>
+    )
+
+    // feeds both CippMobileTableControls (cards) and CippTableFilterSheet (table branch)
+    const mobileColumnItems = table
+      .getAllColumns()
+      .filter((column) => !column.id.startsWith('mrt-'))
+      .map((column) => ({
+        id: column.id,
+        visible: Boolean(column.getIsVisible()),
+      }))
+    const handleToggleColumn = (columnId, visible) =>
+      setColumnVisibility({ ...columnVisibility, [columnId]: !visible })
+    const handleExportCsvClick = () =>
+      document.querySelector(`[data-csv-export="${title}"]`)?.click()
+    const handleExportPdfClick = () =>
+      document.querySelector(`[data-pdf-export="${title}"]`)?.click()
+    const handleViewApiResponse = () =>
+      isInDialog ? setJsonDialogOpen(true) : setOffcanvasVisible(true)
+    const handleEditGraphFilters =
+      api?.url === '/api/ListGraphRequest' ? () => setFilterCanvasVisible(true) : undefined
+    const handleResetFilters = () => setTableFilter('', 'reset', '')
+    const mobileIsRefreshing = Boolean(
+      getRequestData?.isFetching || refreshFunction?.isFetching
+    )
+
     return (
       <>
         {viewMode === 'cards' ? (
@@ -998,13 +965,12 @@ export const CIPPTableToptoolbar = React.memo(
             searchValue={searchValue}
             onSearchChange={handleSearchChange}
             onRefresh={handleRefresh}
-            isRefreshing={Boolean(
-              getRequestData?.isFetching || refreshFunction?.isFetching
-            )}
+            isRefreshing={mobileIsRefreshing}
             selectionEnabled={Boolean(table.options.enableRowSelection)}
             selectMode={selectMode}
             onSelectModeChange={onSelectModeChange}
             selectModeLocked={selectModeLocked}
+            onViewToggle={onViewToggle}
             customBulkActions={customBulkActions}
             onBulkAction={handleBulkAction}
             graphPresetItems={graphPresetItems}
@@ -1013,32 +979,14 @@ export const CIPPTableToptoolbar = React.memo(
             activeSlotCount={activeSlotCount}
             presetKey={presetKey}
             onPresetClick={handlePresetClick}
-            onResetFilters={() => setTableFilter('', 'reset', '')}
-            onEditGraphFilters={
-              api?.url === '/api/ListGraphRequest'
-                ? () => setFilterCanvasVisible(true)
-                : undefined
-            }
-            columnItems={table
-              .getAllColumns()
-              .filter((column) => !column.id.startsWith('mrt-'))
-              .map((column) => ({
-                id: column.id,
-                visible: Boolean(column.getIsVisible()),
-              }))}
-            onToggleColumn={(columnId, visible) =>
-              setColumnVisibility({ ...columnVisibility, [columnId]: !visible })
-            }
+            onResetFilters={handleResetFilters}
+            onEditGraphFilters={handleEditGraphFilters}
+            columnItems={mobileColumnItems}
+            onToggleColumn={handleToggleColumn}
             exportEnabled={exportEnabled}
-            onExportCsv={() =>
-              document.querySelector(`[data-csv-export="${title}"]`)?.click()
-            }
-            onExportPdf={() =>
-              document.querySelector(`[data-pdf-export="${title}"]`)?.click()
-            }
-            onViewApiResponse={() =>
-              isInDialog ? setJsonDialogOpen(true) : setOffcanvasVisible(true)
-            }
+            onExportCsv={handleExportCsvClick}
+            onExportPdf={handleExportPdfClick}
+            onViewApiResponse={handleViewApiResponse}
             fixedChrome={!isInDialog}
             queueTracker={
               queueMetadata?.QueueId ? (
@@ -1049,8 +997,10 @@ export const CIPPTableToptoolbar = React.memo(
                 />
               ) : undefined
             }
+            dataSourceControls={dataSourceControls}
           />
         ) : (
+        <>
         <Box
           ref={toolbarRef}
           sx={{
@@ -1076,48 +1026,50 @@ export const CIPPTableToptoolbar = React.memo(
               minWidth: 0,
             }}
           >
-            {/* Refresh Button */}
-            <Tooltip
-              title={
-                getRequestData?.isFetchNextPageError
-                  ? 'Could not retrieve all data. Click to try again.'
-                  : getRequestData?.isFetching
-                    ? 'Retrieving more data...'
-                    : 'Refresh data'
-              }
-            >
-              <span>
-                <RefreshButton
-                  onClick={handleRefresh}
-                  disabled={
-                    getRequestData?.isLoading ||
-                    getRequestData?.isFetching ||
-                    refreshFunction?.isFetching
-                  }
-                >
-                  <SvgIcon
-                    fontSize="small"
-                    sx={{
-                      animation:
-                        getRequestData?.isFetching ||
-                        refreshFunction?.isFetching
-                          ? 'spin 1s linear infinite'
-                          : 'none',
-                      '@keyframes spin': {
-                        '0%': { transform: 'rotate(0deg)' },
-                        '100%': { transform: 'rotate(-360deg)' },
-                      },
-                    }}
+            {/* phones refresh from the options sheet instead */}
+            {!mdDown && (
+              <Tooltip
+                title={
+                  getRequestData?.isFetchNextPageError
+                    ? 'Could not retrieve all data. Click to try again.'
+                    : getRequestData?.isFetching
+                      ? 'Retrieving more data...'
+                      : 'Refresh data'
+                }
+              >
+                <span>
+                  <RefreshButton
+                    onClick={handleRefresh}
+                    disabled={
+                      getRequestData?.isLoading ||
+                      getRequestData?.isFetching ||
+                      refreshFunction?.isFetching
+                    }
                   >
-                    {getRequestData?.isFetchNextPageError ? (
-                      <ExclamationCircleIcon color="red" />
-                    ) : (
-                      <Sync />
-                    )}
-                  </SvgIcon>
-                </RefreshButton>
-              </span>
-            </Tooltip>
+                    <SvgIcon
+                      fontSize="small"
+                      sx={{
+                        animation:
+                          getRequestData?.isFetching ||
+                          refreshFunction?.isFetching
+                            ? 'spin 1s linear infinite'
+                            : 'none',
+                        '@keyframes spin': {
+                          '0%': { transform: 'rotate(0deg)' },
+                          '100%': { transform: 'rotate(-360deg)' },
+                        },
+                      }}
+                    >
+                      {getRequestData?.isFetchNextPageError ? (
+                        <ExclamationCircleIcon color="red" />
+                      ) : (
+                        <Sync />
+                      )}
+                    </SvgIcon>
+                  </RefreshButton>
+                </span>
+              </Tooltip>
+            )}
 
             {/* Search Input */}
             <ModernSearchContainer elevation={0}>
@@ -1228,8 +1180,8 @@ export const CIPPTableToptoolbar = React.memo(
               </Box>
             )}
 
-            {/* Mobile/Compact Action Button */}
-            {(mdDown || useCompactMode) && !hasSelection && (
+            {/* Compact Action Button — desktop compact mode only, the phone table uses the filter sheet */}
+            {!mdDown && useCompactMode && !hasSelection && (
               <IconButton
                 onClick={(event) => setActionMenuAnchor(event.currentTarget)}
                 sx={{ flexShrink: 0 }}
@@ -1238,7 +1190,50 @@ export const CIPPTableToptoolbar = React.memo(
               </IconButton>
             )}
 
-            {/* Mobile Action Menu */}
+            {/* phones keep the kebab open regardless of selection, the only route to the
+                sheet (refresh, export, rows-per-page) down there, not just filters */}
+            {(mdDown || (useCompactMode && !hasSelection)) && (
+              <IconButton
+                aria-label={mdDown ? 'Table options' : 'Filters'}
+                onClick={(event) => {
+                  if (mdDown) {
+                    setMobileFilterSheetOpen(true)
+                    return
+                  }
+                  setFiltersAnchor(event.currentTarget)
+                }}
+                sx={{
+                  flexShrink: 0,
+                  ...(mdDown && activeSlotCount > 0 && { color: 'primary.main' }),
+                }}
+              >
+                {mdDown ? (
+                  <Badge badgeContent={activeSlotCount} color="primary">
+                    <MoreVertIcon />
+                  </Badge>
+                ) : (
+                  <FilterListIcon />
+                )}
+              </IconButton>
+            )}
+
+            {/* way back to cards, far right to match the card bar's toggle position */}
+            {tableViewActive && showReturnToCards && (
+              <Tooltip title="Return to card view">
+                <RefreshButton
+                  onClick={onViewToggle}
+                  aria-label="Toggle table view"
+                  aria-pressed={true}
+                >
+                  <SvgIcon fontSize="small">
+                    {/* destination icon: tapping here returns to cards */}
+                    <ViewAgenda />
+                  </SvgIcon>
+                </RefreshButton>
+              </Tooltip>
+            )}
+
+            {/* Compact Action Menu — desktop compact mode only */}
             <Menu
               anchorEl={actionMenuAnchor}
               open={Boolean(actionMenuAnchor)}
@@ -1254,17 +1249,6 @@ export const CIPPTableToptoolbar = React.memo(
               {/* Anchor the nested menus to the stable overflow IconButton — anchoring to
                   event.currentTarget here targets a MenuItem inside a menu that closes in
                   the same tick, which positions the next popover unpredictably. */}
-              <MenuItem
-                onClick={() => {
-                  setFiltersAnchor(actionMenuAnchor)
-                  setActionMenuAnchor(null)
-                }}
-              >
-                <ListItemIcon>
-                  <FilterListIcon />
-                </ListItemIcon>
-                <ListItemText>Filters</ListItemText>
-              </MenuItem>
               <MenuItem
                 onClick={() => {
                   setColumnsAnchor(actionMenuAnchor)
@@ -1515,46 +1499,8 @@ export const CIPPTableToptoolbar = React.memo(
               mt: { xs: 1, md: 0 },
             }}
           >
-            {/* Selected rows indicator */}
-            {(table.getIsAllRowsSelected() ||
-              table.getIsSomeRowsSelected()) && (
-              <Typography
-                variant="body2"
-                sx={{
-                  color: 'text.secondary',
-                  fontSize: { xs: '12px', md: '14px' },
-                  whiteSpace: 'nowrap',
-                  mr: 1,
-                }}
-              >
-                {table.getSelectedRowModel().rows.length} rows selected
-              </Typography>
-            )}
-
-            {/* Bulk Actions - inline with toolbar */}
-            {showBulkActionsButton && (
-              <Button
-                onClick={popover.handleOpen}
-                ref={popover.anchorRef}
-                startIcon={
-                  <SvgIcon fontSize="small">
-                    <ChevronDownIcon />
-                  </SvgIcon>
-                }
-                variant="outlined"
-                size="small"
-                sx={{
-                  flexShrink: 0,
-                  whiteSpace: 'nowrap',
-                  minWidth: 'auto',
-                  height: '32px',
-                  fontSize: { xs: '12px', md: '14px' },
-                  mr: 1,
-                }}
-              >
-                Bulk Actions
-              </Button>
-            )}
+            {/* Selected rows indicator + Bulk Actions - inline, unless portaled into the header */}
+            {!bulkActionsSlot && bulkActionsContent}
 
             {/* Queue tracker */}
             <CippQueueTracker
@@ -1565,7 +1511,35 @@ export const CIPPTableToptoolbar = React.memo(
           </Box>
 
         </Box>
+        <CippTableFilterSheet
+          open={mobileFilterSheetOpen}
+          onClose={mobileFilterSheet.cancel}
+          onExited={mobileFilterSheet.handleExited}
+          run={mobileFilterSheet.run}
+          tablePresetItems={tablePresetItems}
+          graphPresetItems={graphPresetItems}
+          activeFilters={activeFilters}
+          presetKey={presetKey}
+          onPresetClick={handlePresetClick}
+          columnItems={mobileColumnItems}
+          onToggleColumn={handleToggleColumn}
+          onResetFilters={handleResetFilters}
+          onEditGraphFilters={handleEditGraphFilters}
+          exportEnabled={exportEnabled}
+          onExportCsv={handleExportCsvClick}
+          onExportPdf={handleExportPdfClick}
+          onViewApiResponse={handleViewApiResponse}
+          onRefresh={handleRefresh}
+          isRefreshing={mobileIsRefreshing}
+          pageSize={table.getState().pagination.pageSize}
+          onPageSizeChange={(size) => table.setPageSize(size)}
+          pageSizeOptions={[25, 50, 100, 250, 500]}
+          dataSourceControls={dataSourceControls}
+        />
+        </>
         )}
+
+        {bulkActionsSlot && createPortal(bulkActionsContent, bulkActionsSlot)}
 
         {/* Hidden export buttons for triggering — outside the mode branch so the
             mobile filter sheet's export items can click them too */}

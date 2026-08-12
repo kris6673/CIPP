@@ -14,6 +14,7 @@ import { ResourceUnavailable } from '../resource-unavailable'
 import { ResourceError } from '../resource-error'
 import { Scrollbar } from '../scrollbar'
 import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
+import { useRouter } from 'next/router'
 import { ApiGetCallWithPagination } from '../../api/ApiCall'
 import { utilTableMode } from './util-tablemode'
 import {
@@ -26,13 +27,14 @@ import { CippOffCanvas } from '../CippComponents/CippOffCanvas'
 import { useDialog } from '../../hooks/use-dialog'
 import { CippApiDialog } from '../CippComponents/CippApiDialog'
 import { getCippError } from '../../utils/get-cipp-error'
-import { Box } from '@mui/system'
+import { Box, Stack } from '@mui/system'
 import { useSettings } from '../../hooks/use-settings'
 import { parseCippDate } from '../../utils/parse-cipp-date'
 import { isEqual } from 'lodash' // Import lodash for deep comparison
 import { useLicenseBackfill } from '../../hooks/use-license-backfill'
-import { useTableViewMode } from '../../hooks/use-breakpoint'
+import { useTableViewMode, useIsNarrowForTables } from '../../hooks/use-breakpoint'
 import { CippMobileCardList } from './CippMobileCardList'
+import { CippPageActionsFab } from '../CippComponents/CippPageActionsFab'
 
 // Resolve dot-delimited property paths against arbitrary data objects.
 const getNestedValue = (source, path) => {
@@ -81,6 +83,22 @@ const compareNullable = (aVal, bVal) => {
     return 0
   }
   return aVal > bVal ? 1 : -1
+}
+
+// walk up from the toggled node to the page's scrolling ancestor (LayoutContainer,
+// overflowY auto) and reset it, so a narrow-table height measurement taken right after
+// starts from a deterministic scroll position
+const scrollScrollableAncestorToTop = (node) => {
+  let ancestor = node?.parentElement
+  while (ancestor && ancestor !== document.body) {
+    const overflowY = window.getComputedStyle(ancestor).overflowY
+    if (overflowY === 'auto' || overflowY === 'scroll') {
+      ancestor.scrollTop = 0
+      return
+    }
+    ancestor = ancestor.parentElement
+  }
+  window.scrollTo(0, 0)
 }
 
 // ── Module-level constants ──────────────────────────────────────────────────
@@ -393,6 +411,7 @@ export const CippDataTable = (props) => {
     showBulkExportAction = true,
     viewMode: viewModeProp,
     mobileCard,
+    dataSourceControls,
   } = props
 
   // Create a map of column IDs to their filterType for quick lookup
@@ -436,16 +455,40 @@ export const CippDataTable = (props) => {
   const [columnFilters, setColumnFilters] = useState([])
   const waitingBool = api?.url ? true : false
 
+  // The cards branch and the renderTopToolbar branch are two alternating CIPPTableToptoolbar
+  // instances (only one is ever mounted), so state that must survive the cards<->table flip
+  // lives here and is passed down as props to both.
+  const [activeFilters, setActiveFilters] = useState({ graph: null, table: null })
+  const [searchValue, setSearchValue] = useState('')
+  const restoredFiltersRef = useRef(new Set())
+
   const settings = useSettings()
+  const router = useRouter()
+  const pageName = router.pathname.split('/').slice(1).join('/')
 
   // 'cards' below the md breakpoint (or when forced via settings/prop), 'table' otherwise.
   // simple tables always resolve to 'table'.
   const resolvedViewMode = useTableViewMode({ viewMode: viewModeProp, simple })
-  const isCardView = resolvedViewMode === 'cards'
+  // same pivot as the cards/table auto mode, so the FAB and the card list agree on width
+  const isNarrowViewport = useIsNarrowForTables()
+  // viewMode prop or simple is a hard force, the toggle never overrides it
+  const toggleAllowed = !viewModeProp && !simple
   // Mobile select mode: checkboxes on cards + the bottom bulk bar. Lives here so the
   // toolbar (which renders the Select toggle) and the card list stay in sync. Picker
   // tables (onChange) force it on — selection is their entire purpose.
   const [mobileSelectMode, setMobileSelectMode] = useState(false)
+  // portal target for the header's bulk-actions slot, set by the CardHeader's ref callback
+  const [headerBulkSlot, setHeaderBulkSlot] = useState(null)
+
+  // transient cards<->table override, session-only, never persisted
+  const [viewOverride, setViewOverride] = useState(null)
+  const effectiveViewMode = toggleAllowed ? (viewOverride ?? resolvedViewMode) : resolvedViewMode
+  const isCardView = effectiveViewMode === 'cards'
+  const tableViewActive = effectiveViewMode === 'table'
+  const CardViewSurface = noCard ? Box : Card
+  const [narrowTableMaxHeight, setNarrowTableMaxHeight] = useState(null)
+  // way back button: table is only up because of the override, phone default is still cards
+  const showReturnToCards = toggleAllowed && tableViewActive && resolvedViewMode === 'cards'
 
   // Hook to trigger re-render when license backfill completes
   const { updateTrigger } = useLicenseBackfill()
@@ -645,6 +688,62 @@ export const CippDataTable = (props) => {
     filterTypeMap,
   ])
 
+  // Previous-value refs for the guards below: CippDataTable is the single owner of this
+  // state across both toolbar instances, so an effect can compare against the last value
+  // it actually saw rather than firing unconditionally on every render.
+  const prevTenantRef = useRef(settings?.currentTenant)
+  const prevQueryKeyRef = useRef(queryKey || title)
+  const prevPageNameRef = useRef(pageName)
+  const appliedColumnDefaultsRef = useRef({})
+
+  // if the currentTenant switches, remove graph filters and the active-filter highlight
+  useEffect(() => {
+    const currentTenant = settings?.currentTenant
+    if (prevTenantRef.current === currentTenant) {
+      return
+    }
+    prevTenantRef.current = currentTenant
+    if (currentTenant) {
+      setGraphFilterData({})
+      setActiveFilters({ graph: null, table: null })
+      restoredFiltersRef.current.delete(`${pageName}-graph`)
+    }
+  }, [settings?.currentTenant, pageName])
+
+  // clear the active-filter highlight when the effective query key changes (tenant swap,
+  // different queryKey/title)
+  useEffect(() => {
+    const effectiveKey = queryKey || title
+    if (prevQueryKeyRef.current === effectiveKey) {
+      return
+    }
+    prevQueryKeyRef.current = effectiveKey
+    setActiveFilters({ graph: null, table: null })
+  }, [queryKey, title])
+
+  // clear persisted-filter restoration tracking only when the page actually changes
+  useEffect(() => {
+    if (prevPageNameRef.current === pageName) {
+      return
+    }
+    prevPageNameRef.current = pageName
+    restoredFiltersRef.current.clear()
+  }, [pageName])
+
+  // apply preferred columns once per page, and again whenever the saved preference's
+  // identity changes
+  useEffect(() => {
+    const preferred = settings?.columnDefaults?.[pageName]
+    if (
+      preferred &&
+      Object.keys(preferred).length > 0 &&
+      appliedColumnDefaultsRef.current[pageName] !== preferred
+    ) {
+      appliedColumnDefaultsRef.current[pageName] = preferred
+      setColumnVisibility(preferred)
+    }
+  }, [settings?.columnDefaults?.[pageName], pageName])
+
   const createDialog = useDialog()
   const hasActions = !!actions
   const hasOffCanvas = !!offCanvas
@@ -662,7 +761,8 @@ export const CippDataTable = (props) => {
         onChange,
         maxHeightOffset,
         settings,
-        resolvedViewMode
+        effectiveViewMode,
+        isNarrowViewport
       ),
     [
       simple,
@@ -671,7 +771,8 @@ export const CippDataTable = (props) => {
       hasOnChange,
       maxHeightOffset,
       settings?.tablePageSize?.value,
-      resolvedViewMode,
+      effectiveViewMode,
+      isNarrowViewport,
     ]
   )
 
@@ -855,6 +956,16 @@ export const CippDataTable = (props) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // the flipped table shows whatever columns are visible; horizontal scroll covers the width
+  const handleViewToggle = useCallback((event) => {
+    const nextView = effectiveViewMode === 'table' ? 'cards' : 'table'
+    setViewOverride(nextView)
+    if (nextView === 'table' && isNarrowViewport) {
+      scrollScrollableAncestorToTop(event?.currentTarget)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveViewMode, isNarrowViewport])
+
   // Memoize renderRowActionMenuItems to avoid re-creating on each render.
   const renderRowActionMenuItems = useMemo(() => {
     if (actions) {
@@ -952,6 +1063,16 @@ export const CippDataTable = (props) => {
               queueMetadata={getRequestData.data?.pages?.[0]?.Metadata}
               isInDialog={isInDialog}
               showBulkExportAction={showBulkExportAction}
+              onViewToggle={toggleAllowed ? handleViewToggle : undefined}
+              tableViewActive={toggleAllowed ? tableViewActive : undefined}
+              showReturnToCards={showReturnToCards}
+              bulkActionsSlot={isNarrowViewport && !isInDialog ? headerBulkSlot : null}
+              dataSourceControls={dataSourceControls}
+              activeFilters={activeFilters}
+              setActiveFilters={setActiveFilters}
+              searchValue={searchValue}
+              setSearchValue={setSearchValue}
+              restoredFiltersRef={restoredFiltersRef}
             />
           )}
         </>
@@ -975,6 +1096,15 @@ export const CippDataTable = (props) => {
       graphFilterData,
       isInDialog,
       showBulkExportAction,
+      toggleAllowed,
+      handleViewToggle,
+      tableViewActive,
+      showReturnToCards,
+      isNarrowViewport,
+      headerBulkSlot,
+      dataSourceControls,
+      activeFilters,
+      searchValue,
     ]
   )
 
@@ -1005,6 +1135,18 @@ export const CippDataTable = (props) => {
     renderEmptyRowsFallback,
     onColumnVisibilityChange: setColumnVisibility,
     ...modeInfo,
+    // narrow table views size their scroll viewport from measurement (see the effect below),
+    // the modeInfo calc budget only holds for desktop chrome
+    ...(isNarrowViewport &&
+      effectiveViewMode === 'table' && {
+        muiTableContainerProps: {
+          ...modeInfo.muiTableContainerProps,
+          sx: {
+            ...modeInfo.muiTableContainerProps?.sx,
+            maxHeight: narrowTableMaxHeight ? `${narrowTableMaxHeight}px` : 'none',
+          },
+        },
+      }),
     renderRowActionMenuItems,
     renderTopToolbar,
     sortingFns: SORTING_FNS,
@@ -1014,6 +1156,64 @@ export const CippDataTable = (props) => {
     renderGlobalFilterModeMenuItems: renderGlobalFilterModeMenuItemsFn,
     renderColumnFilterModeMenuItems: renderColumnFilterModeMenuItemsFn,
   })
+
+  // deselect all rows when the underlying data set actually changes, guarded so a toolbar
+  // remount (cards<->table flip) does not wipe an in-progress selection
+  const prevUsedDataRef = useRef(memoizedData)
+  useEffect(() => {
+    if (prevUsedDataRef.current === memoizedData) {
+      return
+    }
+    prevUsedDataRef.current = memoizedData
+    table.toggleAllRowsSelected(false)
+  }, [memoizedData])
+
+  // size the narrow table's scroll viewport from where it actually sits: viewport height
+  // minus the container's measured top, the real footer height and the chrome below the
+  // paper. the desktop calc assumes chrome heights that phone layouts do not have.
+  // deps include getRequestData.isSuccess so a cold load (table not yet mounted when the
+  // toggle flips tableViewActive true) re-arms the measurement once MRT actually renders
+  useEffect(() => {
+    if (!(isNarrowViewport && tableViewActive)) {
+      setNarrowTableMaxHeight(null)
+      return undefined
+    }
+    const measure = () => {
+      const container = table.refs.tableContainerRef?.current
+      if (!container) {
+        return
+      }
+      const footer = table.refs.bottomToolbarRef?.current?.offsetHeight ?? 0
+      // chrome between the paper's bottom edge and the page bottom (CardContent padding + page gap)
+      const BELOW_PAPER_PX = 40
+      // viewport-relative, so a scrolled page needs the toggle handler to reset scroll first
+      const top = container.getBoundingClientRect().top
+      let next = Math.max(240, Math.floor(window.innerHeight - top - footer - BELOW_PAPER_PX))
+      // 120 = minimal chrome allowance, keeps the table from claiming the full viewport
+      next = Math.min(next, window.innerHeight - 120)
+      setNarrowTableMaxHeight((prev) => {
+        if (prev !== null && Math.abs(prev - next) <= 1) {
+          return prev
+        }
+        return next
+      })
+    }
+    const raf = requestAnimationFrame(() => requestAnimationFrame(measure))
+    window.addEventListener('resize', measure)
+    let observer
+    // the paper mounts in the same commit as the container and the footer, so it is a
+    // reliable observation target even on the pass where the footer ref is still null
+    const paper = table.refs.tablePaperRef?.current
+    if (typeof ResizeObserver !== 'undefined' && paper) {
+      observer = new ResizeObserver(measure)
+      observer.observe(paper)
+    }
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('resize', measure)
+      observer?.disconnect()
+    }
+  }, [isNarrowViewport, tableViewActive, table, getRequestData.isSuccess])
 
   // A card shows at most a title, subtitle, three chips and three detail rows, so the rest
   // of the row has to live in the drawer. On a page with no offCanvas that means every
@@ -1105,10 +1305,19 @@ export const CippDataTable = (props) => {
 
   const selectModeActive = hasOnChange ? true : mobileSelectMode
 
+  // below md, table-in-Card branch: the actions FAB carries cardButton
+  const headerAction = isNarrowViewport && !isInDialog ? undefined : cardButton
+
   return (
     <>
       {isCardView ? (
-        <Box data-testid="cipp-card-view">
+        // same paper surface as the table path; overflow visible keeps the controls bar sticky
+        <CardViewSurface
+          data-testid="cipp-card-view"
+          {...(noCard
+            ? {}
+            : { sx: { width: '100%', overflow: 'visible' }, ...props.cardProps })}
+        >
           {!hideTitle && (
             <Box
               sx={{
@@ -1168,6 +1377,14 @@ export const CippDataTable = (props) => {
                   hasOnChange ? undefined : handleMobileSelectModeChange
                 }
                 selectModeLocked={hasOnChange}
+                onViewToggle={toggleAllowed ? handleViewToggle : undefined}
+                tableViewActive={toggleAllowed ? tableViewActive : undefined}
+                dataSourceControls={dataSourceControls}
+                activeFilters={activeFilters}
+                setActiveFilters={setActiveFilters}
+                searchValue={searchValue}
+                setSearchValue={setSearchValue}
+                restoredFiltersRef={restoredFiltersRef}
               />
               <CippMobileCardList
                 table={table}
@@ -1192,7 +1409,7 @@ export const CippDataTable = (props) => {
               message={`Error Loading data:  ${getCippError(getRequestData.error)}`}
             />
           )}
-        </Box>
+        </CardViewSurface>
       ) : noCard ? (
         <Scrollbar>
           {!Array.isArray(usedData) && usedData ? (
@@ -1213,40 +1430,61 @@ export const CippDataTable = (props) => {
         </Scrollbar>
       ) : (
         // Render the table inside a Card
-        <Card style={{ width: '100%' }} {...props.cardProps}>
-          {cardButton || !hideTitle ? (
-            <>
-              <CardHeader
-                action={cardButton}
-                title={hideTitle ? '' : title}
-                {...props.cardHeaderProps}
-              />
-              <Divider />
-            </>
-          ) : null}
-          <CardContent sx={{ padding: '1rem' }}>
-            <Scrollbar>
-              {!Array.isArray(usedData) && usedData ? (
-                <ResourceUnavailable message={incorrectDataMessage} />
-              ) : (
-                <>
-                  {(getRequestData.isSuccess ||
-                    getRequestData.data?.pages.length >= 0 ||
-                    (data && !getRequestData.isError)) && (
-                    <MaterialReactTable table={table} />
-                  )}
-                </>
-              )}
-              {getRequestData.isError &&
-                !getRequestData.isFetchNextPageError && (
-                  <ResourceError
-                    onReload={() => getRequestData.refetch()}
-                    message={`Error Loading data:  ${getCippError(getRequestData.error)}`}
-                  />
+        <>
+          <Card style={{ width: '100%' }} {...props.cardProps}>
+            {cardButton || !hideTitle ? (
+              <>
+                <CardHeader
+                  action={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box
+                        ref={setHeaderBulkSlot}
+                        sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                      />
+                      {/* narrow viewports carry these in the Table options sheet */}
+                      {dataSourceControls && !isNarrowViewport ? (
+                        <Stack direction='row' spacing={1} alignItems='center'>
+                          {dataSourceControls}
+                          {headerAction}
+                        </Stack>
+                      ) : (
+                        headerAction
+                      )}
+                    </Box>
+                  }
+                  title={hideTitle ? '' : title}
+                  {...props.cardHeaderProps}
+                />
+                <Divider />
+              </>
+            ) : null}
+            <CardContent sx={{ padding: '1rem' }}>
+              <Scrollbar>
+                {!Array.isArray(usedData) && usedData ? (
+                  <ResourceUnavailable message={incorrectDataMessage} />
+                ) : (
+                  <>
+                    {(getRequestData.isSuccess ||
+                      getRequestData.data?.pages.length >= 0 ||
+                      (data && !getRequestData.isError)) && (
+                      <MaterialReactTable table={table} />
+                    )}
+                  </>
                 )}
-            </Scrollbar>
-          </CardContent>
-        </Card>
+                {getRequestData.isError &&
+                  !getRequestData.isFetchNextPageError && (
+                    <ResourceError
+                      onReload={() => getRequestData.refetch()}
+                      message={`Error Loading data:  ${getCippError(getRequestData.error)}`}
+                    />
+                  )}
+              </Scrollbar>
+            </CardContent>
+          </Card>
+          {isNarrowViewport && !isInDialog && cardButton && (
+            <CippPageActionsFab title="Actions">{cardButton}</CippPageActionsFab>
+          )}
+        </>
       )}
       <CippOffCanvas
         isFetching={getRequestData.isFetching}

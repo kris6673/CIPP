@@ -11,7 +11,8 @@ export const utilTableMode = (
   onChange,
   maxHeightOffset = '380px',
   settings = {},
-  viewMode = 'table'
+  viewMode = 'table',
+  narrowTable = false
 ) => {
   if (mode === true) {
     return {
@@ -63,9 +64,18 @@ export const utilTableMode = (
       enableColumnPinning: !isCards,
       muiPaginationProps: {
         rowsPerPageOptions: [25, 50, 100, 250, 500],
+        // a full footer wraps below MRT's 720px pivot, the extra row scrolls the page chrome
+        ...(narrowTable && {
+          showRowsPerPage: false,
+          showFirstButton: false,
+          showLastButton: false,
+        }),
       },
       muiTableContainerProps: {
-        sx: { maxHeight: `calc(100vh - ${maxHeightOffset})` },
+        // offset numbers are tuned against desktop chrome, narrow viewports page-scroll
+        sx: {
+          maxHeight: narrowTable ? 'none' : `calc(100vh - ${maxHeightOffset})`,
+        },
       },
       displayColumnDefOptions: {
         'mrt-row-actions': {

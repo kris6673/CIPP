@@ -8,7 +8,7 @@ import { useSettings } from "./use-settings";
 export const useIsMobileLayout = () => useMediaQuery((theme) => theme.breakpoints.down("lg"));
 
 // Tables pivot narrower: a table still reads fine at 1100, cards that wide are mostly whitespace.
-const useIsNarrowForTables = () => useMediaQuery((theme) => theme.breakpoints.down("md"));
+export const useIsNarrowForTables = () => useMediaQuery((theme) => theme.breakpoints.down("md"));
 
 export const useIsTabletLayout = () =>
   useMediaQuery((theme) => theme.breakpoints.between("sm", "md"));
