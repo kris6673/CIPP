@@ -388,3 +388,25 @@ describe('CIPPTableToptoolbar - preset list refresh', () => {
     })
   }, 30000)
 })
+
+describe('CIPPTableToptoolbar desktop export', () => {
+  it('Export menu carries the row exports and opens the API response viewer', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(
+      <CippDataTable
+        data={rows}
+        simpleColumns={['displayName', 'mail']}
+        title="Users"
+        maxHeightOffset="100px"
+      />
+    )
+    await screen.findByText('Users')
+
+    await user.click(screen.getByRole('button', { name: /Export/ }))
+    await screen.findByRole('menuitem', { name: 'Export to CSV' })
+    expect(screen.getByRole('menuitem', { name: 'Export to PDF' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('menuitem', { name: 'View API Response' }))
+    await screen.findByText('API Response')
+  })
+})

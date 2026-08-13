@@ -7,7 +7,9 @@ import { renderWithProviders } from "../test-utils";
 
 // jsdom has no width-based matchMedia, so the mobile branch is driven by mocking the hook
 const layoutState = vi.hoisted(() => ({ isMobile: false, viewMode: "table" }));
-vi.mock("../../src/hooks/use-breakpoint", () => ({
+// partial mock: real module spread first, so new exports keep working here
+vi.mock("../../src/hooks/use-breakpoint", async (importOriginal) => ({
+  ...(await importOriginal()),
   useIsMobileLayout: () => layoutState.isMobile,
   useIsTabletLayout: () => false,
   useTableViewMode: () => layoutState.viewMode,
