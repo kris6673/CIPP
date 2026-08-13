@@ -14,6 +14,8 @@ For the full walkthrough, see [executing-the-setup-wizard.md](../../setup/instal
 
 Choose **Add a tenant** to bring a new tenant into an existing CIPP deployment. You are then asked to pick a tenant type, and each type leads to a different path.
 
+**Add GDAP Tenant** and **Get Reseller Invite Link** are greyed out where the tenant CIPP itself runs in is not a Microsoft Partner tenant, since both work through Partner Center. **Add Direct Tenant** is always available.
+
 Detailed steps for the GDAP and direct paths are in [gdap-invite-wizard.md](../../setup/installation/gdap-invite-wizard.md "mention").
 
 ### Add GDAP Tenant
