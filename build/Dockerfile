@@ -203,8 +203,8 @@ COPY --chown=app:app --from=build-openapi /gen/openapi.json /app/API/Config/open
 # Frontend — changes most frequently, placed last
 COPY --from=frontend-build /build/out/ /app/Frontend/
 
-# Memory tuning 2.35GB
-ENV DOTNET_GCHeapHardLimit=0x95E00000
+# Memory tuning 3GB
+ENV DOTNET_GCHeapHardLimit=0xC0000000
 
 # Runtime environment — CIPP-NG-specific only. .NET GC tuning, mimalloc preload
 # and PowerShell telemetry opt-outs are inherited from the CRAFT base image.
