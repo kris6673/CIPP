@@ -30,9 +30,13 @@ For non-partner scenarios, or tenants that fall outside the scope of your Partne
 
 Generates a reseller relationship invite link to send to a customer. If your service account is an indirect reseller, your indirect provider can optionally be included in the link.
 
+A reseller relationship is a **billing** relationship. It lets you sell and issue licences to the customer and it is what the Partner Center APIs authorise against, for example Autopilot device registration — see [add-device.md](../endpoint/autopilot/add-device.md "mention"). It grants no administrative access.
+
 {% hint style="warning" %}
-This option does not add the tenant to CIPP. It only produces the Microsoft Admin Portal invitation link. Once the reseller relationship exists, come back and add the tenant using one of the other two types.
+This is not part of tenant onboarding and is not a prerequisite for it. GDAP is the delegated admin relationship and works with no reseller relationship in place; a reseller relationship on its own gives CIPP nothing to manage. Use this option only when you actually need the billing relationship.
 {% endhint %}
+
+This option does not add the tenant to CIPP. It only produces the Microsoft Admin Portal invitation link, and there is no automatic confirmation when the customer accepts it — verify the relationship in Partner Center.
 
 ## Create a New Application Registration
 
