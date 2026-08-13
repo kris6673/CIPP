@@ -118,6 +118,11 @@ services:
       # Live backend source. rw because runtime permission extraction writes
       # Config/function-permissions.json back into the repo (gitignored).
       - ../backend:/app/API
+      # GitBook docs, indexed by the SearchDocs MCP tool. Mounted at the same path the
+      # image uses (COPY docs /app/API/Docs) so Get-CippDocsRoot resolves identically in
+      # dev and in prod — without this the tool reports the docs as missing, because only
+      # backend/ is bind-mounted and ../docs is not reachable from inside the container.
+      - ../docs:/app/API/Docs:ro
       # Writable manifest shims, seeded by cipp-manifests. Each mount shadows a single
       # .psd1 so DevExpandModuleExports rewrites the copy under .devmanifests/ instead of
       # the tracked file in backend/Modules. Everything else in the module dir (Public/,

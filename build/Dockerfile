@@ -184,6 +184,10 @@ COPY --from=build-cippsharp /out/CIPPSharp.dll /app/API/Shared/CIPPSharp/bin/CIP
 COPY backend/AddChocoApp            /app/API/AddChocoApp/
 COPY backend/AddMSPApp              /app/API/AddMSPApp/
 COPY backend/ExecMaintenanceScripts /app/API/ExecMaintenanceScripts/
+# GitBook source for docs.cipp.app, indexed at runtime by the SearchDocs MCP tool
+# (Get-CippDocsIndex reads $env:CIPPRootPath/Docs). Markdown only — Dockerfile.dockerignore
+# keeps the .gitbook image tree out. ~2 MB, and it version-matches the docs to this build.
+COPY docs                           /app/API/Docs/
 
 # Compiled modules — ordered by change frequency (least → most)
 COPY --from=build-cippextensions       /src/CippExtensions/       /app/API/Modules/CippExtensions/
