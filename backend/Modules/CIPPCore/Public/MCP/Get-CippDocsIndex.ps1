@@ -128,20 +128,38 @@ function Get-CippDocsRoot {
     .SYNOPSIS
         Locates the documentation tree, in the container or in a source checkout.
     .DESCRIPTION
-        The image copies docs/ to $env:CIPPRootPath/Docs. A source checkout has it alongside the
-        backend instead, so local dev and Pester runs work without a build. Returns $null when
-        neither exists. Not an HTTP entrypoint.
+        Checks CIPPDocsPath first (the dev compose files set it), then the image's own
+        $env:CIPPRootPath/Docs, then the repo layout so local dev and Pester runs work without a
+        build. Returns $null when none holds documentation.
+
+        A candidate has to actually contain markdown to win, which is not the pedantry it looks
+        like. Bind-mounting the docs at /app/API/Docs - inside the ../backend mount - makes Docker
+        create the nested mountpoint on the *host*, leaving an empty backend/Docs in the working
+        tree. That directory then satisfies a bare existence check and shadows the real docs for
+        everything running outside the container, so every search silently returns nothing against
+        a perfectly healthy index of zero pages. The dev mount now lives at /app/Docs to avoid
+        creating it at all; this check is the backstop. Not an HTTP entrypoint.
     .FUNCTIONALITY
         Internal
     #>
     [CmdletBinding()]
     param()
 
-    if (-not $env:CIPPRootPath) { return $null }
+    $Candidates = [System.Collections.Generic.List[string]]::new()
+    if ($env:CIPPDocsPath) { $Candidates.Add($env:CIPPDocsPath) }
+    if ($env:CIPPRootPath) {
+        foreach ($Relative in 'Docs', '../docs', '../../docs') {
+            $Candidates.Add((Join-Path -Path $env:CIPPRootPath -ChildPath $Relative))
+        }
+    }
 
-    foreach ($Candidate in @('Docs', '../docs', '../../docs')) {
-        $Path = Join-Path -Path $env:CIPPRootPath -ChildPath $Candidate
-        if (Test-Path -LiteralPath $Path -PathType Container) { return $Path }
+    foreach ($Candidate in $Candidates) {
+        if (-not (Test-Path -LiteralPath $Candidate -PathType Container)) { continue }
+        # Select-Object -First 1 short-circuits the enumeration, so this stops at the first hit
+        # rather than walking the whole tree.
+        $Markdown = @([System.IO.Directory]::EnumerateFiles($Candidate, '*.md', [System.IO.SearchOption]::AllDirectories) |
+                Select-Object -First 1)
+        if ($Markdown.Count -gt 0) { return $Candidate }
     }
     return $null
 }

@@ -9,6 +9,7 @@
 
 BeforeAll {
     $BackendRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+    $script:BackendRoot = $BackendRoot
     $script:RepoRoot = Split-Path -Parent $BackendRoot
     $script:DocsRoot = Join-Path $script:RepoRoot 'docs'
 
@@ -234,6 +235,46 @@ Describe 'ConvertTo-CippDocToken' {
 
     It 'returns nothing for empty input' {
         ConvertTo-CippDocToken -Text '' | Should -BeNullOrEmpty
+    }
+}
+
+Describe 'Get-CippDocsRoot' {
+
+    AfterEach {
+        $env:CIPPDocsPath = $null
+        $env:CIPPRootPath = $script:BackendRoot
+    }
+
+    It 'finds the docs in a source checkout' {
+        (Resolve-Path (Get-CippDocsRoot)).Path.TrimEnd('\', '/') |
+            Should -Be (Resolve-Path $script:DocsRoot).Path.TrimEnd('\', '/')
+    }
+
+    It 'prefers CIPPDocsPath when it is set' {
+        $env:CIPPDocsPath = $script:DocsRoot
+        Get-CippDocsRoot | Should -Be $script:DocsRoot
+    }
+
+    It 'skips a directory that exists but holds no markdown' {
+        # Docker leaves exactly this behind: bind-mounting the docs at /app/API/Docs creates an
+        # empty backend/Docs on the host, which a bare existence check accepts and then indexes
+        # to zero pages - every search silently returns nothing.
+        $Empty = Join-Path ([System.IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString())
+        New-Item -ItemType Directory -Path $Empty | Out-Null
+        try {
+            $env:CIPPDocsPath = $Empty
+            Get-CippDocsRoot | Should -Not -Be $Empty
+            (Resolve-Path (Get-CippDocsRoot)).Path.TrimEnd('\', '/') |
+                Should -Be (Resolve-Path $script:DocsRoot).Path.TrimEnd('\', '/')
+        } finally {
+            Remove-Item -LiteralPath $Empty -Recurse -Force
+        }
+    }
+
+    It 'returns null when nothing holds documentation' {
+        $env:CIPPDocsPath = $null
+        $env:CIPPRootPath = [System.IO.Path]::GetTempPath()
+        Get-CippDocsRoot | Should -BeNullOrEmpty
     }
 }
 
