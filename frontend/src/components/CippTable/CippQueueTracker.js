@@ -363,13 +363,23 @@ export const CippQueueTracker = ({ queueId, queryKey, title, onQueueComplete }) 
                               direction="row"
                               justifyContent="space-between"
                               alignItems="center"
+                              spacing={1}
                             >
-                              <Typography variant="body2" fontWeight="medium">
+                              {/* Task names are tenant domains — one unbreakable token — so
+                                  without minWidth: 0 the row's min-content width exceeds a
+                                  phone-width card and shoves the status pill off its edge. */}
+                              <Typography
+                                variant="body2"
+                                fontWeight="medium"
+                                sx={{ minWidth: 0, overflowWrap: "anywhere" }}
+                              >
                                 {task.Name}
                               </Typography>
                               <Typography
                                 variant="caption"
                                 sx={(theme) => ({
+                                  flexShrink: 0,
+                                  whiteSpace: "nowrap",
                                   px: 1.5,
                                   py: 0.5,
                                   borderRadius: 2,
