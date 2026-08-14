@@ -357,8 +357,9 @@ describe('CippDataTable card view without an offCanvas', () => {
     await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument())
     await user.click(screen.getByText('Alice Smith'))
 
-    // 'text' mode would flatten the boolean to the string "Yes"; the cell renderer uses an icon
-    await waitFor(() => expect(screen.getAllByText(/contoso\.com/).length).toBeGreaterThan(0))
+    // 'text' mode would flatten the boolean to the string "Yes"; the cell renderer uses an icon.
+    // Anchored: unanchored, this would also pass on "notcontoso.com" — and CodeQL flags it.
+    await waitFor(() => expect(screen.getAllByText(/^contoso\.com$/).length).toBeGreaterThan(0))
     expect(screen.queryByText('Yes')).toBeNull()
   })
 
@@ -425,7 +426,7 @@ describe('CippDataTable card view without an offCanvas', () => {
     await waitFor(() => expect(screen.getByText('User Details')).toBeInTheDocument())
 
     // curated fields present, and the ones it left out are appended rather than dropped
-    expect(screen.getAllByText(/alice@contoso\.com/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/^alice@contoso\.com$/).length).toBeGreaterThan(0)
     expect(screen.getAllByText(/Engineer/).length).toBeGreaterThan(0)
     expect(screen.getAllByText(/Seattle/).length).toBeGreaterThan(0)
   })
