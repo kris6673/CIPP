@@ -604,3 +604,56 @@ describe('CippDataTable offcanvas row navigation', () => {
     expect(within(drawer).getByText('bob@contoso.com')).toBeInTheDocument()
   })
 })
+
+// the narrow-table height measurement reads viewport-relative positions, so the toggle
+// aligns the card surface with the scrolling ancestor's top before the table flips in
+describe('CippDataTable cards->table toggle scroll', () => {
+  const useMobileViewport = () => {
+    const cache = new Map()
+    window.matchMedia = (query) => {
+      if (!cache.has(query)) {
+        cache.set(query, {
+          matches: query.includes('max-width'),
+          media: query,
+          onchange: null,
+          addListener: () => {},
+          removeListener: () => {},
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          dispatchEvent: () => false,
+        })
+      }
+      return cache.get(query)
+    }
+  }
+
+  beforeEach(() => {
+    useMobileViewport()
+  })
+
+  afterEach(() => {
+    delete window.matchMedia
+  })
+
+  it('keeps a mid-page table in view instead of yanking the page to the top', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(
+      <div data-testid="scroller" style={{ overflowY: 'auto' }}>
+        <CippDataTable data={basicData} simpleColumns={['displayName', 'mail']} title="Users" />
+      </div>
+    )
+    await waitFor(() => expect(screen.getByTestId('cipp-card-view')).toBeInTheDocument())
+
+    // surface sits below the scroller's viewport top, page already scrolled
+    const scroller = screen.getByTestId('scroller')
+    const surface = screen.getByTestId('cipp-card-view')
+    scroller.getBoundingClientRect = () => ({ top: 64 })
+    surface.getBoundingClientRect = () => ({ top: 300 })
+    scroller.scrollTop = 120
+
+    await user.click(screen.getByRole('button', { name: 'Toggle table view' }))
+
+    // prior scroll plus the surface's offset from the scroller viewport top
+    expect(scroller.scrollTop).toBe(120 + (300 - 64))
+  })
+})

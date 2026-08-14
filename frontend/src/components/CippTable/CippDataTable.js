@@ -85,20 +85,24 @@ const compareNullable = (aVal, bVal) => {
   return aVal > bVal ? 1 : -1
 }
 
-// walk up from the toggled node to the page's scrolling ancestor (LayoutContainer,
-// overflowY auto) and reset it, so a narrow-table height measurement taken right after
-// starts from a deterministic scroll position
-const scrollScrollableAncestorToTop = (node) => {
-  let ancestor = node?.parentElement
+// walk up from the card surface to the page's scrolling ancestor (LayoutContainer,
+// overflowY auto) and align the surface with its top. the table flips in at the same
+// page slot, so the height measurement taken right after reads a deterministic top
+// and pages with content above the table keep the table in view
+const scrollNodeToScrollableAncestorTop = (node) => {
+  if (!node) {
+    return
+  }
+  let ancestor = node.parentElement
   while (ancestor && ancestor !== document.body) {
     const overflowY = window.getComputedStyle(ancestor).overflowY
     if (overflowY === 'auto' || overflowY === 'scroll') {
-      ancestor.scrollTop = 0
+      ancestor.scrollTop += node.getBoundingClientRect().top - ancestor.getBoundingClientRect().top
       return
     }
     ancestor = ancestor.parentElement
   }
-  window.scrollTo(0, 0)
+  window.scrollTo(0, window.scrollY + node.getBoundingClientRect().top)
 }
 
 // ── Module-level constants ──────────────────────────────────────────────────
@@ -957,13 +961,13 @@ export const CippDataTable = (props) => {
   }, [])
 
   // the flipped table shows whatever columns are visible; horizontal scroll covers the width
-  const handleViewToggle = useCallback((event) => {
+  const cardViewSurfaceRef = useRef(null)
+  const handleViewToggle = useCallback(() => {
     const nextView = effectiveViewMode === 'table' ? 'cards' : 'table'
     setViewOverride(nextView)
     if (nextView === 'table' && isNarrowViewport) {
-      scrollScrollableAncestorToTop(event?.currentTarget)
+      scrollNodeToScrollableAncestorTop(cardViewSurfaceRef.current)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveViewMode, isNarrowViewport])
 
   // Memoize renderRowActionMenuItems to avoid re-creating on each render.
@@ -1186,7 +1190,8 @@ export const CippDataTable = (props) => {
       const footer = table.refs.bottomToolbarRef?.current?.offsetHeight ?? 0
       // chrome between the paper's bottom edge and the page bottom (CardContent padding + page gap)
       const BELOW_PAPER_PX = 40
-      // viewport-relative, so a scrolled page needs the toggle handler to reset scroll first
+      // viewport-relative, the toggle handler aligns the card surface with the scroll
+      // viewport top first so this reads a deterministic position
       const top = container.getBoundingClientRect().top
       let next = Math.max(240, Math.floor(window.innerHeight - top - footer - BELOW_PAPER_PX))
       // 120 = minimal chrome allowance, keeps the table from claiming the full viewport
@@ -1313,6 +1318,7 @@ export const CippDataTable = (props) => {
       {isCardView ? (
         // same paper surface as the table path; overflow visible keeps the controls bar sticky
         <CardViewSurface
+          ref={cardViewSurfaceRef}
           data-testid="cipp-card-view"
           {...(noCard
             ? {}

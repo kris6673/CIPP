@@ -136,6 +136,8 @@ export const MobileNav = (props) => {
       slotProps={{ transition: swipeClose.transitionProps }}
       PaperProps={{
         sx: {
+          // desktop side-nav renders on background.default, keep the drawer on the same surface
+          backgroundColor: "background.default",
           width: MOBILE_NAV_WIDTH,
           // Column layout so the sponsor footer pins to the bottom and the menu scrolls
           // between it and the sticky header, rather than the footer riding the list.
@@ -234,7 +236,6 @@ export const MobileNav = (props) => {
           flexShrink: 0,
           px: 2,
           pb: "calc(env(safe-area-inset-bottom) + 8px)",
-          bgcolor: "background.default",
         }}
       >
         <CippSponsor compact />
