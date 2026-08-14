@@ -22,10 +22,21 @@ frontend/node_modules/
 frontend/.next/
 frontend/out/
 
-# Non-runtime
+# Non-runtime. NOTE: `*.md` matches only markdown in the context ROOT - a dockerignore `*` does
+# not cross '/'. Nested markdown that is read at runtime (backend/Modules/CIPPTests, which
+# Invoke-ListTests.ps1 enumerates, and docs/, which the SearchDocs MCP tool indexes) is therefore
+# untouched by this rule. Do not "fix" it to `**/*.md`.
+#
+# Also note this file, not the context-root .dockerignore, is what BuildKit applies: CI builds
+# with `context: .` and `file: build/Dockerfile`, and a `<dockerfile>.dockerignore` overrides the
+# one at the context root.
 *.md
 .env
 build/.env.example
+
+# Docs are shipped for the SearchDocs MCP tool, but only the markdown - the .gitbook tree is
+# ~437 KB of images that are never indexed.
+docs/.gitbook/
 
 # Knowledge graphs (local dev tooling)
 graphify/

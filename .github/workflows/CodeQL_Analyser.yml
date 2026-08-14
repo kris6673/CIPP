@@ -11,7 +11,7 @@ on:
     - cron: "26 17 * * 0"
 jobs:
   analyze:
-    if: github.repository_owner == 'KelvinTegelaar'
+    if: github.repository_owner == 'CyberDrain'
     name: Analyze
     runs-on: ubuntu-latest
     permissions:

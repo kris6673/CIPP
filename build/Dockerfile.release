@@ -79,6 +79,24 @@ COPY build/tools/build-function-parameters.ps1 /build/build-function-parameters.
 COPY backend/Modules/CIPPCore /gen/CIPPCore
 RUN pwsh -File /build/build-function-parameters.ps1 -ModulePath /gen/CIPPCore -OutputPath /gen/function-parameters.json
 
+# ── Published docs page list ──
+# Config/DocsPublishedPages.txt tells the SearchDocs MCP tool which pages are actually live on
+# docs.cipp.app, so a result never carries a URL that 404s. A page can sit in docs/ unpublished,
+# and only llms.txt knows which, so this is refreshed from the live site at build time — an image
+# then reflects what was published when it was built rather than whenever someone last ran the
+# script by hand. The committed copy is the fallback and is what ships if the fetch fails.
+#
+# ARG BUILD_DATE is here purely to bust the layer cache: the inputs are otherwise just the script
+# and the committed list, so without it Docker would reuse a cached layer and ship a stale list
+# from an earlier build despite this stage existing. It sits in its own tiny stage, so unlike the
+# version args near the frontend build it invalidates nothing expensive.
+FROM ps-base AS build-docspages
+COPY build/tools/Update-DocsPublishedPages.ps1 /build/Update-DocsPublishedPages.ps1
+COPY backend/Config/DocsPublishedPages.txt /gen/DocsPublishedPages.txt
+ARG BUILD_DATE=unknown
+RUN echo "Refreshing published docs list (build ${BUILD_DATE})" && \
+    pwsh -File /build/Update-DocsPublishedPages.ps1 -OutputPath /gen/DocsPublishedPages.txt -AllowFallback
+
 # ── OpenAPI spec ──
 # Config/openapi.json, derived from the CIPPHTTP entrypoint sources via AST parse.
 # Not documentation-only: Get-CippMcpSpec loads it at runtime and Get-CippMcpToolList
@@ -184,6 +202,10 @@ COPY --from=build-cippsharp /out/CIPPSharp.dll /app/API/Shared/CIPPSharp/bin/CIP
 COPY backend/AddChocoApp            /app/API/AddChocoApp/
 COPY backend/AddMSPApp              /app/API/AddMSPApp/
 COPY backend/ExecMaintenanceScripts /app/API/ExecMaintenanceScripts/
+# GitBook source for docs.cipp.app, indexed at runtime by the SearchDocs MCP tool
+# (Get-CippDocsIndex reads $env:CIPPRootPath/Docs). Markdown only — the .dockerignore keeps the
+# .gitbook image tree out. ~2 MB, and it version-matches the docs to this build.
+COPY docs                           /app/API/Docs/
 
 # Compiled modules — ordered by change frequency (least → most)
 COPY --from=build-cippextensions       /src/CippExtensions/       /app/API/Modules/CippExtensions/
@@ -199,12 +221,15 @@ COPY --chown=app:app --from=build-functionparams /gen/function-parameters.json /
 # generated from CIPPHTTP; overwrites the committed copy so the image always ships
 # a spec that matches the entrypoints beside it
 COPY --chown=app:app --from=build-openapi /gen/openapi.json /app/API/Config/openapi.json
+# refreshed from docs.cipp.app at build time; overwrites the committed fallback so the
+# SearchDocs tool links against what was actually published when this image was built
+COPY --chown=app:app --from=build-docspages /gen/DocsPublishedPages.txt /app/API/Config/DocsPublishedPages.txt
 
 # Frontend — changes most frequently, placed last
 COPY --from=frontend-build /build/out/ /app/Frontend/
 
-# Memory tuning 2.35GB
-ENV DOTNET_GCHeapHardLimit=0x95E00000
+# Memory tuning 3GB
+ENV DOTNET_GCHeapHardLimit=0xC0000000
 
 # Runtime environment — CIPP-NG-specific only. .NET GC tuning, mimalloc preload
 # and PowerShell telemetry opt-outs are inherited from the CRAFT base image.

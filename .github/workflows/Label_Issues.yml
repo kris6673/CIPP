@@ -6,7 +6,7 @@ on:
       - opened
 jobs:
   label_issues_bugs:
-    if: github.repository_owner == 'KelvinTegelaar' && contains(github.event.issue.title, 'Bug')
+    if: github.repository_owner == 'CyberDrain' && contains(github.event.issue.title, 'Bug')
     runs-on: ubuntu-slim
     permissions:
       issues: write
@@ -17,7 +17,7 @@ jobs:
           add-labels: "not-assigned"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
   label_issues_frs:
-    if: github.repository_owner == 'KelvinTegelaar' && contains(github.event.issue.title, 'Feature')
+    if: github.repository_owner == 'CyberDrain' && contains(github.event.issue.title, 'Feature')
     runs-on: ubuntu-slim
     permissions:
       issues: write

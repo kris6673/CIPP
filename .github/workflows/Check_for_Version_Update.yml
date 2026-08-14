@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 jobs:
   build:
-    if: github.repository_owner == 'KelvinTegelaar'
+    if: github.repository_owner == 'CyberDrain'
     name: "Check for Version Update"
     runs-on: ubuntu-slim
     # Both actions read the PR's changed-file list; neither writes anything.
