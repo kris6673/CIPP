@@ -1,7 +1,10 @@
 import React from "react";
 import { Box, Button, Chip, SvgIcon } from "@mui/material";
+import { useQueryClient } from "@tanstack/react-query";
 import { CippDataTable } from "../CippTable/CippDataTable";
-import { PencilIcon, TrashIcon, DocumentDuplicateIcon } from "@heroicons/react/24/outline";
+import { PencilIcon, TrashIcon, DocumentDuplicateIcon, EyeIcon } from "@heroicons/react/24/outline";
+import { usePermissions } from "../../hooks/use-permissions";
+import { enterImpersonation } from "../../utils/impersonation";
 import NextLink from "next/link";
 import { CippPropertyListCard } from "../../components/CippCards/CippPropertyListCard";
 import { getCippTranslation } from "../../utils/get-cipp-translation";
@@ -10,7 +13,34 @@ import { Stack } from "@mui/system";
 import { CippCopyToClipBoard } from "../CippComponents/CippCopyToClipboard";
 
 const CippRoles = () => {
+  const queryClient = useQueryClient();
+  const { userRoles } = usePermissions();
+  // While impersonating, /me reports the impersonated roles, so this action disappears
+  // automatically — no nested impersonation; the only way back is the banner's Exit.
+  const isSuperAdmin = userRoles?.includes("superadmin");
+
   const actions = [
+    ...(isSuperAdmin
+      ? [
+          {
+            label: "Impersonate Role",
+            icon: (
+              <SvgIcon>
+                <EyeIcon />
+              </SvgIcon>
+            ),
+            confirmText:
+              "Impersonate this role? CIPP will reload and behave as if you only hold this role — including its tenant and IP restrictions — until you click Exit in the banner at the top of the page.",
+            // Row-menu passes (row, action, formData); the offcanvas property card passes
+            // (item, data, {}) — resolve the row defensively.
+            customFunction: (a, b) => {
+              const row = a?.RoleName ? a : b;
+              if (row?.RoleName) enterImpersonation(row.RoleName, queryClient);
+            },
+            condition: (row) => row?.RoleName?.toLowerCase() !== "superadmin",
+          },
+        ]
+      : []),
     {
       label: "Edit",
       icon: (

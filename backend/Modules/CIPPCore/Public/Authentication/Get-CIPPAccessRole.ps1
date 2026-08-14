@@ -28,8 +28,8 @@ function Get-CIPPAccessRole {
 
     $CachedRoles = Get-CIPPAzDataTableEntity @CacheAccessUserRoleTable -Filter "PartitionKey eq 'AccessUser' and RowKey eq '$Username'" | Select-Object -ExpandProperty Role | ConvertFrom-Json
 
-    Write-Information "SWA Roles: $($SwaRoles -join ', ')"
-    Write-Information "Cached Roles: $($CachedRoles -join ', ')"
+    Write-Debug "SWA Roles: $($SwaRoles -join ', ')"
+    Write-Debug "Cached Roles: $($CachedRoles -join ', ')"
 
     # Combine SWA roles and cached roles into a single deduplicated list
     $AllRoles = [System.Collections.Generic.List[string]]::new()
@@ -47,6 +47,6 @@ function Get-CIPPAccessRole {
     $CombinedRoles = $AllRoles | Select-Object -Unique
 
     # For debugging
-    Write-Information "Combined Roles: $($CombinedRoles -join ', ')"
+    Write-Debug "Combined Roles: $($CombinedRoles -join ', ')"
     return $CombinedRoles
 }
