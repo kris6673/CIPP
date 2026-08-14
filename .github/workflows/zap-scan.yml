@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   zap_baseline:
-    if: github.repository_owner == 'KelvinTegelaar' && (github.event_name == 'schedule' || !inputs.full_scan)
+    if: github.repository_owner == 'CyberDrain' && (github.event_name == 'schedule' || !inputs.full_scan)
     name: ZAP Baseline Scan (passive)
     runs-on: ubuntu-latest
     steps:
@@ -38,7 +38,7 @@ jobs:
           artifact_name: zap-baseline-report
 
   zap_full:
-    if: github.repository_owner == 'KelvinTegelaar' && github.event_name == 'workflow_dispatch' && inputs.full_scan
+    if: github.repository_owner == 'CyberDrain' && github.event_name == 'workflow_dispatch' && inputs.full_scan
     name: ZAP Full Scan (active, pre-release)
     runs-on: ubuntu-latest
     steps:
