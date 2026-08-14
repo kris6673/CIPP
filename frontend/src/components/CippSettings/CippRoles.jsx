@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Button, SvgIcon } from "@mui/material";
+import { Box, Button, Chip, SvgIcon } from "@mui/material";
 import { CippDataTable } from "../CippTable/CippDataTable";
 import { PencilIcon, TrashIcon, DocumentDuplicateIcon } from "@heroicons/react/24/outline";
 import NextLink from "next/link";
@@ -81,9 +81,27 @@ const CippRoles = () => {
         }
       });
 
+      const rules = data["PermissionRules"];
+      const hasRules = Array.isArray(rules?.Include) && rules.Include.length > 0;
+      if (hasRules) {
+        properties.push({
+          label: "Permission Rules",
+          value: (
+            <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap">
+              {rules.Include.map((pattern, idx) => (
+                <Chip key={`inc-${idx}`} size="small" color="success" label={pattern} />
+              ))}
+              {(rules.Exclude || []).map((pattern, idx) => (
+                <Chip key={`exc-${idx}`} size="small" color="error" label={pattern} />
+              ))}
+            </Stack>
+          ),
+        });
+      }
+
       if (data["Permissions"] && Object.keys(data["Permissions"]).length > 0) {
         properties.push({
-          label: "Permissions",
+          label: hasRules ? "Effective Permissions (at last save)" : "Permissions",
           value: (
             <Stack spacing={0.5}>
               {Object.keys(data["Permissions"])
