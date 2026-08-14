@@ -177,20 +177,10 @@ function Test-CIPPAccess {
             throw 'Access denied: unable to resolve roles for the authenticated principal'
         }
 
-        # Superadmin-only role impersonation; the swap sits before the IP check and the /me
-        # short-circuit deliberately, so the impersonated role's IP ranges apply and /me
-        # reports the impersonated permission set. Exit is client-side, so a role whose IP
-        # ranges lock the superadmin out is always escapable.
-        $Impersonation = Resolve-CippImpersonation -User $User -Request $Request
-        $User = $Impersonation.User
-        if ($Impersonation.Impersonating) {
-            $script:CippImpersonation = $Impersonation
-        }
-
-        $script:CippAccessUserContext = [PSCustomObject]@{
-            User  = if ($Impersonation.Impersonating) { "$($User.userDetails) (impersonating $($Impersonation.Impersonating))" } else { $User.userDetails }
-            Roles = @($User.userRoles | Where-Object { $_ -notin @('anonymous', 'authenticated') })
-        }
+        # IP enforcement deliberately uses the REAL roles, never the impersonated one: a
+        # role's IP allowlist describes where its actual members sign in from, and
+        # simulating it locks the impersonating superadmin out of the entire UI, /me and
+        # the exit banner included.
         $AllowedIPRanges = Get-CIPPRoleIPRanges -Roles $User.userRoles
 
         if ($AllowedIPRanges -notcontains 'Any') {
@@ -218,6 +208,20 @@ function Test-CIPPAccess {
 
         $swIPCheck.Stop()
         $AccessTimings['IPRangeCheck'] = $swIPCheck.Elapsed.TotalMilliseconds
+
+        # Superadmin-only role impersonation: everything downstream (/me permissions,
+        # base/custom role checks, tenant scoping) evaluates under the impersonated role.
+        # Only the IP check above is exempt, so impersonation can never lock the UI.
+        $Impersonation = Resolve-CippImpersonation -User $User -Request $Request
+        $User = $Impersonation.User
+        if ($Impersonation.Impersonating) {
+            $script:CippImpersonation = $Impersonation
+        }
+
+        $script:CippAccessUserContext = [PSCustomObject]@{
+            User  = if ($Impersonation.Impersonating) { "$($User.userDetails) (impersonating $($Impersonation.Impersonating))" } else { $User.userDetails }
+            Roles = @($User.userRoles | Where-Object { $_ -notin @('anonymous', 'authenticated') })
+        }
 
         if ($Request.Params.CIPPEndpoint -eq 'me') {
 

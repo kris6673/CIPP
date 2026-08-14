@@ -30,7 +30,7 @@ const CippRoles = () => {
               </SvgIcon>
             ),
             confirmText:
-              "Impersonate this role? CIPP will reload and behave as if you only hold this role — including its tenant and IP restrictions — until you click Exit in the banner at the top of the page.",
+              "Impersonate this role? CIPP will reload and behave as if you only hold this role — including its tenant restrictions — until you click Exit in the banner at the top of the page. IP restrictions are not simulated.",
             // Row-menu passes (row, action, formData); the offcanvas property card passes
             // (item, data, {}) — resolve the row defensively.
             customFunction: (a, b) => {
