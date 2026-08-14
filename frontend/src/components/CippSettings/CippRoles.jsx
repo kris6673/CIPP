@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Button, Chip, SvgIcon } from "@mui/material";
+import { Alert, Box, Button, Chip, SvgIcon, Typography } from "@mui/material";
 import { useQueryClient } from "@tanstack/react-query";
 import { CippDataTable } from "../CippTable/CippDataTable";
 import { PencilIcon, TrashIcon, DocumentDuplicateIcon, EyeIcon } from "@heroicons/react/24/outline";
@@ -29,8 +29,22 @@ const CippRoles = () => {
                 <EyeIcon />
               </SvgIcon>
             ),
-            confirmText:
-              "Impersonate this role? CIPP will reload and behave as if you only hold this role — including its tenant restrictions — until you click Exit in the banner at the top of the page. IP restrictions are not simulated.",
+            confirmText: (
+              <Stack spacing={2}>
+                <Typography variant="body2">
+                  Impersonate this role? CIPP will reload and behave as if you only hold this
+                  role — including its tenant restrictions — until you click Exit in the banner
+                  at the top of the page. IP restrictions are not simulated.
+                </Typography>
+                <Alert severity="warning">
+                  This tests a <strong>single role in isolation</strong>, not role combinations.
+                  For users holding several roles, custom roles are <strong>restrictive, not
+                  additive</strong>: combined with a base role like editor or readonly they can
+                  only narrow access, so a real user's effective permissions may differ from
+                  what you see here.
+                </Alert>
+              </Stack>
+            ),
             // Row-menu passes (row, action, formData); the offcanvas property card passes
             // (item, data, {}) — resolve the row defensively.
             customFunction: (a, b) => {
