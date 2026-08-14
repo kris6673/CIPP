@@ -514,6 +514,7 @@ const Page = () => {
         />
       ),
       multiPost: false,
+      hideBulk: true,
     },
     {
       label: 'Delete Site',
@@ -647,6 +648,7 @@ const Page = () => {
         />
       ),
       multiPost: false,
+      hideBulk: true,
     },
     {
       label: 'Check Cleanup Job Status',
@@ -661,6 +663,7 @@ const Page = () => {
         />
       ),
       multiPost: false,
+      hideBulk: true,
     },
   ]
 
