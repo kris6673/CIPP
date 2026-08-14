@@ -50,10 +50,12 @@ const Page = ({ reason = 'session' }) => {
     swaStatus.isSuccess && !!swaStatus?.data?.clientPrincipal && userRoles.length > 0
   const signedInAs = swaStatus?.data?.clientPrincipal?.userDetails
 
-  // A null clientPrincipal WITH a message is not a missing session — it's a denial the
+  // A signed-in identity plus a /me message is not a missing session — it's a denial the
   // server explained (e.g. "your IP is not in the allowed range"). Show the explanation
-  // instead of the generic sign-in prompt, whatever reason the caller guessed.
-  const isSessionEnded = reason === 'session' && !orgData?.data?.message
+  // instead of the generic sign-in prompt, whatever reason the caller guessed. Without a
+  // SWA identity there is nobody to deny, so a stale message must not hide the sign-in.
+  const hasIdentity = Boolean(swaStatus?.data?.clientPrincipal)
+  const isSessionEnded = reason === 'session' && !(hasIdentity && orgData?.data?.message)
 
   const sessionProps = {
     title: 'Sign in to CIPP',
