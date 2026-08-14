@@ -172,13 +172,18 @@ function Get-CippDocsPublishedSet {
         A page can exist in docs/ and still not be live: nine current pages under
         setup/implementation-guide/your-route-to-a-secure-tenant/ are in SUMMARY.md but
         unpublished, so SUMMARY is not the discriminator. docs.cipp.app/llms.txt is the only
-        authoritative statement, and Config/DocsPublishedPages.txt is a committed snapshot of it -
-        which keeps the check offline, so the index never has to guess and never hands back a
+        authoritative statement, and Config/DocsPublishedPages.txt is a snapshot of it - which
+        keeps the check offline, so the index never has to guess and never hands back a
         docs.cipp.app URL that 404s.
 
-        Refresh it with build/tools/Update-DocsPublishedPages.ps1. Returns $null when the snapshot
-        is missing, which the caller reads as 'assume everything is published' - a stale link is a
-        better failure than no docs search at all. Not an HTTP entrypoint.
+        The container build refreshes that snapshot from the live site (the build-docspages stage),
+        so the committed copy is a fallback rather than the source of truth - it is what ships only
+        when the fetch fails. Refresh the committed one with
+        build/tools/Update-DocsPublishedPages.ps1.
+
+        Returns $null when the snapshot is missing, which the caller reads as 'assume everything is
+        published' - a stale link is a better failure than no docs search at all.
+        Not an HTTP entrypoint.
     .FUNCTIONALITY
         Internal
     #>

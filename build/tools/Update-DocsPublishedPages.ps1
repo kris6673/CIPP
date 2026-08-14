@@ -11,19 +11,50 @@
     Run it when pages are published or unpublished. The diff should be small; a large one usually
     means the docs were restructured, in which case check Get-CippDocLink's slug derivation still
     holds (Tests/Mcp/CippDocs.Tests.ps1 pins it).
+
+    The container build runs this too (see the build-docspages stage in build/Dockerfile), so an
+    image always ships the list as it was at build time rather than whenever someone last ran this
+    by hand. There -AllowFallback is passed: docs.cipp.app being unreachable, or answering with
+    something that does not parse, must not fail the build. The committed copy is the fallback and
+    is simply left in place.
 .EXAMPLE
     pwsh build/tools/Update-DocsPublishedPages.ps1
+.EXAMPLE
+    pwsh build/tools/Update-DocsPublishedPages.ps1 -OutputPath /gen/DocsPublishedPages.txt -AllowFallback
 #>
 [CmdletBinding()]
 param(
     [string]$Uri = 'https://docs.cipp.app/llms.txt',
-    [string]$OutputPath = (Join-Path $PSScriptRoot '../../backend/Config/DocsPublishedPages.txt')
+    [string]$OutputPath = (Join-Path $PSScriptRoot '../../backend/Config/DocsPublishedPages.txt'),
+
+    # Warn and keep the existing file instead of throwing. For the container build, where a
+    # transient network failure must not take the image down with it.
+    [switch]$AllowFallback
 )
 
 $ErrorActionPreference = 'Stop'
 
+# $Allowed is passed rather than closed over: the analyzer cannot see a switch used only inside
+# a nested function and reports it unused, and being explicit reads better at the call sites.
+function Resolve-FetchFailure {
+    param(
+        [Parameter(Mandatory)][string]$Message,
+        [bool]$Allowed
+    )
+    if (-not $Allowed) { throw $Message }
+    Write-Warning $Message
+    Write-Host 'Keeping the committed DocsPublishedPages.txt as the fallback.'
+    # A page missing from a stale list loses its docs.cipp.app link and falls back to GitHub,
+    # which is a far better outcome than failing the build.
+    exit 0
+}
+
 Write-Host "Fetching $Uri ..."
-$Response = Invoke-WebRequest -Uri $Uri -UseBasicParsing
+try {
+    $Response = Invoke-WebRequest -Uri $Uri -UseBasicParsing -TimeoutSec 60
+} catch {
+    Resolve-FetchFailure -Message "Could not fetch $Uri : $($_.Exception.Message)" -Allowed $AllowFallback
+}
 
 $Slugs = [System.Collections.Generic.SortedSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
 foreach ($Line in ($Response.Content -split '\r?\n')) {
@@ -36,7 +67,9 @@ foreach ($Line in ($Response.Content -split '\r?\n')) {
 }
 
 if ($Slugs.Count -lt 100) {
-    throw "Only $($Slugs.Count) slugs parsed from $Uri - refusing to overwrite the snapshot with what looks like a failed fetch."
+    # A captive portal, an error page or a redirect all return 200 with a body that parses to
+    # nothing useful. Overwriting a good list with that would silently strip every docs link.
+    Resolve-FetchFailure -Allowed $AllowFallback -Message "Only $($Slugs.Count) slugs parsed from $Uri - refusing to overwrite the snapshot with what looks like a failed fetch."
 }
 
 $Resolved = [System.IO.Path]::GetFullPath($OutputPath)
