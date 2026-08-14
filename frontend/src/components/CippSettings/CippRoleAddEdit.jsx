@@ -97,6 +97,18 @@ export const CippRoleAddEdit = ({ selectedRole }) => {
   const ipRanges = useWatch({ control: formControl.control, name: "IPRange" });
   const includeRules = useWatch({ control: formControl.control, name: "PermissionRulesInclude" });
   const excludeRules = useWatch({ control: formControl.control, name: "PermissionRulesExclude" });
+  const baseRoleTemplate = useWatch({ control: formControl.control, name: "BaseRoleTemplate" });
+
+  // "Start from a built-in role": copy its patterns into the rule fields as an
+  // editable starting point, then clear the picker so it acts as a one-shot action.
+  useEffect(() => {
+    const roleName = baseRoleTemplate?.value;
+    if (!roleName || !cippRoles[roleName]) return;
+    const toOptions = (list) => (list || []).map((pattern) => ({ label: pattern, value: pattern }));
+    formControl.setValue("PermissionRulesInclude", toOptions(cippRoles[roleName].include));
+    formControl.setValue("PermissionRulesExclude", toOptions(cippRoles[roleName].exclude));
+    formControl.setValue("BaseRoleTemplate", null);
+  }, [baseRoleTemplate]);
 
   const {
     data: apiPermissions = [],
@@ -892,6 +904,25 @@ export const CippRoleAddEdit = ({ selectedRole }) => {
                       Simple mode will replace the role's permissions with the patterns below.
                     </Alert>
                   )}
+                  <CippFormComponent
+                    type="autoComplete"
+                    name="BaseRoleTemplate"
+                    label="Start from a built-in role (optional)"
+                    placeholder="Copy a built-in role's patterns as a starting point"
+                    options={Object.keys(cippRoles).map((role) => ({
+                      label: `${role} — include: ${cippRoles[role].include.join(", ") || "none"}${
+                        cippRoles[role].exclude.length
+                          ? `, exclude: ${cippRoles[role].exclude.join(", ")}`
+                          : ""
+                      }`,
+                      value: role,
+                    }))}
+                    formControl={formControl}
+                    fullWidth={true}
+                    multiple={false}
+                    creatable={false}
+                    helperText="Replaces the patterns below with the selected role's include/exclude rules — edit them freely afterwards."
+                  />
                   <CippFormComponent
                     type="autoComplete"
                     name="PermissionRulesInclude"
