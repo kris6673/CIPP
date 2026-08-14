@@ -48,5 +48,19 @@ function Get-CIPPAccessRole {
 
     # For debugging
     Write-Debug "Combined Roles: $($CombinedRoles -join ', ')"
+
+    # Apply role impersonation here so every secondary authorization or visibility check
+    # that resolves roles through this function (API client grants, Sherweb, alerts,
+    # domain health, ...) sees the impersonated role, consistent with Test-CIPPAccess.
+    if (![string]::IsNullOrWhiteSpace($Headers.'x-cipp-impersonate-role') -and $CombinedRoles -contains 'superadmin') {
+        $Impersonation = Resolve-CippImpersonation -User ([pscustomobject]@{
+                identityProvider = 'swa'
+                userId           = $null
+                userDetails      = $Username
+                userRoles        = @($CombinedRoles)
+            }) -Request ([pscustomobject]@{ Headers = $Headers })
+        return @($Impersonation.User.userRoles)
+    }
+
     return $CombinedRoles
 }
