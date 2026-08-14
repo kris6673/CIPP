@@ -1036,21 +1036,102 @@ export const CippRoleAddEdit = ({ selectedRole }) => {
                     visible={rulePreviewVisible}
                     onClose={() => setRulePreviewVisible(false)}
                     title="Effective Permissions"
+                    size="lg"
                   >
                     <Stack spacing={1} sx={{ mx: 3 }}>
                       <Typography variant="body2" sx={{ mb: 1 }}>
-                        Permissions granted by the current patterns. Struck-through entries were
-                        matched by an include pattern but removed by an exclusion.
+                        Permissions granted by the current patterns — expand one to see the API
+                        endpoints it serves. Struck-through entries were matched by an include
+                        pattern but removed by an exclusion.
                       </Typography>
-                      {ruleExpansion.matched.map((permission) => (
-                        <Typography
-                          key={permission}
-                          variant="body2"
-                          sx={{ fontFamily: "monospace" }}
-                        >
-                          {permission}
-                        </Typography>
-                      ))}
+                      {ruleExpansion.matched.map((permission) => {
+                        const [permCat, permObj, permType] = permission.split(".");
+                        // A ReadWrite grant also serves the Read endpoints (enforcement
+                        // matches loosely), so show them unless Read is granted separately.
+                        const sections = [
+                          { type: permType, endpoints: apiPermissions?.[permCat]?.[permObj]?.[permType] },
+                        ];
+                        if (
+                          permType === "ReadWrite" &&
+                          apiPermissions?.[permCat]?.[permObj]?.Read &&
+                          !ruleExpansion.matched.includes(`${permCat}.${permObj}.Read`)
+                        ) {
+                          sections.push({
+                            type: "Read (included by ReadWrite)",
+                            endpoints: apiPermissions[permCat][permObj].Read,
+                          });
+                        }
+                        const endpointCount = sections.reduce(
+                          (total, section) => total + Object.keys(section.endpoints || {}).length,
+                          0
+                        );
+                        return (
+                          <Accordion variant="outlined" disableGutters key={permission}>
+                            <AccordionSummary
+                              expandIcon={<ExpandMoreIcon />}
+                              sx={{ "& .MuiAccordionSummary-content": { minWidth: 0 } }}
+                            >
+                              <Stack
+                                direction="row"
+                                spacing={1}
+                                alignItems="center"
+                                useFlexGap
+                                flexWrap="wrap"
+                                sx={{ minWidth: 0, width: "100%" }}
+                              >
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    fontFamily: "monospace",
+                                    wordBreak: "break-all",
+                                    flexGrow: 1,
+                                    minWidth: 0,
+                                  }}
+                                >
+                                  {permission}
+                                </Typography>
+                                <Chip
+                                  size="small"
+                                  label={`${endpointCount} endpoint${endpointCount === 1 ? "" : "s"}`}
+                                  sx={{ flexShrink: 0 }}
+                                />
+                              </Stack>
+                            </AccordionSummary>
+                            <AccordionDetails>
+                              <Stack spacing={1}>
+                                {sections.map((section) => (
+                                  <React.Fragment key={section.type}>
+                                    {sections.length > 1 && (
+                                      <Typography variant="subtitle2">{section.type}</Typography>
+                                    )}
+                                    {Object.keys(section.endpoints || {}).map((apiKey) => {
+                                      const apiFunction = section.endpoints[apiKey];
+                                      const description = getFunctionDescriptionText(
+                                        apiFunction.Description
+                                      );
+                                      return (
+                                        <Box key={apiKey}>
+                                          <Typography
+                                            variant="body2"
+                                            sx={{ fontWeight: "bold" }}
+                                          >
+                                            {apiFunction.Name}
+                                          </Typography>
+                                          {description && (
+                                            <Typography variant="caption" color="text.secondary">
+                                              {description}
+                                            </Typography>
+                                          )}
+                                        </Box>
+                                      );
+                                    })}
+                                  </React.Fragment>
+                                ))}
+                              </Stack>
+                            </AccordionDetails>
+                          </Accordion>
+                        );
+                      })}
                       {Object.entries(ruleExpansion.excludedBy).map(([permission, pattern]) => (
                         <Typography
                           key={permission}
