@@ -114,8 +114,10 @@ export const CippPageActionsFab = (props) => {
           }}
           onClick={(event) => {
             // A tap on any action has done its job — close the sheet so the drawer/dialog
-            // it opened isn't stacked under it. menuitem covers MenuItem-rendered children.
-            if (event.target?.closest?.("button, a, [role='menuitem']")) {
+            // it opened isn't stacked under it (the sheet sits at modal + 1, so it would be
+            // ON TOP). menuitem covers MenuItem children; role=button covers ListItemButton,
+            // which renders as a div.
+            if (event.target?.closest?.("button, a, [role='menuitem'], [role='button']")) {
               setOpen(false)
             }
           }}

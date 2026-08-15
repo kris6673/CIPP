@@ -89,6 +89,7 @@ export const CIPPTableToptoolbar = React.memo(
     setConfiguredSimpleColumns,
     queueMetadata,
     isInDialog = false,
+    embedded = false,
     showBulkExportAction = true,
     // Mobile card mode: same state, same handlers, different presentation (sheets
     // instead of menus). Select-mode state lives in CippDataTable so the card list
@@ -988,6 +989,7 @@ export const CIPPTableToptoolbar = React.memo(
             onExportPdf={handleExportPdfClick}
             onViewApiResponse={handleViewApiResponse}
             fixedChrome={!isInDialog}
+            embedded={embedded}
             queueTracker={
               queueMetadata?.QueueId ? (
                 <CippQueueTracker

@@ -62,6 +62,7 @@ export const CippMobileTableControls = (props) => {
     onExportPdf,
     onViewApiResponse,
     fixedChrome = true,
+    embedded = false,
     queueTracker,
     dataSourceControls,
   } = props;
@@ -104,7 +105,7 @@ export const CippMobileTableControls = (props) => {
           zIndex: 10,
           display: "flex",
           gap: 1,
-          px: 1,
+          px: embedded ? 0 : 1,
           py: 1,
           // matches the card-view paper surface it sticks over
           bgcolor: "background.paper",

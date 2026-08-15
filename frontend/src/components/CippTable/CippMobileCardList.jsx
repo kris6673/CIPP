@@ -185,7 +185,12 @@ export const CippMobileCardList = (props) => {
   return (
     <Box data-testid="cipp-mobile-card-list">
       {isStreaming && !showSkeletons && <LinearProgress sx={{ height: 3 }} />}
-      <Stack spacing={0.75} sx={{ px: 1, pt: 0.75, pb: selectMode ? 12 : 10 }}>
+      {/* pb clears the fixed FAB / bulk bar — chrome an embedded (noCard/dialog) list does
+          not have, so it pays a normal gap instead of 80px of blank card. */}
+      <Stack
+        spacing={1}
+        sx={{ px: fixedChrome ? 1 : 0, pt: 0.75, pb: fixedChrome ? (selectMode ? 12 : 10) : 1 }}
+      >
         {showSkeletons ? (
           Array.from({ length: 5 }, (_, i) => <SkeletonCard key={i} />)
         ) : totalFiltered === 0 ? (
@@ -218,7 +223,7 @@ export const CippMobileCardList = (props) => {
                   variant="outlined"
                   onClick={(event) => handleCardTap(event, row)}
                   sx={{
-                    p: 1.25,
+                    p: 2,
                     display: "flex",
                     gap: 1.25,
                     position: "relative",
@@ -259,7 +264,7 @@ export const CippMobileCardList = (props) => {
                         spacing={0.75}
                         useFlexGap
                         flexWrap="wrap"
-                        sx={{ mt: 0.75, alignItems: "center" }}
+                        sx={{ mt: 1, alignItems: "center" }}
                       >
                         {slots.chips.map((col) => {
                           // Booleans format as a bare ✓/✕ icon — meaningful under a column
@@ -303,11 +308,11 @@ export const CippMobileCardList = (props) => {
                       // label column truncating "Business Phones" while values sit half-empty.
                       <Box
                         sx={{
-                          mt: 1,
+                          mt: 1.25,
                           display: "grid",
                           gridTemplateColumns: "minmax(56px, max-content) 1fr",
-                          columnGap: 1.25,
-                          rowGap: 0.375,
+                          columnGap: 1.5,
+                          rowGap: 0.75,
                           alignItems: "baseline",
                         }}
                       >

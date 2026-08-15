@@ -78,7 +78,9 @@ export const TabbedLayout = (props) => {
       >
         <Stack spacing={2}>
           {isMobile && (
-            <Box sx={{ px: 2, pt: 1 }}>
+            // pt: 2 nets to the same 16px the sides and the Stack gap below pay: the
+            // breadcrumb divider's mb (8) is cancelled by this layout's mt: -1.
+            <Box sx={{ px: 2, pt: 2 }}>
               <CippTabPicker />
             </Box>
           )}

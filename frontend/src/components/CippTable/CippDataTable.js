@@ -1327,7 +1327,10 @@ export const CippDataTable = (props) => {
           {!hideTitle && (
             <Box
               sx={{
-                px: 1,
+                // Embedded in another card (noCard) or a dialog, the host already pays a
+                // 16px gutter — the list's own 8px would double it, so the whole card
+                // presentation (title, controls, cards) drops to the host's edge together.
+                px: isInDialog || noCard ? 0 : 1,
                 pt: 1,
                 pb: 0.5,
                 display: 'flex',
@@ -1376,6 +1379,7 @@ export const CippDataTable = (props) => {
                 setConfiguredSimpleColumns={setConfiguredSimpleColumns}
                 queueMetadata={getRequestData.data?.pages?.[0]?.Metadata}
                 isInDialog={isInDialog}
+                embedded={isInDialog || noCard}
                 showBulkExportAction={showBulkExportAction}
                 viewMode="cards"
                 selectMode={selectModeActive}
