@@ -515,11 +515,6 @@
     "description": "Intune managed device cleanup rules (device retirement days)"
   },
   {
-    "type": "AutopatchGroups",
-    "friendlyName": "Windows Autopatch Groups",
-    "description": "Windows Autopatch groups with deployment ring settings"
-  },
-  {
     "type": "IntuneMobileAppsAll",
     "friendlyName": "All Intune Mobile Apps",
     "description": "Unfiltered mobile apps list (id, displayName, odata type) for presence checks"
