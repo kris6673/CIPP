@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { ResponsiveSankey } from "@nivo/sankey";
-import { Box, ButtonBase, Typography } from "@mui/material";
-import { useSettings } from "../../hooks/use-settings";
+import { Box, ButtonBase, Typography, useTheme } from "@mui/material";
 import { useIsMobileLayout } from "../../hooks/use-breakpoint";
 
 // A node's weight: what flows in, or out if nothing flows in (the leftmost column).
@@ -19,8 +18,11 @@ const nodeTotals = (data) => {
 };
 
 export const CippSankey = ({ data, onNodeClick, onLinkClick }) => {
-  const settings = useSettings();
-  const isDark = settings.currentTheme?.value === "dark";
+  // The painted palette, not the theme *setting*: when the setting is "browser" the app
+  // resolves dark/light from the OS preference, so checking the setting for "dark" said
+  // light while the page was dark — and a "multiply" blend over a dark card composites the
+  // link ribbons to black.
+  const isDark = useTheme().palette.mode === "dark";
   // A sankey is three columns of nodes plus their labels. At desktop widths the labels sit
   // horizontally inside an 18px-thick node and still read. On a ~350px card they cannot: a
   // node carrying a handful of users is a couple of pixels tall, and its label — rotated or
