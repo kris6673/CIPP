@@ -1,8 +1,8 @@
 name: "🐞 Bug report"
 description: "Report errors or unexpected behaviors for CIPP and CIPP-API"
 title: "[Bug]: " 
+type: "bug"
 labels:
-  - "unconfirmed-by-user"
   - "bug"
 
 body:
@@ -80,7 +80,7 @@ body:
       description: |
         If available, please share any relevant logs or stack trace data.
         Remove or redact any sensitive info before posting.
-      render: plaintext
+      render: text
     validations:
       required: false
 

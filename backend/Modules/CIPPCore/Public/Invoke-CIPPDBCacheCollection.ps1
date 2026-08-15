@@ -55,6 +55,7 @@ function Invoke-CIPPDBCacheCollection {
             'AdminConsentRequestPolicy'
             'AuthorizationPolicy'
             'AuthenticationMethodsPolicy'
+            'SecurityDefaults'
             'DeviceSettings'
             'DirectoryRecommendations'
             'CrossTenantAccessPolicy'
@@ -69,6 +70,19 @@ function Invoke-CIPPDBCacheCollection {
             'AppRoleAssignments'
             'LicenseOverview'
             'BitlockerKeys'
+            'AdminReportSettings'
+            'PeopleInsights'
+            'Pronouns'
+            'NamePronunciation'
+            'PhotoUpdateSettings'
+            'OrganizationBranding'
+            'HomeRealmDiscoveryPolicy'
+            'MobileDeviceManagementPolicies'
+            'PermissionGrantPolicies'
+            'CopilotAdminSettings'
+            'CopilotPolicySettings'
+            'SelfServicePurchaseProducts'
+            'MoeraDmarc'
         )
         ExchangeConfig     = @(
             'ExoAntiPhishPolicies'
@@ -92,7 +106,23 @@ function Invoke-CIPPDBCacheCollection {
             'ExoProtectionAlert'
             'OwaMailboxPolicy'
             'ReportSubmissionPolicy'
+            'ReportSubmissionRule'
             'ExoTransportConfig'
+            'ExoHostedConnectionFilterPolicy'
+            'ExoExternalInOutlook'
+            'ExoTeamsProtectionPolicy'
+            'ExoOutboundConnector'
+            'ExoRoleAssignmentPolicy'
+            'ExoHostedContentFilterRule'
+            'ExoGlobalQuarantinePolicy'
+            'ExoOMEConfiguration'
+            'ExoMailboxPlans'
+            'ExoRetentionPolicyTags'
+            'ExoRetentionPolicies'
+            'ExoDynamicDistributionGroup'
+            'ExoMailContacts'
+            'ExoTenantAllowBlockListSpoofItems'
+            'ExoPhishSimConfig'
         )
         ExchangeData       = @(
             'CASMailboxes'
@@ -127,10 +157,20 @@ function Invoke-CIPPDBCacheCollection {
             'DetectedApps'
             'IntuneAppInstallStatus'
             'MDEOnboarding'
+            'AutopilotDeploymentProfiles'
+            'DeviceEnrollmentConfigurations'
+            'IntuneDeviceManagementSettings'
+            'IntuneDataProcessorOnboarding'
+            'IntuneBrandingProfile'
+            'ManagedDeviceCleanupRules'
         )
         Compliance         = @(
             'SensitivityLabels'
             'DlpCompliancePolicies'
+            'ComplianceRetentionPolicies'
+            'ComplianceRetentionRules'
+            'ExoDlpSensitiveInfoTypes'
+            'ExoLabels'
         )
         CopilotUsage       = @(
             'CopilotUsageUserDetail'
@@ -141,6 +181,7 @@ function Invoke-CIPPDBCacheCollection {
         SharePoint         = @(
             'SPOTenant'
             'SPOTenantSyncClientRestriction'
+            'SharePointAdminSettings'
             'SharePointSiteUsage'
             'SiteActivity'
             'OneDriveUsage'
@@ -156,6 +197,7 @@ function Invoke-CIPPDBCacheCollection {
             'Teams'
             'TeamsActivity'
             'TeamsVoice'
+            'TeamsResourceAccounts'
         )
         Defender           = @(
             'DefenderCVEs'
