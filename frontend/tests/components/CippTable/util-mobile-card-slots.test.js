@@ -129,6 +129,10 @@ describe('isStatusLike', () => {
   it('detects known status ids case-insensitively', () => {
     expect(isStatusLike(col('complianceState'))).toBe(true)
     expect(isStatusLike(col('Severity'))).toBe(true)
+    // the identity/device/custom test tables — Risk fell to the detail rows while Result sat
+    // in the chips row, two chips organised by two different systems on one card
+    expect(isStatusLike(col('Risk'))).toBe(true)
+    expect(isStatusLike(col('Result'))).toBe(true)
   })
   it('detects small select filters, rejects large ones', () => {
     expect(isStatusLike(col('x', { filterVariant: 'select', filterSelectOptions: ['a', 'b'] }))).toBe(true)

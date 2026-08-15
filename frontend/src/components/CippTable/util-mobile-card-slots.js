@@ -46,6 +46,8 @@ const IDENTIFIER_FIELDS = [
 const STATUS_FIELDS = new Set(
   [
     "severity",
+    "risk",
+    "result",
     "status",
     "state",
     "compliancestate",

@@ -54,6 +54,34 @@ describe('CippMobileCardList card anatomy', () => {
   })
 })
 
+describe('CippMobileCardList status chips', () => {
+  // The identity/device/custom test tables: Result went to the chips row but Risk fell to
+  // the detail rows — two chips organised by two different systems on one card, and the
+  // detail-grid "High" said nothing about what was high.
+  it('keeps Result and Risk together in the chips row, and labels the mute one', async () => {
+    renderWithProviders(
+      <CippDataTable
+        viewMode="cards"
+        title="Identity Tests"
+        data={[{ TestName: 'Tenant has M365 Copilot prerequisites', Result: 'Passed', Risk: 'High' }]}
+        simpleColumns={['TestName', 'Result', 'Risk']}
+      />,
+      { settings: settingsWith({ tableViewMode: 'cards' }) }
+    )
+    await waitFor(() =>
+      expect(screen.getByText('Tenant has M365 Copilot prerequisites')).toBeInTheDocument()
+    )
+
+    const passed = screen.getByText('Passed')
+    const high = screen.getByText('High')
+    // both chips share one container — Risk is not off in the details grid
+    expect(high.closest('.MuiStack-root')).toBe(passed.closest('.MuiStack-root'))
+    // "High" alone doesn't say what is high; "Passed" speaks for itself
+    expect(screen.getByText('Risk')).toBeInTheDocument()
+    expect(screen.queryByText('Result')).not.toBeInTheDocument()
+  })
+})
+
 describe('CippMobileCardList table view toggle', () => {
   afterEach(() => {
     narrowState.narrow = false

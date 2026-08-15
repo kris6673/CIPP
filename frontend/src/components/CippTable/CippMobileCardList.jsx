@@ -29,6 +29,9 @@ import { useSheetHandoff } from "../../hooks/use-sheet-handoff";
 const MOBILE_PAGE_SIZE_CAP = 50;
 const LOAD_STEP = 50;
 
+// Chip values that say nothing without their field name beside them.
+const MUTE_ALONE = new Set(["high", "medium", "low", "critical", "informational"]);
+
 // Render one column's value for a row. Generated columns (util-columnsFromAPI) only use
 // { row } in their Cell, but page-supplied columns may expect fuller MRT context, so we
 // hand over the real cell context when the cell exists.
@@ -262,8 +265,12 @@ export const CippMobileCardList = (props) => {
                           // Booleans format as a bare ✓/✕ icon — meaningful under a column
                           // header, meaningless floating on a card. Give those chips their
                           // field name in a labeled pill ("Primary ✓", "Account Enabled ✕").
+                          // Severity words are just as mute alone: a "High" chip beside a
+                          // "Passed" chip doesn't say what is high, so those keep their field
+                          // name too — as a caption, since the chip is its own container.
                           const text = textValue(row, col);
                           const isBareBoolean = text === "Yes" || text === "No";
+                          const isMuteAlone = MUTE_ALONE.has(String(text ?? "").toLowerCase());
                           return (
                             <Box
                               key={col.id}
@@ -280,7 +287,7 @@ export const CippMobileCardList = (props) => {
                                 }),
                               }}
                             >
-                              {isBareBoolean && (
+                              {(isBareBoolean || isMuteAlone) && (
                                 <Typography variant="caption" color="text.secondary" noWrap>
                                   {getCippTranslation(col.id)}
                                 </Typography>
