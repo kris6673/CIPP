@@ -40,20 +40,12 @@
     }
   },
   "expected": {
-    "SmtpClientAuthenticationDisabled": "%disabled%"
+    "SmtpClientAuthenticationDisabled": "%disabled%",
+    "UsersWithSmtpAuthEnabled": []
   },
   "read": {
     "cacheType": "ExoTransportConfig"
   },
-  "remediate": {
-    "executor": "ExoRequest",
-    "cmdlets": [
-      {
-        "cmdlet": "Set-TransportConfig",
-        "params": {
-          "SmtpClientAuthenticationDisabled": "%disabled%"
-        }
-      }
-    ]
-  }
+  "custom": true,
+  "customFunction": "Invoke-CIPPBaselineDisableBasicAuthSMTP"
 }
