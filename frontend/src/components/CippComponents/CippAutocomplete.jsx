@@ -24,6 +24,11 @@ const MemoTextField = React.memo(function MemoTextField({
   params,
   label,
   placeholder,
+  // Field-level required: asterisk on the label. HTML5 required is separate because
+  // Autocomplete (especially multiple) clears the input after selection — a static
+  // required on the input would falsely block submit even when chips/value exist.
+  required = false,
+  htmlRequired = false,
   // Autocomplete-specific props that must not be forwarded to TextField/DOM
   getOptionLabel,
   isOptionEqualToValue,
@@ -43,11 +48,12 @@ const MemoTextField = React.memo(function MemoTextField({
         label={label}
         placeholder={placeholder}
         {...otherProps}
+        required={htmlRequired}
         slotProps={{
           inputLabel: {
             shrink: true,
             sx: { transition: 'none' },
-            required: otherProps.required,
+            required,
           },
           input: {
             ...InputProps,
@@ -138,6 +144,13 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
     }
   }, [value, defaultValue])
 
+  // Controlled value wins; otherwise use the onChange-tracked selection (FormComponent
+  // often drives via defaultValue + onChange rather than a controlled value prop).
+  const currentSelection = value !== undefined && value !== null ? value : internalValue
+  const hasSelection = multiple
+    ? Array.isArray(currentSelection) && currentSelection.length > 0
+    : currentSelection != null && currentSelection !== ''
+
   // This is our paginated call
   const actionGetRequest = ApiGetCallWithPagination({
     ...getRequestInfo,
@@ -203,10 +216,11 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
         return result
       }
 
-      // Flatten the results from all pages
+      // Flatten the results from all pages. A dataKey can be present but null (e.g. an API
+      // returning {"Accounts":null}), which must read as "no options", not as a null option.
       const combinedResults = allPages.flatMap((page) => {
         const nestedData = getNestedValue(page, currentApi?.dataKey)
-        return nestedData !== undefined ? nestedData : []
+        return nestedData ?? []
       })
 
       if (!Array.isArray(combinedResults)) {
@@ -217,8 +231,11 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
           },
         ])
       } else {
-        // Convert each item into your { label, value, addedFields, rawData } shape
-        const convertedOptions = combinedResults.map((option) => {
+        // Convert each item into your { label, value, addedFields, rawData } shape.
+        // Null items would throw on the label/value field lookups below.
+        const convertedOptions = combinedResults
+          .filter((option) => option !== null && option !== undefined)
+          .map((option) => {
           const addedFields = {}
           if (currentApi?.addedField) {
             Object.keys(currentApi.addedField).forEach((key) => {
@@ -611,6 +628,7 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
                 label={label}
                 placeholder={placeholder}
                 required={required}
+                htmlRequired={required && !hasSelection}
                 {...other}
               />
               {api?.url && api?.showRefresh && (

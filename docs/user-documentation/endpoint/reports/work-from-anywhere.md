@@ -18,6 +18,4 @@ Upgrade Eligibility summarises the outcome as Capable, Not Capable, Upgraded or 
 Devices only appear here once Endpoint Analytics has been enabled in the tenant and has collected enough data from them.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

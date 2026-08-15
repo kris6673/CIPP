@@ -42,6 +42,4 @@ The table deliberately offers nothing else. Approving and rejecting are refused 
 Once a request is approved, a change CIPP raised is reapplied automatically. There is nothing to resubmit from this page.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

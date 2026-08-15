@@ -40,6 +40,4 @@ The Extended Info flyout adds the label's comment, tooltip, parent label, footer
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Create template based on label</td><td>Saves the selected label as a sensitivity label template so it can be redeployed to other tenants.</td><td>false</td></tr><tr><td>Set Label Color</td><td>Opens a colour picker and applies the chosen colour to the selected label. Any hex colour is accepted, beyond the preset palette the Purview portal offers. Submitting an empty value clears a colour that was set previously.</td><td>false</td></tr><tr><td>Delete Label</td><td>Permanently removes the selected label. A label that is published to users is also removed from the policies publishing it.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

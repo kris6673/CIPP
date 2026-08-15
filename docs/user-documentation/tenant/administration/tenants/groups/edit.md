@@ -53,6 +53,4 @@ CIPP re-evaluates dynamic groups on a schedule and updates their membership auto
 
 Select Save to write your changes. For a static group this stores the member list you selected; for a dynamic group it stores the rule set and logic, and membership is resolved automatically from that point forward.
 
-***
-
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

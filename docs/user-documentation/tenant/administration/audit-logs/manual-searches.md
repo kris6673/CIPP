@@ -39,6 +39,4 @@ The properties returned are for the Graph resource type `microsoft.graph.securit
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>View Results</td><td>Opens the <a data-mention href="search-results.md">search-results.md</a> for the selected search. Only useful once the search has reached a status of succeeded.</td><td>false</td></tr><tr><td>Process Logs</td><td>Runs the search results through your alert rules after confirmation, generating alerts for anything that matches. Nothing happens for records that match no rule.</td><td>true</td></tr></tbody></table>
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

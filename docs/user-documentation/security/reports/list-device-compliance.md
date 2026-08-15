@@ -10,6 +10,4 @@ The properties returned are for the Graph resource type `device`. For more infor
 This is the directory's view of a device, not Intune's. A device shows as compliant here based on what the directory holds, so a device that has not checked in recently can keep reporting its last known state. Read **Approximate Last Sign In Date Time** and **Last Sync Date Time** alongside the compliance columns before treating a row as current.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

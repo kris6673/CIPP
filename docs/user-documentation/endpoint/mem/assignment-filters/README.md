@@ -16,6 +16,4 @@ The properties returned are for the Graph resource type `deviceAndAppManagementA
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Create template based on filter</td><td>Saves the filter as an <a data-mention href="../assignment-filter-templates/">assignment-filter-templates</a> entry, so the same filter can be deployed to other tenants.</td><td>true</td></tr><tr><td>Edit Filter</td><td>Opens the filter for editing in <a data-mention href="edit.md">edit.md</a>.</td><td>false</td></tr><tr><td>Delete Filter</td><td>Deletes the filter from the tenant. Assignments using it lose the filter, so they apply to their full target group instead.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

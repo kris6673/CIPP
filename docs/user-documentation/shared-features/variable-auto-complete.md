@@ -36,6 +36,4 @@ You can also click an entry to insert it.
 The list closes on its own if what you type after the `%` stops looking like a variable name, for example when you type a space or punctuation. Type `%` again to bring it back.
 {% endhint %}
 
-***
-
 {% include "../../../.gitbook/includes/feature-request.md" %}

@@ -86,6 +86,4 @@ The SharePoint and Teams counts respect the site-type override, so they always r
 
 Select **Save Template** to store the template. Save only becomes available once the template is valid: a template name is set and every site template has a name, at least one root-level permission, and a name for every library. When something is missing, an information icon next to the Save button lists exactly what needs fixing. Saving a new template or a copy creates a new template, while saving an edit updates the existing template in place. You are then returned to the SharePoint Templates list.
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

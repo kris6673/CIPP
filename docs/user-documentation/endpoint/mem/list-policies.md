@@ -25,6 +25,4 @@ The flyout for a Settings Catalog or Administrative Templates policy fetches the
 
 {% include "../../../../.gitbook/includes/intune-actions.md" %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

@@ -17,6 +17,4 @@ CIPP queries users, contacts and groups separately and combines the results, add
 Sort or filter on **On Premises Provisioning Errors** to bring the objects that need attention to the top, since the table lists every user, contact and group rather than only the ones in error.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

@@ -8,6 +8,4 @@ The **Edit Contact Template** action on [README.md](README.md "mention") opens t
 Editing a template changes only the template. Contacts already created from it in a tenant are not updated, and the change is picked up the next time the template is deployed or the **Deploy Mail Contact Template** standard runs.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

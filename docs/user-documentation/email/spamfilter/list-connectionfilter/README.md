@@ -18,6 +18,4 @@ The properties returned are for the Exchange Online PowerShell command `Get-Host
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Create template based on filter</td><td>Saves the selected policy as a connection filter template, which then appears on <a data-mention href="../list-connectionfilter-templates.md">list-connectionfilter-templates.md</a>.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

@@ -49,6 +49,4 @@ Both targeting actions replace the method's include targets rather than adding t
 Enabling FIDO2 with **Enable Policy** rather than **Configure** turns on attestation enforcement and self-service registration, as those are the defaults CIPP applies. Use **Configure** afterwards if either should be off.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

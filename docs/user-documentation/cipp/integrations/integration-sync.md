@@ -25,6 +25,4 @@ Scheduled tasks are picked up on the quarter hour (:00, :15, :30, :45). Anything
 Tasks are created and removed automatically when you change an integration's tenant mappings, so there is nothing to add or delete here. A tenant disappearing from this table usually means its mapping was removed rather than that the sync has broken.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

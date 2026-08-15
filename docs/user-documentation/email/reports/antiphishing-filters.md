@@ -21,6 +21,4 @@ Spoof intelligence, unauthenticated sender indicators, and the first contact saf
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Enable Rule</td><td>Brings the policy into force so it starts applying to the recipients its rule covers. Greyed out where <strong>State</strong> is already <code>Enabled</code>.</td><td>true</td></tr><tr><td>Disable Rule</td><td>Stops the policy applying while keeping all of its settings, so it can be brought back later. Greyed out where <strong>State</strong> is already <code>Disabled</code>.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

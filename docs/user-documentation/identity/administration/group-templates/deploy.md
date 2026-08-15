@@ -49,6 +49,4 @@ Licences held on a template are carried into the deployment even though this wiz
 The Group Type list here does not include Microsoft 365 Group, so a Microsoft 365 template cannot be deployed from this wizard. Selecting one leaves the group type unset and the wizard will not continue. Create Microsoft 365 groups from the [add.md](../groups/add.md "mention") page in the meantime.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

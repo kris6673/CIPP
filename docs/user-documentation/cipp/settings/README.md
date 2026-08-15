@@ -116,6 +116,4 @@ The remaining application settings are grouped on their own tabs.
 | [features.md](features.md "mention")                 | Enables and disables optional CIPP features.                                     |
 | [siem.md](siem.md "mention")                         | Configures log forwarding to an external SIEM.                                   |
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

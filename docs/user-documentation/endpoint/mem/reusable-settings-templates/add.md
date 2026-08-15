@@ -22,6 +22,4 @@ Each row in this table is one entry in the address list. **Add row** appends ano
 Each entry also carries an identifier, which CIPP generates automatically and does not show. Nothing needs entering for it.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

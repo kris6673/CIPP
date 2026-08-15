@@ -51,6 +51,4 @@ Built-in Microsoft remediation scripts are read-only. The editor opens and the s
 Some script types hold no editable content, in which case the dialogue says so rather than opening an editor.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

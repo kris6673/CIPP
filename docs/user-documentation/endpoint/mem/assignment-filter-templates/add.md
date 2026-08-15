@@ -16,6 +16,4 @@ Creates an assignment filter template in CIPP. The template can then be deployed
 See Microsoft's documentation on [filter device properties](https://learn.microsoft.com/en-us/mem/intune/fundamentals/filters-device-properties) for the properties and operators the rule syntax supports.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

@@ -14,6 +14,4 @@ This is CIPP's custom report builder introduced with the deprecation of the Best
 
 {% @storylane/embed subdomain="app" linkValue="vcrohqu0snfg" url="https://app.storylane.io/share/vcrohqu0snfg" %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

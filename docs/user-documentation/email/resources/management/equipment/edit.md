@@ -47,6 +47,4 @@ This page changes the details and booking behaviour of an equipment mailbox. It 
 
 **Save** applies the changes and returns you to the equipment list.
 
-***
-
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

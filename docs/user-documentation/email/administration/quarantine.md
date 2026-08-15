@@ -26,6 +26,4 @@ The flyout carries the same actions and highlights the message ID, recipient add
 **Release &#38; Allow Sender** adds a standing allow entry to the anti-spam policy, and that entry stays until it is removed by hand. Use it for a sender that is genuinely being caught wrongly, and prefer a plain **Release** otherwise.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

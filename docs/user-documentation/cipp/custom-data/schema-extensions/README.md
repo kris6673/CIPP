@@ -35,6 +35,4 @@ Plan your properties while the schema is still In Development. That is the only 
 CIPP maintains its own schema, `cippUser`, which stores JIT administrator state, mailbox type, archive settings, and per-user MFA state on the user object. It counts towards the limit of five schema extensions and should be left in place.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

@@ -78,6 +78,4 @@ Regardless of the type of report layout you choose, the fields will have the fol
    2. JSON: used for storing more complex objects
    3. Boolean: used for true/false reporting
 
-***
-
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

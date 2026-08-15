@@ -40,6 +40,4 @@ The row flyout adds the account's billing policy, its Microsoft Entra object ID,
 
 Every action other than **Delete HVE Account** works on a single account at a time and is not offered when several rows are selected.
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

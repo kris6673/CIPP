@@ -667,9 +667,9 @@
         "tags": [
           "Tenant > Standards"
         ],
-        "description": "Creates or updates a baseline. There is no baseline blob: the Baselines\ndelta rows (design doc §4.1) are the editable source of truth for every standard's\nconfiguration, and the BaselineRollouts row (§12.2) holds the baseline-level data -\nname, description, exclusions, alert destinations, and the ordered stage definitions.\nBaselines are reconstructed from those rows on read.",
+        "description": "Creates or updates a baseline. There is no baseline blob: the Baselines\ndelta rows (design doc §4.1) are the editable source of truth for every standard's\nconfiguration, and the BaselineRollouts row (§12.2) holds the baseline-level data -\nname, description, exclusions, alert destinations, and the ordered stage definitions.\nBaselines are reconstructed from those rows on read. The actual write lives in\nNew-CIPPBaseline, shared with the community-repo import.",
         "requestBody": {
-          "required": true,
+          "required": false,
           "content": {
             "application/json": {
               "schema": {
@@ -722,9 +722,9 @@
                     "type": "string"
                   }
                 },
-                "required": [
-                  "templateName"
-                ]
+                "additionalProperties": true,
+                "x-cipp-passthrough": true,
+                "description": "This endpoint forwards the request body onward rather than reading a fixed set of fields. The properties listed here are the ones it is known to read; others may be accepted."
               }
             }
           }
@@ -764,7 +764,10 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Tenant.Standards.ReadWrite"
+        "x-cipp-role": "Tenant.Standards.ReadWrite",
+        "x-cipp-reads-via": [
+          "New-CIPPBaseline"
+        ]
       }
     },
     "/api/AddBPATemplate": {
@@ -4667,10 +4670,20 @@
                     }
                   },
                   "TemplateGuid": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "The deploy drawer and wizard send the chosen row's GUID as TemplateList.value, not as TemplateID. Template display names are not unique - re-imports create same-named twins - so resolving by display name below can land on a different row than the one the user picked. The selected RowKey must win whenever the request carries one. String rather than Guid: built-in templates are stored with their filename as RowKey."
                   },
                   "TemplateID": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "The deploy drawer and wizard send the chosen row's GUID as TemplateList.value, not as TemplateID. Template display names are not unique - re-imports create same-named twins - so resolving by display name below can land on a different row than the one the user picked. The selected RowKey must win whenever the request carries one. String rather than Guid: built-in templates are stored with their filename as RowKey."
+                  },
+                  "TemplateList": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "The deploy drawer and wizard send the chosen row's GUID as TemplateList.value, not as TemplateID. Template display names are not unique - re-imports create same-named twins - so resolving by display name below can land on a different row than the one the user picked. The selected RowKey must win whenever the request carries one. String rather than Guid: built-in templates are stored with their filename as RowKey."
                   },
                   "TemplateType": {
                     "type": "string"
@@ -14522,7 +14535,7 @@
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "Returns the business email compromise assessment for a user: recent sign-ins, mailbox rules, added applications and password changes. If no cached result exists the check is queued as a background job and the response reports it as waiting, so poll rather than expecting results on the first call. Pass overwrite=true to force a fresh run.",
+        "description": "Returns the business email compromise assessment for a user: sign-ins with a location analysis against the user's assigned usage location, mailbox rules and rule changes, trusted/blocked sender changes, OneDrive and SharePoint sharing link activity, added applications matched against the known-malicious catalog, MFA methods, Intune devices, sent mail, and tenant-wide password changes. If no cached result exists the check is queued as a background job and the response reports it as waiting, so poll rather than expecting results on the first call. Pass overwrite=true to force a fresh run.",
         "parameters": [
           {
             "name": "GUID",
@@ -15079,7 +15092,8 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "CIPP.AppSettings.ReadWrite"
+        "x-cipp-role": "CIPP.AppSettings.ReadWrite",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/ExecBreachSearch": {
@@ -16301,6 +16315,7 @@
                       "SetBranch",
                       "SetTemplateTypes",
                       "Update",
+                      "UploadBaseline",
                       "UploadScript",
                       "UploadTemplate"
                     ]
@@ -16315,7 +16330,8 @@
                     "type": "string"
                   },
                   "GUID": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "A baseline is not a templates-table row: Export-CIPPBaselineTemplate assembles the portable set - the BaselineTemplate file plus one standard template file per referenced CA/Intune template (packages expanded to their current members). Related templates are separate files, exactly the shape UploadTemplate writes, so they import through the untouched path."
                   },
                   "Id": {
                     "type": "string"
@@ -18594,6 +18610,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
@@ -24800,6 +24819,10 @@
                         "CanViewPrivateItems": {
                           "type": "string"
                         },
+                        "DisplayName": {
+                          "type": "string",
+                          "description": "TargetUser may be a recipient id, so log the display name the caller saw"
+                        },
                         "FolderName": {
                           "type": "string"
                         },
@@ -25253,6 +25276,10 @@
                       "properties": {
                         "CanViewPrivateItems": {
                           "type": "string"
+                        },
+                        "DisplayName": {
+                          "type": "string",
+                          "description": "TargetUser may be a recipient id, so log the display name the caller saw"
                         },
                         "FolderName": {
                           "type": "string"
@@ -30163,6 +30190,53 @@
           }
         ],
         "x-cipp-role": "CIPP.SuperAdmin.ReadWrite"
+      }
+    },
+    "/api/ExecSamSecretStatus": {
+      "post": {
+        "summary": "Reports whether the stored SAM application secret is usable yet.",
+        "operationId": "ExecSamSecretStatus",
+        "tags": [
+          "CIPP > Setup"
+        ],
+        "description": "The setup wizard creates a client secret on one step and uses it on the next, but Entra\ncan take several minutes to replicate a newly created secret. Until it has, every token\nrequest fails with AADSTS7000215 even though the value CIPP holds is correct. This lets\nthe wizard wait on that instead of failing the user after they have already signed in.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.AppSettings.ReadWrite",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/ExecScheduleForwardingVacation": {
@@ -38369,7 +38443,7 @@
         "tags": [
           "CIPP > Settings"
         ],
-        "description": "Returns the report branding: colours, logo and cover images, footer and watermark text.\n\nThis used to ride along inside ListUserSettings, which meant every page load carried every\nuploaded cover as an inline data URL — megabytes of images fetched to render a settings\nmenu. Worse, hydrating branding also ran the legacy-image migration, so a GET issued on\nevery page load wrote the BrandingSettings row back from a snapshot it had read moments\nearlier, and any upload that landed in between was overwritten.\n\nBranding therefore has its own endpoint, fetched by the things that actually draw it, and\nthis read never writes. Migration belongs to ExecBrandingSettings -Action Get: the settings\npage opening is a deliberate, infrequent, single-user action, which is the one place where\nrewriting the row is safe.\n\nIts role matches ListUserSettings rather than the branding write role — every user who\nrenders a report needs the branding on it, and that is exactly who could read it before.",
+        "description": "Returns the report branding: colours, logo and cover images, footer and watermark text.\n\nBranding was previously returned by ListUserSettings, which put every uploaded cover\ninline on every page load and ran the legacy-image migration - a write - on that read\npath. This read never writes; migration belongs to ExecBrandingSettings -Action Get.\n\nThe role matches ListUserSettings rather than the branding write role, since every user\nwho renders a report needs the branding on it.",
         "parameters": [
           {
             "name": "includeGallery",
@@ -38597,6 +38671,9 @@
                         "x-cipp-field-source": "backend"
                       },
                       "User": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "UserId": {
                         "x-cipp-field-source": "backend"
                       }
                     }
@@ -38847,6 +38924,86 @@
           }
         ],
         "x-cipp-role": "CIPP.Core.Read"
+      }
+    },
+    "/api/ListCippDocs": {
+      "get": {
+        "summary": "Search the CIPP documentation, or fetch one documentation page in full.",
+        "operationId": "ListCippDocs",
+        "tags": [
+          "CIPP > Core"
+        ],
+        "description": "Searches the GitBook documentation shipped with this build and returns matching sections,\neach with an excerpt and links back to docs.cipp.app and to the file on GitHub. Pages under\nuser-documentation also report the CIPP route they document, so a screen can be traced to\nits docs and back.\n\nPass path on its own to list the pages under a documentation subtree or a CIPP route, or\nwith full=true to return one page's entire text. This backs the SearchDocs and GetDoc MCP\ntools and is available to the UI and API clients on the same terms.",
+        "parameters": [
+          {
+            "name": "full",
+            "in": "query",
+            "description": "Return the whole page rather than matching sections. Requires path.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum results to return (default 8, max 25).",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "description": "A documentation subtree ('user-documentation/identity') or a CIPP route ('/identity/administration/users').",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "description": "Keywords or a plain-language question, e.g. 'how do I set up GDAP'.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.Core.Read",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/ListCippQueue": {
@@ -39732,6 +39889,9 @@
                         "x-cipp-field-source": "backend"
                       },
                       "User": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "UserId": {
                         "x-cipp-field-source": "backend"
                       }
                     }
@@ -44396,7 +44556,7 @@
         "tags": [
           "Tools > GitHub"
         ],
-        "description": "Returns release metadata for the provided repository and semantic version. Hotfix\nversions (e.g. v8.5.2) map back to the base release tag (v8.5.0).",
+        "description": "Returns release metadata for the provided repository. Results are cached and refreshed\nwhen the cache has no entry for the running version - hotfix releases (e.g. v8.5.2)\npublish their own notes, so a v8.5.0 entry no longer counts as current.",
         "responses": {
           "200": {
             "description": "Success",
@@ -46239,21 +46399,24 @@
                     "type": "object",
                     "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                     "properties": {
+                      "corrupt": {
+                        "x-cipp-field-source": "backend"
+                      },
                       "description": {
-                        "x-cipp-field-source": "frontend"
+                        "x-cipp-field-source": "backend,frontend"
                       },
                       "displayName": {
-                        "x-cipp-field-source": "frontend"
+                        "x-cipp-field-source": "backend,frontend"
                       },
                       "ETag": {
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       },
                       "guid": {
-                        "x-cipp-field-source": "storage"
+                        "x-cipp-field-source": "storage,backend"
                       },
                       "isSynced": {
-                        "x-cipp-field-source": "frontend"
+                        "x-cipp-field-source": "backend,frontend"
                       },
                       "JSON": {
                         "x-cipp-field-source": "storage"
@@ -46262,7 +46425,7 @@
                         "x-cipp-field-source": "backend"
                       },
                       "package": {
-                        "x-cipp-field-source": "storage,frontend"
+                        "x-cipp-field-source": "storage,backend,frontend"
                       },
                       "PartitionKey": {
                         "x-cipp-field-source": "storage"
@@ -46278,7 +46441,7 @@
                         "x-cipp-field-source": "storage"
                       },
                       "source": {
-                        "x-cipp-field-source": "storage"
+                        "x-cipp-field-source": "storage,backend"
                       },
                       "templateCount": {
                         "x-cipp-field-source": "backend"
@@ -49072,6 +49235,48 @@
           }
         ],
         "x-cipp-role": "Tenant.Relationship.Read"
+      }
+    },
+    "/api/ListPartnerTenantInfo": {
+      "get": {
+        "summary": "ListPartnerTenantInfo",
+        "operationId": "ListPartnerTenantInfo",
+        "tags": [
+          "CIPP > Core"
+        ],
+        "description": "Reports whether the CIPP host tenant is a Microsoft Partner tenant, so the frontend can\ndecide whether partner-only flows (GDAP onboarding, reseller invites, GDAP permission\nchecks) apply to this instance.\n\nMarked AnyTenant deliberately. This answers a question about the CIPP instance, not\nabout a tenant the caller wants to act on, and Get-CippPartnerTenantInfo pins the lookup\nto $env:TenantID. Without the flag, Test-CIPPAccess falls back to $env:TenantID as the\ntenant filter and denies any custom role that blocks the partner tenant, which silently\ngreys out partner-only UI for roles that are otherwise fully permitted.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.Core.Read",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/ListPendingWebhooks": {
@@ -54933,10 +55138,18 @@
         "tags": [
           "Tenant > Standards"
         ],
-        "description": "Lists tenant alignment data showing how well tenants conform to their assigned standards templates.",
+        "description": "Lists tenant alignment data showing how well tenants conform to their assigned standards templates.\n\nPass summary=true for the estate roll-up only: per-tenant averages collapsed into score\nbuckets, the overall average, the lowest-scoring tenants and the pending-deviation totals.\nThe row list is one entry per tenant per standard, so an estate-wide caller that only\nrenders those aggregates would otherwise pull tenants x standards rows to compute a\nhandful of numbers.",
         "parameters": [
           {
             "name": "granular",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "summary",
             "in": "query",
             "required": false,
             "schema": {
@@ -55761,6 +55974,14 @@
         "parameters": [
           {
             "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "countsOnly",
             "in": "query",
             "required": false,
             "schema": {
@@ -57976,10 +58197,66 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                  "description": "Derived from the Microsoft Graph entity it queries, and the fields written into the storage table it reads. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
                   "properties": {
+                    "addIns": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "api": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "appId": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "applicationTemplateId": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
                     "AppName": {
                       "x-cipp-field-source": "storage"
+                    },
+                    "appRoles": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "authenticationBehaviors": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "certification": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "createdByAppId": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "createdDateTime": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "defaultRedirectUri": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "deletedDateTime": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "description": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "disabledByMicrosoftStatus": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "displayName": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
                     },
                     "Enabled": {
                       "x-cipp-field-source": "storage"
@@ -57988,15 +58265,95 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     },
+                    "groupMembershipClaims": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "id": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "identifierUris": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "info": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
                     "IPRange": {
                       "x-cipp-field-source": "storage"
+                    },
+                    "isDeviceOnlyAuthSupported": {
+                      "type": "boolean",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "isDisabled": {
+                      "type": "boolean",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "isFallbackPublicClient": {
+                      "type": "boolean",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "keyCredentials": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "logo": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "managerApplications": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
                     },
                     "MCPAllowed": {
                       "type": "boolean",
                       "x-cipp-field-source": "storage"
                     },
+                    "nativeAuthenticationApisEnabled": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "notes": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "oauth2RequirePostResponse": {
+                      "type": "boolean",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "optionalClaims": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "parentalControlSettings": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
                     "PartitionKey": {
                       "x-cipp-field-source": "storage"
+                    },
+                    "passwordCredentials": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "publicClient": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "publisherDomain": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "requestSignatureVerification": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "requiredResourceAccess": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
                     },
                     "Role": {
                       "type": "string",
@@ -58005,9 +58362,49 @@
                     "RowKey": {
                       "x-cipp-field-source": "storage"
                     },
+                    "samlMetadataUrl": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "serviceManagementReference": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "servicePrincipalLockConfiguration": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "signInAudience": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "spa": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "tags": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
                     "Timestamp": {
                       "type": "string",
                       "x-cipp-field-source": "storage"
+                    },
+                    "tokenEncryptionKeyId": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "uniqueName": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "verifiedPublisher": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "web": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
                     }
                   }
                 }

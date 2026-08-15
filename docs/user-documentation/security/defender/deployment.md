@@ -198,6 +198,4 @@ The mode applies to the whole policy rather than to individual rules. Deploying 
 
 For more details on each setting, refer to the [Microsoft Defender for Endpoint documentation](https://learn.microsoft.com/en-us/microsoft-365/security/defender-endpoint/microsoft-defender-endpoint?view=o365-worldwide).
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

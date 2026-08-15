@@ -17,6 +17,4 @@ This page lists the SharePoint sites that have been deleted in the selected tena
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Restore Site</td><td>Restores the selected site from the tenant recycle bin back to active use, at the address shown in the <strong>Url</strong> column. You are asked to confirm first, and large sites can take a while to finish restoring. Greyed out unless you have SharePoint site write access.</td><td>true</td></tr></tbody></table>
 
-***
-
 {% include "../../../.gitbook/includes/feature-request.md" %}

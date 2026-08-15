@@ -97,6 +97,4 @@ A summary of everything selected. Submitting creates the scheduled tasks.
 {% endstep %}
 {% endstepper %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

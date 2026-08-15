@@ -55,6 +55,4 @@ This pattern keeps your group-level templates clean and your exceptions visible 
 Because licence-incompatible settings are automatically skipped, you _can_ lump everything into one big template — but the group-based pattern above gives you cleaner alignment reporting and makes "why is this tenant non-compliant?" easier to answer.
 {% endhint %}
 
-***
-
 {% include "../../../.gitbook/includes/feature-request.md" %}

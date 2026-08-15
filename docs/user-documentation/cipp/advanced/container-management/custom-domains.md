@@ -65,6 +65,4 @@ Wildcard domains are the exception: App Service Managed Certificates do not supp
 {% endstep %}
 {% endstepper %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

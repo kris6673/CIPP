@@ -44,6 +44,4 @@ After saving, the drawer stays open so a variation can be adjusted and saved as 
 Deployed templates go into the queue alongside anything added from the Applications page, so nothing reaches Intune until the queue is processed. Use **Run Queue now** on the [queue.md](queue.md "mention") page if you would rather not wait for the scheduled run.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

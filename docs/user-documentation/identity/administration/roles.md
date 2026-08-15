@@ -33,6 +33,4 @@ Custom roles cannot have their members removed from this page, because the remov
 This page covers Entra ID directory roles. Permissions granted through Exchange Online role groups, Azure resource roles, or Microsoft Purview are held elsewhere and do not appear here, so a review of who holds administrative access needs to take in those as well.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

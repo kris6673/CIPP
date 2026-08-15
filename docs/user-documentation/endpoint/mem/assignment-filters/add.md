@@ -20,6 +20,4 @@ See Microsoft's documentation on [filter device properties](https://learn.micros
 Filter Type and Platform are fixed at creation. Getting either wrong means deleting the filter and creating it again, so check both before saving.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

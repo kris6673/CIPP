@@ -46,6 +46,4 @@ The fix is on the tenant, not in CIPP. Enabling the **Enable Usernames instead o
 This setting also affects reports elsewhere in CIPP, and in the Microsoft 365 admin center itself, so it is worth resolving for any tenant where you rely on usage reporting.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

@@ -20,6 +20,4 @@ This affects CIPP's own background jobs that run at a fixed time of day — Stan
 It does **not** change Scheduled Tasks that you create yourself. Those run at the absolute time you picked when you created them. Background jobs that run on a short interval, such as every 15 minutes, are also unaffected.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

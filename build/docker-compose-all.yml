@@ -83,6 +83,9 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - CRAFT_VERBOSE=true
       - App__Setup__Enabled=false
+      # Where the SearchDocs MCP tool finds the docs. Only needed in dev: the image puts them
+      # at $CIPPRootPath/Docs, which Get-CippDocsRoot probes by default.
+      - CIPPDocsPath=/app/Docs
       - AzureWebJobsStorage=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;
       - NonLocalHostAzurite=true
       - CIPPNG=true
@@ -118,6 +121,16 @@ services:
       # Live backend source. rw because runtime permission extraction writes
       # Config/function-permissions.json back into the repo (gitignored).
       - ../backend:/app/API
+      # GitBook docs, indexed by the SearchDocs MCP tool. Without this the tool reports the
+      # docs as missing, because only backend/ is bind-mounted and ../docs is not reachable
+      # from inside the container.
+      #
+      # Mounted at /app/Docs and pointed at by CIPPDocsPath rather than at the image's own
+      # /app/API/Docs: that path sits INSIDE the ../backend bind mount, and Docker creates a
+      # nested mountpoint on the host to hang it off — leaving an empty backend/Docs in the
+      # working tree that then shadows the real docs for Pester and anything else running
+      # outside the container.
+      - ../docs:/app/Docs:ro
       # Writable manifest shims, seeded by cipp-manifests. Each mount shadows a single
       # .psd1 so DevExpandModuleExports rewrites the copy under .devmanifests/ instead of
       # the tracked file in backend/Modules. Everything else in the module dir (Public/,

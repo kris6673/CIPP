@@ -14,6 +14,4 @@ The properties returned are for the Exchange Online PowerShell command `Get-Mobi
 
 Each action confirms first, naming the device and the mailbox it belongs to. Allowing and blocking are settings on the mailbox rather than on the device, so a device that synchronises several mailboxes needs the action running against each of its rows.
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

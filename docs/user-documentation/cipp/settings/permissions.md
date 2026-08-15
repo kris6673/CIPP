@@ -52,6 +52,4 @@ Selecting a row opens a flyout with further detail, including the tenant ID, def
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Check Tenant</td><td>Re-runs the access check for the selected tenant.</td><td>true</td></tr><tr><td>Repair Exchange Roles</td><td>Restores the Exchange roles CIPP requires in the selected tenant. Available only where the check has found that a repair is needed.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

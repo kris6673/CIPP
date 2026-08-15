@@ -120,6 +120,4 @@ Selecting three or more users turns scheduling on by itself, since a large offbo
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>View Task Details</td><td>Opens the <a data-mention href="../../tools/scheduler/task.md">task.md</a> page for the selected job, showing its full parameters and results. Requires scheduler read permissions.</td><td>false</td></tr><tr><td>Run Now</td><td>Runs the selected job immediately rather than waiting for its scheduled date. Requires scheduler write permissions.</td><td>true</td></tr><tr><td>Delete Job</td><td>Removes the job so it never runs. Requires scheduler write permissions.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

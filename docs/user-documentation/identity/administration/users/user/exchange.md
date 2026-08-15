@@ -131,6 +131,4 @@ Sets the mailbox's automatic replies.
 
 Sets the largest number of recipients the mailbox may address in a single message, which is a practical brake on a compromised account being used to send in bulk.
 
-***
-
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

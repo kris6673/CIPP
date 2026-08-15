@@ -169,6 +169,12 @@ const buildSeries = (primary, secondary) => {
 const DEFAULT_FOOTER_TEMPLATE = ''
 const DEFAULT_WATERMARK_TEXT = ''
 
+/** Hard ceiling for page/cover footer text — applied after `%variable%` substitution. */
+export const FOOTER_MAX_LENGTH = 200
+
+/** Hard ceiling for the mark drawn on the page — applied after `%variable%` substitution. */
+export const WATERMARK_MAX_LENGTH = 40
+
 /**
  * The parts of a report that can be coloured independently.
  *
@@ -300,10 +306,8 @@ export const buildPalette = (branding, { primary, secondary }) => {
  * footer might want — `%tenantname%` foremost — is already a CIPP variable, so it is not restated
  * here. The `report` prefix keeps these clear of the reserved names in Get-CIPPTextReplacement.
  *
- * A PDF is rendered in the browser, so Get-CIPPTextReplacement never sees this text and cannot fill
- * CIPP's own variables in it. `useReportVariables` reads their resolved values back out of
- * ListCustomVariables and hands them to the report, which is what makes `%cippurl%` in a footer
- * print the URL rather than the word. Being a CIPP variable is about where it is documented and
+ * A PDF renders in the browser, so Get-CIPPTextReplacement never sees this text. `useReportVariables`
+ * supplies the resolved values instead. Being a CIPP variable is about where it is documented and
  * offered, not about who substitutes it.
  */
 export const REPORT_VARIABLES = [
@@ -318,9 +322,8 @@ export const REPORT_VARIABLES = [
  * and an unknown token is left as written rather than blanked — that is what tells whoever
  * configured it that they mistyped, instead of silently swallowing it.
  *
- * This runs in the browser because that is where the PDF is rendered, so it is given the values
- * rather than looking them up: the report's own tokens plus whatever `useReportVariables` resolved
- * out of CIPP for the tenant.
+ * Given the values rather than looking them up: the report's own tokens plus whatever
+ * `useReportVariables` resolved for the tenant.
  */
 export const applyReportVariables = (template, variables = {}) => {
   if (!template) return ''
@@ -335,6 +338,23 @@ export const applyReportVariables = (template, variables = {}) => {
     return value == null ? match : String(value)
   })
 }
+
+/**
+ * Resolve a watermark template and enforce the on-page length ceiling.
+ *
+ * The branding field stores a template (and rejects templates over the same limit). Tenant names
+ * and other variables can still expand past it at render time — that is when the ceiling is
+ * applied, so a long `%tenantname%` cannot spill a mark across the whole page.
+ */
+export const applyWatermarkText = (template, variables = {}) =>
+  applyReportVariables(template, variables).slice(0, WATERMARK_MAX_LENGTH)
+
+/**
+ * Resolve page-footer / cover-note text and enforce the length ceiling after substitution.
+ * Same reason as the watermark: a long `%tenantname%` must not blow past the stored limit.
+ */
+export const applyFooterText = (template, variables = {}) =>
+  applyReportVariables(template, variables).slice(0, FOOTER_MAX_LENGTH)
 
 /**
  * Build the theme a report renders against.

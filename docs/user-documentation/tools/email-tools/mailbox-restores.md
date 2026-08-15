@@ -68,6 +68,4 @@ The properties returned are for the Exchange Online PowerShell command `Get-Mail
 
 **View Report** opens the detailed request report, a verbose log of everything Exchange Online did while processing the request. This is the most useful artefact to attach to a support case for a failed restore.
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

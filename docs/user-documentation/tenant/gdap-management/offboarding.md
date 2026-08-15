@@ -40,6 +40,4 @@ The following actions will terminate all delegated access to the customer tenant
 Selecting **Terminate all active GDAP relationships** also removes the tenant from CIPP's tenant list as part of the same run. The other options leave the tenant in place, so if you need it gone without terminating relationships, use the **Delete Tenant** action on [tenants.md](../../cipp/settings/tenants.md "mention").
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

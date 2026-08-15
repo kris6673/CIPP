@@ -79,6 +79,4 @@ Licences assigned to a group are applied automatically to everyone in it, which 
 The five settings under Group Settings are only sent when you have actually changed them, so a toggle you leave alone is not written back. The properties under Group Properties behave differently and are submitted every time, whatever their current value.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

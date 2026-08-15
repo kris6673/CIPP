@@ -51,6 +51,4 @@ Either source lets you preview a policy's full JSON before importing. Imported t
 Package tags are free text. Assigning the same package name to several templates groups them, which is useful for keeping a baseline set together when deploying to a new tenant.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

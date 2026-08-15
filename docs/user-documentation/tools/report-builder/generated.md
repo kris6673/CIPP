@@ -32,6 +32,4 @@ The report opens rendered in full, using the page setup and branding that were i
 
 **Download PDF** saves the report locally. The filename is built from the tenant and the current date.
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

@@ -10,6 +10,4 @@ Everything CIPP does in the frontend is represented by an API endpoint. For furt
 
 {% @cipp-external-webpage-block/cyberdrain url="https://cipp-ashe.github.io/cipp-oas-generator/" fullWidth="true" %}
 
-***
-
 {% include "../../.gitbook/includes/feature-request.md" %}

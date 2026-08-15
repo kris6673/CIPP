@@ -63,6 +63,4 @@ The flyout adapts to the type of event in the row.
 | Task and standard completions | A summary card with the task or standard name, the command, the tenant, and the run count and duration figures where present.                                   |
 | Anything else                 | A property list of every field returned by the query, with the custom dimensions listed separately and available to copy.                                       |
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

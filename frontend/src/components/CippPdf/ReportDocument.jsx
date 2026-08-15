@@ -1,6 +1,6 @@
 import { Document } from '@react-pdf/renderer'
 import { ReportProvider } from './reportContext'
-import { createReportTheme } from './reportTheme'
+import { applyFooterText, createReportTheme } from './reportTheme'
 import { createReportStyles, DEFAULT_PAGE_SETUP } from './reportPdfStyles'
 import { CoverPage } from './reportPdfPrimitives'
 import { resolveCoverImage } from './resolveCoverImage'
@@ -55,8 +55,7 @@ export const ReportDocument = ({
   // The report's own footer wording, used when branding configures none.
   footerLabel,
 
-  // Resolved CIPP variables, from `useReportVariables`. Without them a footer configured with
-  // `%cippurl%` or a custom variable ships with the token still written in it.
+  // Resolved CIPP variables, from `useReportVariables`.
   variables: cippVariables,
 
   size = DEFAULT_PAGE_SETUP.size,
@@ -73,10 +72,8 @@ export const ReportDocument = ({
     generatedOn ??
     new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 
-  // What every `%variable%` resolves to anywhere in this report. CIPP's own come first and the
-  // report's three override them: `%reportname%` and `%reportdate%` exist nowhere else, and this
-  // report's subject is the authority on `%tenantname%` — it still resolves before the fetch lands,
-  // which a footer that has always worked should not have to wait for.
+  // What every `%variable%` resolves to in this report. The report's own three override CIPP's,
+  // so `%tenantname%` still resolves before the variables fetch lands.
   const variables = {
     ...cippVariables,
     tenantname: tenantName || 'Organization',
@@ -85,6 +82,14 @@ export const ReportDocument = ({
   }
 
   const context = { theme, styles, variables, logo, footerLabel, size, orientation, date }
+
+  // Branding's cover note wins; a report's own wording is the fallback. Leave the prop undefined
+  // when neither is set so CoverPage's default confidentiality line still appears. Variables are
+  // filled here so a configured `%tenantname%` note resolves the same way the page footer does.
+  const coverNoteTemplate = theme.coverFooterText || coverFooterNote
+  const coverNote = coverNoteTemplate
+    ? applyFooterText(coverNoteTemplate, variables)
+    : undefined
 
   return (
     <ReportProvider value={context}>
@@ -106,8 +111,7 @@ export const ReportDocument = ({
             // Naming the client on the cover is what makes it a client report. Every report wanted
             // it and each one printed it slightly differently; `coverTenant={false}` opts out.
             tenantName={coverTenant === false ? null : coverTenant || tenantName}
-            // Branding's cover note wins; a report's own wording is the fallback.
-            footerNote={theme.coverFooterText || coverFooterNote}
+            footerNote={coverNote}
           >
             {coverMeta}
           </CoverPage>

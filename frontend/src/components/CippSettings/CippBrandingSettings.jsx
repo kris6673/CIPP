@@ -33,7 +33,7 @@ import {
   normalizeLogoImageIds,
   normalizeLogoUploads,
 } from "../CippPdf/resolveCoverImage";
-import { REPORT_COLOUR_ROLES } from "../CippPdf/reportTheme";
+import { FOOTER_MAX_LENGTH, REPORT_COLOUR_ROLES, WATERMARK_MAX_LENGTH } from "../CippPdf/reportTheme";
 import { BRANDING_GALLERY_QUERY_KEY } from "../CippPdf/useBrandingSettings";
 import { useForm } from "react-hook-form";
 
@@ -78,7 +78,7 @@ const FOOTER_TOOLTIP =
   "Text shown at the bottom of every report page. Type % for CIPP's variables, plus %reportname% and %reportdate% which reports add. Report templates can override this or switch it off individually.";
 
 const WATERMARK_TOOLTIP =
-  "Diagonal text drawn faintly across every page of a report, cover included — e.g. DRAFT or CONFIDENTIAL. Typing text is enough to show it; the toggle only exists to switch it off without losing the wording.";
+  "Diagonal text drawn faintly across every page of a report, cover included. Type % for CIPP's variables (e.g. %tenantname%), or a static mark such as DRAFT. Typing text is enough to show it; the toggle only exists to switch it off without losing the wording.";
 
 const REPORT_DEFAULTS_TOOLTIP =
   "Which preset each report reaches for when nothing else says otherwise. A report template with its own preset still wins over this, and this still wins over the default branding above.";
@@ -222,9 +222,8 @@ const GalleryTile = ({
 
 const CippBrandingSettings = () => {
   const settings = useSettings();
-  // Read through ApiGetCall rather than useBrandingSettings so this page can see when the fetch
-  // landed: the sync effect below has to run on a *new* server payload, not on every render.
-  // Same url and queryKey, so it is the same cache entry every report reads.
+  // Read through ApiGetCall rather than useBrandingSettings so the sync effect below can key on
+  // when the fetch landed. Same cache entry either way.
   const brandingQuery = ApiGetCall({
     url: "/api/ListBrandingSettings",
     data: { includeGallery: true },
@@ -415,10 +414,6 @@ const CippBrandingSettings = () => {
     if (coversHydrated || logosHydrated) {
       setCoversReady(true);
     }
-    // Branding used to be a mutable client blob on the settings object, so this had to list every
-    // field that might have changed underneath it — and compare the arrays by hand, because their
-    // identity changed on every render. A query has one answer to "is this a new payload from the
-    // server", which is the only question this effect was ever asking.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when server branding payload changes
   }, [activePresetId, uploadPending, brandingQuery.isSuccess, brandingQuery.dataUpdatedAt]);
 
@@ -1417,12 +1412,12 @@ const CippBrandingSettings = () => {
                     name="footerText"
                     formControl={formControl}
                     placeholder="%tenantname% — prepared by Contoso IT — %reportdate%"
-                    helperText="Type % for variables. Reports add %reportname% and %reportdate%."
+                    helperText={`Type % for variables. Reports add %reportname% and %reportdate%. After substitution, text is capped at ${FOOTER_MAX_LENGTH} characters.`}
                     includeSystemVariables={true}
                     validators={{
                       maxLength: {
-                        value: 200,
-                        message: "Footer text must be 200 characters or fewer",
+                        value: FOOTER_MAX_LENGTH,
+                        message: `Footer text must be ${FOOTER_MAX_LENGTH} characters or fewer`,
                       },
                     }}
                   />
@@ -1431,13 +1426,13 @@ const CippBrandingSettings = () => {
                     name="coverFooterText"
                     label="Cover Note"
                     placeholder="Blank = each report's own wording"
-                    helperText="Replaces the confidentiality note on cover pages"
+                    helperText={`Replaces the confidentiality note on cover pages. After substitution, text is capped at ${FOOTER_MAX_LENGTH} characters.`}
                     includeSystemVariables={true}
                     formControl={formControl}
                     validators={{
                       maxLength: {
-                        value: 200,
-                        message: "Cover note must be 200 characters or fewer",
+                        value: FOOTER_MAX_LENGTH,
+                        message: `Cover note must be ${FOOTER_MAX_LENGTH} characters or fewer`,
                       },
                     }}
                   />
@@ -1467,14 +1462,16 @@ const CippBrandingSettings = () => {
                 </Stack>
                 <Stack spacing={1}>
                   <CippFormComponent
-                    type="textField"
+                    type="textFieldWithVariables"
                     name="watermarkText"
                     formControl={formControl}
-                    placeholder="DRAFT"
+                    placeholder="%tenantname%"
+                    helperText={`Type % for variables. After substitution, the mark is capped at ${WATERMARK_MAX_LENGTH} characters.`}
+                    includeSystemVariables={true}
                     validators={{
                       maxLength: {
-                        value: 40,
-                        message: "Watermark text must be 40 characters or fewer",
+                        value: WATERMARK_MAX_LENGTH,
+                        message: `Watermark text must be ${WATERMARK_MAX_LENGTH} characters or fewer`,
                       },
                     }}
                   />

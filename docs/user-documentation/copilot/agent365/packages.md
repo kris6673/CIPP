@@ -29,6 +29,4 @@ The Package Management API this page relies on requires a Microsoft Agent 365 li
 
 The flyout also fetches the package's full detail record live from the tenant, adding the allowed and acquired users and groups and the package's element details, which the list view does not include.
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

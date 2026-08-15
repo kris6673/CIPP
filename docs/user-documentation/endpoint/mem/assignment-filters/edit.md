@@ -16,6 +16,4 @@ The form is the same as [add.md](add.md "mention"), populated with the filter's 
 Editing the rule changes what every assignment using this filter reaches, so a device matching the old rule but not the new one loses the policies and applications the filter was narrowing.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

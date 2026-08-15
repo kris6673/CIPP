@@ -32,6 +32,4 @@ Disabled accounts and guests are left out. A disabled account is already handled
 Removing a licence from a dormant account starts a clock on the data attached to it. A mailbox left unlicensed stops receiving mail and is eventually removed, and OneDrive content follows its own retention schedule. Where the data still matters, convert the mailbox to shared or run the account through the offboarding-wizard.md rather than simply stripping the licence.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

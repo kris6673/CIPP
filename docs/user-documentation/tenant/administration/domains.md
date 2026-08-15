@@ -64,6 +64,4 @@ The flyout for this table is built specifically for domains and shows three sect
 
 Both record sets are read live from Microsoft when the flyout is opened, so they reflect what Microsoft is currently asking for rather than a cached copy.
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

@@ -42,6 +42,4 @@ The Apple ID, token expiry and token type of the owning token are also carried o
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Delete Profile</td><td>Deletes the enrolment profile from its ADE token. Devices already assigned to it fall back to the token's default profile at next enrolment.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

@@ -20,6 +20,4 @@ The row flyout shows the rule's full definition, which is where its actual condi
 
 All three actions are also available from inside the flyout.
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

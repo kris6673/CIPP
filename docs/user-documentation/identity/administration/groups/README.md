@@ -65,6 +65,4 @@ Group Type is composed by CIPP rather than returned by Graph, which reports the 
 A group has to be at least fifteen minutes old before **Create Team from Group** will work, as Microsoft needs the group to have finished provisioning first.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

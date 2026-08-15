@@ -47,6 +47,4 @@ The expiration action offers **Delete User** and **Disable User** whatever the s
 An All Tenants template can only create a new user. The Existing User option is not offered, because a specific account exists in one tenant and means nothing in the others. Domain and group selection are withdrawn for the same reason, so an All Tenants template covers the roles, timing and expiry behaviour while the tenant-specific details are supplied when the grant is made.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

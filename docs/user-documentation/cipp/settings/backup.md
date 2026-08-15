@@ -116,6 +116,4 @@ Each scope has the same two settings.
 Replication applies to new backups only. Existing backups are not copied across when you enable it, and CIPP does not manage or prune what it writes to the external container, so keep an eye on the storage costs there yourself.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

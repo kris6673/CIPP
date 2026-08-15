@@ -29,6 +29,4 @@ Once a SKU is chosen, a card appears summarising it. Check this before submittin
 Where the tenant has no Sherweb mapping, the SKU list returns empty rather than raising an error, so the selector will simply have nothing in it. If you see no SKUs at all, check that the Sherweb integration is enabled and that the tenant is mapped to a Sherweb customer in the integration settings, rather than assuming the catalogue is empty.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

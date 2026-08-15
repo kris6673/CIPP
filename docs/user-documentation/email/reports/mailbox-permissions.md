@@ -41,6 +41,4 @@ The `NT AUTHORITY\SELF` grant that every mailbox carries is left out, as are inh
 
 Both groupings are refreshed once the removal completes, so the report reflects the change straight away.
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

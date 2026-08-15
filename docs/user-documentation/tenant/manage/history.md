@@ -43,6 +43,4 @@ The Load More button appears below the timeline only once there is at least one 
 | ------------ | ---------------------------------------------------- |
 | Refresh Data | Re-reads the timeline for the range currently shown. |
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

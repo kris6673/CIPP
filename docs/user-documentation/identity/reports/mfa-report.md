@@ -50,6 +50,4 @@ A user is protected when at least one of the following applies. Reading the thre
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Set Per-User MFA</td><td>Sets the legacy per-user MFA state to Enforced, Enabled or Disabled, independently of any Conditional Access policy.</td><td>true</td></tr></tbody></table>
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

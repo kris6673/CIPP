@@ -17,6 +17,4 @@ This page lists the soft-deleted mailboxes in the selected tenant, which are mai
 
 The page is read only and has no row actions. To bring a mailbox back, use the mailbox restore tools.
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

@@ -96,6 +96,4 @@ $filter=PartitionKey ge '20260305' and PartitionKey le '20260312'
 * [Querying Tables and Entities](https://learn.microsoft.com/en-us/rest/api/storageservices/querying-tables-and-entities) covers filter syntax, operators, and supported data types.
 * [Query Timeout and Pagination](https://learn.microsoft.com/en-us/rest/api/storageservices/query-timeout-and-pagination) covers continuation tokens for large result sets.
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

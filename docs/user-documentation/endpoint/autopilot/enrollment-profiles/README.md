@@ -39,6 +39,4 @@ The properties returned are for the Graph resource type `windowsAutopilotDeploym
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Delete Profile</td><td>Deletes the profile from the tenant along with its assignments. Devices already deployed with it are unaffected, but devices reset afterwards will no longer receive it.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

@@ -18,6 +18,4 @@ Deployment State is the overall outcome. Where a deployment failed, Enrollment F
 Intune retains Autopilot deployment events for a limited period, so a deployment that ran some time ago may no longer appear here even though the device is still enrolled.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

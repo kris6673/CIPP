@@ -60,6 +60,4 @@ A **Run Standard Report** option regenerates the comparison data for the selecte
 
 * There is currently a limitation with Conditional Access standards due to the complexity of the comparison the standard settings and the Conditional Access response object. We hope to resolve this in a future update.
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

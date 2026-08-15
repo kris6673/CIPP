@@ -48,6 +48,4 @@ Removing a role from this page stops it being granted in future, but does not re
 
 To confirm which Exchange cmdlets the application context actually gains, use [exchange-cmdlets.md](../exchange-cmdlets.md "mention") with **As App** enabled and compare it against the delegated result.
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

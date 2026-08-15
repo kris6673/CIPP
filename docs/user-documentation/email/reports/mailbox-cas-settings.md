@@ -22,6 +22,4 @@ The properties returned are for the Exchange Online PowerShell command `Get-CASM
 
 Choosing **Disable** with **SMTP Client Authentication** selected does turn SMTP AUTH off, despite the inverted column name. The reverse is not possible: SMTP client authentication can only be turned off from here, and an attempt to turn it back on comes back as a warning, though any other protocols chosen at the same time are still applied.
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}
