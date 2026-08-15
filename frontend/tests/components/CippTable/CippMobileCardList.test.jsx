@@ -129,6 +129,26 @@ describe('CippMobileCardList table view toggle', () => {
     await waitFor(() => expect(screen.queryByText('Department')).not.toBeInTheDocument())
   })
 
+  // "Fields shown" is a checkbox per column — a dozen rows on a wide table — so anything
+  // after it starts a long scroll down. The table utilities (refresh, export, reset) are what
+  // people open this sheet for far more often than field toggles.
+  it('puts the table utilities above the Fields shown list, not below it', async () => {
+    const user = userEvent.setup()
+    renderCards()
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument())
+
+    await user.click(screen.getByRole('button', { name: 'Table options' }))
+    const fields = await screen.findByText('Fields shown')
+    const refresh = screen.getByText('Refresh data')
+
+    // DOCUMENT_POSITION_FOLLOWING = 4: fields comes after refresh in the DOM
+    expect(refresh.compareDocumentPosition(fields) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(4)
+    expect(
+      screen.getByText('Reset all filters').compareDocumentPosition(fields) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBe(4)
+  })
+
   it('an explicit viewMode prop hides the toggle button', async () => {
     renderWithProviders(
       <CippDataTable viewMode="cards" data={users} simpleColumns={columns} title="Users" />,

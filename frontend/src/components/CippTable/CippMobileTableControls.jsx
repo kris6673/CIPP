@@ -208,7 +208,7 @@ export const CippMobileTableControls = (props) => {
         )}
       </CippBottomSheet>
 
-      {/* Filter sheet — presets first, then card fields, then table utilities */}
+      {/* Filter sheet — presets first, then table utilities, then card fields */}
       <CippTableFilterSheet
         open={filterOpen}
         onClose={filterSheet.cancel}
