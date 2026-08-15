@@ -343,6 +343,38 @@ describe('CippDataTable card view without an offCanvas', () => {
     expect(screen.getAllByText(/Seattle/).length).toBeGreaterThan(0)
   })
 
+  // The test-detail pages render their own drawer body (offCanvas.children) — prepending
+  // the generic property list on top of it repeated Risk/Status above a body that already
+  // presents them.
+  it('lets a custom drawer body own the drawer, without the generic property list', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(
+      <CippDataTable
+        viewMode="cards"
+        data={[{ Name: 'Applications do not have client secrets configured', Risk: 'High', Status: 'Failed' }]}
+        simpleColumns={['Name', 'Risk', 'Status']}
+        title="Identity Tests"
+        offCanvas={{
+          size: 'lg',
+          children: () => <div data-testid="rich-body">rich detail body</div>,
+        }}
+      />
+    )
+
+    await waitFor(() =>
+      expect(screen.getByText('Applications do not have client secrets configured')).toBeInTheDocument()
+    )
+    await user.click(screen.getByText('Applications do not have client secrets configured'))
+
+    // scope to the drawer that holds the body — the toolbar's Edit Filters offcanvas is
+    // also a mounted .MuiDrawer-paper and sorts first in the DOM
+    const body = await screen.findByTestId('rich-body')
+    const drawer = body.closest('.MuiDrawer-paper')
+    expect(drawer.textContent).toContain('rich detail body')
+    // no generic property list stacked above the page's own body
+    expect(drawer.textContent).not.toMatch(/Risk/)
+  })
+
   it('formats fallback values the way their table cells do', async () => {
     const user = userEvent.setup()
     renderWithProviders(

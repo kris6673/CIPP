@@ -97,6 +97,29 @@ describe("TabbedLayout", () => {
     tabOptions.forEach((tab) => expect(sheet.getByText(tab.label)).toBeInTheDocument());
   });
 
+  // pages/index.js re-exports the dashboard, so it renders at "/" while every tab path is
+  // /dashboardv2/... — no match meant the trigger fell back to "Views" and the sheet had no
+  // check. An aliased route belongs to the tab whose page it re-exports: the first one.
+  it("treats an aliased route as the first tab instead of showing no selection", async () => {
+    layoutState.isMobile = true;
+    routerState.pathname = "/";
+    const user = userEvent.setup();
+    renderWithProviders(
+      <TabbedLayout tabOptions={tabOptions}>
+        <div>page content</div>
+      </TabbedLayout>
+    );
+
+    expect(picker()).toHaveAccessibleName("Overview switch view");
+
+    const sheet = await openPicker(user);
+    expect(sheet.getByText("Overview").closest('[role="button"]')).toHaveClass("Mui-selected");
+
+    // and tapping the aliased tab is still a no-op, not a navigation loop
+    await user.click(sheet.getByText("Overview"));
+    expect(routerState.push).not.toHaveBeenCalled();
+  });
+
   it("navigates when a tab row is tapped, and does nothing for the current tab", async () => {
     layoutState.isMobile = true;
     const user = userEvent.setup();

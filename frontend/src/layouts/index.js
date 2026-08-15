@@ -355,16 +355,9 @@ export const Layout = (props) => {
             </Box>
           ) : (
             <Stack>
-              {showBreadcrumb && (
-                <>
-                  {/* Breadcrumbs sit directly under the fixed top nav — a slim rail, not a
-                      spaced section. The old mt:3 left a 24px dead band on every page. */}
-                  <Box sx={{ mx: { xs: 2, md: 3 }, mt: { xs: 0.75, md: 1.25 } }}>
-                    <CippBreadcrumbNav mode="hierarchical" />
-                  </Box>
-                  <Divider sx={{ mb: { xs: 1, md: 1.5 } }} />
-                </>
-              )}
+              {/* The nav carries its own rail chrome (gutter + divider) so that when it
+                  renders nothing — a single crumb on a phone — no hairline is left behind. */}
+              {showBreadcrumb && <CippBreadcrumbNav withRail />}
               {children}
             </Stack>
           )}

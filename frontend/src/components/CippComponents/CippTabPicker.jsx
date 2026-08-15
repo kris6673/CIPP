@@ -58,14 +58,10 @@ export const CippTabPicker = (props) => {
                 bgcolor: 'action.hover',
               }
             : {
+                // Full-width tap target, heading clothes: the chevron is the affordance.
                 width: '100%',
-                // Matches the mobile table controls' search field rather than the filled chip:
-                // a full-width filled block reads as a banner, an outlined one as a control.
-                height: 44,
-                px: 1.5,
-                border: 1,
-                borderColor: 'divider',
-                bgcolor: 'background.paper',
+                minHeight: 44,
+                justifyContent: 'flex-start',
               }),
           ...sx,
         }}
@@ -77,7 +73,11 @@ export const CippTabPicker = (props) => {
             fontSize: 'small',
             sx: { flexShrink: 0, color: 'text.secondary' },
           })}
-        <Typography variant="body2" noWrap sx={{ minWidth: 0, flex: 1, fontWeight: 500 }}>
+        <Typography
+          variant={isCompact ? 'body2' : 'h6'}
+          noWrap
+          sx={{ minWidth: 0, flex: isCompact ? 1 : '0 1 auto', fontWeight: isCompact ? 500 : undefined }}
+        >
           {label}
         </Typography>
         {/* Not an aria-label: overriding the name would leave the visible text out of it, and
@@ -86,10 +86,10 @@ export const CippTabPicker = (props) => {
         <Box component="span" sx={visuallyHidden}>
           switch view
         </Box>
-        {/* Pinned to the control's edge so it reads as the affordance rather than punctuation
-            trailing whatever the current view happens to be called. */}
+        {/* Compact rides the control's right edge; the heading form keeps the chevron
+            beside the text, where a title's disclosure affordance belongs. */}
         <KeyboardArrowDown
-          sx={{ flexShrink: 0, ml: 'auto', opacity: 0.7, fontSize: 18 }}
+          sx={{ flexShrink: 0, ml: isCompact ? 'auto' : 0, opacity: 0.7, fontSize: isCompact ? 18 : 20 }}
         />
       </ButtonBase>
       <CippBottomSheet open={open} onClose={() => setOpen(false)} title="Views">

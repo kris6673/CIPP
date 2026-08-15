@@ -57,6 +57,13 @@ export const useTabNavigationValue = ({
 }) => {
   const [claims, setClaims] = useState([])
 
+  // An aliased route (pages/index.js re-exports the dashboard, so it renders at "/") matches
+  // no tab path — which left the picker labelled "Views" with nothing checked. The page an
+  // alias re-exports is one of these tabs, and in practice the first: treat it as current.
+  const resolvedPath = tabs?.some((tab) => tab.path === currentPath)
+    ? currentPath
+    : (tabs?.[0]?.path ?? currentPath)
+
   const claim = useCallback((id) => {
     setClaims((prev) => (prev.includes(id) ? prev : [...prev, id]))
   }, [])
@@ -69,7 +76,7 @@ export const useTabNavigationValue = ({
     () => ({
       enabled,
       tabs,
-      currentPath,
+      currentPath: resolvedPath,
       onNavigate,
       actions,
       providesGutters,
@@ -80,7 +87,7 @@ export const useTabNavigationValue = ({
     [
       enabled,
       tabs,
-      currentPath,
+      resolvedPath,
       onNavigate,
       actions,
       providesGutters,

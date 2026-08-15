@@ -132,15 +132,44 @@ describe("CippReportToolbar", () => {
     expect(screen.queryByRole("button", { name: "Test suite actions" })).not.toBeInTheDocument();
   });
 
-  it("collapses to selector + kebab on mobile", () => {
+  it("collapses to a sheet trigger + kebab on mobile — no text input, no keyboard", () => {
     layoutState.isMobile = true;
+    routerState.query = { reportId: "ztna" };
     renderWithProviders(<CippReportToolbar />);
 
     expect(screen.getByRole("button", { name: "Test suite actions" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Refresh" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Refresh test suites" })).not.toBeInTheDocument();
-    expect(screen.getByRole("combobox")).toBeInTheDocument();
+    // the house pick-one pattern: a trigger, not an autocomplete
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /switch test suite/i })).toHaveTextContent(
+      "Zero Trust Network Access Tests"
+    );
+  });
+
+  it("switches suite from the bottom sheet, routing shallowly", async () => {
+    layoutState.isMobile = true;
+    routerState.query = { reportId: "ztna" };
+    const user = userEvent.setup();
+    renderWithProviders(<CippReportToolbar />);
+
+    await user.click(screen.getByRole("button", { name: /switch test suite/i }));
+    const sheet = within((await screen.findByText("Test suite")).closest(".MuiDrawer-paper"));
+    // descriptions ride as secondary text, the current suite is checked
+    expect(sheet.getByText("custom")).toBeInTheDocument();
+    expect(sheet.getByText("Zero Trust Network Access Tests").closest('[role="button"]')).toHaveClass(
+      "Mui-selected"
+    );
+
+    await user.click(sheet.getByText("My Custom Suite"));
+    await waitFor(() =>
+      expect(routerState.push).toHaveBeenCalledWith(
+        expect.objectContaining({ query: expect.objectContaining({ reportId: "custom-1" }) }),
+        undefined,
+        { shallow: true }
+      )
+    );
   });
 
   it("offers all five suite actions in the sheet", async () => {

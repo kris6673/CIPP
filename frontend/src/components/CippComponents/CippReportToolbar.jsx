@@ -1,13 +1,16 @@
 import {
   Box,
   Button,
+  ButtonBase,
   IconButton,
   List,
   ListItemButton,
   ListItemIcon,
   ListItemText,
   Tooltip,
+  Typography,
 } from '@mui/material'
+import { visuallyHidden } from '@mui/utils'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { useForm, useWatch } from 'react-hook-form'
@@ -17,8 +20,10 @@ import { ApiGetCall } from '../../api/ApiCall.jsx'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   Add,
+  Check,
   Delete as DeleteIcon,
   Edit,
+  KeyboardArrowDown,
   MoreVert,
   Refresh as RefreshIcon,
   Sync,
@@ -38,6 +43,7 @@ export const CippReportToolbar = () => {
   const [deleteDialog, setDeleteDialog] = useState({ open: false })
   const [refreshDialog, setRefreshDialog] = useState({ open: false })
   const [actionSheetOpen, setActionSheetOpen] = useState(false)
+  const [suiteSheetOpen, setSuiteSheetOpen] = useState(false)
   // Every row here opens a drawer or dialog — let the sheet close first
   const actionSheet = useSheetHandoff(() => setActionSheetOpen(false))
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false)
@@ -145,10 +151,36 @@ export const CippReportToolbar = () => {
   return (
     <>
       {isMobile ? (
-        // Selector + kebab only; suite actions live in the bottom sheet. The overlays they
-        // open are mounted below, outside the sheet, so closing it doesn't unmount them.
+        // Trigger + kebab only; picking a suite and the suite actions are both bottom
+        // sheets — the house pick-one pattern, so no keyboard is summoned for a list nobody
+        // types into. The overlays the actions open are mounted below, outside the sheet.
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', width: '100%' }}>
-          <Box sx={{ flex: 1, minWidth: 0 }}>{suiteSelector(false)}</Box>
+          <ButtonBase
+            onClick={() => setSuiteSheetOpen(true)}
+            aria-haspopup="dialog"
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              height: 44,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.75,
+              px: 1.5,
+              borderRadius: 1,
+              border: 1,
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+              textAlign: 'left',
+            }}
+          >
+            <Typography variant="body2" noWrap sx={{ minWidth: 0, flex: 1, fontWeight: 500 }}>
+              {selectedReportObject?.name ?? 'Select a test suite'}
+            </Typography>
+            <Box component="span" sx={visuallyHidden}>
+              switch test suite
+            </Box>
+            <KeyboardArrowDown sx={{ flexShrink: 0, ml: 'auto', opacity: 0.7, fontSize: 18 }} />
+          </ButtonBase>
           <IconButton
             aria-label="Test suite actions"
             onClick={() => setActionSheetOpen(true)}
@@ -223,6 +255,44 @@ export const CippReportToolbar = () => {
         </Box>
       )}
 
+      {isMobile && (
+        <CippBottomSheet
+          open={suiteSheetOpen}
+          onClose={() => setSuiteSheetOpen(false)}
+          title="Test suite"
+        >
+          <List sx={{ py: 0 }}>
+            {reports.map((report) => {
+              const selected = report.id === selectedReport
+              return (
+                <ListItemButton
+                  key={report.id}
+                  selected={selected}
+                  sx={{ minHeight: 48 }}
+                  onClick={() => {
+                    setSuiteSheetOpen(false)
+                    if (!selected) {
+                      // Same write the autocomplete made — the routing effect owns the push
+                      formControl.setValue('reportId', { value: report.id, label: report.name })
+                    }
+                  }}
+                >
+                  <ListItemText
+                    primary={report.name}
+                    secondary={report.description}
+                    primaryTypographyProps={{ noWrap: true }}
+                    secondaryTypographyProps={{
+                      noWrap: true,
+                      variant: 'caption',
+                    }}
+                  />
+                  {selected && <Check fontSize="small" color="primary" sx={{ ml: 1 }} />}
+                </ListItemButton>
+              )
+            })}
+          </List>
+        </CippBottomSheet>
+      )}
       {isMobile && (
         <>
           <CippBottomSheet

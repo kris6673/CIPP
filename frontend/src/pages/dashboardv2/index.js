@@ -196,12 +196,15 @@ const Page = () => {
 
   return (
     // Both branches sit under the same TabbedLayout tab bar; the per-tenant mt: 12 is legacy
-    // desktop spacing kept for now. On mobile it becomes a thin rail — enough to lift the
-    // test-suite selector off the breadcrumb divider without the old 96px dead band.
-    <Container maxWidth={false} sx={{ mt: { xs: 1.5, md: 12 }, mb: 6 }}>
+    // desktop spacing kept for now. Mobile adds nothing — the breadcrumb rail no longer
+    // renders on the dashboard, and the sibling views (identity/devices/custom) start their
+    // toolbar straight after the layout's own 16px gap, so this view must too.
+    <Container maxWidth={false} sx={{ mt: { xs: 0, md: 12 }, mb: 6 }}>
       <CippHead title="Dashboard" />
       <Box sx={{ width: '100%', mx: 'auto' }}>
-        <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>
+        {/* xs has a single item (the portals cell is desktop-only), so grid spacing would
+            only pad the toolbar down away from the title. */}
+        <Grid container spacing={{ xs: 0, md: 2 }} alignItems="center" sx={{ mb: 2 }}>
           {!isMobile && (
           <Grid size={{ xs: 12, md: 4 }}>
             <Box
@@ -326,7 +329,7 @@ const Page = () => {
             </Box>
           </Grid>
           )}
-          <Grid size={{ xs: 12, md: 8 }} sx={{ mt: { xs: 2, md: 0 } }} data-tutorial="dashboard-test-suite">
+          <Grid size={{ xs: 12, md: 8 }} data-tutorial="dashboard-test-suite">
             <CippReportToolbar />
           </Grid>
         </Grid>

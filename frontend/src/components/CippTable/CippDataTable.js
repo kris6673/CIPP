@@ -105,6 +105,21 @@ const scrollNodeToScrollableAncestorTop = (node) => {
   window.scrollTo(0, window.scrollY + node.getBoundingClientRect().top)
 }
 
+/**
+ * Column order for a user-curated selection: the selected ids first, in selection order,
+ * then everything else in its existing order. Exported for tests.
+ *
+ * MRT only reads initialState.columnOrder once, so when the graph filter swaps in a new
+ * \$select list after mount, the new columns (dot-delimited nested fields included) were
+ * appended last — and the card view's three detail slots are filled in column order, so a
+ * field the user explicitly selected was exactly the one that overflowed into "+N more".
+ */
+export const orderColumnsBySelection = (allIds, selectedIds) => {
+  const selected = selectedIds.filter((id) => allIds.includes(id))
+  const rest = allIds.filter((id) => !selected.includes(id))
+  return [...selected, ...rest]
+}
+
 // ── Module-level constants ──────────────────────────────────────────────────
 // These never change between renders, so extracting them avoids creating new
 // object references on every render cycle.
@@ -444,6 +459,7 @@ export const CippDataTable = (props) => {
     useState(simpleColumns)
   const [usedData, setUsedData] = useState(data)
   const [usedColumns, setUsedColumns] = useState([])
+  const lastOrderedSelectionRef = useRef(simpleColumns)
   const [offcanvasVisible, setOffcanvasVisible] = useState(false)
   const [offCanvasData, setOffCanvasData] = useState({})
   const [offCanvasRowIndex, setOffCanvasRowIndex] = useState(0)
@@ -655,6 +671,13 @@ export const CippDataTable = (props) => {
           newVisibility[col.id] = finalResolvedColumns.includes(col.id)
         }
       })
+      // Selection order wins over data-key order — but only when the selection itself
+      // changed, so a data refetch doesn't stomp a manual column reorder.
+      if (lastOrderedSelectionRef.current !== configuredSimpleColumns) {
+        lastOrderedSelectionRef.current = configuredSimpleColumns
+        const allIds = finalColumns.map((col) => col.id).filter(Boolean)
+        table.setColumnOrder(orderColumnsBySelection(allIds, finalResolvedColumns))
+      }
     } else {
       const providedColumnKeys = new Set(
         columns.map((col) => col.id || col.header)
@@ -1227,6 +1250,10 @@ export const CippDataTable = (props) => {
   // desktop those columns are still on screen in the table, on mobile they are not.
   const cardInfoFields = useMemo(() => {
     if (!isCardView) return undefined
+    // A page that renders its own drawer body (offCanvas.children — the test-detail pages)
+    // is the authority on what the drawer shows; prepending the generic property list on
+    // top of it repeated Risk/Status above a body that already presents them.
+    if (offCanvas?.children) return undefined
     const visible = table
       .getVisibleLeafColumns()
       .map((column) => column.id)

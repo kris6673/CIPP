@@ -73,10 +73,13 @@ export const BlockAtPhoneWidth = {
       await expect(picker.getBoundingClientRect().width).toBeGreaterThan(content - 1)
     })
 
-    await step('the chevron stays pinned to the right edge', async () => {
+    // Heading clothes: the chevron rides beside the text like a title's disclosure
+    // affordance, not pinned to the far edge like a form field's.
+    await step('the chevron sits beside the label, not at the far edge', async () => {
       const chevron = picker.querySelector('svg:last-of-type')
-      const gap = picker.getBoundingClientRect().right - chevron.getBoundingClientRect().right
-      await expect(gap).toBeLessThan(20)
+      const labelEl = within(picker).getByText('Policies and Settings Deployed')
+      const gapToLabel = chevron.getBoundingClientRect().left - labelEl.getBoundingClientRect().right
+      await expect(gapToLabel).toBeLessThan(24)
     })
   },
 }

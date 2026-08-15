@@ -10,6 +10,12 @@
 } from 'react'
 import {
   Box,
+  ButtonBase,
+  IconButton,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
   Button,
   CircularProgress,
   Dialog,
@@ -20,14 +26,18 @@ import {
   Stack,
   Typography,
 } from '@mui/material'
+import { visuallyHidden } from '@mui/utils'
 import ReactMarkdown from 'react-markdown'
+import { useHistoryDismiss } from '../hooks/use-history-dismiss'
+import { CippBottomSheet } from './CippComponents/CippBottomSheet'
+import { useIsMobileLayout } from '../hooks/use-breakpoint'
 import remarkGfm from 'remark-gfm'
 import remarkParse from 'remark-parse'
 import rehypeRaw from 'rehype-raw'
 import { unified } from 'unified'
 import packageInfo from '../../public/version.json'
 import { ApiGetCall } from '../api/ApiCall'
-import { GitHub } from '@mui/icons-material'
+import { Check, Close, GitHub, KeyboardArrowDown, MoreHoriz } from '@mui/icons-material'
 import { CippAutoComplete } from './CippComponents/CippAutocomplete'
 
 const RELEASE_COOKIE_KEY = 'cipp_release_notice'
@@ -153,10 +163,13 @@ export const ReleaseNotesDialog = forwardRef((_props, ref) => {
   const [open, setOpen] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
   const [manualOpenRequested, setManualOpenRequested] = useState(false)
+  const [moreActionsOpen, setMoreActionsOpen] = useState(false)
+  const [releasePickerOpen, setReleasePickerOpen] = useState(false)
   // Left unset until the catalog loads so pickDisplayRelease chooses; seeding it with
   // the running tag meant a hotfix build always displayed its own thin release notes.
   const [selectedReleaseTag, setSelectedReleaseTag] = useState(null)
   const hasOpenedRef = useRef(false)
+  const isMobile = useIsMobileLayout()
 
   useEffect(() => {
     hasOpenedRef.current = false
@@ -224,7 +237,13 @@ export const ReleaseNotesDialog = forwardRef((_props, ref) => {
   const releaseOptions = useMemo(() => {
     const mapped = releaseCatalog.map((release) => {
       const tag = release.releaseTag ?? release.tagName
-      const label = release.name ? `${release.name} (${tag})` : tag
+      // GitHub release names usually start with the tag ("v10.8.0 - Ramos Melon Fizz"),
+      // so the parenthetical only earns its width when the name doesn't carry it.
+      const label = release.name
+        ? release.name.includes(tag)
+          ? release.name
+          : `${release.name} (${tag})`
+        : tag
       return {
         label,
         value: tag,
@@ -320,6 +339,10 @@ export const ReleaseNotesDialog = forwardRef((_props, ref) => {
     setManualOpenRequested(false)
   }
 
+  // Phone back gesture dismisses the dialog instead of navigating the page away — same
+  // remind-later semantics as the ✕, the backdrop and Esc.
+  useHistoryDismiss(open, handleRemindLater, isMobile)
+
   const toggleExpanded = () => {
     setIsExpanded((prev) => !prev)
   }
@@ -380,39 +403,72 @@ export const ReleaseNotesDialog = forwardRef((_props, ref) => {
         },
       }}
     >
-      <DialogTitle sx={{ alignItems: 'center', display: 'flex', justifyContent: 'space-between' }}>
-        <Stack
-          alignItems={{ xs: 'flex-start', sm: 'center' }}
-          direction={{ xs: 'column', sm: 'row' }}
-          spacing={1.5}
-          sx={{ width: '100%' }}
-        >
-          <Typography sx={{ flexGrow: 1 }} variant="h6" component="div">
-            {`Release notes for ${releaseHeading}`}
-          </Typography>
-          <CippAutoComplete
-            creatable={false}
-            disableClearable
-            isFetching={isReleaseListLoading}
-            label="Release"
-            multiple={false}
-            onChange={handleReleaseChange}
-            options={releaseOptions}
-            placeholder="Select a release"
-            size="small"
-            sx={{ minWidth: { xs: '100%', sm: 260 }, maxWidth: { xs: '100%', sm: 320 } }}
-            value={selectedReleaseValue}
-          />
-          <Button
-            onClick={toggleExpanded}
-            size="small"
-            variant="outlined"
-            // Below md the dialog already fills the screen, so there is nothing to expand into
-            sx={{ display: { xs: 'none', md: 'inline-flex' } }}
+      <DialogTitle
+        sx={{
+          alignItems: 'center',
+          display: 'flex',
+          justifyContent: 'space-between',
+          // The mobile title IS the release picker — one row, tight padding, so the notes
+          // themselves get the height back.
+          px: { xs: 2, md: 3 },
+          py: { xs: 1, md: 2 },
+        }}
+      >
+        {isMobile ? (
+          <ButtonBase
+            onClick={() => setReleasePickerOpen(true)}
+            aria-haspopup="dialog"
+            sx={{
+              minWidth: 0,
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5,
+              borderRadius: 1,
+              textAlign: 'left',
+              justifyContent: 'flex-start',
+            }}
           >
-            {isExpanded ? 'Shrink' : 'Expand'}
-          </Button>
-        </Stack>
+            <Typography variant="h6" noWrap sx={{ minWidth: 0 }}>
+              {selectedReleaseValue?.label ?? 'Release notes'}
+            </Typography>
+            <Box component="span" sx={visuallyHidden}>
+              switch release
+            </Box>
+            <KeyboardArrowDown sx={{ flexShrink: 0, opacity: 0.7, fontSize: 20 }} />
+          </ButtonBase>
+        ) : (
+          <Stack alignItems="center" direction="row" spacing={1.5} sx={{ width: '100%' }}>
+            <Typography sx={{ flexGrow: 1 }} variant="h6" component="div">
+              {`Release notes for ${releaseHeading}`}
+            </Typography>
+            <CippAutoComplete
+              creatable={false}
+              disableClearable
+              isFetching={isReleaseListLoading}
+              label="Release"
+              multiple={false}
+              onChange={handleReleaseChange}
+              options={releaseOptions}
+              placeholder="Select a release"
+              size="small"
+              sx={{ minWidth: 260, maxWidth: 320 }}
+              value={selectedReleaseValue}
+            />
+            <Button onClick={toggleExpanded} size="small" variant="outlined">
+              {isExpanded ? 'Shrink' : 'Expand'}
+            </Button>
+          </Stack>
+        )}
+        {/* Phones drop the "Remind me next time" button — closing IS remind-later
+            (onClose runs the same handler) — so the ✕ is the visible way to do it. */}
+        <IconButton
+          aria-label="Close"
+          onClick={handleRemindLater}
+          sx={{ display: { xs: 'inline-flex', md: 'none' }, ml: 1 }}
+        >
+          <Close fontSize="small" />
+        </IconButton>
       </DialogTitle>
       <DialogContent dividers sx={{ pt: 1, flex: 1, display: 'flex' }}>
         <Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
@@ -509,34 +565,37 @@ export const ReleaseNotesDialog = forwardRef((_props, ref) => {
         sx={{
           alignItems: { xs: 'stretch', md: 'center' },
           display: 'flex',
-          // Stacked on phones with the primary dismissal last, so it sits in thumb reach
+          // Stacked on phones with the primary dismissal last, so it sits in thumb reach.
+          // Four stacked rows ate ~240px of a phone screen, so the two low-emphasis actions
+          // (GitHub, permanent dismiss) share one small row there — and on desktop that row
+          // dissolves (display: contents) back into this flex row, unchanged.
           flexDirection: { xs: 'column', md: 'row' },
           flexWrap: 'wrap',
           gap: 1,
-          justifyContent: 'space-between',
           px: { xs: 2, md: 3 },
-          py: 2,
-          '& .MuiButton-root': { minHeight: { xs: 44, md: 'auto' } },
+          py: { xs: 1.5, md: 2 },
         }}
       >
-        <Button
-          href={releaseUrl}
-          rel="noopener"
-          target="_blank"
-          variant="text"
-          startIcon={<GitHub />}
+        {/* Desktop-only: on phones these two live in the bottom sheet behind the kebab,
+            the same actions treatment as the rest of the mobile surface. */}
+        <Box
+          sx={{
+            display: { xs: 'none', md: 'contents' },
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
         >
-          View release notes on GitHub
-        </Button>
-        <Stack
-          useFlexGap
-          alignItems={{ xs: 'stretch', md: 'center' }}
-          direction={{ xs: 'column', md: 'row' }}
-          flexWrap="wrap"
-          gap={1}
-          justifyContent="flex-end"
-          sx={{ width: { xs: '100%', md: 'auto' } }}
-        >
+          <Button
+            href={releaseUrl}
+            rel="noopener"
+            target="_blank"
+            variant="text"
+            size="small"
+            startIcon={<GitHub />}
+            sx={{ mr: { md: 'auto' } }}
+          >
+            View release notes on GitHub
+          </Button>
           <Button
             onClick={handleDismissPermanently}
             size="small"
@@ -545,14 +604,100 @@ export const ReleaseNotesDialog = forwardRef((_props, ref) => {
           >
             Don't show again
           </Button>
-          <Button onClick={handleRemindLater} variant="outlined">
-            Remind me next time
-          </Button>
-          <Button onClick={handleDismissUntilNextRelease} variant="contained">
+        </Box>
+        <Button
+          onClick={handleRemindLater}
+          variant="outlined"
+          // Redundant on phones: the ✕, the back gesture and the backdrop all run this
+          // same handler. Desktop keeps the labelled button.
+          sx={{ display: { xs: 'none', md: 'inline-flex' } }}
+        >
+          Remind me next time
+        </Button>
+        <Box sx={{ display: { xs: 'flex', md: 'contents' }, gap: 1 }}>
+          <Button
+            onClick={handleDismissUntilNextRelease}
+            variant="contained"
+            // small keeps the 44px tap target but drops the chunky medium padding
+            size="small"
+            sx={{ minHeight: { xs: 44, md: 'auto' }, flex: { xs: 1, md: '0 0 auto' } }}
+          >
             Don't show until next release
           </Button>
-        </Stack>
+          <IconButton
+            aria-label="More options"
+            onClick={() => setMoreActionsOpen(true)}
+            sx={{
+              display: { xs: 'inline-flex', md: 'none' },
+              minWidth: 44,
+              minHeight: 44,
+              border: 1,
+              borderColor: 'divider',
+              borderRadius: 1,
+            }}
+          >
+            <MoreHoriz />
+          </IconButton>
+        </Box>
       </DialogActions>
+      <CippBottomSheet
+        open={releasePickerOpen}
+        onClose={() => setReleasePickerOpen(false)}
+        title="Release"
+      >
+        <List sx={{ py: 0 }}>
+          {releaseOptions.map((option) => {
+            const selected = option.value === selectedReleaseTag
+            return (
+              <ListItemButton
+                key={option.value}
+                selected={selected}
+                sx={{ minHeight: 48 }}
+                onClick={() => {
+                  setReleasePickerOpen(false)
+                  if (!selected) handleReleaseChange(option)
+                }}
+              >
+                <ListItemText primary={option.label} primaryTypographyProps={{ noWrap: true }} />
+                {selected && <Check fontSize="small" color="primary" />}
+              </ListItemButton>
+            )
+          })}
+        </List>
+      </CippBottomSheet>
+      <CippBottomSheet
+        open={moreActionsOpen}
+        onClose={() => setMoreActionsOpen(false)}
+        title="Release notes"
+      >
+        <List sx={{ py: 0 }}>
+          <ListItemButton
+            component="a"
+            href={releaseUrl}
+            rel="noopener"
+            target="_blank"
+            onClick={() => setMoreActionsOpen(false)}
+            sx={{ minHeight: 48 }}
+          >
+            <ListItemIcon sx={{ minWidth: 40 }}>
+              <GitHub fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="View release notes on GitHub" />
+          </ListItemButton>
+          <ListItemButton
+            onClick={() => {
+              setMoreActionsOpen(false)
+              handleDismissPermanently()
+            }}
+            sx={{ minHeight: 48 }}
+          >
+            <ListItemIcon sx={{ minWidth: 40 }}>
+              <Close fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="Don't show again" />
+          </ListItemButton>
+        </List>
+      </CippBottomSheet>
     </Dialog>
   )
 })
