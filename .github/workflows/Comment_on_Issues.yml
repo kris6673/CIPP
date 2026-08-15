@@ -6,7 +6,7 @@ on:
       - labeled
 jobs:
   add-comment_bug:
-    if: github.repository_owner == 'CyberDrain'
+    if: github.repository_owner == 'CyberDrain' && github.event.label.name == 'bug'
     runs-on: ubuntu-slim
     permissions:
       issues: write
