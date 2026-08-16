@@ -175,8 +175,14 @@ export const HeaderedTabbedLayout = (props) => {
                       spacing={1}
                       justifyContent="space-between"
                     >
-                      <Typography variant={isMobile ? "h6" : "h4"} noWrap={isMobile}>
-                        {title}
+                      <Typography
+                        variant={isMobile ? "h6" : "h4"}
+                        noWrap={isMobile}
+                        sx={{ minWidth: 0, flex: isFetching ? 1 : undefined }}
+                      >
+                        {/* A name-shaped skeleton, not the word "Loading...": the header is
+                            the entity's identity, and a text placeholder reads as a title. */}
+                        {isFetching ? <Skeleton variant="text" sx={{ maxWidth: 280 }} /> : title}
                       </Typography>
                     </Stack>
                     {!isMobile && subtitleBlock}

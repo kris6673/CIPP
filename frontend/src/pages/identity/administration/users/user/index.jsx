@@ -2,7 +2,6 @@ import { Layout as DashboardLayout } from '../../../../../layouts/index.js'
 import { useSettings } from '../../../../../hooks/use-settings'
 import { useRouter } from 'next/router'
 import { ApiGetCall, ApiPostCall } from '../../../../../api/ApiCall'
-import CippFormSkeleton from '../../../../../components/CippFormPages/CippFormSkeleton'
 import CalendarIcon from '@heroicons/react/24/outline/CalendarIcon'
 import {
   AdminPanelSettings,
@@ -34,7 +33,7 @@ import { CippUserInfoCard } from '../../../../../components/CippCards/CippUserIn
 import { SvgIcon, Typography } from '@mui/material'
 import { CippBannerListCard } from '../../../../../components/CippCards/CippBannerListCard'
 import { CippTimeAgo } from '../../../../../components/CippComponents/CippTimeAgo'
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { useCippUserActions } from '../../../../../components/CippComponents/CippUserActions'
 import { EyeIcon, PencilIcon } from '@heroicons/react/24/outline'
 import { CippDataTable } from '../../../../../components/CippTable/CippDataTable'
@@ -1010,7 +1009,30 @@ const Page = () => {
       subtitle={subtitle}
       isFetching={userRequest.isLoading}
     >
-      {userRequest.isLoading && <CippFormSkeleton layout={[2, 1, 2, 2]} />}
+      {/* The loading state is the loaded page's own scaffold with each card in its
+          skeleton form — generic form-row bars looked nothing like what replaces them
+          and left the rest of the viewport empty. */}
+      {userRequest.isLoading && (
+        <Box sx={{ flexGrow: 1, py: { xs: 2, md: 4 } }}>
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12, lg: 4 }}>
+              <CippUserInfoCard isFetching />
+            </Grid>
+            <Grid size={{ xs: 12, lg: 8 }}>
+              <Stack spacing={3}>
+                {['Latest Logon', 'Applied Conditional Access Policies', 'Multi-Factor Authentication Devices', 'Memberships'].map(
+                  (section) => (
+                    <Fragment key={section}>
+                      <Typography variant="h6">{section}</Typography>
+                      <CippBannerListCard isFetching items={[]} />
+                    </Fragment>
+                  )
+                )}
+              </Stack>
+            </Grid>
+          </Grid>
+        </Box>
+      )}
       {userRequest.isSuccess && (
         <Box
           sx={{
