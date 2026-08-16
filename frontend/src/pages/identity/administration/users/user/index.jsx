@@ -30,6 +30,7 @@ import { CippCopyToClipBoard } from '../../../../../components/CippComponents/Ci
 import { Box, Stack } from '@mui/system'
 import { Grid } from '@mui/system'
 import { CippUserInfoCard } from '../../../../../components/CippCards/CippUserInfoCard'
+import { CippUserSwitcher } from '../../../../../components/CippComponents/CippUserSwitcher'
 import { SvgIcon, Typography } from '@mui/material'
 import { CippBannerListCard } from '../../../../../components/CippCards/CippBannerListCard'
 import { CippTimeAgo } from '../../../../../components/CippComponents/CippTimeAgo'
@@ -1004,6 +1005,13 @@ const Page = () => {
     <HeaderedTabbedLayout
       tabOptions={tabOptions}
       title={title}
+      titleControl={
+        <CippUserSwitcher
+          title={title}
+          currentUserId={userId}
+          tenantFilter={router.query.tenantFilter ?? userSettingsDefaults.currentTenant}
+        />
+      }
       actions={userActions}
       actionsData={data}
       subtitle={subtitle}
