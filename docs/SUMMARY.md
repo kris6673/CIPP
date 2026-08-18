@@ -88,6 +88,7 @@
     * [Bookmarks](user-documentation/shared-features/menu-bar/bookmarks.md)
     * [User Preferences](user-documentation/shared-features/menu-bar/user-settings.md)
   * [Table Features](user-documentation/shared-features/table-features.md)
+  * [Mobile Layout](user-documentation/shared-features/mobile-layout.md)
   * [Speed Dial](user-documentation/shared-features/speed-dial.md)
   * [Keyboard Shortcuts](user-documentation/shared-features/keyboard-shortcuts.md)
   * [Get Help](user-documentation/shared-features/get-help.md)

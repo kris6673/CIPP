@@ -2,6 +2,10 @@
 
 The CIPP speed dial gives you quick access to help, feedback, and troubleshooting from anywhere in the application. It sits as a round button in the lower right corner of your browser window, and opens when you hover over it or click it. Clicking anywhere outside closes it again.
 
+{% hint style="info" %}
+On a phone the lower right corner holds the actions for the page you are on, so the speed dial is not shown. **Report Bug**, **Request Feature**, **Join the Discord!**, **Check the Documentation** and **Clear Cache and Reload** move into your account menu instead. **Tutorials** and **License** are available on a larger screen. See [mobile-layout.md](mobile-layout.md "mention").
+{% endhint %}
+
 ## Options
 
 | Option                  | Description                                                                                                                                                      |
