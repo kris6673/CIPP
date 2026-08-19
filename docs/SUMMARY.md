@@ -111,6 +111,7 @@
         * [Compromise Remediation](user-documentation/identity/administration/users/user/bec.md)
         * [Conditional Access](user-documentation/identity/administration/users/user/conditional-access.md)
       * [Edit Properties Wizard](user-documentation/identity/administration/users/patch-wizard.md)
+    * [Guest Users](user-documentation/identity/administration/guest-users.md)
     * [Risky Users](user-documentation/identity/administration/risky-users.md)
     * [Groups](user-documentation/identity/administration/groups/README.md)
       * [Add Group](user-documentation/identity/administration/groups/add.md)
