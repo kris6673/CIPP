@@ -117,6 +117,10 @@ Some entries in the priority and outcome lists are guidance rows rather than rea
 
 The **Tenant Mapping** tab pairs each CIPP tenant with a Halo client. Alerts for an unmapped tenant have no client to be raised against, so mapping is required before the integration is useful.
 
+{% hint style="warning" %}
+Saving on the **Tenant Mapping** tab requires a role with unrestricted tenant access, meaning **Allowed Tenants** left as `AllTenants` with nothing in **Blocked Tenants**. A role scoped to particular tenants or tenant groups can read the existing mappings but is refused when it selects **Submit** or **Automap Companies**. See [roles.md](../../../setup/setting-up-cipp/roles.md "mention").
+{% endhint %}
+
 To add a mapping manually, choose a tenant and a Halo client, then select the add button, and select **Submit** to save. Selecting **Automap Companies** matches automatically, and the refresh button reloads the client list from Halo.
 
 | Column          | Description                                          |

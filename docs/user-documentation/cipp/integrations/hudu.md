@@ -95,6 +95,10 @@ Work through the **Tenant Mapping** and **Field Mapping** tabs described below. 
 
 The **Tenant Mapping** tab pairs each CIPP tenant with a Hudu company. Only mapped tenants are synchronised, and mapping a tenant is what causes CIPP to schedule its daily synchronisation.
 
+{% hint style="warning" %}
+Saving on the **Tenant Mapping** and **Field Mapping** tabs requires a role with unrestricted tenant access, meaning **Allowed Tenants** left as `AllTenants` with nothing in **Blocked Tenants**. A role scoped to particular tenants or tenant groups can read the existing mappings but is refused when it selects **Submit** or **Automap Companies**. See [roles.md](../../../setup/setting-up-cipp/roles.md "mention").
+{% endhint %}
+
 To map manually, choose a tenant, choose the matching entry under **Select Hudu Company**, and select the add button. **Automap Companies** fills in matches automatically, and the refresh button reloads the company list from Hudu. Mappings are only written when you select **Submit**.
 
 | Column          | Description                                           |
