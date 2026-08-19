@@ -87,6 +87,7 @@
     * [Search](user-documentation/shared-features/menu-bar/search.md)
     * [Bookmarks](user-documentation/shared-features/menu-bar/bookmarks.md)
     * [User Preferences](user-documentation/shared-features/menu-bar/user-settings.md)
+    * [Refresh My Access](user-documentation/shared-features/menu-bar/refresh-my-access.md)
   * [Table Features](user-documentation/shared-features/table-features.md)
   * [Mobile Layout](user-documentation/shared-features/mobile-layout.md)
   * [Speed Dial](user-documentation/shared-features/speed-dial.md)
