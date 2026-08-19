@@ -6,7 +6,7 @@ The layout is chosen from the width of the browser window rather than from the d
 
 | Window width         | What changes                                                                                                                      |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Below roughly 1200px | The left-hand navigation collapses behind a menu button, and the tenant selector becomes a chip in the menu bar.                   |
+| Below roughly 1200px | The left-hand navigation collapses behind a menu button, the tenant selector becomes a chip in the menu bar, and the search and display mode icons move into your account menu.                   |
 | Below roughly 900px  | Tables become card lists, dialogs and flyouts take the full screen, and page actions move to a button in the bottom right corner. |
 
 Pages are laid out to fit the width of the screen, so scrolling is vertical. Where content genuinely cannot be made narrower, such as a marketing email built around a fixed-width layout, it scrolls sideways within its own card rather than moving the page beneath it.
@@ -21,7 +21,7 @@ On a narrow window the menu bar carries the menu button, the current tenant, not
 | Tenant selector  | A chip in the menu bar showing the current tenant, which opens a full-screen picker. See [tenant-select.md](menu-bar/tenant-select.md "mention").                                 |
 | Universal search | The **Universal Search** entry in your account menu. See [universal-search.md](menu-bar/universal-search.md "mention").                                                           |
 | Light/dark mode  | The **Light Mode** or **Dark Mode** entry in your account menu.                                                                                                                   |
-| Help and support | The help links and **Clear Cache and Reload** move into your account menu, because the speed dial's corner is given to page actions. See [speed-dial.md](speed-dial.md "mention"). |
+| Help and support | On a phone, the help links and **Clear Cache and Reload** move into your account menu, because the speed dial's corner is given to page actions. See [speed-dial.md](speed-dial.md "mention"). |
 
 The navigation drawer has a search box at the top. Typing in it narrows the menu to matching entries and opens the sections they sit in, so a page several levels down can be reached without expanding each level by hand.
 
