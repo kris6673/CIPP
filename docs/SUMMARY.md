@@ -95,6 +95,7 @@
   * [Variable Auto Complete](user-documentation/shared-features/variable-auto-complete.md)
   * [Release Notes Notification](user-documentation/shared-features/release-notes-notification.md)
   * [Breadcrumb Navigation](user-documentation/shared-features/breadcrumb-navigation.md)
+  * [Entity Switcher](user-documentation/shared-features/entity-switcher.md)
   * [Global Page Icon](user-documentation/shared-features/global-page-icon.md)
 * [CIPP Dashboard](user-documentation/dashboard/README.md)
   * [Identity](user-documentation/dashboard/identity.md)

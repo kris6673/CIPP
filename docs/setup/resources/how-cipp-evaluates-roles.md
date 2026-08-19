@@ -69,6 +69,16 @@ If a user holds more than one custom role, their granted permissions are **combi
 Tenant scope is evaluated **per custom role**, not pooled across them. For any single action, one custom role must grant **both** the required permission **and** access to the target tenant. A user cannot borrow the permission from one custom role and the tenant access from another.
 {% endhint %}
 
+### A tenant scope that resolves to no tenants
+
+A custom role's tenant scope can end up covering nothing at all. The usual causes are a role whose Allowed Tenants are all named again under Blocked Tenants, because a blocked tenant always wins over an allowed one, and a role scoped to a tenant group that currently resolves to no tenants. A user whose only custom roles have since been deleted ends up in the same position.
+
+A role in that state reaches no tenant's data at all, whatever API permissions it holds. The tenant selector comes back empty, All Tenants pages show nothing, and reports drawn from cached data are empty too. A scope that grants nothing is treated as nothing rather than as everything.
+
+{% hint style="info" %}
+This is usually reported as CIPP showing no data rather than as an access problem, because nothing on screen says the tenant scope is empty. Check Allowed Tenants and Blocked Tenants on every custom role the user holds, and the membership of any tenant group either list names, before looking anywhere else.
+{% endhint %}
+
 ## Worked examples
 
 ### Example 1 — Built-in roles only
@@ -148,6 +158,7 @@ Starting impersonation is written to the logs and attributed to the super admin'
 | `editor`/`readonly` + several custom roles | **Union** of the custom roles' grants, still capped by the built-in ceiling; tenant scope checked per role. |
 | One custom role, **no** base role          | Exactly what that role explicitly grants — no ceiling. Unset categories are denied.                         |
 | Several custom roles, **no** base role     | **Union** of all the roles' explicit grants; tenant scope checked per role.                                 |
+| A custom role whose tenant scope resolves to no tenants | **No access to any tenant's data**, whatever permissions the role grants.                       |
 
 {% hint style="info" %}
 Because `admin`/`superadmin` bypass custom roles, the most common pattern for scoped access is to map a base role (`editor` or `readonly`) to one Entra group and a custom role to another, then add users to **both** — the base role provides a safe ceiling and the custom role tailors it. Custom-roles-only assignments also work, but without a base-role ceiling they grant exactly what is defined, so review them carefully. See [Custom Roles](../setting-up-cipp/roles.md#custom-roles) for the full setup steps.
