@@ -32,6 +32,10 @@ Creates a single user in the selected tenant. **Create User** submits the form, 
 | Primary Domain name | The domain used after the @ symbol, chosen from the tenant's verified domains.                                                               |
 | Add Aliases         | Additional addresses, one per line, entered without the domain.                                                                              |
 
+{% hint style="warning" %}
+If the username and Primary Domain name together match an existing account's user principal name or one of its email aliases, a warning appears below the domain selector naming that account. It does not block creation, and it is checked against the user list already loaded for the tenant, so a match can go unreported. No warning is not confirmation that the address is free.
+{% endhint %}
+
 **Settings**
 
 | Setting                               | Description                                                                                                                                   |
