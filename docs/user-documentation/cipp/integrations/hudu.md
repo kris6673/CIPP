@@ -30,7 +30,7 @@ User and device information is written to a rich text field named **Microsoft 36
 | Reschedule next sync date                                                       | Sets a future date to delay the next scheduled synchronisation, which is useful for keeping the first run outside business hours. Leave blank to sync at the next scheduled time.                 |
 
 {% hint style="info" %}
-The Microsoft 365 and Entra portal links are always included. The Partner Center, Defender and Compliance links are optional because not every technician has access to them.
+The M365 Admin Portal, Exchange Admin Portal, Entra Portal, Intune, Teams Portal, SharePoint Portal, and Azure Portal links are always included. The Partner Center, Defender, and Compliance links are optional because not every technician has access to them.
 {% endhint %}
 
 ## Obtaining an API Key in Hudu
