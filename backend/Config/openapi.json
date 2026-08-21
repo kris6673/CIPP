@@ -1391,6 +1391,67 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/AddCorporateDeviceIdentifier": {
+      "post": {
+        "summary": "AddCorporateDeviceIdentifier",
+        "operationId": "AddCorporateDeviceIdentifier",
+        "tags": [
+          "Endpoint > Autopilot"
+        ],
+        "description": "Uploads corporate device identifiers (manufacturer, model and serial number) for Windows Autopilot device preparation via the Graph importedDeviceIdentities API",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "devicePrepData": {
+                    "type": "string"
+                  },
+                  "overwriteExisting": {
+                    "type": "boolean"
+                  },
+                  "tenantFilter": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Endpoint.Autopilot.ReadWrite"
+      }
+    },
     "/api/AddCustomScript": {
       "post": {
         "summary": "AddCustomScript",
