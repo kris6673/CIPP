@@ -32,7 +32,7 @@ const TIME_AGO_NAMES = new Set([
   'Date', 'WhenCreated', 'WhenChanged', 'CreationTime', 'renewalDate',
   'commitmentTerm.renewalConfiguration.renewalDate', 'purchaseDate', 'NextOccurrence',
   'LastOccurrence', 'NotBefore', 'NotAfter', 'latestDataCollection',
-  'requestDate', 'reviewedDate', 'GeneratedAt',
+  'requestDate', 'reviewedDate', 'GeneratedAt', 'RecordedAt',
 ])
 const MATCH_DATE_TIME = /([dD]ate[tT]ime|[Ee]xpiration|[Tt]imestamp|[sS]tart[Dd]ate)/
 const ABSOLUTE_DATE_NAMES = new Set([

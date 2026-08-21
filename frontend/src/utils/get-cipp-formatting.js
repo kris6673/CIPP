@@ -319,6 +319,7 @@ export const getCippFormatting = (
     'requestDate', // App Consent Requests
     'reviewedDate', // App Consent Requests
     'GeneratedAt', // Report Builder
+    'RecordedAt', // Container update history
     'directTenantAuthDate', // Direct tenant service account
     'ServiceAccountLastAuth', // Direct tenant service account
   ]
