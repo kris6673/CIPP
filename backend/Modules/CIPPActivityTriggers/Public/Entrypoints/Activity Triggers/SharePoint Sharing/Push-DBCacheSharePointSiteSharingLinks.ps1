@@ -356,6 +356,7 @@ function Push-DBCacheSharePointSiteSharingLinks {
     $Drive = [PSCustomObject]@{ id = [string]$Item.DriveId; name = [string]$Item.DriveName }
     $DriveKeySegment = ConvertTo-CIPPSharingLinksKeySegment -Value "$($Drive.id)"
     $CheckpointRowKey = "chk-$SiteKeySegment~$DriveKeySegment"
+    $RequeueCount = [int]($Item.RequeueCount ?? 0)
     $Stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
     function Get-DriveCheckpoint {
@@ -408,6 +409,21 @@ function Push-DBCacheSharePointSiteSharingLinks {
         if ($DoneDrives -ge [int]$DrivesRow.DriveCount) { Complete-Site }
     }
 
+    # Re-dispatches this drive task to resume from its checkpoint. Used when the timebox is
+    # spent and when enumeration throttles out mid-drive: either way the checkpoint holds the
+    # last unpersisted page, so the fresh task loses nothing.
+    function Invoke-DriveRequeue {
+        param([int]$NextRequeueCount = $RequeueCount)
+        $ResumeItem = [PSCustomObject]@{}
+        foreach ($Property in $Item.PSObject.Properties) { $ResumeItem | Add-Member -NotePropertyName $Property.Name -NotePropertyValue $Property.Value -Force }
+        $ResumeItem | Add-Member -NotePropertyName 'RequeueCount' -NotePropertyValue $NextRequeueCount -Force
+        $null = Start-CIPPOrchestrator -InputObject ([PSCustomObject]@{
+                Batch            = @($ResumeItem)
+                OrchestratorName = "SharingLinksResume_$($TenantFilter)_$([guid]::NewGuid().ToString('N').Substring(0, 8))"
+                SkipLog          = $true
+            })
+    }
+
     # Checkpoints the position, re-dispatches this drive task and returns $true when the timebox
     # is spent. The platform kills tasks at Worker:BgTimeoutSeconds WITHOUT retrying them, so a
     # long drive must yield on its own; the fresh task resumes from the checkpoint.
@@ -416,11 +432,24 @@ function Push-DBCacheSharePointSiteSharingLinks {
         if ($Stopwatch.Elapsed.TotalSeconds -lt $TimeboxSeconds) { return $false }
         Save-DriveCheckpoint -State $State
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Sharing links: timebox reached on drive '$($Drive.name)' ($SiteUrl); requeueing to resume" -sev Debug
-        $null = Start-CIPPOrchestrator -InputObject ([PSCustomObject]@{
-                Batch            = @($Item)
-                OrchestratorName = "SharingLinksResume_$($TenantFilter)_$([guid]::NewGuid().ToString('N').Substring(0, 8))"
-                SkipLog          = $true
-            })
+        Invoke-DriveRequeue
+        return $true
+    }
+
+    # Requeues instead of failing when enumeration throttles out mid-drive, so the resumed task
+    # continues from the checkpoint rather than restarting the drive from page one - on a large
+    # drive a restart could retread the same pages every scan and never converge. Returns $false
+    # once the requeue budget is spent (or for non-throttle errors) so the caller fails the
+    # drive normally.
+    function Invoke-ThrottleRequeue {
+        param([string]$ErrorMessage)
+        if ($ErrorMessage -notmatch 'throttl|too many requests|429') { return $false }
+        if ($RequeueCount -ge 6) {
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Sharing links: drive '$($Drive.name)' ($SiteUrl) still throttled after $RequeueCount resumes; giving up this scan" -sev Warning
+            return $false
+        }
+        Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Sharing links: throttled mid-scan on drive '$($Drive.name)' ($SiteUrl); requeueing to resume from checkpoint (attempt $($RequeueCount + 1))" -sev Info
+        Invoke-DriveRequeue -NextRequeueCount ($RequeueCount + 1)
         return $true
     }
 
@@ -454,16 +483,22 @@ function Push-DBCacheSharePointSiteSharingLinks {
                 if (-not $Uri) {
                     $List = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/drives/$($Drive.id)/list?`$select=id" -tenantid $TenantFilter -asapp $true
                     if (-not $List.id) { throw 'drive has no backing list' }
-                    # Baseline = the number of principals an item inherits when nothing was ever
-                    # shared on it. The drive root's permission objects are exactly that set.
-                    $RootPermissions = @(New-GraphGetRequest -uri "https://graph.microsoft.com/beta/drives/$($Drive.id)/root/permissions?`$select=id" -tenantid $TenantFilter -asapp $true)
-                    $Baseline = [int]$RootPermissions.Count
                     $Uri = "https://graph.microsoft.com/beta/sites/$SiteId/lists/$($List.id)/items?`$top=999&`$select=id&`$expand=fields(`$select=PrincipalCount)"
                 }
 
                 $DroppedReads = 0
                 while ($Uri) {
                     $Page = New-GraphGetRequest -uri $Uri -tenantid $TenantFilter -asapp $true -noPagination $true -SkipValueExtraction
+
+                    # Baseline = the dominant PrincipalCount on the drive's first page: the
+                    # inherited count every unshared item carries. The drive root's own
+                    # permission list is NOT a safe proxy - system entries (Limited Access,
+                    # claims principals) inflate it above the items' inherited count, inverting
+                    # the filter and flagging an entire library for permission reads.
+                    if ($null -eq $Baseline) {
+                        $Dominant = @($Page.value) | Group-Object { [int]$_.fields.PrincipalCount } | Sort-Object Count -Descending | Select-Object -First 1
+                        $Baseline = if ($Dominant) { [int]$Dominant.Name } else { -1 }
+                    }
 
                     # An item whose principal count deviates from the inherited baseline carries
                     # extra (or unusual) role assignments; the permission read is the ground truth
@@ -529,6 +564,10 @@ function Push-DBCacheSharePointSiteSharingLinks {
                     # Site locked mid-scan: links are inactive, so leave the drive state stale
                     # for finalisation to prune rather than protecting this drive's rows.
                     Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Sharing links: drive '$($Drive.name)' on '$SiteUrl' is locked; leaving its rows for pruning" -sev Info
+                } elseif (Invoke-ThrottleRequeue -ErrorMessage $_.Exception.Message) {
+                    # Requeued to resume from the checkpoint; this task must not complete the
+                    # drive or touch its state.
+                    return @()
                 } else {
                     Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Sharing links: failed scanning drive '$($Drive.name)' on '$SiteUrl': $($_.Exception.Message)" -sev Warning
                     # A current LastScanId with an empty token both protects this drive's cached
@@ -582,6 +621,11 @@ function Push-DBCacheSharePointSiteSharingLinks {
                     Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Sharing links: drive '$($Drive.name)' on '$SiteUrl' is locked; leaving its rows for pruning" -sev Info
                     Remove-DriveCheckpoint
                     Complete-Drive
+                    return @()
+                }
+                if (Invoke-ThrottleRequeue -ErrorMessage $ErrorMessage) {
+                    # Requeued to resume from the checkpoint; this task must not complete the
+                    # drive or touch its state.
                     return @()
                 }
                 Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Sharing links: failed scanning drive '$($Drive.name)' on '$SiteUrl': $ErrorMessage" -sev Warning

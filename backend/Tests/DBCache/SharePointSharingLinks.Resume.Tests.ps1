@@ -334,6 +334,39 @@ Describe 'Per-drive sharing-links scan' {
         }
     }
 
+    Context 'Principal-mode baseline detection' {
+        It 'derives the baseline from the dominant item count, not the inflated root permission list' {
+            $ScanId = 'scan-baseline-1'
+            Initialize-TestScan -ScanId $ScanId -TotalSites 1
+            # Root carries system entries (Limited Access etc.) that items never inherit: a
+            # root-derived baseline of 5 would invert the filter and flag the whole library.
+            $script:GraphGetHandler = {
+                param($Uri)
+                if ($Uri -match '/sites/[^/]+/drives\?') { return @([pscustomobject]@{ id = 'b!driveone'; name = 'Documents'; webUrl = 'https://contoso.sharepoint.com/sites/one/Shared%20Documents' }) }
+                if ($Uri -match '/drives/b!driveone/list\?') { return [pscustomobject]@{ id = 'list1' } }
+                if ($Uri -match '/drives/b!driveone/root/permissions') { return @(1..5 | ForEach-Object { [pscustomobject]@{ id = "g$_" } }) }
+                if ($Uri -match '/lists/list1/items\?') {
+                    return [pscustomobject]@{
+                        value = @(
+                            [pscustomobject]@{ id = '21'; fields = [pscustomobject]@{ PrincipalCount = 4 } }
+                            [pscustomobject]@{ id = '22'; fields = [pscustomobject]@{ PrincipalCount = 4 } }
+                            [pscustomobject]@{ id = '23'; fields = [pscustomobject]@{ PrincipalCount = 4 } }
+                            [pscustomobject]@{ id = '24'; fields = [pscustomobject]@{ PrincipalCount = 5 } } # the linked one
+                        )
+                    }
+                }
+                if ($Uri -match 'token=latest') { return New-DeltaPage -DeltaLink 'https://graph.microsoft.com/beta/drives/b!driveone/root/delta?token=captured' }
+                throw "Unrouted GET: $Uri"
+            }
+
+            Invoke-SiteAndDrives -SiteItem (New-SiteItem -ScanId $ScanId)
+
+            $LinkRows = @((Get-FakeTableRows -TableName 'CippReportingDB') | Where-Object { $_.RowKey -like 'SharePointSharingLinks-b!driveone_01DRV*' })
+            $LinkRows.Count | Should -Be 1
+            $LinkRows[0].RowKey | Should -BeLike '*01DRV24*'
+        }
+    }
+
     Context 'Principal-mode scan with dropped permission reads' {
         It 'keeps existing rows and defers the sweep when batch reads are throttled away' {
             $ScanId = 'scan-principal-drop-1'
@@ -525,6 +558,61 @@ Describe 'Per-drive sharing-links scan' {
             $Requeued.Count | Should -Be 1
             @($Requeued[0].Batch)[0].DriveId | Should -Be 'b!driveone'
             (Get-FakeTableRows -TableName 'CippSharingLinksState') | Where-Object { $_.RowKey -like 'ddone-*' } | Should -BeNullOrEmpty
+        }
+    }
+
+    Context 'throttle mid-scan' {
+        BeforeEach {
+            # Page 1 succeeds; page 2 throttles out even after the helper's own retries.
+            $script:GraphGetHandler = {
+                param($Uri)
+                if ($Uri -match '/sites/[^/]+/drives\?') { return @([pscustomobject]@{ id = 'b!driveone'; name = 'Documents'; webUrl = 'https://contoso.sharepoint.com/sites/one/Shared%20Documents' }) }
+                if ($Uri -match 'token=page2') { throw 'The request has been throttled' }
+                if ($Uri -match '/root/delta') {
+                    return New-DeltaPage -Items @(
+                        [pscustomobject]@{ id = '01ITEMA'; name = 'a.docx'; shared = [pscustomobject]@{ scope = 'anonymous' } }
+                    ) -NextLink 'https://graph.microsoft.com/beta/drives/b!driveone/root/delta?token=page2'
+                }
+                throw "Unrouted GET: $Uri"
+            }
+        }
+
+        It 'requeues from the checkpoint instead of failing the drive' {
+            $ScanId = 'scan-throttle-1'
+            Initialize-TestScan -ScanId $ScanId -TotalSites 1
+
+            Push-DBCacheSharePointSiteSharingLinks -Item (New-SiteItem -ScanId $ScanId -IsPersonalSite $true)
+            $DriveTask = @($script:Orchestrations[0].Batch)[0]
+            Push-DBCacheSharePointSiteSharingLinks -Item $DriveTask
+
+            # Page 1 persisted, checkpoint points at page 2, and a resume task carries the
+            # incremented requeue count; the drive is neither completed nor failed.
+            Get-CacheRowKeys | Should -Contain 'SharePointSharingLinks-b!driveone_01ITEMA_perm-01ITEMA'
+            $Checkpoint = (Get-FakeTableRows -TableName 'CippSharingLinksState') | Where-Object { $_.RowKey -like 'chk-*' }
+            $Checkpoint.StateJson | Should -BeLike '*token=page2*'
+            $Requeued = @($script:Orchestrations | Where-Object { $_.OrchestratorName -like 'SharingLinksResume_*' })
+            $Requeued.Count | Should -Be 1
+            [int]@($Requeued[0].Batch)[0].RequeueCount | Should -Be 1
+            (Get-FakeTableRows -TableName 'CippSharingLinksState') | Where-Object { $_.RowKey -like 'ddone-*' } | Should -BeNullOrEmpty
+            (Get-CIPPSharingLinksDriveState -TenantFilter 'contoso.com' -DriveId 'b!driveone') | Should -BeNullOrEmpty
+        }
+
+        It 'fails the drive normally once the requeue budget is spent' {
+            $ScanId = 'scan-throttle-2'
+            Initialize-TestScan -ScanId $ScanId -TotalSites 1
+
+            Push-DBCacheSharePointSiteSharingLinks -Item (New-SiteItem -ScanId $ScanId -IsPersonalSite $true)
+            $DriveTask = @($script:Orchestrations[0].Batch)[0]
+            $DriveTask | Add-Member -NotePropertyName RequeueCount -NotePropertyValue 6 -Force
+            Push-DBCacheSharePointSiteSharingLinks -Item $DriveTask
+
+            # Budget exhausted: no further resume, drive state written (rows protected, next
+            # scan full), drive and site complete so the scan can finalise.
+            @($script:Orchestrations | Where-Object { $_.OrchestratorName -like 'SharingLinksResume_*' }).Count | Should -Be 0
+            $DriveState = Get-CIPPSharingLinksDriveState -TenantFilter 'contoso.com' -DriveId 'b!driveone'
+            $DriveState.LastScanId | Should -Be $ScanId
+            [string]$DriveState.DeltaLink | Should -BeNullOrEmpty
+            Get-CacheRowKeys | Should -Contain 'SharePointSharingLinks-Count'
         }
     }
 
