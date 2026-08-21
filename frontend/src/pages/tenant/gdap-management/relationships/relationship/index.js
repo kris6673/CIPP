@@ -3,7 +3,6 @@ import { useRouter } from "next/router";
 import { ApiGetCall } from "../../../../../api/ApiCall";
 import CippFormSkeleton from "../../../../../components/CippFormPages/CippFormSkeleton";
 import { HeaderedTabbedLayout } from "../../../../../layouts/HeaderedTabbedLayout";
-import { CippGdapRelationshipSwitcher } from "../../../../../components/CippComponents/CippGdapRelationshipSwitcher";
 import tabOptions from "./tabOptions.json";
 import { Box, Grid, Stack } from "@mui/system";
 import { CippTimeAgo } from "../../../../../components/CippComponents/CippTimeAgo";
@@ -136,7 +135,6 @@ const Page = () => {
     <HeaderedTabbedLayout
       tabOptions={tabOptions}
       title={title}
-      titleControl={<CippGdapRelationshipSwitcher title={title} currentRelationshipId={id} />}
       subtitle={subtitle}
       isFetching={relationshipRequest.isLoading}
       actions={CippGdapActions()}

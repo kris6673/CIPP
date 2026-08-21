@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
-import { Text, View, StyleSheet } from '@react-pdf/renderer'
-import { CippPdfPreview } from '../CippPdf/CippPdfPreview'
+import { Text, View, StyleSheet, PDFViewer } from '@react-pdf/renderer'
 import {
   ContentPage,
   DEFAULT_PAGE_SETUP,
@@ -30,7 +29,6 @@ import {
 } from '../../utils/markdown-table'
 import { parseInlineMarkdown } from '../../utils/markdown-inline'
 import { htmlToPlainText, parseInlineHtml } from '../../utils/html-inline'
-import { useReportVariables } from '../CippPdf/useReportVariables'
 
 /* ── Report settings ─────────────────────────────────────── */
 
@@ -558,7 +556,6 @@ export const ReportBuilderDocument = ({
   brandingSettings,
   reportSettings,
   generatedDate,
-  variables,
 }) => {
   // Only the paper comes from the template now. Everything else — theme, styles, cover, footer,
   // watermark — is decided by the branding it points at, via ReportDocument.
@@ -586,7 +583,6 @@ export const ReportBuilderDocument = ({
       tenantName={tenantName}
       reportName={reportName}
       generatedOn={currentDate}
-      variables={variables}
       size={settings.size || DEFAULT_PAGE_SETUP.size}
       orientation={settings.orientation || DEFAULT_PAGE_SETUP.orientation}
       coverLabel={DEFAULT_REPORT_SETTINGS.coverLabel}
@@ -630,10 +626,6 @@ export const ReportBuilderPDF = ({
   generatedDate,
   mode = 'preview',
 }) => {
-  // Fetched here rather than by each page that renders a built report: this wrapper is the one
-  // component in the DOM tree that both of them go through.
-  const variables = useReportVariables()
-
   const document = useMemo(
     () => (
       <ReportBuilderDocument
@@ -643,23 +635,16 @@ export const ReportBuilderPDF = ({
         brandingSettings={brandingSettings}
         reportSettings={reportSettings}
         generatedDate={generatedDate}
-        variables={variables}
       />
     ),
-    [blocks, tenantName, templateName, brandingSettings, reportSettings, generatedDate, variables]
+    [blocks, tenantName, templateName, brandingSettings, reportSettings, generatedDate]
   )
 
   if (mode === 'preview') {
     return (
-      <CippPdfPreview
-        title="Report preview"
-        fileName="Report.pdf"
-        style={{ width: '100%', height: '100%', border: 'none' }}
-        showToolbar={true}
-        showDownload
-      >
+      <PDFViewer style={{ width: '100%', height: '100%', border: 'none' }} showToolbar={true}>
         {document}
-      </CippPdfPreview>
+      </PDFViewer>
     )
   }
   return null

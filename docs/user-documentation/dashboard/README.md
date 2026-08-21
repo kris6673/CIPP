@@ -284,4 +284,6 @@ The [identity.md](identity.md "mention"), [devices.md](devices.md "mention"), an
 
 **Previous Dashboard Experience** returns you to the [dashboard.md](dashboard.md "mention").
 
+***
+
 {% include "../../../.gitbook/includes/feature-request.md" %}

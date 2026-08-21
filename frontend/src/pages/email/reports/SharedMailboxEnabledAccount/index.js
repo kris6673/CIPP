@@ -29,7 +29,7 @@ const Page = () => {
         title="Shared Mailbox with Enabled Account"
         apiUrl={reportDB.resolvedApiUrl}
         queryKey={reportDB.resolvedQueryKey}
-        dataSourceControls={reportDB.controls}
+        cardButton={reportDB.controls}
         actions={[
           {
             label: "Block Sign In",

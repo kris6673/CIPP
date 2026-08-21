@@ -24,12 +24,15 @@ const MemoTextField = React.memo(function MemoTextField({
   params,
   label,
   placeholder,
-  variant,
-  // Field-level required: asterisk on the label. HTML5 required is separate because
-  // Autocomplete (especially multiple) clears the input after selection — a static
-  // required on the input would falsely block submit even when chips/value exist.
-  required = false,
-  htmlRequired = false,
+  // Autocomplete-specific props that must not be forwarded to TextField/DOM
+  getOptionLabel,
+  isOptionEqualToValue,
+  filterOptions,
+  getOptionDisabled,
+  groupBy,
+  renderGroup,
+  renderOption,
+  ...otherProps
 }) {
   const { InputProps, ...otherParams } = params
 
@@ -39,13 +42,12 @@ const MemoTextField = React.memo(function MemoTextField({
         {...otherParams}
         label={label}
         placeholder={placeholder}
-        variant={variant}
-        required={htmlRequired}
+        {...otherProps}
         slotProps={{
           inputLabel: {
             shrink: true,
             sx: { transition: 'none' },
-            required,
+            required: otherProps.required,
           },
           input: {
             ...InputProps,
@@ -88,8 +90,6 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
     renderGroup,
     customAction,
     handleHomeEndKeys = false,
-    // TextField-bound, MUI Autocomplete would pass it through to its root div
-    variant,
     ...other
   } = props
 
@@ -137,13 +137,6 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
       })
     }
   }, [value, defaultValue])
-
-  // Controlled value wins; otherwise use the onChange-tracked selection (FormComponent
-  // often drives via defaultValue + onChange rather than a controlled value prop).
-  const currentSelection = value !== undefined && value !== null ? value : internalValue
-  const hasSelection = multiple
-    ? Array.isArray(currentSelection) && currentSelection.length > 0
-    : currentSelection != null && currentSelection !== ''
 
   // This is our paginated call
   const actionGetRequest = ApiGetCallWithPagination({
@@ -210,11 +203,10 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
         return result
       }
 
-      // Flatten the results from all pages. A dataKey can be present but null (e.g. an API
-      // returning {"Accounts":null}), which must read as "no options", not as a null option.
+      // Flatten the results from all pages
       const combinedResults = allPages.flatMap((page) => {
         const nestedData = getNestedValue(page, currentApi?.dataKey)
-        return nestedData ?? []
+        return nestedData !== undefined ? nestedData : []
       })
 
       if (!Array.isArray(combinedResults)) {
@@ -225,11 +217,8 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
           },
         ])
       } else {
-        // Convert each item into your { label, value, addedFields, rawData } shape.
-        // Null items would throw on the label/value field lookups below.
-        const convertedOptions = combinedResults
-          .filter((option) => option !== null && option !== undefined)
-          .map((option) => {
+        // Convert each item into your { label, value, addedFields, rawData } shape
+        const convertedOptions = combinedResults.map((option) => {
           const addedFields = {}
           if (currentApi?.addedField) {
             Object.keys(currentApi.addedField).forEach((key) => {
@@ -332,10 +321,7 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
   ])
 
   // single mode: live options win over the form-held copy, a stored label goes stale
-  // when its option refetches under it (e.g. renamed preset), resolve by value id.
-  // Values are not always unique (the alert wizard's property options share a type
-  // string as value), so only let a value-only match win when it's unambiguous —
-  // otherwise require the label to match too, and keep the stored copy if none does.
+  // when its option refetches under it (e.g. renamed preset), resolve by value id
   const resolvedDefaultValue = useMemo(() => {
     if (
       multiple ||
@@ -345,11 +331,7 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
     ) {
       return defaultValue
     }
-    const valueMatches = memoizedOptions.filter((option) => option.value === defaultValue.value)
-    if (valueMatches.length === 1) {
-      return valueMatches[0]
-    }
-    return valueMatches.find((option) => option.label === defaultValue.label) ?? defaultValue
+    return memoizedOptions.find((option) => option.value === defaultValue.value) ?? defaultValue
   }, [defaultValue, multiple, memoizedOptions])
 
   // Create a stable key that only changes when necessary inputs change
@@ -624,14 +606,12 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
 
           return (
             <Stack direction="row" spacing={1}>
-              {/* caller props stay on <Autocomplete>, anything spread here reaches the input as a DOM attr */}
               <MemoTextField
                 params={{ ...otherParams, InputProps: modifiedInputProps }}
                 label={label}
                 placeholder={placeholder}
-                variant={variant}
                 required={required}
-                htmlRequired={required && !hasSelection}
+                {...other}
               />
               {api?.url && api?.showRefresh && (
                 <Tooltip title="Refresh">

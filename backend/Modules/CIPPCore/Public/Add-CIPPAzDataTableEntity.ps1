@@ -13,9 +13,6 @@ function Add-CIPPAzDataTableEntity {
     Kept as a wrapper for backward compatibility with existing call sites and to
     strip null-valued properties, which the table service cannot store and the
     binary module rejects.
-
-    On TableNotFound, invalidates the CreateTable cache, recreates the table, and
-    retries once so a stale CIPPEnsuredTables entry cannot permanently break writes.
     #>
     [CmdletBinding(DefaultParameterSetName = 'OperationType')]
     param(
@@ -92,18 +89,5 @@ function Add-CIPPAzDataTableEntity {
         $Parameters.OperationType = $OperationType
     }
 
-    try {
-        Add-AzDataTableLargeEntity @Parameters -ErrorAction Stop
-    } catch {
-        if ($script:CIPPRepairingTable -or -not (Test-CIPPTableNotFound $_)) {
-            throw
-        }
-        $script:CIPPRepairingTable = $true
-        try {
-            Repair-CIPPTable -Context $Context
-            Add-AzDataTableLargeEntity @Parameters -ErrorAction Stop
-        } finally {
-            $script:CIPPRepairingTable = $false
-        }
-    }
+    Add-AzDataTableLargeEntity @Parameters -ErrorAction Stop
 }

@@ -3,17 +3,14 @@ import { Layout as DashboardLayout } from "../../../../layouts/index.js";
 import tabOptions from "./tabOptions";
 import CippPageCard from "../../../../components/CippCards/CippPageCard";
 import { CippUserManagement } from "../../../../components/CippSettings/CippUserManagement";
-import { CippExpandableAlert } from "../../../../components/CippComponents/CippExpandableAlert";
-import { CardContent, Stack } from "@mui/material";
+import { CardContent, Stack, Alert } from "@mui/material";
 
 const Page = () => {
   return (
-    // Titled to match the tab label, so the mobile picker claims the heading and the page
-    // does not say "CIPP Users" and "CIPP User Management" back to back.
-    <CippPageCard hideBackButton={true} title={"CIPP Users"}>
+    <CippPageCard hideBackButton={true} title={"CIPP User Management"}>
       <CardContent>
         <Stack spacing={2}>
-          <CippExpandableAlert severity="info">
+          <Alert severity="info">
             Manage users who can access CIPP. Users are automatically synced from your partner
             tenant every 15 minutes based on Entra group memberships configured on the CIPP Roles
             page. You can also manually add users or assign additional roles — manual assignments
@@ -26,7 +23,7 @@ const Page = () => {
             to access CIPP, you can add them as guest users in your partner tenant and assign them the
             appropriate roles in CIPP or enable the multi tenant mode in the CIPP SSO tab and add the users
             to the list below without needing to add them as guest users in your tenant.
-          </CippExpandableAlert>
+          </Alert>
           <CippUserManagement />
         </Stack>
       </CardContent>

@@ -71,7 +71,6 @@ const Page = () => {
         ClearImmutableId: false,
         DisableOneDriveSharing: false,
         removeCalendarPermissions: false,
-        OOO: "",
         postExecution: {
           psa: false,
           email: false,
@@ -123,7 +122,6 @@ const Page = () => {
       ClearImmutableId: false,
       DisableOneDriveSharing: false,
       removeCalendarPermissions: false,
-      OOO: "",
       postExecution: {
         psa: false,
         email: false,

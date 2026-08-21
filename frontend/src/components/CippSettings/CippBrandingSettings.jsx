@@ -33,8 +33,7 @@ import {
   normalizeLogoImageIds,
   normalizeLogoUploads,
 } from "../CippPdf/resolveCoverImage";
-import { FOOTER_MAX_LENGTH, REPORT_COLOUR_ROLES, WATERMARK_MAX_LENGTH } from "../CippPdf/reportTheme";
-import { BRANDING_GALLERY_QUERY_KEY } from "../CippPdf/useBrandingSettings";
+import { REPORT_COLOUR_ROLES } from "../CippPdf/reportTheme";
 import { useForm } from "react-hook-form";
 
 const LOGO_TOOLTIP =
@@ -78,7 +77,7 @@ const FOOTER_TOOLTIP =
   "Text shown at the bottom of every report page. Type % for CIPP's variables, plus %reportname% and %reportdate% which reports add. Report templates can override this or switch it off individually.";
 
 const WATERMARK_TOOLTIP =
-  "Diagonal text drawn faintly across every page of a report, cover included. Type % for CIPP's variables (e.g. %tenantname%), or a static mark such as DRAFT. Typing text is enough to show it; the toggle only exists to switch it off without losing the wording.";
+  "Diagonal text drawn faintly across every page of a report, cover included — e.g. DRAFT or CONFIDENTIAL. Typing text is enough to show it; the toggle only exists to switch it off without losing the wording.";
 
 const REPORT_DEFAULTS_TOOLTIP =
   "Which preset each report reaches for when nothing else says otherwise. A report template with its own preset still wins over this, and this still wins over the default branding above.";
@@ -87,8 +86,8 @@ const PREVIEW_TOOLTIP =
   "Renders the real report against sample data so you can page through it. The sample figures exist only in this preview — a report run for a client with no data still shows that it has none.";
 
 // Kept in step with the same ceiling in Add-CIPPImage. Storage is not the constraint — oversized
-// entities are split across part rows — but branding images are returned inline as data URLs by
-// ListBrandingSettings, and base64 adds about a third on top.
+// entities are split across part rows — but branding images ride along in ListUserSettings as data
+// URLs on every page load, and base64 adds about a third on top.
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 const readImageFile = (file, onSuccess) => {
@@ -222,14 +221,11 @@ const GalleryTile = ({
 
 const CippBrandingSettings = () => {
   const settings = useSettings();
-  // Read through ApiGetCall rather than useBrandingSettings so the sync effect below can key on
-  // when the fetch landed. Same cache entry either way.
-  const brandingQuery = ApiGetCall({
-    url: "/api/ListBrandingSettings",
-    data: { includeGallery: true },
-    queryKey: BRANDING_GALLERY_QUERY_KEY,
+  const branding = settings?.customBranding || {};
+  const userSettings = ApiGetCall({
+    url: "/api/ListUserSettings",
+    queryKey: "userSettings",
   });
-  const branding = brandingQuery.data && !Array.isArray(brandingQuery.data) ? brandingQuery.data : {};
 
   const [logoImageId, setLogoImageId] = useState(branding.logoImageId || null);
   const [logoImageIds, setLogoImageIds] = useState(() => normalizeLogoImageIds(branding));
@@ -341,13 +337,13 @@ const CippBrandingSettings = () => {
 
   // Sync gallery from ListUserSettings; selection is id-based (pinned in-session).
   useEffect(() => {
-    if (!brandingQuery.isSuccess || uploadPending) return;
+    if (!userSettings.isSuccess || uploadPending) return;
     // While a preset is being edited the form holds that preset's values, not the default ones —
     // syncing here would silently overwrite them with the default branding mid-edit.
     if (activePresetId) return;
 
-    const next = brandingQuery.data;
-    if (!next || Array.isArray(next)) return;
+    const next = settings?.customBranding;
+    if (!next) return;
 
     const nextCoverIds = normalizeCoverImageIds(next);
     const nextCoverUploadsAligned = normalizeCoverUploads(next);
@@ -415,7 +411,33 @@ const CippBrandingSettings = () => {
       setCoversReady(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when server branding payload changes
-  }, [activePresetId, uploadPending, brandingQuery.isSuccess, brandingQuery.dataUpdatedAt]);
+  }, [
+    activePresetId,
+    uploadPending,
+    userSettings.isSuccess,
+    userSettings.dataUpdatedAt,
+    settings?.customBranding?.logoImageId,
+    settings?.customBranding?.coverImageId,
+    settings?.customBranding?.coverStock,
+    settings?.customBranding?.colour,
+    settings?.customBranding?.logo,
+    Array.isArray(settings?.customBranding?.logoImageIds)
+      ? settings.customBranding.logoImageIds.join(",")
+      : settings?.customBranding?.logoImageIds,
+    Array.isArray(settings?.customBranding?.logoUploads)
+      ? settings.customBranding.logoUploads.length
+      : settings?.customBranding?.logoUploads
+        ? 1
+        : 0,
+    Array.isArray(settings?.customBranding?.coverImageIds)
+      ? settings.customBranding.coverImageIds.join(",")
+      : settings?.customBranding?.coverImageIds,
+    Array.isArray(settings?.customBranding?.coverUploads)
+      ? settings.customBranding.coverUploads.length
+      : settings?.customBranding?.coverUploads
+        ? 1
+        : 0,
+  ]);
 
   const brandColour = formControl.watch("colour") || "#F77F00";
   const previewReportTypeValue = formControl.watch("previewReportType");
@@ -434,7 +456,7 @@ const CippBrandingSettings = () => {
    * is the one on screen.
    */
   const brandingApi = ApiPostCall({
-    relatedQueryKeys: ["BrandingSettings*", "BrandingPresets"],
+    relatedQueryKeys: ["BrandingSettings", "userSettings", "BrandingPresets"],
   });
 
   const logoPreview = useMemo(() => {
@@ -567,6 +589,13 @@ const CippBrandingSettings = () => {
         setLogoUploads(nextUploads);
         setLogoImageId(id);
         pinLogoSelection(id);
+        settings.handleUpdate({
+          customBranding: buildLocalBranding({
+            logoImageId: id,
+            logoImageIds: nextIds,
+            logoUploads: nextUploads,
+          }),
+        });
         if (logoGalleryRef.current) {
           logoGalleryRef.current.scrollLeft = 0;
         }
@@ -614,6 +643,13 @@ const CippBrandingSettings = () => {
       } else {
         pinLogoSelection(logoImageId);
       }
+      settings.handleUpdate({
+        customBranding: buildLocalBranding({
+          logoImageId: nextLogoId,
+          logoImageIds: nextIds,
+          logoUploads: nextUploads,
+        }),
+      });
     } catch (error) {
       console.error("Failed to delete logo", error);
       alert(error?.response?.data?.Results || error.message || "Failed to delete logo");
@@ -651,6 +687,13 @@ const CippBrandingSettings = () => {
         setCoverUploads(nextUploads);
         setCoverImageId(id);
         pinCoverSelection(id, coverStock);
+        settings.handleUpdate({
+          customBranding: buildLocalBranding({
+            coverImageId: id,
+            coverImageIds: nextIds,
+            coverUploads: nextUploads,
+          }),
+        });
         if (coverGalleryRef.current) {
           coverGalleryRef.current.scrollTop = 0;
         }
@@ -701,6 +744,14 @@ const CippBrandingSettings = () => {
       } else {
         pinCoverSelection(coverImageId, coverStock);
       }
+      settings.handleUpdate({
+        customBranding: buildLocalBranding({
+          coverImageId: nextCoverId,
+          coverImageIds: nextIds,
+          coverUploads: nextUploads,
+          coverStock: nextStock,
+        }),
+      });
     } catch (error) {
       console.error("Failed to delete cover", error);
       alert(error?.response?.data?.Results || error.message || "Failed to delete cover");
@@ -717,7 +768,7 @@ const CippBrandingSettings = () => {
    */
   const handleSelectScope = (presetId) => {
     const preset = presetId ? presets.find((item) => item.id === presetId) : null;
-    const source = presetId ? preset : branding;
+    const source = presetId ? preset : settings?.customBranding || {};
     if (presetId && !preset) return;
 
     setActivePresetId(presetId || null);
@@ -822,6 +873,9 @@ const CippBrandingSettings = () => {
 
     const brandingData = buildLocalBranding();
 
+    settings.handleUpdate({
+      customBranding: brandingData,
+    });
 
     brandingApi.mutate({
       url: "/api/ExecBrandingSettings",
@@ -862,6 +916,9 @@ const CippBrandingSettings = () => {
       delete next[reportId];
     }
     setReportDefaults(next);
+    settings.handleUpdate({
+      customBranding: { ...(settings?.customBranding || {}), reportDefaults: next },
+    });
     brandingApi.mutate({
       url: "/api/ExecBrandingSettings",
       data: { Action: "Set", reportDefaults: next },
@@ -884,6 +941,20 @@ const CippBrandingSettings = () => {
       previewReportType: formControl.getValues("previewReportType") || reportTypeOptions[0],
     });
 
+    settings.handleUpdate({
+      customBranding: {
+        ...reportChromeValues({}),
+        logoImageId: null,
+        logoImageIds: [],
+        coverImageId: null,
+        coverImageIds: [],
+        coverStock: DEFAULT_COVER_STOCK,
+        logo: null,
+        logoUploads: [],
+        coverImage: null,
+        coverUploads: [],
+      },
+    });
 
     brandingApi.mutate({
       url: "/api/ExecBrandingSettings",
@@ -1412,12 +1483,12 @@ const CippBrandingSettings = () => {
                     name="footerText"
                     formControl={formControl}
                     placeholder="%tenantname% — prepared by Contoso IT — %reportdate%"
-                    helperText={`Type % for variables. Reports add %reportname% and %reportdate%. After substitution, text is capped at ${FOOTER_MAX_LENGTH} characters.`}
+                    helperText="Type % for variables. Reports add %reportname% and %reportdate%."
                     includeSystemVariables={true}
                     validators={{
                       maxLength: {
-                        value: FOOTER_MAX_LENGTH,
-                        message: `Footer text must be ${FOOTER_MAX_LENGTH} characters or fewer`,
+                        value: 200,
+                        message: "Footer text must be 200 characters or fewer",
                       },
                     }}
                   />
@@ -1426,17 +1497,17 @@ const CippBrandingSettings = () => {
                     name="coverFooterText"
                     label="Cover Note"
                     placeholder="Blank = each report's own wording"
-                    helperText={`Replaces the confidentiality note on cover pages. After substitution, text is capped at ${FOOTER_MAX_LENGTH} characters.`}
+                    helperText="Replaces the confidentiality note on cover pages"
                     includeSystemVariables={true}
                     formControl={formControl}
                     validators={{
                       maxLength: {
-                        value: FOOTER_MAX_LENGTH,
-                        message: `Cover note must be ${FOOTER_MAX_LENGTH} characters or fewer`,
+                        value: 200,
+                        message: "Cover note must be 200 characters or fewer",
                       },
                     }}
                   />
-                  <Stack useFlexGap direction="row" columnGap={2} rowGap={1} flexWrap="wrap">
+                  <Stack direction="row" spacing={2} flexWrap="wrap">
                     <CippFormComponent
                       type="switch"
                       name="showFooter"
@@ -1462,16 +1533,14 @@ const CippBrandingSettings = () => {
                 </Stack>
                 <Stack spacing={1}>
                   <CippFormComponent
-                    type="textFieldWithVariables"
+                    type="textField"
                     name="watermarkText"
                     formControl={formControl}
-                    placeholder="%tenantname%"
-                    helperText={`Type % for variables. After substitution, the mark is capped at ${WATERMARK_MAX_LENGTH} characters.`}
-                    includeSystemVariables={true}
+                    placeholder="DRAFT"
                     validators={{
                       maxLength: {
-                        value: WATERMARK_MAX_LENGTH,
-                        message: `Watermark text must be ${WATERMARK_MAX_LENGTH} characters or fewer`,
+                        value: 40,
+                        message: "Watermark text must be 40 characters or fewer",
                       },
                     }}
                   />

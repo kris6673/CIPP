@@ -244,11 +244,8 @@ export const CippTenantSelector = React.forwardRef((props, ref) => {
           clearTimeout(routerUpdateTimeoutRef.current);
         }
 
-        // Only cancel on a real tenant change; cancelling the initial-load URL backfill
-        // aborts mount fetches that react-query never retries.
-        if (query.tenantFilter && query.tenantFilter !== currentTenant.value) {
-          queryClient.cancelQueries();
-        }
+        // Cancel all in-flight queries before changing tenant
+        queryClient.cancelQueries();
 
         // Update router only - let the URL watcher handle settings
         query.tenantFilter = currentTenant.value;
@@ -408,9 +405,7 @@ export const CippTenantSelector = React.forwardRef((props, ref) => {
           disableClearable={true}
           creatable={false}
           multiple={multiple}
-          // Full width below md by default: the hard 400px overflowed any narrow container
-          // this selector was dropped into (the old 80%-wide mobile drawer most visibly).
-          sx={{ width: width ? width : { xs: "100%", md: "400px" } }}
+          sx={{ width: width ? width : "400px" }}
           placeholder={
             tenantList.isFetching
               ? "Loading Tenants..."

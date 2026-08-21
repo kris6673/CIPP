@@ -45,7 +45,7 @@ const Page = () => {
         apiData={reportDB.resolvedApiData}
         simpleColumns={columns}
         filters={filters}
-        dataSourceControls={reportDB.controls}
+        cardButton={reportDB.controls}
         offCanvas={null}
       />
       {reportDB.syncDialog}

@@ -1,7 +1,7 @@
 # CIPP-API & MCP
 
 {% hint style="warning" %}
-Self-hosted clients who originally deployed CIPP prior to v7.1, please see [#pre-version-7.1-self-hosted-deployments](cipp-api.md#pre-version-7.1-self-hosted-deployments "mention") for how to set up and configure your API for use before proceeding with this page.
+Self-hosted clients, please see the [Broken link](/broken/pages/m55pq5CkCX1NtfmE0316 "mention") for how to set up and configure your API for use before proceeding with this page.
 
 If you're using a **hosted CIPP instance**, you can follow the instructions below to set up and manage your API clients with no additional steps.
 {% endhint %}
@@ -157,52 +157,6 @@ If tools show up and return data, you're done.
 ## Scoping Copilot Tool Imports
 
 By default CIPP exposes 5 tools; older versions used to expose over 70 tools, which is the limit for copilot please switch over to the new model to allow access for limited tools such as Microsoft Copilot.
-
-## Pre Version 7.1 Self-Hosted Deployments
-
-#### Assign the “Contributor” Role to the Function App
-
-If you're self-hosting and running your own Azure Function App, you'll need to grant it proper access:
-
-{% stepper %}
-{% step %}
-#### Go to [Azure Portal](https://portal.azure.com).
-{% endstep %}
-
-{% step %}
-#### Open the resource group hosting CIPP.
-{% endstep %}
-
-{% step %}
-#### Select the **Function App** (not an offloaded app).
-{% endstep %}
-
-{% step %}
-#### Navigate to **Access control (IAM)** > **+ Add** > **Add role assignment**.
-{% endstep %}
-
-{% step %}
-#### Click on Privileged administrator roles.
-{% endstep %}
-
-{% step %}
-#### Choose:
-
-* **Role:** Contributor
-* **Assign access to:** User, group, or service principal
-* **Select:** The CIPP Function App identity
-
-{% hint style="info" %}
-The **Contributor** role should allow the identity to create and manage all types of Azure resources but does not allow them to grant access to others.
-
-In the **Select** field and type `cipp`. As you begin typing, the list of options will narrow, and you should see the Managed Identity for your Function App.
-{% endhint %}
-{% endstep %}
-
-{% step %}
-#### Click **Save.**
-{% endstep %}
-{% endstepper %}
 
 ---
 

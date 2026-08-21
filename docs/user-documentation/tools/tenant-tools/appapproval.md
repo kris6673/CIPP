@@ -71,4 +71,6 @@ Progress and any per-tenant failures are recorded in the logbook, which is where
 [logs](../../cipp/logs/)
 {% endcontent-ref %}
 
+***
+
 {% include "../../../../.gitbook/includes/feature-request.md" %}

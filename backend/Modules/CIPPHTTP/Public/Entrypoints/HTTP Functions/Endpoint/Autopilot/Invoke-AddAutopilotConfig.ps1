@@ -24,14 +24,6 @@ function Invoke-AddAutopilotConfig {
     $UserType = if ($Profbod.NotLocalAdmin -eq 'true') { 'standard' } else { 'administrator' }
     $DeploymentMode = if ($Profbod.DeploymentMode -eq 'true') { 'shared' } else { 'singleUser' }
 
-    # The frontend group picker sends option objects ({ value, label }); accept those plus
-    # bare id strings from direct API callers, and drop anything empty.
-    $GroupIds = @(
-        $Request.Body.GroupIds | ForEach-Object {
-            if ($_ -is [string]) { $_.Trim() } elseif ($_ -and $_.value) { $_.value }
-        } | Where-Object { $_ }
-    )
-
     # If deployment mode is shared, disable white glove (pre-provisioning) as it's not supported
     $AllowWhiteGlove = if ($DeploymentMode -eq 'shared') { $false } else { $Profbod.allowWhiteGlove }
 
@@ -41,7 +33,6 @@ function Invoke-AddAutopilotConfig {
         UserType           = $UserType
         DeploymentMode     = $DeploymentMode
         AssignTo           = $Request.Body.Assignto
-        GroupIds           = $GroupIds
         DeviceNameTemplate = $Profbod.DeviceNameTemplate
         AllowWhiteGlove    = $AllowWhiteGlove
         CollectHash        = $Profbod.CollectHash

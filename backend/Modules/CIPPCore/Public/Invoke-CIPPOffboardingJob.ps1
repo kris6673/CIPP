@@ -22,12 +22,6 @@ function Invoke-CIPPOffboardingJob {
         $UserID = $User.id
         $DisplayName = $User.displayName
 
-        # Resolve OOO once; empty TipTap HTML must not enable automatic replies
-        $OooMessage = $null
-        if (-not (Test-CIPPHtmlIsEmpty -Html ([string]$Options.OOO))) {
-            $OooMessage = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $Options.OOO
-        }
-
         # Build dynamic batch of offboarding tasks based on selected options
         $Batch = [System.Collections.Generic.List[object]]::new()
 
@@ -123,13 +117,13 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
-                Condition  = { -not [string]::IsNullOrEmpty($OooMessage) }
+                Condition  = { ![string]::IsNullOrEmpty($Options.OOO) }
                 Cmdlet     = 'Set-CIPPOutOfOffice'
                 Parameters = @{
                     tenantFilter    = $TenantFilter
                     UserID          = $Username
-                    InternalMessage = $OooMessage
-                    ExternalMessage = $OooMessage
+                    InternalMessage = $Options.OOO
+                    ExternalMessage = $Options.OOO
                     APIName         = $APIName
                     state           = 'Enabled'
                     Headers         = $Headers
@@ -206,30 +200,6 @@ function Invoke-CIPPOffboardingJob {
                     AccessRights = @('FullAccess')
                     APIName      = $APIName
                     Headers      = $Headers
-                }
-            }
-            @{
-                Condition  = { $Options.AccessSendAs.Count -gt 0 }
-                Cmdlet     = 'Set-CIPPMailboxAccess'
-                Parameters = @{
-                    tenantFilter    = $TenantFilter
-                    userid          = $Username
-                    AccessUser      = $Options.AccessSendAs
-                    PermissionLevel = 'SendAs'
-                    APIName         = $APIName
-                    Headers         = $Headers
-                }
-            }
-            @{
-                Condition  = { $Options.AccessSendOnBehalf.Count -gt 0 }
-                Cmdlet     = 'Set-CIPPMailboxAccess'
-                Parameters = @{
-                    tenantFilter    = $TenantFilter
-                    userid          = $Username
-                    AccessUser      = $Options.AccessSendOnBehalf
-                    PermissionLevel = 'SendOnBehalf'
-                    APIName         = $APIName
-                    Headers         = $Headers
                 }
             }
             @{

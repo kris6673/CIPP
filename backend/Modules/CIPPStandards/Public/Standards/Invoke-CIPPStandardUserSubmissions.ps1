@@ -237,7 +237,7 @@ function Invoke-CIPPStandardUserSubmissions {
             ReportJunkAddresses              = @($PolicyState.ReportJunkAddresses)
             ReportNotJunkAddresses           = @($PolicyState.ReportNotJunkAddresses)
             ReportPhishAddresses             = @($PolicyState.ReportPhishAddresses)
-            CustomDestinationRule             = @{
+            RuleState                        = @{
                 State  = if ($RuleState.length -eq 0) { 'Disabled' } else { $RuleState.State }
                 SentTo = if ($RuleState.length -eq 0) { $null } else { @($RuleState.SentTo) }
             }
@@ -250,7 +250,7 @@ function Invoke-CIPPStandardUserSubmissions {
             ReportJunkAddresses              = @(if (-not [string]::IsNullOrWhiteSpace($Email)) { $Email })
             ReportNotJunkAddresses           = @(if (-not [string]::IsNullOrWhiteSpace($Email)) { $Email })
             ReportPhishAddresses             = @(if (-not [string]::IsNullOrWhiteSpace($Email)) { $Email })
-            CustomDestinationRule             = if ([string]::IsNullOrWhiteSpace($Email) -or $state -eq 'disable') {
+            RuleState                        = if ([string]::IsNullOrWhiteSpace($Email) -or $state -eq 'disable') {
                 @{
                     State  = 'Disabled'
                     SentTo = $null

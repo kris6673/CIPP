@@ -320,7 +320,7 @@ const CompactTemplateList = memo(
                 mb: 1,
                 bgcolor: 'background.paper',
                 '&:hover': { bgcolor: 'action.hover' },
-                pr: { xs: 6, md: 20 },
+                pr: 20,
               }}
             >
               <Checkbox
@@ -429,7 +429,6 @@ export const CippTemplateCatalog = ({
   const catalog = ApiGetCall({
     url: '/api/ListCommunityRepoTemplates',
     queryKey: 'CommunityRepoTemplates',
-    waiting: true,
   })
 
   const importMutation = ApiPostCall({

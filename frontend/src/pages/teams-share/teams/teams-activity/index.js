@@ -39,7 +39,7 @@ const Page = () => {
           "CallCount",
           "TeamsChat",
         ]}
-        dataSourceControls={reportDB.controls}
+        cardButton={reportDB.controls}
       />
       {reportDB.syncDialog}
     </>

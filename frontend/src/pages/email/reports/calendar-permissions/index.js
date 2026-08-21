@@ -56,6 +56,7 @@ const Page = () => {
           variant="outlined"
         />
       </Tooltip>
+      {reportDB.controls}
     </Stack>
   )
 
@@ -69,7 +70,6 @@ const Page = () => {
         apiData={{ ...reportDB.resolvedApiData, ByUser: byUser }}
         simpleColumns={columns}
         cardButton={pageActions}
-        dataSourceControls={reportDB.controls}
         offCanvas={null}
       />
       {reportDB.syncDialog}

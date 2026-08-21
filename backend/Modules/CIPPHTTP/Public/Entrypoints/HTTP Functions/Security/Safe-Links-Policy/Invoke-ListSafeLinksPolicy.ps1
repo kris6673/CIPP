@@ -82,8 +82,6 @@ Function Invoke-ListSafeLinksPolicy {
                 Description = $policy.AdminDisplayName
                 IsBuiltIn = ($null -ne $matchingBuiltInRule)
                 IsValid = $policy.IsValid
-                WhenCreated = $policy.WhenCreated
-                WhenChanged = $policy.WhenChanged
                 ConfigurationStatus = if ($associatedRule) { "Complete" } else { "Policy Only (Missing Rule)" }
             }
             $Output.Add($OutputItem)
@@ -123,9 +121,6 @@ Function Invoke-ListSafeLinksPolicy {
                     ExceptIfRecipientDomainIs = $rule.ExceptIfRecipientDomainIs
                     Description = $rule.Comments
                     IsBuiltIn = $false
-                    IsValid = $rule.IsValid
-                    WhenCreated = $rule.WhenCreated
-                    WhenChanged = $rule.WhenChanged
                     ConfigurationStatus = "Rule Only (Missing Policy: $($rule.SafeLinksPolicy))"
                 }
                 $Output.Add($OutputItem)
@@ -167,9 +162,6 @@ Function Invoke-ListSafeLinksPolicy {
                         ExceptIfRecipientDomainIs = $builtInRule.ExceptIfRecipientDomainIs
                         Description = $builtInRule.Comments
                         IsBuiltIn = $true
-                        IsValid = $builtInRule.IsValid
-                        WhenCreated = $builtInRule.WhenCreated
-                        WhenChanged = $builtInRule.WhenChanged
                         ConfigurationStatus = "Built-In Rule Only (No Associated Policy)"
                     }
                     $Output.Add($OutputItem)

@@ -149,7 +149,6 @@ const Page = () => {
         ClearImmutableId: false,
         DisableOneDriveSharing: false,
         removeCalendarPermissions: false,
-        OOO: '',
       }
 
       let offboardingDefaults = {}
@@ -191,7 +190,6 @@ const Page = () => {
       ClearImmutableId: false,
       DisableOneDriveSharing: false,
       removeCalendarPermissions: false,
-      OOO: '',
     }
 
     offboardingFormControl.reset({ offboardingDefaults: defaultOffboardingValues })

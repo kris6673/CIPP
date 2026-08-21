@@ -12,7 +12,6 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { CippWizardActionsRow } from "./CippWizardActionsRow";
 
 const options = [
   {
@@ -148,14 +147,14 @@ export const CippPSASyncOptions = (props) => {
             </Card>
           </>
         )}
-        <CippWizardActionsRow>
+        <Stack alignItems="center" direction="row" justifyContent="flex-end" spacing={2}>
           <Button color="inherit" onClick={onPreviousStep} size="large" type="button">
             Back
           </Button>
           <Button size="large" type="submit" variant="contained">
             Next Step
           </Button>
-        </CippWizardActionsRow>
+        </Stack>
       </Stack>
     </form>
   );

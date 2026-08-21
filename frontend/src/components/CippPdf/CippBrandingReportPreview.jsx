@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { CippPdfPreview } from './CippPdfPreview'
+import { PDFViewer } from '@react-pdf/renderer'
 import { ExecutiveReportDocument } from '../ExecutiveReportButton'
 import { ShadowAIReportDocument } from '../ShadowAIReportButton'
 import { BECRemediationReportDocument } from '../BECRemediationReportButton'
@@ -7,7 +7,6 @@ import { SharingReportDocument } from './SharingReportButton'
 import { PermissionsReportDocument } from './PermissionsReportButton'
 import { ReportBuilderDocument } from '../ReportBuilder/ReportBuilderPDF'
 import { SAMPLE_DATA_BY_REPORT, SAMPLE_TENANT_NAME } from './previewSampleData'
-import { useReportVariables } from './useReportVariables'
 
 // Renders a real report — the same document a client would receive — against sample data, so the
 // branding being edited can be checked on every page rather than on a mock of the cover.
@@ -42,9 +41,9 @@ const EXECUTIVE_SECTIONS = {
  * Build the report document for a given type. Pure, and exported so it can be rendered to a real
  * PDF in tests without mounting the viewer.
  */
-export const buildPreviewDocument = (reportType, brandingSettings, variables) => {
+export const buildPreviewDocument = (reportType, brandingSettings) => {
   const sample = SAMPLE_DATA_BY_REPORT[reportType] ?? SAMPLE_DATA_BY_REPORT.executive
-  const shared = { brandingSettings, tenantName: SAMPLE_TENANT_NAME, variables }
+  const shared = { brandingSettings, tenantName: SAMPLE_TENANT_NAME }
 
   switch (reportType) {
     case 'reportBuilder':
@@ -77,18 +76,13 @@ export const buildPreviewDocument = (reportType, brandingSettings, variables) =>
 }
 
 const CippBrandingReportPreview = ({ reportType = 'executive', brandingSettings }) => {
-  // Resolved against the selected tenant, so a footer being written with %cippurl% or a custom
-  // variable previews the value it will actually print rather than the token.
-  const variables = useReportVariables()
-
   // Rebuilding the document on every keystroke of a colour picker would re-run the whole PDF
   // layout; keying on the branding values that actually reach the page keeps that to real changes.
   const document = useMemo(
-    () => buildPreviewDocument(reportType, brandingSettings, variables),
+    () => buildPreviewDocument(reportType, brandingSettings),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- rebuild only on values the PDF reads
     [
       reportType,
-      variables,
       brandingSettings?.colour,
       brandingSettings?.secondaryColour,
       brandingSettings?.logo,
@@ -105,15 +99,9 @@ const CippBrandingReportPreview = ({ reportType = 'executive', brandingSettings 
   )
 
   return (
-    <CippPdfPreview
-      title="Branding preview"
-      fileName="Branding_Preview.pdf"
-      style={{ width: '100%', height: '100%', border: 'none' }}
-      showToolbar={true}
-      showDownload
-    >
+    <PDFViewer style={{ width: '100%', height: '100%', border: 'none' }} showToolbar={true}>
       {document}
-    </CippPdfPreview>
+    </PDFViewer>
   )
 }
 

@@ -13,7 +13,6 @@ import cippDefaults from "../../../../data/CIPPDefaultGDAPRoles";
 import { ApiGetCall } from "../../../../api/ApiCall";
 import { Settings, SyncAlt } from "@mui/icons-material";
 import { CippDataTable } from "../../../../components/CippTable/CippDataTable";
-import { CippExpandableAlert } from "../../../../components/CippComponents/CippExpandableAlert";
 import { TrashIcon } from "@heroicons/react/24/outline";
 
 const Page = () => {
@@ -218,7 +217,7 @@ const Page = () => {
             compareType="is"
             compareValue={true}
           >
-            <CippExpandableAlert severity="warning">
+            <Alert severity="warning">
               <Typography variant="subtitle">
                 In Advanced Mode, you can manually map existing groups to GDAP roles. This
                 functionality is designed to help map existing groups to GDAP roles that do not
@@ -245,7 +244,7 @@ const Page = () => {
                   on GDAP Role Guidance.
                 </li>
               </ul>
-            </CippExpandableAlert>
+            </Alert>
             <Grid container spacing={2} alignItems="center">
               <Grid size={{ md: 5, xs: 12 }}>
                 <CippFormComponent

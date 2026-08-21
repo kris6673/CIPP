@@ -25,18 +25,11 @@ export const CippAddTestReportDrawer = ({
   mode = 'create',
   reportToEdit = null,
   disabled = false,
-  open,
-  onClose,
-  hideTrigger = false,
 }) => {
   const [drawerVisible, setDrawerVisible] = useState(false)
   const [activeTab, setActiveTab] = useState(0)
   const [searchTerm, setSearchTerm] = useState('')
   const isEditMode = mode === 'edit'
-  // Controlled mode: the parent owns open/close (mobile sheet rows trigger the drawer
-  // without rendering its button). Uncontrolled keeps the original self-contained shape.
-  const isControlled = open !== undefined
-  const visible = isControlled ? open : drawerVisible
 
   const formControl = useForm({
     mode: 'onChange',
@@ -88,7 +81,7 @@ export const CippAddTestReportDrawer = ({
   }, [createReport.isSuccess, formControl, isEditMode])
 
   useEffect(() => {
-    if (visible && isEditMode && reportToEdit) {
+    if (drawerVisible && isEditMode && reportToEdit) {
       formControl.reset({
         name: reportToEdit.name || '',
         description: reportToEdit.description || '',
@@ -97,7 +90,7 @@ export const CippAddTestReportDrawer = ({
         CustomTests: reportToEdit.CustomTests || [],
       })
     }
-  }, [visible, isEditMode, reportToEdit, formControl])
+  }, [drawerVisible, isEditMode, reportToEdit, formControl])
 
   const handleSubmit = () => {
     formControl.trigger()
@@ -124,10 +117,7 @@ export const CippAddTestReportDrawer = ({
 
   const handleCloseDrawer = () => {
     createReport.reset()
-    if (!isControlled) {
-      setDrawerVisible(false)
-    }
-    onClose?.()
+    setDrawerVisible(false)
     setSearchTerm('')
     setActiveTab(0)
     formControl.reset({
@@ -189,41 +179,39 @@ export const CippAddTestReportDrawer = ({
 
   return (
     <>
-      {!hideTrigger && (
-        <Button
-          variant="contained"
+      <Button
+        variant="contained"
+        sx={{
+          minWidth: 0,
+          overflow: 'hidden',
+          whiteSpace: 'nowrap',
+          textOverflow: 'ellipsis',
+          fontWeight: 'bold',
+          textTransform: 'none',
+          borderRadius: 2,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          transition: 'all 0.2s ease-in-out',
+          px: 2,
+        }}
+        onClick={() => setDrawerVisible(true)}
+        startIcon={isEditMode ? <Edit /> : <Add />}
+        disabled={disabled}
+      >
+        <Box
+          component="span"
           sx={{
             minWidth: 0,
             overflow: 'hidden',
             whiteSpace: 'nowrap',
             textOverflow: 'ellipsis',
-            fontWeight: 'bold',
-            textTransform: 'none',
-            borderRadius: 2,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-            transition: 'all 0.2s ease-in-out',
-            px: 2,
           }}
-          onClick={() => setDrawerVisible(true)}
-          startIcon={isEditMode ? <Edit /> : <Add />}
-          disabled={disabled}
         >
-          <Box
-            component="span"
-            sx={{
-              minWidth: 0,
-              overflow: 'hidden',
-              whiteSpace: 'nowrap',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {buttonText}
-          </Box>
-        </Button>
-      )}
+          {buttonText}
+        </Box>
+      </Button>
       <CippOffCanvas
         title={isEditMode ? 'Edit Test Suite' : 'Create Test Suite'}
-        visible={visible}
+        visible={drawerVisible}
         onClose={handleCloseDrawer}
         size="lg"
         footer={
@@ -262,7 +250,7 @@ export const CippAddTestReportDrawer = ({
         >
           {/* Test Suite Details Section */}
           <Grid size={12}>
-            <Paper sx={{ p: { xs: 2, md: 3 }, backgroundColor: 'background.default' }}>
+            <Paper sx={{ p: 3, backgroundColor: 'background.default' }}>
               <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
                 Test Suite Details
               </Typography>

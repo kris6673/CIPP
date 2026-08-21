@@ -20,21 +20,12 @@
     "CIS"
   ],
   "requiredCapabilities": [
-    [
-      "SHAREPOINTWAC",
-      "SHAREPOINTSTANDARD",
-      "SHAREPOINTENTERPRISE",
-      "SHAREPOINTENTERPRISE_EDU",
-      "SHAREPOINTENTERPRISE_GOV",
-      "ONEDRIVE_BASIC",
-      "ONEDRIVE_ENTERPRISE"
-    ],
-    [
-      "ATP_ENTERPRISE",
-      "ATP_ENTERPRISE_GOV",
-      "THREAT_INTELLIGENCE",
-      "THREAT_INTELLIGENCE_GOV"
-    ]
+    "SHAREPOINTWAC",
+    "SHAREPOINTSTANDARD",
+    "SHAREPOINTENTERPRISE",
+    "SHAREPOINTENTERPRISE_EDU",
+    "ONEDRIVE_BASIC",
+    "ONEDRIVE_ENTERPRISE"
   ],
   "secureScoreImpact": 0,
   "compare": "subset",

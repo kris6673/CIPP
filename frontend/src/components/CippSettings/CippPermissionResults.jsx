@@ -98,15 +98,7 @@ export const CippPermissionResults = (props) => {
         />
       )}
       {!importReport && executeCheck?.isFetching ? (
-        <List>
-          {[70, 85, 60, 75].map((width, index) => (
-            <ListItem key={index} sx={{ py: 0 }}>
-              <Typography variant="body2" sx={{ width: `${width}%` }}>
-                <Skeleton />
-              </Typography>
-            </ListItem>
-          ))}
-        </List>
+        <Skeleton variant="rectangular" height={100} sx={{ borderRadius: 1, ml: 3, mr: 1 }} />
       ) : !importReport && executeCheck?.isError ? (
         <Alert severity="error" sx={{ ml: 3, mr: 1 }}>
           Failed to load permission check results. Please try refreshing or contact support if the

@@ -206,7 +206,6 @@ function Invoke-ExecContainerManagement {
                         ValidChannels       = $ValidChannels
                         BuildChannelPattern = $BuildChannelPattern
                         UpdateSettings      = $UpdateInfo
-                        UpgradeHistory      = @(Get-CIPPVersionHistory -Last 50)
                     }
                 }
             } catch {

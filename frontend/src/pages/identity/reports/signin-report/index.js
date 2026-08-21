@@ -242,7 +242,7 @@ const Page = () => {
           />
         </Grid>
         <Grid size={{ xs: 12 }}>
-          <Stack direction="row" spacing={2} alignItems="flex-start" flexWrap="wrap" useFlexGap>
+          <Stack direction="row" spacing={2} alignItems="flex-start">
             <Button
               variant="contained"
               color="primary"

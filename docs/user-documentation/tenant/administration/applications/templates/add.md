@@ -60,4 +60,6 @@ The panel beside the form shows what has been defined so far, and changes with t
 Saved templates can be deployed from [appapproval.md](../../../../tools/tenant-tools/appapproval.md "mention"), or applied continuously through the Deploy Application standard in [standards](../../../standards/ "mention").
 {% endhint %}
 
+***
+
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

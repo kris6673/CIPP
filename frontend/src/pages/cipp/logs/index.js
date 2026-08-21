@@ -81,7 +81,7 @@ const Page = () => {
 
     if (daysDifference > 10) {
       return (
-        <Grid size={{ xs: 12, md: 7 }}>
+        <Grid size={7}>
           <Alert severity="warning">
             You have selected a date range of {Math.ceil(daysDifference)} days. Large date ranges
             may cause timeouts or errors due to the amount of data being processed. Consider
@@ -151,22 +151,14 @@ const Page = () => {
       tableFilter={
         <Accordion expanded={expanded} onChange={() => setExpanded(!expanded)}>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+            <Stack direction="row" spacing={1} alignItems="center">
               <SvgIcon>
                 <FunnelIcon />
               </SvgIcon>
-              <Typography variant="h6" sx={{ minWidth: 0, overflowWrap: "anywhere" }}>
+              <Typography variant="h6">
                 Logbook Filters
                 {filterEnabled ? (
-                  <Box
-                    component="span"
-                    sx={{
-                      fontSize: '0.8em',
-                      fontWeight: 'normal',
-                      display: { xs: 'block', md: 'inline' },
-                      ml: { xs: 0, md: '10px' },
-                    }}
-                  >
+                  <span style={{ fontSize: '0.8em', marginLeft: '10px', fontWeight: 'normal' }}>
                     (
                     {startDate || endDate ? (
                       <>
@@ -187,19 +179,11 @@ const Page = () => {
                     {username && <>User: {username}</>}
                     {severity && (username || startDate || endDate) && ' | '}
                     {severity && <>Severity: {severity.replace(/,/g, ', ')}</>})
-                  </Box>
+                  </span>
                 ) : (
-                  <Box
-                    component="span"
-                    sx={{
-                      fontSize: '0.8em',
-                      fontWeight: 'normal',
-                      display: { xs: 'block', md: 'inline' },
-                      ml: { xs: 0, md: '10px' },
-                    }}
-                  >
+                  <span style={{ fontSize: '0.8em', marginLeft: '10px', fontWeight: 'normal' }}>
                     (Today: {new Date().toLocaleDateString()})
-                  </Box>
+                  </span>
                 )}
               </Typography>
             </Stack>
@@ -208,7 +192,7 @@ const Page = () => {
             <form onSubmit={formControl.handleSubmit(onSubmit)}>
               <Grid container spacing={2}>
                 {/* Date Filter */}
-                <Grid size={{ xs: 12, md: 7 }}>
+                <Grid size={{ sm: 7, xs: 12 }}>
                   <Alert severity="info">
                     Use the filters below to narrow down your logbook results. You can filter by
                     date range, username, and severity levels. By default, the logbook shows the
@@ -216,10 +200,8 @@ const Page = () => {
                     {new Date().getTimezoneOffset() / -60} hours offset from UTC.
                   </Alert>
                 </Grid>
-                <Grid size={{ xs: 12, md: 7 }}>
-                  {/* Two full-width pickers side by side leaves each about 150px on a
-                      phone, which is narrower than the date they have to show. */}
-                  <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                <Grid size={{ sm: 7, xs: 12 }}>
+                  <Stack direction="row" spacing={2}>
                     <Box flexGrow={1}>
                       <CippFormComponent
                         type="datePicker"
@@ -261,7 +243,7 @@ const Page = () => {
                 <DateRangeWarning />
 
                 {/* Username Filter */}
-                <Grid size={{ xs: 12, md: 7 }}>
+                <Grid size={{ sm: 7, xs: 12 }}>
                   <CippFormComponent
                     type="textField"
                     name="username"
@@ -273,7 +255,7 @@ const Page = () => {
                 </Grid>
 
                 {/* Severity Filter */}
-                <Grid size={{ xs: 12, md: 7 }}>
+                <Grid size={{ sm: 7, xs: 12 }}>
                   <CippFormComponent
                     type="autoComplete"
                     name="severity"
@@ -294,7 +276,7 @@ const Page = () => {
 
                 {/* Action Buttons */}
                 <Grid size={{ xs: 12 }}>
-                  <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+                  <Stack direction="row" spacing={2}>
                     <Button
                       type="submit"
                       variant="contained"

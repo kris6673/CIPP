@@ -37,22 +37,11 @@
       "type": "switch",
       "label": "Allow communication with unmanaged Teams accounts",
       "default": false
-    },
-    "EnableTeamsConsumerInbound": {
-      "type": "switch",
-      "label": "Allow unmanaged Teams users to initiate contact",
-      "default": false,
-      "condition": {
-        "field": "EnableTeamsConsumerAccess",
-        "compareType": "is",
-        "compareValue": true
-      }
     }
   },
   "expected": {
     "EnableFederationAccess": "%EnableFederationAccess%",
-    "EnableTeamsConsumerAccess": "%EnableTeamsConsumerAccess%",
-    "EnableTeamsConsumerInbound": "%EnableTeamsConsumerInbound%"
+    "EnableTeamsConsumerAccess": "%EnableTeamsConsumerAccess%"
   },
   "read": {
     "cacheType": "CsExternalAccessPolicy"
@@ -64,8 +53,7 @@
         "cmdlet": "Set-CsExternalAccessPolicy",
         "params": {
           "EnableFederationAccess": "%EnableFederationAccess%",
-          "EnableTeamsConsumerAccess": "%EnableTeamsConsumerAccess%",
-          "EnableTeamsConsumerInbound": "%EnableTeamsConsumerInbound%"
+          "EnableTeamsConsumerAccess": "%EnableTeamsConsumerAccess%"
         }
       }
     ]

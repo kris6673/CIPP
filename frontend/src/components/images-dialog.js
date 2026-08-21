@@ -92,7 +92,7 @@ export const ImagesDialog = (props) => {
           onDrop={handleDrop}
           sx={{ mb: 3 }}
         />
-        <Stack useFlexGap
+        <Stack
           alignItems="center"
           direction="row"
           flexWrap="wrap"

@@ -6,7 +6,7 @@ on:
       - labeled
 jobs:
   add-comment_bug:
-    if: github.repository_owner == 'CyberDrain' && github.event.label.name == 'bug'
+    if: github.repository_owner == 'KelvinTegelaar' && github.event.label.name == 'unconfirmed-by-user'
     runs-on: ubuntu-slim
     permissions:
       issues: write

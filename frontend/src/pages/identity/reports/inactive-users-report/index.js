@@ -20,14 +20,14 @@ const Page = () => {
   const actions = [
     {
       label: "View User",
-      link: "/identity/administration/users/user?userId=[azureAdUserId]&tenantFilter=[tenantId]",
+      link: "/identity/administration/users/user?userId=[azureAdUserId]",
       multiPost: false,
       icon: <EyeIcon />,
       color: "success",
     },
     {
       label: "Edit User",
-      link: "/identity/administration/users/user/edit?userId=[azureAdUserId]&tenantFilter=[tenantId]",
+      link: "/identity/administration/users/user/edit?userId=[azureAdUserId]",
       icon: <Edit />,
       color: "success",
       target: "_self",
@@ -61,7 +61,6 @@ const Page = () => {
       "createdDateTime",
       "lastSignInDateTime",
       "lastNonInteractiveSignInDateTime",
-      "lastSuccessfulSignInDateTime",
       "numberOfAssignedLicenses",
       "daysSinceLastSignIn",
       "lastRefreshedDateTime",
@@ -76,7 +75,6 @@ const Page = () => {
     "displayName",
     "lastSignInDateTime",
     "lastNonInteractiveSignInDateTime",
-    "lastSuccessfulSignInDateTime",
     "numberOfAssignedLicenses",
     "daysSinceLastSignIn",
     ...reportDB.cacheColumns.filter((c) => c !== "Tenant"),
@@ -91,7 +89,7 @@ const Page = () => {
         actions={actions}
         offCanvas={offCanvas}
         simpleColumns={simpleColumns}
-        dataSourceControls={reportDB.controls}
+        cardButton={reportDB.controls}
       />
       {reportDB.syncDialog}
     </>

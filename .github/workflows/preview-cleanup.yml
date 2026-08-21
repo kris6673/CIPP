@@ -85,8 +85,10 @@ jobs:
               exit 0
             fi
             SLUG="${PREFIX}-${NAME}"
-            echo "Branch '$DELETED_REF' deleted - removing $SLUG and its pinned builds."
-            # Exact moving tag, or that tag plus a -<shortsha> suffix.
+            echo "Branch '$DELETED_REF' deleted - removing $SLUG."
+            # The optional -<shortsha> suffix matches immutable per-build tags that an earlier
+            # version of preview-container.yml pushed alongside the moving tag. It no longer
+            # creates them, but any still on the registry must still be swept.
             MATCH="^${SLUG}(-[0-9a-f]{7})?$"
             CUTOFF=""
           else

@@ -181,6 +181,7 @@ const Page = () => {
           variant="outlined"
         />
       </Tooltip>
+      {reportDB.controls}
     </Stack>
   )
 
@@ -195,7 +196,6 @@ const Page = () => {
         simpleColumns={columns}
         actions={byUser ? byUserActions : byMailboxActions}
         cardButton={pageActions}
-        dataSourceControls={reportDB.controls}
         offCanvas={null}
       />
       {reportDB.syncDialog}

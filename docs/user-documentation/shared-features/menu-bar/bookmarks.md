@@ -45,4 +45,6 @@ The list is locked by default. If you attempt to move or remove a bookmark while
 
 Your custom order, sort choice and lock state are all remembered between sessions.
 
+***
+
 {% include "../../../../.gitbook/includes/feature-request.md" %}

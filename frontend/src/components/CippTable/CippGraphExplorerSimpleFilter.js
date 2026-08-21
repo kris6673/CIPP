@@ -136,17 +136,8 @@ const CippGraphExplorerSimpleFilter = ({
 
   return (
     <>
-      {/* This sits on a page with no Card, so at 390px there is ~358px for a query field
-          plus three buttons whose fixed minimums alone came to 340px. */}
-      <Box
-        sx={{
-          display: "flex",
-          gap: 2,
-          flexDirection: { xs: "column", md: "row" },
-          alignItems: { xs: "stretch", md: "flex-end" },
-        }}
-      >
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+      <Box sx={{ display: "flex", gap: 2, alignItems: "flex-end" }}>
+        <Box sx={{ flex: 1 }}>
           <CippFormComponent
             type="autoComplete"
             name="reportTemplate"
@@ -165,14 +156,14 @@ const CippGraphExplorerSimpleFilter = ({
             placeholder="Select a query to run"
           />
         </Box>
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ pb: 0.25 }}>
+        <Stack direction="row" spacing={1} sx={{ pb: 0.25 }}>
           <Button
             variant="contained"
             color="primary"
             startIcon={<PlayCircle />}
             onClick={handleRunPreset}
             disabled={!selectedPreset && !currentFilterValues}
-            sx={{ minWidth: { md: "100px" } }}
+            sx={{ minWidth: "100px" }}
           >
             Run
           </Button>
@@ -180,7 +171,7 @@ const CippGraphExplorerSimpleFilter = ({
             variant="outlined"
             startIcon={<ManageSearch />}
             onClick={() => setOffCanvasVisible(true)}
-            sx={{ minWidth: { md: "120px" } }}
+            sx={{ minWidth: "120px" }}
           >
             Edit Query
           </Button>
@@ -189,7 +180,7 @@ const CippGraphExplorerSimpleFilter = ({
               variant="outlined"
               startIcon={viewMode === "table" ? <Code /> : <TableChart />}
               onClick={() => onViewModeChange(viewMode === "table" ? "json" : "table")}
-              sx={{ minWidth: { md: "120px" } }}
+              sx={{ minWidth: "120px" }}
             >
               {viewMode === "table" ? "View JSON" : "View Table"}
             </Button>

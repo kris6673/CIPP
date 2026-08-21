@@ -15,4 +15,6 @@ Role templates are used to create new GDAP invites for your customer tenants. Ma
 Only mappings that already exist on the [roles](../roles/ "mention") page can be selected. If a role you need is missing, create the mapping first and then return here.
 {% endhint %}
 
+***
+
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

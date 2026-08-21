@@ -1,11 +1,10 @@
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/router'
-import { Breadcrumbs, Divider, Link, Typography, Box, IconButton, Tooltip, useMediaQuery } from '@mui/material'
+import { Breadcrumbs, Link, Typography, Box, IconButton, Tooltip } from '@mui/material'
 import { History, AccountTree } from '@mui/icons-material'
 import { nativeMenuItems } from '../../layouts/config'
 import { useSettings } from '../../hooks/use-settings'
 import { CippBookmarkStar } from './CippBookmarkStar'
-import { useIsMobileLayout } from '../../hooks/use-breakpoint'
 
 const MAX_HISTORY_STORAGE = 20 // Maximum number of pages to keep in history
 const MAX_BREADCRUMB_DISPLAY = 5 // Maximum number of breadcrumbs to display at once
@@ -37,13 +36,9 @@ const loadTabOptions = () => {
   })
 }
 
-export const CippBreadcrumbNav = ({ withRail = false } = {}) => {
+export const CippBreadcrumbNav = () => {
   const router = useRouter()
   const settings = useSettings()
-  // Phones get one line: leading crumbs collapse behind MUI's ellipsis button instead of
-  // the trail wrapping to two rows of chrome above every table.
-  const mdDown = useMediaQuery((theme) => theme.breakpoints.down('md'))
-  const isMobileLayout = useIsMobileLayout()
   const [history, setHistory] = useState([])
   const [mode, setMode] = useState(settings.breadcrumbMode || 'hierarchical')
   const [tabOptions] = useState(loadTabOptions)
@@ -610,19 +605,6 @@ export const CippBreadcrumbNav = ({ withRail = false } = {}) => {
   const bookmarkCategory = trail.length > 1 ? crumbTitle(trail[0]) : ''
   const bookmarkStar = <CippBookmarkStar label={bookmarkLabel} category={bookmarkCategory} />
 
-  // The layout's rail chrome (gutter box + divider) travels with the nav so that when the
-  // nav renders nothing — error routes, or a single crumb on a phone — no stray hairline is
-  // left where the rail was. The AllTenants interstitial renders the nav bare (no withRail).
-  const rail = (node) =>
-    withRail ? (
-      <>
-        <Box sx={{ mx: { xs: 2, md: 3 }, mt: { xs: 0.75, md: 1.25 } }}>{node}</Box>
-        <Divider sx={{ mb: { xs: 1, md: 1.5 } }} />
-      </>
-    ) : (
-      node
-    )
-
   // Render based on mode
   if (mode === 'hierarchical') {
     const breadcrumbs = trail
@@ -632,18 +614,7 @@ export const CippBreadcrumbNav = ({ withRail = false } = {}) => {
       return null
     }
 
-    // On phones the rail stands down (taking the mode toggle and bookmark star with it) when
-    // it has nothing the page doesn't already say: a single crumb is no hierarchy, and the
-    // dashboard's whole trail ("Overview > Identity") is just its own tab set — the exact
-    // list the view picker beneath it presents. Desktop keeps the rail everywhere.
-    const isHomeSurface = breadcrumbs.every(
-      (crumb) => crumb.path === '/' || crumb.path?.startsWith('/dashboardv2')
-    )
-    if (isMobileLayout && (breadcrumbs.length < 2 || isHomeSurface)) {
-      return null
-    }
-
-    return rail(
+    return (
       <Box
         data-tutorial="breadcrumb-nav"
         sx={{ mb: 1, width: '100%', display: 'flex', alignItems: 'center', gap: 1 }}
@@ -656,9 +627,6 @@ export const CippBreadcrumbNav = ({ withRail = false } = {}) => {
         <Breadcrumbs
           separator=">"
           aria-label="page hierarchy"
-          maxItems={mdDown ? 2 : undefined}
-          itemsBeforeCollapse={mdDown ? 0 : 1}
-          itemsAfterCollapse={mdDown ? 2 : 1}
           sx={{
             fontSize: '0.875rem',
             // Not flexGrow - the bookmark button sits directly after the last crumb rather than
@@ -666,16 +634,6 @@ export const CippBreadcrumbNav = ({ withRail = false } = {}) => {
             minWidth: 0,
             userSelect: 'text',
             '& .MuiBreadcrumbs-separator': { userSelect: 'text' },
-            ...(mdDown && {
-              '& .MuiBreadcrumbs-ol': { flexWrap: 'nowrap' },
-              '& .MuiBreadcrumbs-li': { minWidth: 0 },
-              '& .MuiBreadcrumbs-li > *': {
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                display: 'block',
-              },
-            }),
           }}
         >
           {breadcrumbs.map((crumb, index) => {
@@ -745,9 +703,7 @@ export const CippBreadcrumbNav = ({ withRail = false } = {}) => {
             }
           })}
         </Breadcrumbs>
-        {/* Mobile: star pinned to the right edge — a stable tap target instead of trailing
-            the crumb text. Desktop keeps it directly after the last crumb. */}
-        <Box sx={{ ml: { xs: "auto", md: 0 }, display: "inline-flex" }}>{bookmarkStar}</Box>
+        {bookmarkStar}
       </Box>
     )
   }
@@ -761,7 +717,7 @@ export const CippBreadcrumbNav = ({ withRail = false } = {}) => {
   // Show only the last MAX_BREADCRUMB_DISPLAY items
   const visibleHistory = history.slice(-MAX_BREADCRUMB_DISPLAY)
 
-  return rail(
+  return (
     <Box
       data-tutorial="breadcrumb-nav"
       sx={{ mb: 1, width: '100%', display: 'flex', alignItems: 'center', gap: 1 }}
@@ -772,9 +728,7 @@ export const CippBreadcrumbNav = ({ withRail = false } = {}) => {
         </IconButton>
       </Tooltip>
       <Breadcrumbs
-        maxItems={mdDown ? 2 : MAX_BREADCRUMB_DISPLAY}
-        itemsBeforeCollapse={mdDown ? 0 : 1}
-        itemsAfterCollapse={mdDown ? 2 : 1}
+        maxItems={MAX_BREADCRUMB_DISPLAY}
         separator=">"
         aria-label="navigation history"
         sx={{
@@ -782,10 +736,6 @@ export const CippBreadcrumbNav = ({ withRail = false } = {}) => {
           minWidth: 0,
           userSelect: 'text',
           '& .MuiBreadcrumbs-separator': { userSelect: 'text' },
-          ...(mdDown && {
-            '& .MuiBreadcrumbs-ol': { flexWrap: 'nowrap' },
-            '& .MuiBreadcrumbs-li': { minWidth: 0 },
-          }),
         }}
       >
         {visibleHistory.map((page, index) => {
@@ -836,7 +786,7 @@ export const CippBreadcrumbNav = ({ withRail = false } = {}) => {
           )
         })}
       </Breadcrumbs>
-      <Box sx={{ ml: { xs: "auto", md: 0 }, display: "inline-flex" }}>{bookmarkStar}</Box>
+      {bookmarkStar}
     </Box>
   )
 }

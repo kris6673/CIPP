@@ -16,9 +16,7 @@ function Invoke-CIPPBaselineCATemplate {
     [CmdletBinding()]
     param(
         $Remediate,
-        $TenantFilter,
-        # The read result. Unused here; every executor takes the same arguments.
-        $Current
+        $TenantFilter
     )
 
     $TemplateRef = "$($Remediate.caTemplate)"

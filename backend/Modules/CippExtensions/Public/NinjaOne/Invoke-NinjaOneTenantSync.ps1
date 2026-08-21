@@ -1557,10 +1557,8 @@ function Invoke-NinjaOneTenantSync {
             } catch {
                 $SharePointTenantName = ($Customer.initialDomainName -split '\.')[0]
                 if ($SharePointTenantName) {
-                    # Sovereign clouds do not use sharepoint.com - map the initial domain's suffix.
-                    $SharePointDomain = Get-CIPPSharePointDomain -TenantDomain $Customer.initialDomainName
-                    $SharePointAdminUrl = "https://$SharePointTenantName-admin.$SharePointDomain"
                     Write-Information "NinjaOneSync: Get-SharePointAdminLink failed for $($Customer.defaultDomainName), using fallback SharePoint admin URL '$SharePointAdminUrl'. Error: $($_.Exception.Message)"
+                    $SharePointAdminUrl = "https://$SharePointTenantName-admin.sharepoint.com"
                 }
             }
 
@@ -1587,11 +1585,7 @@ function Invoke-NinjaOneTenantSync {
                 },
                 @{
                     Name = 'SharePoint Admin'
-                    # No guess here: the old fallback pasted defaultDomainName in front of
-                    # '-admin.sharepoint.com' ('contoso.onmicrosoft.com-admin.sharepoint.com') and
-                    # assumed the commercial cloud. Unresolved links are dropped below instead -
-                    # NinjaOne keeps whatever we write, so a bad URL sticks around in their portal.
-                    Link = $SharePointAdminUrl
+                    Link = $SharePointAdminUrl ?? "https://$($Customer.defaultDomainName)-admin.sharepoint.com"
                     Icon = 'fas fa-shapes'
                 },
                 @{
@@ -1626,9 +1620,6 @@ function Invoke-NinjaOneTenantSync {
                 }
 
             )
-
-            # Drop any portal we could not build a URL for rather than publishing a dead link.
-            $ManagementLinksData = @($ManagementLinksData | Where-Object { $_.Link })
 
             $M365LinksHTML = Get-NinjaOneLinks -Data $ManagementLinksData -Title 'Portals' -SmallCols 2 -MedCols 3 -LargeCols 3 -XLCols 3
 
@@ -2217,56 +2208,45 @@ function Invoke-NinjaOneTenantSync {
                     $DeviceIdHeader      = $ResolvedScanGroup.deviceIdHeader
                     $CveIdHeader         = $ResolvedScanGroup.cveIdHeader
 
-                    $ExceptionsTable      = Get-CIPPTable -TableName 'CveExceptions'
-                    $AllExceptions        = Get-CIPPAzDataTableEntity @ExceptionsTable
-                    $ApplicableExceptions = $AllExceptions | Where-Object { $_.RowKey -eq $TenantFilter -or $_.RowKey -eq 'ALL' }
-                    $ExceptedCveIds       = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-                    foreach ($Ex in @($ApplicableExceptions)) {
-                        if ($Ex.cveId) { [void]$ExceptedCveIds.Add([string]$Ex.cveId) }
-                    }
+                    $RawVulns = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'DefenderCVEs' | Where-Object { $_.RowKey -ne 'DefenderCVEs-Count' }
+                    $AllVulns = $RawVulns.Data | ConvertFrom-Json
+                    $CsvRows  = [System.Collections.Generic.List[object]]::new()
 
-                    # Fold the cached rows one at a time instead of materialising a parsed
-                    # copy of every Data blob before the CSV build - only the CSV rows are
-                    # needed, so each parsed graph is collectable as soon as its devices are
-                    # folded (see Get-CIPPCVEReport for the same pattern).
-                    $CsvRows       = [System.Collections.Generic.List[object]]::new()
-                    $VulnCount     = 0
-                    $ExceptedCount = 0
-                    $SkippedCount  = 0
-
-                    foreach ($Row in Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'DefenderCVEs') {
-                        if ($Row.RowKey -eq 'DefenderCVEs-Count' -or -not $Row.Data) { continue }
-                        $Item = $Row.Data | ConvertFrom-Json
-                        $VulnCount++
-
-                        if ([string]::IsNullOrWhiteSpace($Item.cveId)) {
-                            $SkippedCount++
-                            continue
-                        }
-                        if ($ExceptedCveIds.Contains([string]$Item.cveId)) {
-                            $ExceptedCount++
-                            continue
-                        }
-                        if ($Item.deviceDetailsJson) {
-                            $Devices = ConvertFrom-Json $Item.deviceDetailsJson | Sort-Object -Property deviceName -Unique
-                            foreach ($Dev in $Devices) {
-                                [void]$CsvRows.Add([PSCustomObject]@{
-                                $DeviceIdHeader = $Dev.deviceName.Trim()
-                                $CveIdHeader    = $Item.cveId.Trim()
-                                })
-                            }
-                        }
-                    }
-
-                    if ($VulnCount -eq 0) {
+                    if (-not $AllVulns) {
                         Write-LogMessage -API 'NinjaOneSync' -tenant $TenantFilter -message 'CVE sync — no vulnerability data returned' -sev 'Warning'
                         [void]$CsvRows.Add([PSCustomObject]@{
                                     $DeviceIdHeader = ""
                                     $CveIdHeader    = ""})
                     } else {
-                        if ($ExceptedCveIds.Count -gt 0) {
-                            Write-LogMessage -API 'NinjaOneSync' -tenant $TenantFilter -message "CVE sync — filtered $ExceptedCount excepted CVEs, $($VulnCount - $ExceptedCount) remaining" -sev 'Info'
+                        $ExceptionsTable      = Get-CIPPTable -TableName 'CveExceptions'
+                        $AllExceptions        = Get-CIPPAzDataTableEntity @ExceptionsTable
+                        $ApplicableExceptions = $AllExceptions | Where-Object { $_.RowKey -eq $TenantFilter -or $_.RowKey -eq 'ALL' }
+
+                        if ($ApplicableExceptions) {
+                            $ExceptedCveIds = $ApplicableExceptions | Select-Object -ExpandProperty cveId -Unique
+                            $BeforeCount    = $AllVulns.Count
+                            $AllVulns       = $AllVulns | Where-Object { $_.cveId -notin $ExceptedCveIds }
+                            Write-LogMessage -API 'NinjaOneSync' -tenant $TenantFilter -message "CVE sync — filtered $($BeforeCount - $AllVulns.Count) excepted CVEs, $($AllVulns.Count) remaining" -sev 'Info'
                         }
+
+                        $SkippedCount = 0
+
+                        foreach ($Item in $AllVulns) {
+                            if ([string]::IsNullOrWhiteSpace($Item.cveId)) {
+                                $SkippedCount++
+                                continue
+                            }
+                            if ($Item.deviceDetailsJson) {
+                                $Devices = ConvertFrom-Json $Item.deviceDetailsJson | Sort-Object -Property deviceName -Unique
+                                foreach ($Dev in $Devices) {
+                                    [void]$CsvRows.Add([PSCustomObject]@{
+                                    $DeviceIdHeader = $Dev.deviceName.Trim()
+                                    $CveIdHeader    = $Item.cveId.Trim()
+                                    })
+                                }
+                            }
+                        }
+
                         if ($SkippedCount -gt 0) {
                             Write-LogMessage -API 'NinjaOneSync' -tenant $TenantFilter -message "CVE sync — skipped $SkippedCount rows (missing deviceName or cveId)" -sev 'Warning'
                         }

@@ -6,7 +6,6 @@ import CippPageCard from "../../../../components/CippCards/CippPageCard";
 import { ApiGetCall, ApiPostCall } from "../../../../api/ApiCall";
 import { CippDataTable } from "../../../../components/CippTable/CippDataTable";
 import { CippApiResults } from "../../../../components/CippComponents/CippApiResults";
-import { CippExpandableAlert } from "../../../../components/CippComponents/CippExpandableAlert";
 import {
   Accordion,
   AccordionDetails,
@@ -100,7 +99,7 @@ const Page = () => {
         <CardContent sx={{ mb: 2 }}>
           <Grid container spacing={2}>
             <Grid size={12}>
-              <CippExpandableAlert severity="info">
+              <Alert severity="info">
                 <Typography variant="body2">
                   Use this form to generate invites for the selected GDAP Role Template. After
                   generating the invite, you will receive two URLs:
@@ -123,7 +122,7 @@ const Page = () => {
                   </Link>{" "}
                   in Application Settings.
                 </Typography>
-              </CippExpandableAlert>
+              </Alert>
             </Grid>
             {createDefaults && (
               <>

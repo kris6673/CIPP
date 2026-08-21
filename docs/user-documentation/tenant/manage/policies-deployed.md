@@ -65,4 +65,6 @@ The Conditional Access templates included in the standards template, with the sa
 | Controls      | Always Access Control in this section.                                                                                          |
 | Last Modified | The date the comparison data for this template was last refreshed, or N/A where none exists.                                    |
 
+***
+
 {% include "../../../../.gitbook/includes/feature-request.md" %}

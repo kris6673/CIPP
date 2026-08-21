@@ -29,4 +29,6 @@ Alongside the usual row details, the flyout for this table renders an **Applicat
 
 These are the permissions the application asks for in its manifest, which is not the same as what has been consented to in a tenant. Granted consent is shown on the Permissions tab of ...
 
+***
+
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

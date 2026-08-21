@@ -28,8 +28,8 @@ function Get-CIPPAccessRole {
 
     $CachedRoles = Get-CIPPAzDataTableEntity @CacheAccessUserRoleTable -Filter "PartitionKey eq 'AccessUser' and RowKey eq '$Username'" | Select-Object -ExpandProperty Role | ConvertFrom-Json
 
-    Write-Debug "SWA Roles: $($SwaRoles -join ', ')"
-    Write-Debug "Cached Roles: $($CachedRoles -join ', ')"
+    Write-Information "SWA Roles: $($SwaRoles -join ', ')"
+    Write-Information "Cached Roles: $($CachedRoles -join ', ')"
 
     # Combine SWA roles and cached roles into a single deduplicated list
     $AllRoles = [System.Collections.Generic.List[string]]::new()
@@ -47,20 +47,6 @@ function Get-CIPPAccessRole {
     $CombinedRoles = $AllRoles | Select-Object -Unique
 
     # For debugging
-    Write-Debug "Combined Roles: $($CombinedRoles -join ', ')"
-
-    # Apply role impersonation here so every secondary authorization or visibility check
-    # that resolves roles through this function (API client grants, Sherweb, alerts,
-    # domain health, ...) sees the impersonated role, consistent with Test-CIPPAccess.
-    if (![string]::IsNullOrWhiteSpace($Headers.'x-cipp-impersonate-role') -and $CombinedRoles -contains 'superadmin') {
-        $Impersonation = Resolve-CippImpersonation -User ([pscustomobject]@{
-                identityProvider = 'swa'
-                userId           = $null
-                userDetails      = $Username
-                userRoles        = @($CombinedRoles)
-            }) -Request ([pscustomobject]@{ Headers = $Headers })
-        return @($Impersonation.User.userRoles)
-    }
-
+    Write-Information "Combined Roles: $($CombinedRoles -join ', ')"
     return $CombinedRoles
 }

@@ -32,13 +32,12 @@ const TIME_AGO_NAMES = new Set([
   'Date', 'WhenCreated', 'WhenChanged', 'CreationTime', 'renewalDate',
   'commitmentTerm.renewalConfiguration.renewalDate', 'purchaseDate', 'NextOccurrence',
   'LastOccurrence', 'NotBefore', 'NotAfter', 'latestDataCollection',
-  'requestDate', 'reviewedDate', 'GeneratedAt', 'RecordedAt',
+  'requestDate', 'reviewedDate', 'GeneratedAt',
 ])
 const MATCH_DATE_TIME = /([dD]ate[tT]ime|[Ee]xpiration|[Tt]imestamp|[sS]tart[Dd]ate)/
 const ABSOLUTE_DATE_NAMES = new Set([
   'WindowStart', 'WindowEnd', 'CreatedUtc', 'DownloadedUtc', 'ProcessedUtc',
   'NextAttemptUtc', 'LastErrorUtc', 'LastPolledUtc',
-  'QueuedUtc', 'StartedUtc', 'CompletedUtc',
 ])
 const isDateTimeColumn = (key) =>
   TIME_AGO_NAMES.has(key) || ABSOLUTE_DATE_NAMES.has(key) || MATCH_DATE_TIME.test(key)
@@ -295,7 +294,7 @@ export const utilColumnsFromAPI = (dataArray) => {
             sampleValue,
             values: valuesForColumn,
             getValue: (row) => resolveValue(row),
-            dataArray,
+            dataArray: filterSample,
           }),
           Cell: ({ row }) => {
             const value = resolveValue(row.original)

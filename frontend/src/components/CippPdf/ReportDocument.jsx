@@ -1,6 +1,6 @@
 import { Document } from '@react-pdf/renderer'
 import { ReportProvider } from './reportContext'
-import { applyFooterText, createReportTheme } from './reportTheme'
+import { createReportTheme } from './reportTheme'
 import { createReportStyles, DEFAULT_PAGE_SETUP } from './reportPdfStyles'
 import { CoverPage } from './reportPdfPrimitives'
 import { resolveCoverImage } from './resolveCoverImage'
@@ -55,9 +55,6 @@ export const ReportDocument = ({
   // The report's own footer wording, used when branding configures none.
   footerLabel,
 
-  // Resolved CIPP variables, from `useReportVariables`.
-  variables: cippVariables,
-
   size = DEFAULT_PAGE_SETUP.size,
   orientation = DEFAULT_PAGE_SETUP.orientation,
 
@@ -72,24 +69,14 @@ export const ReportDocument = ({
     generatedOn ??
     new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 
-  // What every `%variable%` resolves to in this report. The report's own three override CIPP's,
-  // so `%tenantname%` still resolves before the variables fetch lands.
+  // What `%tenantname%`, `%reportname%` and `%reportdate%` resolve to anywhere in this report.
   const variables = {
-    ...cippVariables,
     tenantname: tenantName || 'Organization',
     reportname: reportName || '',
     reportdate: date,
   }
 
   const context = { theme, styles, variables, logo, footerLabel, size, orientation, date }
-
-  // Branding's cover note wins; a report's own wording is the fallback. Leave the prop undefined
-  // when neither is set so CoverPage's default confidentiality line still appears. Variables are
-  // filled here so a configured `%tenantname%` note resolves the same way the page footer does.
-  const coverNoteTemplate = theme.coverFooterText || coverFooterNote
-  const coverNote = coverNoteTemplate
-    ? applyFooterText(coverNoteTemplate, variables)
-    : undefined
 
   return (
     <ReportProvider value={context}>
@@ -111,7 +98,8 @@ export const ReportDocument = ({
             // Naming the client on the cover is what makes it a client report. Every report wanted
             // it and each one printed it slightly differently; `coverTenant={false}` opts out.
             tenantName={coverTenant === false ? null : coverTenant || tenantName}
-            footerNote={coverNote}
+            // Branding's cover note wins; a report's own wording is the fallback.
+            footerNote={theme.coverFooterText || coverFooterNote}
           >
             {coverMeta}
           </CoverPage>

@@ -9,11 +9,6 @@ function Add-CippQueueMessage {
         The name of the function to execute (must exist in CIPPCore module)
     .PARAMETER Parameters
         Hashtable of parameters to pass to the function
-    .PARAMETER Priority
-        Queue priority for the starter job (lower = sooner). The queue claims strictly by priority
-        bucket, so a starter below the background band (P4) cannot run until that backlog drains.
-        Defaults to P2 when called from an HTTP request (user-initiated work skips the queue) and
-        P5 otherwise.
     .EXAMPLE
         Add-CippQueueMessage -Cmdlet 'Start-BPAOrchestrator' -Parameters @{ TenantFilter = 'AllTenants'; Force = $true }
     .FUNCTIONALITY
@@ -25,11 +20,7 @@ function Add-CippQueueMessage {
         [string]$Cmdlet,
 
         [Parameter(Mandatory = $false)]
-        [hashtable]$Parameters = @{},
-
-        [Parameter(Mandatory = $false)]
-        [ValidateRange(0, 99)]
-        [System.Nullable[int]]$Priority
+        [hashtable]$Parameters = @{}
     )
 
     $QueueMessage = @{
@@ -39,20 +30,9 @@ function Add-CippQueueMessage {
 
     try {
         if ($env:CIPPNG -eq 'true') {
-            if ($null -eq $Priority) {
-                # Stamped into the global scope per invocation by the Craft worker; absent on older
-                # Craft runtimes, so this read degrades to $null and the default band applies.
-                $OpContext = Get-Variable -Name 'CraftOperationContext' -Scope Global -ValueOnly -ErrorAction SilentlyContinue
-                $Priority = if ($null -ne $OpContext -and $OpContext.Category -eq 'HTTP') { 2 } else { 5 }
-            }
             $ParametersJson = $Parameters | ConvertTo-Json -Depth 10 -Compress
-            try {
-                [Craft.Services.QueueBridge]::Enqueue($Cmdlet, $ParametersJson, [int]$Priority)
-            } catch [System.Management.Automation.MethodException] {
-                # Older Craft runtime without the priority overload - fall back to the default band.
-                [Craft.Services.QueueBridge]::Enqueue($Cmdlet, $ParametersJson)
-            }
-            Write-Information "Craft: Queued $Cmdlet for background execution (P$Priority)"
+            [Craft.Services.QueueBridge]::Enqueue($Cmdlet, $ParametersJson)
+            Write-Information "Craft: Queued $Cmdlet for background execution"
             return $true
         }
 

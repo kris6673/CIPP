@@ -30,9 +30,8 @@ function Invoke-CippTestSMB1001_2_12 {
                 $A = $Analyser | Where-Object { $_.Domain -eq $D.DomainName } | Select-Object -First 1
                 $K = $Dkim | Where-Object { $_.Domain -eq $D.DomainName } | Select-Object -First 1
                 $Spf = $A.ActualSPFRecord -match 'v=spf1'
-                # Domain Analyser exposes DMARC as DMARCPresent / DMARCFullPolicy / DMARCActionPolicy - there is no DMARCRecord property
-                $Dmarc = ($A.DMARCPresent -eq $true) -or ($A.DMARCFullPolicy -match 'v=DMARC1')
-                $DmarcStrong = ($A.DMARCActionPolicy -in @('Reject', 'Quarantine')) -or ($A.DMARCFullPolicy -match 'p\s*=\s*(reject|quarantine)')
+                $Dmarc = $A.DMARCRecord -match 'v=DMARC1'
+                $DmarcStrong = $A.DMARCRecord -match 'p=(reject|quarantine)'
                 $DkimEnabled = ($K -and $K.Enabled -eq $true)
                 $DomainIssues = @(
                     if (-not $Spf) { 'no SPF' }

@@ -170,7 +170,6 @@ Describe 'Set-CIPPDBCacheIntunePolicies' {
             (Get-CIPPIntunePolicyListDefinitions).Id
             'WindowsAutopilotDeploymentProfiles'
             'DeviceEnrollmentConfigurations'
-            'AppleUserInitiatedEnrollmentProfiles'
             'DeviceManagementScripts'
             'MobileApps'
         )

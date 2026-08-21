@@ -86,13 +86,7 @@ When a page has queued a long-running background task, a queue status button app
 
 ### Narrow Screens
 
-Whenever the toolbar runs out of room, the **Filters**, **Columns** and **Export** buttons collapse into a single menu behind the vertical ellipsis. That menu also offers **Fullscreen**, which expands the table to fill the window, and **Exit Fullscreen** to return.
-
-On a phone the ellipsis opens a sheet instead, holding the same filters, presets, column selection, exports and refresh, along with a **Rows per page** section in place of the footer's page size control.
-
-{% hint style="info" %}
-Below roughly 900px, tables are presented as a list of cards rather than as a table, with their own search, sort and filter controls. Everything on this page still applies, and the full table remains available. See [mobile-layout.md](mobile-layout.md "mention").
-{% endhint %}
+On smaller viewports, and whenever the toolbar runs out of room, the **Filters**, **Columns** and **Export** buttons collapse into a single menu behind the vertical ellipsis. That menu also offers **Fullscreen**, which expands the table to fill the window, and **Exit Fullscreen** to return.
 
 ## Row Selection and Actions
 
@@ -170,5 +164,7 @@ You can adjust a width yourself by hovering over the divider between two column 
 Tables are paged, with a control at the foot of the table for moving between pages and choosing how many rows are shown at a time. The available page sizes are 25, 50, 100, 250 and 500. The starting value comes from the **Default Page Size** setting in your user preferences.
 
 Only the rows and columns currently in view are rendered, which keeps large result sets responsive while scrolling.
+
+***
 
 {% include "../../../.gitbook/includes/feature-request.md" %}

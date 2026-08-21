@@ -1,6 +1,6 @@
 # Create New Template
 
-This page is used to create a new SharePoint provisioning template, or to edit or copy an existing one. A template defines one or more site templates, each of which provisions either a SharePoint site or a Microsoft Team, along with the document libraries and permissions to apply. Templates can later be deployed to your tenants to provision sites in a consistent way. The page opens in one of three modes depending on how you reach it: **Create** a new template, **Edit** an existing template in place, or **Copy** an existing template into a new one. When copying, the name is pre-filled with a "(Copy)" suffix and saving creates a separate template rather than overwriting the original.
+This page is used to create a new SharePoint provisioning template, or to edit or copy an existing one. A template defines one or more site templates — each of which provisions either a SharePoint site or a Microsoft Team — along with the document libraries and permissions to apply. Templates can later be deployed to your tenants to provision sites in a consistent way. The page opens in one of three modes depending on how you reach it: **Create** a new template, **Edit** an existing template in place, or **Copy** an existing template into a new one. When copying, the name is pre-filled with a "(Copy)" suffix and saving creates a separate template rather than overwriting the original.
 
 ## Template Settings
 
@@ -14,12 +14,12 @@ These settings apply to the template as a whole.
 
 ## Site Templates
 
-The Site Templates section is a card canvas where you define each site the template should provision. Add a site using one of the two buttons on the **Add New Site Template** card, **SharePoint** or **Teams**, which sets that entry's site type. There is no limit on the number of site templates, and any card can be removed from its options ("...") menu.
+The Site Templates section is a card canvas where you define each site the template should provision. Add a site using one of the two buttons on the add card — **SharePoint site** or **Microsoft Team** — which sets that entry's site type. There is no limit on the number of site templates, and any card can be removed from its options ("...") menu.
 
 Each site template has:
 
 * **A name**, entered in the card header, which becomes the name of the provisioned site or team.
-* **A site type**, either a SharePoint site or a Microsoft Team.
+* **A site type** — a SharePoint site or a Microsoft Team.
 * **A mandatory site-level permission object.** Every site template must have at least one root-level permission grant. Until it does, the card is outlined in red and the Save button stays disabled.
 * **One or more document libraries**, described below.
 
@@ -62,7 +62,7 @@ The available permission levels are SharePoint's built-in levels:
 
 | Permission Level | Access granted                                         |
 | ---------------- | ------------------------------------------------------ |
-| Read             | View pages and items, and download documents.          |
+| Read             | View items.                                            |
 | Contribute       | View, add, update, and delete items.                   |
 | Edit             | Contribute access plus the ability to manage lists.    |
 | Design           | Edit access plus the ability to approve and customise. |
@@ -85,5 +85,7 @@ The SharePoint and Teams counts respect the site-type override, so they always r
 ## Saving
 
 Select **Save Template** to store the template. Save only becomes available once the template is valid: a template name is set and every site template has a name, at least one root-level permission, and a name for every library. When something is missing, an information icon next to the Save button lists exactly what needs fixing. Saving a new template or a copy creates a new template, while saving an edit updates the existing template in place. You are then returned to the SharePoint Templates list.
+
+***
 
 {% include "../../../../.gitbook/includes/feature-request.md" %}

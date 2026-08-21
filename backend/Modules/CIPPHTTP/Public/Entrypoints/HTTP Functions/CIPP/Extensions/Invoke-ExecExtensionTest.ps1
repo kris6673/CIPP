@@ -50,23 +50,12 @@ Function Invoke-ExecExtensionTest {
                 }
             }
             'PWPush' {
-                if ($Configuration.PWPush.Enabled -ne $true) {
-                    $Results = [pscustomobject]@{'Results' = 'PWPush is not enabled. Enable the integration and save the configuration, then test again.' }
-                    break
-                }
                 $Payload = 'This is a test from CIPP'
-                # ThrowOnError: the silent $false fallback exists for the password flows; the
-                # test's whole job is to show why a push fails, so let the real exception through.
-                try {
-                    $PasswordLink = New-PwPushLink -Payload $Payload -ThrowOnError
-                } catch {
-                    $Results = [pscustomobject]@{'Results' = "PWPush is enabled but creating a test push failed: $($_.Exception.Message)" }
-                    break
-                }
+                $PasswordLink = New-PwPushLink -Payload $Payload
                 if ($PasswordLink) {
                     $Results = [pscustomobject]@{Results = @(@{'resultText' = 'Successfully generated PWPush, hit the Copy to Clipboard button to retrieve the test.'; 'copyField' = $PasswordLink; 'state' = 'success' }) }
                 } else {
-                    $Results = [pscustomobject]@{'Results' = 'PWPush did not return a link. Check the CIPP logbook (API: PwPush) for details.' }
+                    $Results = [pscustomobject]@{'Results' = 'PWPush is not enabled' }
                 }
             }
             'Hudu' {
@@ -91,14 +80,7 @@ Function Invoke-ExecExtensionTest {
                 $Results = [pscustomobject]@{'Results' = 'Successfully Connected to HIBP' }
             }
             'GitHub' {
-                # NoFallback: the test must judge the configured token itself - the anonymous
-                # function-app fallback would turn a rejected PAT into a false success.
-                try {
-                    $GitHubResponse = Invoke-GitHubApiRequest -Method 'GET' -Path 'user' -ReturnHeaders -NoFallback
-                } catch {
-                    $Results = [pscustomobject]@{ 'Results' = "GitHub rejected the configured API token: $($_.Exception.Message). Check that the API key is valid and has not expired, then try again." }
-                    break
-                }
+                $GitHubResponse = Invoke-GitHubApiRequest -Method 'GET' -Path 'user' -ReturnHeaders
                 if ($GitHubResponse.login) {
                     if ($GitHubResponse.Headers.'x-oauth-scopes') {
                         $Results = [pscustomobject]@{ 'Results' = "Successfully connected to GitHub user: $($GitHubResponse.login) with scopes: $($GitHubResponse.Headers.'x-oauth-scopes')" }

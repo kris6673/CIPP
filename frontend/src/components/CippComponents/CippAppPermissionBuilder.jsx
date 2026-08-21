@@ -1013,55 +1013,23 @@ const CippAppPermissionBuilder = ({
                       onChange={handleChange(sp.appId)}
                       slotProps={{ transition: { unmountOnExit: true } }}
                     >
-                      <AccordionSummary
-                        expandIcon={<ExpandMore />}
-                        // Flex children default to min-width:auto, so without this the
-                        // 36-character app-id chip refuses to shrink and pushes the whole
-                        // summary — display name first — off the left edge of a phone.
-                        sx={{ "& .MuiAccordionSummary-content": { minWidth: 0 } }}
-                      >
+                      <AccordionSummary expandIcon={<ExpandMore />}>
                         <Stack
-                          direction={{ xs: "column", md: "row" }}
-                          spacing={{ xs: 1, md: 2 }}
+                          direction="row"
+                          spacing={2}
                           justifyContent="space-between"
-                          alignItems={{ xs: "flex-start", md: "center" }}
-                          useFlexGap
-                          sx={{ width: "100%", mr: 1, minWidth: 0 }}
+                          alignItems="center"
+                          sx={{ width: "100%", mr: 1 }}
                         >
-                          <Typography
-                            variant="h6"
-                            sx={{
-                              minWidth: 0,
-                              maxWidth: "100%",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: { xs: "nowrap", md: "normal" },
-                            }}
-                          >
-                            {sp.displayName}
-                          </Typography>
-                          <Stack
-                            direction="row"
-                            spacing={{ xs: 1, md: 2 }}
-                            alignItems="center"
-                            useFlexGap
-                            sx={{
-                              flexWrap: { xs: "wrap", md: "nowrap" },
-                              minWidth: 0,
-                              maxWidth: "100%",
-                            }}
-                          >
+                          <Typography variant="h6">{sp.displayName}</Typography>
+                          <Stack direction="row" spacing={2} alignItems="center">
                             <Tooltip title="Copy Application ID to clipboard">
                               <Chip
                                 label={sp.appId}
                                 variant="outlined"
                                 size="small"
                                 color="info"
-                                sx={{
-                                  mr: "0.25rem",
-                                  fontFamily: "monospace",
-                                  maxWidth: "100%",
-                                }}
+                                sx={{ mr: "0.25rem", fontFamily: "monospace" }}
                                 icon={
                                   <SvgIcon>
                                     <Apps />
@@ -1079,7 +1047,7 @@ const CippAppPermissionBuilder = ({
                                 variant="outlined"
                                 size="small"
                                 label={getPermissionCounts(sp.appId)}
-                                sx={{ width: "100px", flexShrink: 0 }}
+                                sx={{ width: "100px" }}
                                 icon={
                                   <SvgIcon fontSize="small">
                                     <ShieldCheckIcon />

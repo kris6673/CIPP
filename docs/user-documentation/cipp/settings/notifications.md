@@ -139,4 +139,6 @@ You are able to select to send a test alert. Select which options you want to in
 
 <figure><img src="../../../.gitbook/assets/paths_overview.png" alt=""><figcaption></figcaption></figure>
 
+***
+
 {% include "../../../../.gitbook/includes/feature-request.md" %}

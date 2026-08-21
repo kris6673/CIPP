@@ -78,4 +78,6 @@ The BPA uses a traffic-light system for quick, visual feedback:
 **Permissions:** Validate required permissions with `Run Permission Check` and troubleshoot invalid refresh tokens with `Tenant Access Check`.
 {% endhint %}
 
+***
+
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

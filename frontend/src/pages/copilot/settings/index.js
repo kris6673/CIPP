@@ -14,11 +14,7 @@ const Page = () => {
       url: '/api/ExecCopilotSettings',
       icon: <Cog6ToothIcon />,
       data: { settingId: 'settingId' },
-      condition: (row) =>
-        ![
-          'microsoft.copilot.allowwebsearch',
-          'microsoft.copilot.imagegeneration',
-        ].includes(row.settingId),
+      condition: (row) => row.settingId !== 'microsoft.copilot.allowwebsearch',
       fields: [
         {
           type: 'autoComplete',
@@ -29,31 +25,6 @@ const Page = () => {
           options: [
             { label: 'Enabled', value: '1' },
             { label: 'Disabled', value: '0' },
-            { label: 'Not configured', value: 'clear' },
-          ],
-        },
-      ],
-      confirmText: "Set '[setting]' to the selected state?",
-      relatedQueryKeys: [queryKey],
-    },
-    {
-      // Designer image generation inverts the usual toggle: '1' disables, '0' enables.
-      label: 'Set Status',
-      type: 'POST',
-      url: '/api/ExecCopilotSettings',
-      icon: <Cog6ToothIcon />,
-      data: { settingId: 'settingId' },
-      condition: (row) => row.settingId === 'microsoft.copilot.imagegeneration',
-      fields: [
-        {
-          type: 'autoComplete',
-          name: 'value',
-          label: 'Desired state',
-          multiple: false,
-          creatable: false,
-          options: [
-            { label: 'Enabled', value: '0' },
-            { label: 'Disabled', value: '1' },
             { label: 'Not configured', value: 'clear' },
           ],
         },
@@ -80,7 +51,7 @@ const Page = () => {
             {
               label:
                 'Enabled in Microsoft 365 Copilot and Microsoft 365 Copilot Chat',
-              value: '0',
+              value: '2',
             },
             {
               label:
@@ -90,7 +61,7 @@ const Page = () => {
             {
               label:
                 'Disabled in Microsoft 365 Copilot Work mode, Enabled in Microsoft 365 Copilot Chat',
-              value: '2',
+              value: '0',
             },
             { label: 'Not configured', value: 'clear' },
           ],

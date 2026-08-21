@@ -30,7 +30,6 @@ function Invoke-ListTestResultsTenants {
         $SummaryOnly = $Request.Query.summaryOnly ?? $Request.Body.summaryOnly
         $RowStatusRaw = $Request.Query.rowStatus ?? $Request.Body.rowStatus
         $IncludeCounts = $Request.Query.includeCounts ?? $Request.Body.includeCounts
-        $CountsOnly = $Request.Query.countsOnly ?? $Request.Body.countsOnly
 
         # Normalise inputs that may arrive as a single string, a comma-delimited string, or an
         # array of strings / {value,label} objects (the frontend autocomplete posts the latter).
@@ -58,8 +57,6 @@ function Invoke-ListTestResultsTenants {
         if ($Category) { $Params.Category = $Category }
         if ([string]$SummaryOnly -eq 'true') { $Params.SummaryOnly = $true }
         if ([string]$IncludeCounts -eq 'true') { $Params.IncludeCounts = $true }
-        # countsOnly returns the aggregates with no rows, for callers that only render totals.
-        if ([string]$CountsOnly -eq 'true') { $Params.CountsOnly = $true }
 
         # Restrict to tenants the caller is allowed to see. Test-CIPPAccess returns the list of
         # permitted customerIds, or 'AllTenants' for unrestricted users. Passed into the query so
@@ -73,7 +70,7 @@ function Invoke-ListTestResultsTenants {
         $Response = Get-CIPPTestResultsTenants @Params
 
         $StatusCode = [HttpStatusCode]::OK
-        if ($Params.IncludeCounts -or $Params.CountsOnly) {
+        if ($Params.IncludeCounts) {
             $Body = @{ Results = @($Response.Results); Counts = $Response.Counts }
         } else {
             $Body = @{ Results = @($Response) }

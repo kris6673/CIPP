@@ -38,11 +38,7 @@ function Get-CippMcpToolCatalog {
             # backs the in-app documentation browser: it returns the whole ~1.5 MB OpenAPI
             # document, which would flood the caller's context to tell it what SearchTools
             # already answers.
-            #
-            # ListCippDocs is excluded for a different reason: it is already advertised as the
-            # SearchDocs and GetDoc core tools, and leaving it in the catalog would offer a
-            # third name for the same thing with a different argument shape.
-            if ($Endpoint -in @('ExecMcp', 'ListOpenApiSpec', 'ListCippDocs')) { continue }
+            if ($Endpoint -in @('ExecMcp', 'ListOpenApiSpec')) { continue }
 
             foreach ($MethodEntry in $PathEntry.Value.GetEnumerator()) {
                 $Method = [string]$MethodEntry.Key

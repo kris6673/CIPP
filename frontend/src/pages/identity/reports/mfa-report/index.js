@@ -117,7 +117,7 @@ const Page = () => {
         simpleColumns={simpleColumns}
         filters={filters}
         actions={actions}
-        dataSourceControls={reportDB.controls}
+        cardButton={reportDB.controls}
         initialFilters={urlFilters}
       />
       {reportDB.syncDialog}

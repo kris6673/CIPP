@@ -41,4 +41,6 @@ Deleting a named location does not update the Conditional Access policies that r
 | IPv4 | `1.1.1.1/32`    | /9 to /32    |
 | IPv6 | `2001:db8::/32` | /9 to /128   |
 
+***
+
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

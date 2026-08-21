@@ -250,14 +250,6 @@ function Add-CIPPScheduledTask {
                 $entity['Tag'] = [string]$task.Tag
             }
 
-            if ($Task.RowKey) {
-                # Editing replaces the entity, so carry the disabled state over to keep a disabled task disabled
-                $ExistingEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'ScheduledTask' and RowKey eq '$RowKey'" -Property RowKey, Disabled
-                if ($ExistingEntity.Disabled -eq $true) {
-                    $entity['Disabled'] = $true
-                }
-            }
-
             # Always store DesiredStartTime if provided
             if ($DesiredStartTime) {
                 $entity['DesiredStartTime'] = [string]$DesiredStartTime
@@ -282,14 +274,31 @@ function Add-CIPPScheduledTask {
                 $entity.Trigger = [string]($task.Trigger | ConvertTo-Json -Compress)
                 $TriggerType = $task.Trigger.Type.value ?? $task.Trigger.Type
                 if ($TriggerType -eq 'DeltaQuery') {
+                    $Parameters = @{}
+                    if ($task.Trigger.WatchedAttributes -and ($task.Trigger.WatchedAttributes | Measure-Object).Count -gt 0) {
+                        $Parameters.'$select' = $task.Trigger.WatchedAttributes | ForEach-Object { $_.value ?? $_ } -join ','
+                    }
+                    if ($task.Trigger.ResourceFilter) {
+                        $ResourceFilterValues = $task.Trigger.ResourceFilter | ForEach-Object { $_.value ?? $_ }
+                        $Parameters.'$filter' = "id eq '" + ($ResourceFilterValues -join "' or id eq '") + "'"
+                    }
                     $Resource = $task.Trigger.DeltaResource.value ?? $task.Trigger.DeltaResource
-                    $DeltaTenantFilter = if ($entity.TenantGroup) { $entity.TenantGroup | ConvertFrom-Json } else { $tenantFilter }
+
+                    if ($entity.TenantGroup) {
+                        $tenantFilter = $entity.TenantGroup | ConvertFrom-Json
+                    }
+                    $DeltaQuery = @{
+                        TenantFilter = $tenantFilter
+                        Resource     = $Resource
+                        Parameters   = $Parameters
+                        PartitionKey = $RowKey
+                    }
 
                     try {
-                        $null = New-CIPPTaskDeltaQuery -Trigger $task.Trigger -TenantFilter $DeltaTenantFilter -PartitionKey $RowKey
+                        $null = New-GraphDeltaQuery @DeltaQuery
                         Write-Information "Created delta query for resource $($Resource)"
                     } catch {
-                        throw "Failed to create delta query for resource $($Resource): $($_.Exception.Message)"
+                        Write-Warning "Failed to create delta query for resource $($Resource): $($_.Exception.Message)"
                     }
                 }
             }

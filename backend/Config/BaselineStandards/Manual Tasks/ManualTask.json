@@ -19,7 +19,6 @@
     "taskName": {
       "type": "textField",
       "label": "Task name",
-      "required": true,
       "default": ""
     },
     "instructions": {

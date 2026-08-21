@@ -82,11 +82,9 @@ const Page = () => {
 
   const { startDate, endDate } = getDateRange(daysToLoad);
 
-  // Hoisted so the header actions invalidate the same query this page reads.
-  const logsQueryKey = `Listlogs-${tenant}-${startDate}-${endDate}`;
   const logsData = ApiGetCall({
     url: `/api/Listlogs?tenant=${tenant}&StartDate=${startDate}&EndDate=${endDate}&Filter=true`,
-    queryKey: logsQueryKey,
+    queryKey: `Listlogs-${tenant}-${startDate}-${endDate}`,
   });
 
   // Get severity icon and color
@@ -151,7 +149,6 @@ const Page = () => {
       tabOptions={tabOptions}
       title={title}
       actions={actions}
-      queryKeys={logsQueryKey}
       actionsData={{}}
       isFetching={logsData.isLoading}
     >

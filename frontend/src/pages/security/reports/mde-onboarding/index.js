@@ -355,7 +355,7 @@ const Page = () => {
           "partnerUnresponsivenessThresholdInDays",
           "CacheTimestamp",
         ]}
-        dataSourceControls={reportDB.controls}
+        cardButton={reportDB.controls}
       />
       {reportDB.syncDialog}
     </>

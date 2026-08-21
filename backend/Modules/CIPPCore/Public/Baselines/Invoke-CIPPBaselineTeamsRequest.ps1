@@ -16,9 +16,7 @@ function Invoke-CIPPBaselineTeamsRequest {
     [CmdletBinding()]
     param(
         $Remediate,
-        $TenantFilter,
-        # The read result. Unused here; every executor takes the same arguments.
-        $Current
+        $TenantFilter
     )
 
     foreach ($Step in @($Remediate.cmdlets)) {

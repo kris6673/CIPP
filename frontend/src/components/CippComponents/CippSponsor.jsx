@@ -40,9 +40,7 @@ const selectRandomSponsor = (sponsors) => {
 
 const activeSponsors = getActiveSponsors();
 
-// `compact` trims the vertical footprint for the mobile nav drawer, where this sits pinned
-// below a scrolling menu and every pixel it takes is a pixel of navigation lost.
-export const CippSponsor = ({ compact = false }) => {
+export const CippSponsor = () => {
   const pathname = usePathname();
   const [selectedSponsor, setSelectedSponsor] = useState(() => selectRandomSponsor(activeSponsors));
   const currentSettings = useSettings();
@@ -74,12 +72,7 @@ export const CippSponsor = ({ compact = false }) => {
       <Typography
         color="text.secondary"
         variant="caption"
-        sx={{
-          lineHeight: compact ? 1.6 : 2,
-          textAlign: "center",
-          display: "block",
-          mt: compact ? 0.75 : 2,
-        }}
+        sx={{ lineHeight: 2, textAlign: "center", display: "block", mt: 2 }}
       >
         This application is sponsored by
       </Typography>
@@ -88,8 +81,8 @@ export const CippSponsor = ({ compact = false }) => {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          height: compact ? "38px" : "55px",
-          mb: compact ? 0.5 : 1,
+          height: "55px",
+          mb: 1,
         }}
       >
         <Tooltip title={randomimg.tooltip} arrow>
@@ -98,9 +91,9 @@ export const CippSponsor = ({ compact = false }) => {
             alt={randomimg.altText}
             style={{
               cursor: "pointer",
-              maxHeight: compact ? "34px" : "50px",
+              maxHeight: "50px",
               width: "auto",
-              maxWidth: compact ? "130px" : "150px",
+              maxWidth: "150px",
             }}
             onClick={() => window.open(randomimg.link)}
           />

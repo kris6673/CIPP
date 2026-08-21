@@ -24,12 +24,10 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v4
-      # Node version comes from frontend/package.json `engines.node` so CI can
-      # never drift from what the app declares it supports.
-      - name: Use Node.js from package.json engines
+      - name: Use Node.js 22.13.0
         uses: actions/setup-node@v4
         with:
-          node-version-file: frontend/package.json
+          node-version: "22.13.0"
           cache: 'yarn'
           cache-dependency-path: frontend/yarn.lock
       - name: Install dependencies

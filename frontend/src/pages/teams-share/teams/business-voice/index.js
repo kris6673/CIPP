@@ -139,7 +139,7 @@ const Page = () => {
               "Complex: AssignmentStatus eq Unassigned; AcquiredCapabilities like UserAssignment",
           },
         ]}
-        dataSourceControls={reportDB.controls}
+        cardButton={reportDB.controls}
       />
       {reportDB.syncDialog}
     </>

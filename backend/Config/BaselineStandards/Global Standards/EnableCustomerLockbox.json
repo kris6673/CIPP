@@ -20,9 +20,7 @@
     "CIS"
   ],
   "requiredCapabilities": [
-    "LOCKBOX_ENTERPRISE",
-    "LOCKBOX_ENTERPRISE_GOV",
-    "CustomerLockboxA_Enterprise"
+    "CustomerLockbox"
   ],
   "secureScoreImpact": 0,
   "compare": "subset",

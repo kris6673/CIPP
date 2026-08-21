@@ -10,7 +10,6 @@ const Page = () => {
   const simpleColumns = [
     "displayName",
     "defaultDomainName",
-    "tenantGroups",
     "portal_m365",
     "portal_exchange",
     "portal_entra",

@@ -3,7 +3,7 @@ function Invoke-ExecBaselineRun {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Tenant.BaselinesRun.ReadWrite
+        Tenant.Standards.ReadWrite
     .DESCRIPTION
         Starts an on-demand baseline run directly as a durable orchestration: a full baseline
         run (templateId), a tenant- or standard-scoped run, a compare (no remediation), or a

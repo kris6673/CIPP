@@ -61,4 +61,6 @@ How the result is displayed depends on what the command returned:
 
 A search box filters the history by tenant or by anything within the results themselves, and the heading shows how many entries match against the total. Where nothing matches, the section says so rather than appearing empty.
 
+***
+
 {% include "../../../../.gitbook/includes/feature-request.md" %}

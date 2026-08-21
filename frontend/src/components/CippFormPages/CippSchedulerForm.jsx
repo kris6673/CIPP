@@ -929,7 +929,7 @@ const CippSchedulerForm = (props) => {
 
                       {addedConditions.map((condition, index) => (
                         <Grid container spacing={2} key={condition.id}>
-                          <Grid size={{ xs: 12, md: 4 }}>
+                          <Grid size={4}>
                             <CippFormComponent
                               type="textField"
                               name={`Trigger.DeltaConditions.${index}.Property`}
@@ -939,7 +939,7 @@ const CippSchedulerForm = (props) => {
                               required={true}
                             />
                           </Grid>
-                          <Grid size={{ xs: 12, md: 3 }}>
+                          <Grid size={3}>
                             <CippFormComponent
                               type="autoComplete"
                               multiple={false}
@@ -951,7 +951,7 @@ const CippSchedulerForm = (props) => {
                               disableClearable={true}
                             />
                           </Grid>
-                          <Grid size={{ xs: 12, md: 4 }}>
+                          <Grid size={4}>
                             <CippFormComponent
                               type="textField"
                               name={`Trigger.DeltaConditions.${index}.Value`}
@@ -960,7 +960,7 @@ const CippSchedulerForm = (props) => {
                               placeholder="*admin*"
                             />
                           </Grid>
-                          <Grid size={{ xs: 12, md: 1 }}>
+                          <Grid size={1}>
                             <IconButton
                               onClick={() => handleRemoveCondition(index)}
                               color="error"

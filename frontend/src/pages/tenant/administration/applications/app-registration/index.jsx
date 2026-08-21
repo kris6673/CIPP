@@ -14,7 +14,6 @@ import {
   Badge,
 } from '@mui/icons-material'
 import { HeaderedTabbedLayout } from '../../../../../layouts/HeaderedTabbedLayout'
-import { CippAppRegistrationSwitcher } from '../../../../../components/CippComponents/CippAppRegistrationSwitcher'
 import tabOptions from './tabOptions'
 import { CippCopyToClipBoard } from '../../../../../components/CippComponents/CippCopyToClipboard'
 import { Box, Stack } from '@mui/system'
@@ -369,13 +368,6 @@ const Page = () => {
     <HeaderedTabbedLayout
       tabOptions={tabOptions}
       title={title}
-      titleControl={
-        <CippAppRegistrationSwitcher
-          title={title}
-          currentAppId={applicationClientId}
-          tenantFilter={router.query.tenantFilter ?? userSettingsDefaults.currentTenant}
-        />
-      }
       subtitle={subtitle}
       actions={appData ? appActions : []}
       actionsData={actionsData}
@@ -398,7 +390,7 @@ const Page = () => {
         >
           <CippHead title={title} />
           <Grid container spacing={2}>
-            <Grid size={{ xs: 12, lg: 4 }}>
+            <Grid size={4}>
               <Card>
                 <CardHeader title="Application Details" />
                 <Divider />
@@ -486,7 +478,7 @@ const Page = () => {
                 </PropertyList>
               </Card>
             </Grid>
-            <Grid size={{ xs: 12, lg: 8 }}>
+            <Grid size={8}>
               <Stack spacing={3}>
                 <Typography variant="h6">Credentials</Typography>
                 <CippBannerListCard

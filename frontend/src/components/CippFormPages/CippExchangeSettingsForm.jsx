@@ -221,7 +221,7 @@ const CippExchangeSettingsForm = (props) => {
                 ]}
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid size={6}>
               <Tooltip
                 title={
                   areDateFieldsDisabled
@@ -241,7 +241,7 @@ const CippExchangeSettingsForm = (props) => {
                 </Box>
               </Tooltip>
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid size={6}>
               <Tooltip
                 title={
                   areDateFieldsDisabled

@@ -7,9 +7,7 @@ function Set-CIPPMailboxAccess {
         $TenantFilter,
         $APIName = 'Manage Shared Mailbox Access',
         $Headers,
-        [array]$AccessRights, # Retained for caller compatibility; use PermissionLevel instead
-        [ValidateSet('FullAccess', 'SendAs', 'SendOnBehalf')]
-        [string]$PermissionLevel = 'FullAccess'
+        [array]$AccessRights # Retained for caller compatibility; this helper grants FullAccess
     )
 
     # Ensure AccessUser is always an array
@@ -25,10 +23,10 @@ function Set-CIPPMailboxAccess {
     $Results = [system.collections.generic.list[string]]::new()
 
     # Delegate each grant to Set-CIPPMailboxPermission so the permission-level -> EXO cmdlet mapping,
-    # logging, cache sync, and error handling all live in one place.
+    # logging, cache sync, and error handling all live in one place. This helper grants FullAccess.
     foreach ($User in $AccessUser) {
         $Results.Add(
-            (Set-CIPPMailboxPermission -UserId $userid -AccessUser $User -PermissionLevel $PermissionLevel -Action 'Add' -AutoMap $Automap -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers)
+            (Set-CIPPMailboxPermission -UserId $userid -AccessUser $User -PermissionLevel 'FullAccess' -Action 'Add' -AutoMap $Automap -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers)
         )
     }
 

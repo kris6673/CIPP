@@ -81,10 +81,7 @@ function Invoke-ListHVEAccounts {
 
         if ($UseReportDB) {
             try {
-                # 'AllTenants' hits Get-CIPPDbItem's cross-partition sentinel ('allTenants', and -ne is
-                # case-insensitive), so the read returns every tenant's rows. CippReportingDB partitions
-                # by defaultDomainName; narrow to the caller's allowed tenants before responding.
-                $HVEItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'HVEAccounts' | Where-Object { $_.RowKey -ne 'HVEAccounts-Count' } | Select-CippAllowedTenantData -TenantProperty 'PartitionKey'
+                $HVEItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'HVEAccounts' | Where-Object { $_.RowKey -ne 'HVEAccounts-Count' }
                 if (-not $HVEItems) {
                     $GraphRequest = @()
                 } else {

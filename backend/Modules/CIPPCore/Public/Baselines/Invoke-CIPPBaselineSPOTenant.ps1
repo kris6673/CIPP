@@ -19,9 +19,7 @@ function Invoke-CIPPBaselineSPOTenant {
     [CmdletBinding()]
     param(
         $Remediate,
-        $TenantFilter,
-        # The read result. Unused here; every executor takes the same arguments.
-        $Current
+        $TenantFilter
     )
 
     # CSOM property writes accept Boolean/String/Int32 only.

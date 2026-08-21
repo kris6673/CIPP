@@ -57,11 +57,6 @@ const Page = () => {
       type: "column",
     },
     {
-      filterName: "Location Alerts",
-      value: [{ id: "Name", value: "Location Alert Exclusion" }],
-      type: "column",
-    },
-    {
       filterName: "Mailbox Permissions",
       value: [{ id: "Name", value: "Mailbox Vacation" }],
       type: "column",

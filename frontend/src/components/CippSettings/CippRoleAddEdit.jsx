@@ -1,10 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import {
   Box,
   Button,
   Alert,
-  Chip,
   Typography,
   Accordion,
   AccordionSummary,
@@ -12,8 +11,6 @@ import {
   Stack,
   SvgIcon,
   Skeleton,
-  ToggleButton,
-  ToggleButtonGroup,
 } from "@mui/material";
 
 import { Grid } from "@mui/system";
@@ -28,15 +25,6 @@ import { InformationCircleIcon } from "@heroicons/react/24/outline";
 import { CippApiResults } from "../CippComponents/CippApiResults";
 import cippRoles from "../../data/cipp-roles.json";
 import { GroupHeader, GroupItems } from "../CippComponents/CippAutocompleteGrouping";
-import {
-  matchPattern,
-  flattenPermissionTree,
-  expandRules,
-  rulesToFlatMap,
-  flatMapToRules,
-  validateRulePattern,
-  buildRuleSuggestions,
-} from "../../utils/permission-rules";
 
 export const CippRoleAddEdit = ({ selectedRole }) => {
   const updatePermissions = ApiPostCall({
@@ -50,11 +38,6 @@ export const CippRoleAddEdit = ({ selectedRole }) => {
   const [updateDefaults, setUpdateDefaults] = useState(false);
   const [baseRolePermissions, setBaseRolePermissions] = useState({});
   const [isBaseRole, setIsBaseRole] = useState(false);
-  // New roles start in simple (pattern) mode; existing roles pick their mode in the
-  // reset effect based on whether their stored rules contain wildcards.
-  const [permissionMode, setPermissionMode] = useState(selectedRole ? "advanced" : "simple");
-  const [gridDiverged, setGridDiverged] = useState(false);
-  const [rulePreviewVisible, setRulePreviewVisible] = useState(false);
 
   const formControl = useForm({
     mode: "onChange",
@@ -64,9 +47,7 @@ export const CippRoleAddEdit = ({ selectedRole }) => {
       BlockedEndpoints: [],
       IPRange: [],
       Permissions: {},
-AllowedRolesTemplate: null,
-PermissionRulesInclude: [],
-PermissionRulesExclude: [],
+      AllowedRolesTemplate: null,
     },
   });
 
@@ -100,20 +81,6 @@ PermissionRulesExclude: [],
     name: "AllowedRolesTemplate",
   });
   const ipRanges = useWatch({ control: formControl.control, name: "IPRange" });
-  const includeRules = useWatch({ control: formControl.control, name: "PermissionRulesInclude" });
-  const excludeRules = useWatch({ control: formControl.control, name: "PermissionRulesExclude" });
-  const baseRoleTemplate = useWatch({ control: formControl.control, name: "BaseRoleTemplate" });
-
-  // "Start from a built-in role": copy its patterns into the rule fields as an
-  // editable starting point, then clear the picker so it acts as a one-shot action.
-  useEffect(() => {
-    const roleName = baseRoleTemplate?.value;
-    if (!roleName || !cippRoles[roleName]) return;
-    const toOptions = (list) => (list || []).map((pattern) => ({ label: pattern, value: pattern }));
-    formControl.setValue("PermissionRulesInclude", toOptions(cippRoles[roleName].include));
-    formControl.setValue("PermissionRulesExclude", toOptions(cippRoles[roleName].exclude));
-    formControl.setValue("BaseRoleTemplate", null);
-  }, [baseRoleTemplate]);
 
   const {
     data: apiPermissions = [],
@@ -143,38 +110,9 @@ PermissionRulesExclude: [],
   });
   const tenants = pages[0] || [];
 
-  const permissionUniverse = useMemo(() => flattenPermissionTree(apiPermissions), [apiPermissions]);
-  const ruleSuggestions = useMemo(() => buildRuleSuggestions(apiPermissions), [apiPermissions]);
-  const currentRules = useMemo(
-    () => ({
-      Include: (includeRules || []).map((o) => o?.value || o).filter(Boolean),
-      Exclude: (excludeRules || []).map((o) => o?.value || o).filter(Boolean),
-    }),
-    [includeRules, excludeRules]
-  );
-  const ruleExpansion = useMemo(
-    () => expandRules(currentRules, permissionUniverse),
-    [currentRules, permissionUniverse]
-  );
-  // Login breaks without CIPP.Core.Read; save auto-adds it when rules miss it.
-  const coreCovered = ruleExpansion.matched.some((p) => p.startsWith("CIPP.Core."));
-
-  const handleModeChange = (_event, newMode) => {
-    if (!newMode || newMode === permissionMode) return;
-    if (newMode === "advanced") {
-      // Expand rules into the grid so the advanced view reflects the same role.
-      if (currentRules.Include.length > 0) {
-        formControl.setValue("Permissions", rulesToFlatMap(currentRules, apiPermissions));
-      }
-      setGridDiverged(false);
-    } else {
-      const rulesGrid = rulesToFlatMap(currentRules, apiPermissions);
-      const diverged =
-        currentRules.Include.length > 0 &&
-        Object.keys(rulesGrid).some((key) => (selectedPermissions?.[key] ?? null) !== rulesGrid[key]);
-      setGridDiverged(diverged);
-    }
-    setPermissionMode(newMode);
+  const matchPattern = (pattern, value) => {
+    const regex = new RegExp(`^${pattern.replace("*", ".*")}$`);
+    return regex.test(value);
   };
 
   const getFunctionDescriptionText = (description) => {
@@ -344,10 +282,6 @@ PermissionRulesExclude: [],
           value: ip,
         })) || [];
 
-      const storedRules = currentPermissions?.PermissionRules;
-      const toRuleOptions = (list) =>
-        Array.isArray(list) ? list.map((pattern) => ({ label: pattern, value: pattern })) : [];
-
       formControl.reset({
         Permissions:
           basePermissions && Object.keys(basePermissions).length > 0
@@ -359,17 +293,8 @@ PermissionRulesExclude: [],
         BlockedEndpoints: processedBlockedEndpoints,
         IPRange: processedIPRanges,
         EntraGroup: currentPermissions?.EntraGroup,
-AllowedRolesTemplate: currentPermissions?.AllowedRolesTemplate || null,
-PermissionRulesInclude: toRuleOptions(storedRules?.Include),
-PermissionRulesExclude: toRuleOptions(storedRules?.Exclude),
+        AllowedRolesTemplate: currentPermissions?.AllowedRolesTemplate || null,
       });
-      if (currentPermissions) {
-        // Wildcard roles open in simple mode; migrated concrete-string roles open in
-        // the grid, which is the friendlier view of an explicit list.
-        const hasWildcards = storedRules?.Include?.some((pattern) => pattern.includes("*"));
-        setPermissionMode(hasWildcards ? "simple" : "advanced");
-        setGridDiverged(false);
-      }
     }
   }, [customRoleList, customRoleListSuccess, tenantsSuccess, baseRolePermissions]);
 
@@ -464,28 +389,11 @@ PermissionRulesExclude: toRuleOptions(storedRules?.Exclude),
         return ip?.value || ip;
       }) || [];
 
-    // PermissionRules is the canonical format for both modes: simple mode sends the
-    // authored patterns, advanced mode sends concrete strings derived from the grid.
-    // Permissions stays as a flat snapshot for older backends.
-    const activeRules =
-      permissionMode === "simple"
-        ? {
-            Include:
-              coreCovered || currentRules.Include.length === 0
-                ? currentRules.Include
-                : [...currentRules.Include, "CIPP.Core.Read"],
-            Exclude: currentRules.Exclude,
-          }
-        : flatMapToRules(selectedPermissions);
-    const snapshotPermissions =
-      permissionMode === "simple" ? rulesToFlatMap(activeRules, apiPermissions) : selectedPermissions;
-
     updatePermissions.mutate({
       url: "/api/ExecCustomRole?Action=AddUpdate",
       data: {
         RoleName: values?.["RoleName"],
-        Permissions: snapshotPermissions,
-        PermissionRules: activeRules,
+        Permissions: selectedPermissions,
         EntraGroup: selectedEntraGroup,
         AllowedTenants: processedAllowedTenants,
         BlockedTenants: processedBlockedTenants,
@@ -508,15 +416,14 @@ PermissionRulesExclude: toRuleOptions(storedRules?.Exclude),
 
     return (
       <Stack
-        // The None/Read/ReadWrite radio row is wider than a phone leaves beside the object
-        // name, so the controls drop below it there.
-        direction={{ xs: "column", md: "row" }}
-        alignItems={{ xs: "flex-start", md: "center" }}
+        direction="row"
+        display="flex"
+        alignItems="center"
         justifyContent={"space-between"}
         width={"100%"}
       >
         <Typography variant="h6">{obj}</Typography>
-        <Stack direction="row" spacing={3} alignItems="center">
+        <Stack direction="row" spacing={3} size={{ xl: 8 }}>
           <Button onClick={() => setOffcanvasVisible(true)} size="sm" color="info">
             <SvgIcon fontSize="small">
               <InformationCircleIcon />
@@ -610,11 +517,8 @@ PermissionRulesExclude: toRuleOptions(storedRules?.Exclude),
 
   return (
     <>
-      {/* The summary pane rides beside the form only where there is room for both; below xl
-          it follows the form instead of squeezing it (the old 80%/30% flex split shrank both
-          panes at every width and pushed the summary off a phone screen entirely). */}
-      <Grid container spacing={3}>
-        <Grid size={{ xs: 12, xl: 9 }}>
+      <Stack spacing={3} direction="row">
+        <Box width={"80%"}>
           <Stack spacing={1} sx={{ mb: 3 }}>
             <Typography variant="h5" sx={{ mb: 2 }}>
               Role Options
@@ -911,345 +815,65 @@ PermissionRulesExclude: toRuleOptions(storedRules?.Exclude),
                 API Permissions
               </Typography>
               {!isBaseRole && (
-                <ToggleButtonGroup
-                  exclusive
-                  value={permissionMode}
-                  onChange={handleModeChange}
-                  size="small"
+                <Stack
+                  direction="row"
+                  display="flex"
+                  alignItems="center"
+                  justifyContent={"space-between"}
+                  width={"100%"}
                   sx={{ mb: 2 }}
                 >
-                  <ToggleButton value="simple">Simple (patterns)</ToggleButton>
-                  <ToggleButton value="advanced">Advanced (per-category)</ToggleButton>
-                </ToggleButtonGroup>
-              )}
-              {!isBaseRole && permissionMode === "simple" && (
-                <Stack spacing={2} sx={{ mb: 3 }}>
-                  <Alert color="info">
-                    Simple mode works like CIPP's built-in roles: pick what to include, then carve
-                    out exclusions. Wildcards (*) match anything, so rules automatically cover new
-                    features added in future CIPP releases.
-                  </Alert>
-                  {gridDiverged && (
-                    <Alert color="warning">
-                      Changes made in Advanced mode are not reflected in these patterns. Saving in
-                      Simple mode will replace the role's permissions with the patterns below.
-                    </Alert>
-                  )}
-                  <CippFormComponent
-                    type="autoComplete"
-                    name="BaseRoleTemplate"
-                    label="Start from a built-in role (optional)"
-                    placeholder="Copy a built-in role's patterns as a starting point"
-                    options={Object.keys(cippRoles).map((role) => ({
-                      label: `${role} — include: ${cippRoles[role].include.join(", ") || "none"}${
-                        cippRoles[role].exclude.length
-                          ? `, exclude: ${cippRoles[role].exclude.join(", ")}`
-                          : ""
-                      }`,
-                      value: role,
-                    }))}
-                    formControl={formControl}
-                    fullWidth={true}
-                    multiple={false}
-                    creatable={false}
-                    helperText="Replaces the patterns below with the selected role's include/exclude rules — edit them freely afterwards."
-                  />
-                  <CippFormComponent
-                    type="autoComplete"
-                    name="PermissionRulesInclude"
-                    label="Include — grant access matching any of these"
-                    placeholder="Pick a pattern or type your own, e.g. Identity.User.*"
-                    options={ruleSuggestions}
-                    formControl={formControl}
-                    fullWidth={true}
-                    multiple={true}
-                    freeSolo={true}
-                    creatable={true}
-                    groupBy={(option) => option.category}
-                    renderGroup={(params) => (
-                      <li key={params.key}>
-                        <GroupHeader>{params.group}</GroupHeader>
-                        <GroupItems>{params.children}</GroupItems>
-                      </li>
-                    )}
-                    helperText="Patterns match Category.Object.Level permission names. * matches anything."
-                  />
-                  <CippFormComponent
-                    type="autoComplete"
-                    name="PermissionRulesExclude"
-                    label="Exclude — then deny anything matching these"
-                    placeholder="e.g. Tenant.Administration.*"
-                    options={ruleSuggestions}
-                    formControl={formControl}
-                    fullWidth={true}
-                    multiple={true}
-                    freeSolo={true}
-                    creatable={true}
-                    groupBy={(option) => option.category}
-                    renderGroup={(params) => (
-                      <li key={params.key}>
-                        <GroupHeader>{params.group}</GroupHeader>
-                        <GroupItems>{params.children}</GroupItems>
-                      </li>
-                    )}
-                    helperText="Exclusions always win over inclusions, exactly like built-in roles."
-                  />
-                  {[...currentRules.Include, ...currentRules.Exclude]
-                    .filter((pattern) => !validateRulePattern(pattern))
-                    .map((pattern) => (
-                      <Alert color="error" key={`invalid-${pattern}`}>
-                        "{pattern}" is not a valid pattern. Use up to three dot-separated segments
-                        of letters, numbers and *, e.g. Identity.User.Read or Exchange.*.
-                      </Alert>
-                    ))}
-                  <Box>
-                    <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                      Live result
-                    </Typography>
-                    <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ mb: 1 }}>
-                      {currentRules.Include.map((pattern) => (
-                        <Chip
-                          key={`inc-${pattern}`}
-                          size="small"
-                          label={`${pattern} — ${ruleExpansion.includeCounts[pattern] ?? 0} match${
-                            (ruleExpansion.includeCounts[pattern] ?? 0) === 1 ? "" : "es"
-                          }`}
-                          color={
-                            (ruleExpansion.includeCounts[pattern] ?? 0) > 0 ? "success" : "warning"
-                          }
-                          icon={
-                            (ruleExpansion.includeCounts[pattern] ?? 0) === 0 ? (
-                              <WarningOutlined />
-                            ) : undefined
-                          }
-                        />
-                      ))}
-                      {currentRules.Exclude.map((pattern) => (
-                        <Chip
-                          key={`exc-${pattern}`}
-                          size="small"
-                          label={`${pattern} — removes ${ruleExpansion.excludeCounts[pattern] ?? 0}`}
-                          color={
-                            (ruleExpansion.excludeCounts[pattern] ?? 0) > 0 ? "error" : "warning"
-                          }
-                          icon={
-                            (ruleExpansion.excludeCounts[pattern] ?? 0) === 0 ? (
-                              <WarningOutlined />
-                            ) : undefined
-                          }
-                        />
-                      ))}
-                    </Stack>
-                    {currentRules.Include.length === 0 ? (
-                      <Alert color="warning">
-                        Add at least one include pattern — a role with no inclusions grants no
-                        access and cannot be saved.
-                      </Alert>
-                    ) : (
-                      <Stack direction="row" spacing={2} alignItems="center">
-                        <Typography variant="body2">
-                          <strong>{ruleExpansion.matched.length}</strong> of{" "}
-                          {permissionUniverse.length} permissions granted
-                        </Typography>
-                        <Button size="small" onClick={() => setRulePreviewVisible(true)}>
-                          Preview effective permissions
-                        </Button>
-                      </Stack>
-                    )}
-                    {currentRules.Include.length > 0 && !coreCovered && (
-                      <Alert color="info" sx={{ mt: 1 }}>
-                        CIPP.Core.Read is required to sign in and will be added automatically when
-                        you save.
-                      </Alert>
-                    )}
+                  <Typography variant="body2">Set All Permissions</Typography>
+
+                  <Box sx={{ pr: 5 }}>
+                    <CippFormComponent
+                      type="radio"
+                      name="Defaults"
+                      options={[
+                        {
+                          label: "None",
+                          value: "None",
+                        },
+                        { label: "Read", value: "Read" },
+                        {
+                          label: "Read / Write",
+                          value: "ReadWrite",
+                        },
+                      ]}
+                      formControl={formControl}
+                      row={true}
+                    />
                   </Box>
-                  <CippOffCanvas
-                    visible={rulePreviewVisible}
-                    onClose={() => setRulePreviewVisible(false)}
-                    title="Effective Permissions"
-                    size="lg"
-                  >
-                    <Stack spacing={1} sx={{ mx: 3 }}>
-                      <Typography variant="body2" sx={{ mb: 1 }}>
-                        Permissions granted by the current patterns — expand one to see the API
-                        endpoints it serves. Struck-through entries were matched by an include
-                        pattern but removed by an exclusion.
-                      </Typography>
-                      {ruleExpansion.matched.map((permission) => {
-                        const [permCat, permObj, permType] = permission.split(".");
-                        // A ReadWrite grant also serves the Read endpoints (enforcement
-                        // matches loosely), so show them unless Read is granted separately.
-                        const sections = [
-                          { type: permType, endpoints: apiPermissions?.[permCat]?.[permObj]?.[permType] },
-                        ];
-                        if (
-                          permType === "ReadWrite" &&
-                          apiPermissions?.[permCat]?.[permObj]?.Read &&
-                          !ruleExpansion.matched.includes(`${permCat}.${permObj}.Read`)
-                        ) {
-                          sections.push({
-                            type: "Read (included by ReadWrite)",
-                            endpoints: apiPermissions[permCat][permObj].Read,
-                          });
-                        }
-                        const endpointCount = sections.reduce(
-                          (total, section) => total + Object.keys(section.endpoints || {}).length,
-                          0
-                        );
-                        return (
-                          <Accordion variant="outlined" disableGutters key={permission}>
-                            <AccordionSummary
-                              expandIcon={<ExpandMoreIcon />}
-                              sx={{ "& .MuiAccordionSummary-content": { minWidth: 0 } }}
-                            >
-                              <Stack
-                                direction="row"
-                                spacing={1}
-                                alignItems="center"
-                                useFlexGap
-                                flexWrap="wrap"
-                                sx={{ minWidth: 0, width: "100%" }}
-                              >
-                                <Typography
-                                  variant="body2"
-                                  sx={{
-                                    fontFamily: "monospace",
-                                    wordBreak: "break-all",
-                                    flexGrow: 1,
-                                    minWidth: 0,
-                                  }}
-                                >
-                                  {permission}
-                                </Typography>
-                                <Chip
-                                  size="small"
-                                  label={`${endpointCount} endpoint${endpointCount === 1 ? "" : "s"}`}
-                                  sx={{ flexShrink: 0 }}
-                                />
-                              </Stack>
-                            </AccordionSummary>
-                            <AccordionDetails>
-                              <Stack spacing={1}>
-                                {sections.map((section) => (
-                                  <React.Fragment key={section.type}>
-                                    {sections.length > 1 && (
-                                      <Typography variant="subtitle2">{section.type}</Typography>
-                                    )}
-                                    {Object.keys(section.endpoints || {}).map((apiKey) => {
-                                      const apiFunction = section.endpoints[apiKey];
-                                      const description = getFunctionDescriptionText(
-                                        apiFunction.Description
-                                      );
-                                      return (
-                                        <Box key={apiKey}>
-                                          <Typography
-                                            variant="body2"
-                                            sx={{ fontWeight: "bold" }}
-                                          >
-                                            {apiFunction.Name}
-                                          </Typography>
-                                          {description && (
-                                            <Typography variant="caption" color="text.secondary">
-                                              {description}
-                                            </Typography>
-                                          )}
-                                        </Box>
-                                      );
-                                    })}
-                                  </React.Fragment>
-                                ))}
-                              </Stack>
-                            </AccordionDetails>
-                          </Accordion>
-                        );
-                      })}
-                      {Object.entries(ruleExpansion.excludedBy).map(([permission, pattern]) => (
-                        <Typography
-                          key={permission}
-                          variant="body2"
-                          sx={{
-                            fontFamily: "monospace",
-                            textDecoration: "line-through",
-                            color: "error.main",
-                          }}
-                        >
-                          {permission} (excluded by {pattern})
-                        </Typography>
-                      ))}
-                    </Stack>
-                  </CippOffCanvas>
                 </Stack>
               )}
-              {(isBaseRole || permissionMode === "advanced") && (
+              <Box>
                 <>
-                  {!isBaseRole && (
-                    <Stack
-                      direction="row"
-                      display="flex"
-                      alignItems="center"
-                      justifyContent={"space-between"}
-                      width={"100%"}
-                      sx={{ mb: 2 }}
-                    >
-                      <Typography variant="body2">Set All Permissions</Typography>
-
-                      <Box sx={{ pr: 5 }}>
-                        <CippFormComponent
-                          type="radio"
-                          name="Defaults"
-                          options={[
-                            {
-                              label: "None",
-                              value: "None",
-                            },
-                            { label: "Read", value: "Read" },
-                            {
-                              label: "Read / Write",
-                              value: "ReadWrite",
-                            },
-                          ]}
-                          formControl={formControl}
-                          row={true}
-                        />
-                      </Box>
-                    </Stack>
-                  )}
-                  <Box>
-                    <>
-                      {Object.keys(apiPermissions)
-                        .sort()
-                        .map((cat, catIndex) => (
-                          <Accordion variant="outlined" key={`accordion-item-${catIndex}`}>
-                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                              {cat}
-                            </AccordionSummary>
-                            <AccordionDetails>
-                              {Object.keys(apiPermissions[cat])
-                                .sort()
-                                .map((obj, index) => {
-                                  const readOnly = baseRolePermissions?.[cat] ? true : false;
-                                  return (
-                                    <Grid
-                                      container
-                                      key={`row-${catIndex}-${index}`}
-                                      className="mb-3"
-                                    >
-                                      <ApiPermissionRow obj={obj} cat={cat} readOnly={readOnly} />
-                                    </Grid>
-                                  );
-                                })}
-                            </AccordionDetails>
-                          </Accordion>
-                        ))}
-                    </>
-                  </Box>
+                  {Object.keys(apiPermissions)
+                    .sort()
+                    .map((cat, catIndex) => (
+                      <Accordion variant="outlined" key={`accordion-item-${catIndex}`}>
+                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>{cat}</AccordionSummary>
+                        <AccordionDetails>
+                          {Object.keys(apiPermissions[cat])
+                            .sort()
+                            .map((obj, index) => {
+                              const readOnly = baseRolePermissions?.[cat] ? true : false;
+                              return (
+                                <Grid container key={`row-${catIndex}-${index}`} className="mb-3">
+                                  <ApiPermissionRow obj={obj} cat={cat} readOnly={readOnly} />
+                                </Grid>
+                              );
+                            })}
+                        </AccordionDetails>
+                      </Accordion>
+                    ))}
                 </>
-              )}
+              </Box>
             </>
           )}
-        </Grid>
+        </Box>
 
-        <Grid size={{ xs: 12, xl: 3 }}>
+        <Box size={{ md: 12, xl: 3 }} width="30%">
           {selectedEntraGroup && (
             <Alert color="info">
               This role will be assigned to the Entra Group:{" "}
@@ -1301,27 +925,7 @@ PermissionRulesExclude: toRuleOptions(storedRules?.Exclude),
               </ul>
             </>
           )}
-          {!isBaseRole && permissionMode === "simple" && currentRules.Include.length > 0 && (
-            <>
-              <h5>Permission Rules</h5>
-              <ul>
-                {currentRules.Include.map((pattern) => (
-                  <li key={`summary-inc-${pattern}`} style={{ fontFamily: "monospace" }}>
-                    + {pattern}
-                  </li>
-                ))}
-                {currentRules.Exclude.map((pattern) => (
-                  <li key={`summary-exc-${pattern}`} style={{ fontFamily: "monospace" }}>
-                    − {pattern}
-                  </li>
-                ))}
-              </ul>
-              <Typography variant="body2">
-                {ruleExpansion.matched.length} permissions granted
-              </Typography>
-            </>
-          )}
-          {(isBaseRole || permissionMode === "advanced") && selectedPermissions && apiPermissionSuccess && (
+          {selectedPermissions && apiPermissionSuccess && (
             <>
               <h5>Selected Permissions</h5>
               <ul>
@@ -1340,8 +944,8 @@ PermissionRulesExclude: toRuleOptions(storedRules?.Exclude),
               </ul>
             </>
           )}
-        </Grid>
-      </Grid>
+        </Box>
+      </Stack>
 
       <CippApiResults apiObject={updatePermissions} />
       <Stack direction="row" spacing={2} justifyContent="flex-end">
@@ -1354,13 +958,7 @@ PermissionRulesExclude: toRuleOptions(storedRules?.Exclude),
             customRoleListFetching ||
             apiPermissionFetching ||
             tenantsFetching ||
-            !formState.isValid ||
-            (!isBaseRole &&
-              permissionMode === "simple" &&
-              (currentRules.Include.length === 0 ||
-                [...currentRules.Include, ...currentRules.Exclude].some(
-                  (pattern) => !validateRulePattern(pattern)
-                )))
+            !formState.isValid
           }
           startIcon={
             <SvgIcon fontSize="small">

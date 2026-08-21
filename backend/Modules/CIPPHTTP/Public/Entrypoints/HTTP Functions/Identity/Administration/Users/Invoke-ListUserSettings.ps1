@@ -56,11 +56,21 @@ function Invoke-ListUserSettings {
 
         if (!$UserSettings) {
             $UserSettings = [pscustomobject]@{
-                direction    = 'ltr'
-                paletteMode  = 'light'
-                currentTheme = @{ value = 'light'; label = 'light' }
-                pinNav       = $true
-                showDevtools = $false
+                direction      = 'ltr'
+                paletteMode    = 'light'
+                currentTheme   = @{ value = 'light'; label = 'light' }
+                pinNav         = $true
+                showDevtools   = $false
+                customBranding = @{
+                    colour        = '#F77F00'
+                    logo          = $null
+                    coverImage    = $null
+                    coverStock    = '/reportImages/soc.jpg'
+                    coverUploads  = @()
+                    logoImageId   = $null
+                    coverImageId  = $null
+                    coverImageIds = @()
+                }
             }
         }
 
@@ -72,9 +82,6 @@ function Invoke-ListUserSettings {
             if (-not $Offboarding) { return $false }
             foreach ($Property in $Offboarding.PSObject.Properties) {
                 if ($Property.Value -eq $true) { return $true }
-                if ($Property.Name -eq 'OOO' -and -not (Test-CIPPHtmlIsEmpty -Html ([string]$Property.Value))) {
-                    return $true
-                }
             }
             return $false
         }
@@ -100,8 +107,15 @@ function Invoke-ListUserSettings {
             Write-Warning "Failed to convert UserBookmarks JSON: $($_.Exception.Message)"
         }
 
-        # Branding is served by Invoke-ListBrandingSettings, not from here: it carries inline
-        # images and its migration writes, neither of which belong on every page load.
+        #Get branding settings (hydrated image refs from Images table)
+        if ($UserSettings) {
+            try {
+                $HydratedBranding = Get-CIPPBrandingSettings -PersistMigration
+                $UserSettings | Add-Member -MemberType NoteProperty -Name 'customBranding' -Value $HydratedBranding -Force | Out-Null
+            } catch {
+                Write-Warning "Failed to load branding settings: $($_.Exception.Message)"
+            }
+        }
 
         if ($UserSpecificSettings) {
             $UserSettings | Add-Member -MemberType NoteProperty -Name 'UserSpecificSettings' -Value $UserSpecificSettings -Force | Out-Null

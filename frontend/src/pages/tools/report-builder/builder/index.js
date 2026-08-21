@@ -24,7 +24,6 @@ import {
 import { Grid, Stack, Box } from '@mui/system'
 import { Layout as DashboardLayout } from '../../../../layouts/index.js'
 import { useSettings } from '../../../../hooks/use-settings'
-import { useBrandingSettings } from '../../../../components/CippPdf/useBrandingSettings'
 import { ApiGetCall, ApiPostCall } from '../../../../api/ApiCall.jsx'
 import { useForm, useWatch } from 'react-hook-form'
 import CippFormComponent from '../../../../components/CippComponents/CippFormComponent'
@@ -34,8 +33,6 @@ import CippButtonCard from '../../../../components/CippCards/CippButtonCard'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { renderCustomScriptMarkdownTemplate } from '../../../../utils/customScriptTemplate'
-import { getCippLicenseTranslation } from '../../../../utils/get-cipp-license-translation'
-import { isCloudPcDevice } from '../../../../utils/is-cloud-pc-device'
 import {
   escapeTableCell,
   isTableSeparatorRow,
@@ -742,14 +739,6 @@ const DatabaseBlock = ({
 }
 
 /* ── Format database content helper ─────────────────────── */
-
-// License assignments come out of the cache as objects carrying skuId GUIDs; render the product
-// names instead. Matches the shape check the backend applies when the report is generated.
-const isLicenseAssignmentValue = (val) => {
-  const items = Array.isArray(val) ? val : [val]
-  return items.length > 0 && items.every((v) => v && typeof v === 'object' && 'skuId' in v)
-}
-
 const formatDatabaseContent = (data, selectedHeaders, format) => {
   if (!data || !selectedHeaders || selectedHeaders.length === 0) return ''
 
@@ -760,14 +749,7 @@ const formatDatabaseContent = (data, selectedHeaders, format) => {
   const filtered = rows.map((row) => {
     const obj = {}
     selectedHeaders.forEach((h) => {
-      const val = row[h] !== undefined && row[h] !== null ? row[h] : ''
-      if (h === 'isEncrypted' && val !== true && isCloudPcDevice(row)) {
-        // Cloud PCs never report BitLocker but are platform-encrypted by Azure. Matches the
-        // cell rendering the backend applies when the report is generated.
-        obj[h] = 'Encrypted (platform-managed)'
-      } else {
-        obj[h] = isLicenseAssignmentValue(val) ? getCippLicenseTranslation(val).join(', ') : val
-      }
+      obj[h] = row[h] !== undefined && row[h] !== null ? row[h] : ''
     })
     return obj
   })
@@ -814,7 +796,7 @@ const Page = () => {
   const router = useRouter()
   const settings = useSettings()
   const { currentTenant } = settings
-  const brandingSettings = useBrandingSettings()
+  const brandingSettings = settings.customBranding
 
   /* ── Deeplink: load template by ID from URL ── */
   const [templateId, setTemplateId] = useState(null)
@@ -1612,7 +1594,7 @@ const Page = () => {
                     isFetching={brandingPresetsApi.isFetching}
                   />
                 </Grid>
-                <Grid size={{ xs: 12, md: 2 }}>
+                <Grid size={{ xs: 6, md: 2 }}>
                   <CippFormComponent
                     type="autoComplete"
                     name="size"
@@ -1624,7 +1606,7 @@ const Page = () => {
                     options={PAGE_SIZES}
                   />
                 </Grid>
-                <Grid size={{ xs: 12, md: 2 }}>
+                <Grid size={{ xs: 6, md: 2 }}>
                   <CippFormComponent
                     type="autoComplete"
                     name="orientation"

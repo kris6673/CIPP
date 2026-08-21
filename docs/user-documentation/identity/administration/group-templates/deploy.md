@@ -20,12 +20,12 @@ Choose the tenants the group should be created in. Several can be selected, and 
 
 | Field                                              | Description                                                                                                                                                                                                               |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Group Type                                         | The kind of group to create: Dynamic Group, Security Group, Distribution Group, Azure Role Group or Mail Enabled Security Group. Required, and it decides which of the settings below appear. |
+| Group Type                                         | The kind of group to create: Dynamic Group, Dynamic Distribution Group, Security Group, Distribution Group, Azure Role Group or Mail Enabled Security Group. Required, and it decides which of the settings below appear. |
 | Group Display Name                                 | The name the group is created with. Required.                                                                                                                                                                             |
 | Group Description                                  | A description for the group.                                                                                                                                                                                              |
 | Group Username                                     | The mail nickname the group's email address is built from.                                                                                                                                                                |
 | Allow external emails to the group                 | Allows senders outside the organisation to email the group. Shown for a Distribution Group.                                                                                                                               |
-| Membership Rules                                   | The rule that decides membership. Shown for a Dynamic Group, and required.                                                                                                                                                |
+| Membership Rules                                   | The rule that decides membership. Shown for a Dynamic Group or Dynamic Distribution Group, and required for both.                                                                                                         |
 | Email Aliases                                      | Additional email addresses, one per line. Shown for a Distribution Group or Mail Enabled Security Group.                                                                                                                  |
 | Hide this group from the Global Address List (GAL) | Hides the group from address lists. Shown for a Distribution Group or Mail Enabled Security Group.                                                                                                                        |
 {% endstep %}
@@ -48,5 +48,7 @@ Licences held on a template are carried into the deployment even though this wiz
 {% hint style="warning" %}
 The Group Type list here does not include Microsoft 365 Group, so a Microsoft 365 template cannot be deployed from this wizard. Selecting one leaves the group type unset and the wizard will not continue. Create Microsoft 365 groups from the [add.md](../groups/add.md "mention") page in the meantime.
 {% endhint %}
+
+***
 
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

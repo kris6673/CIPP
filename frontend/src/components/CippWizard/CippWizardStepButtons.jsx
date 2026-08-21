@@ -1,10 +1,9 @@
-import { Button } from "@mui/material";
+import { Button, Stack } from "@mui/material";
 import { useFormState } from "react-hook-form";
 import { createPortal } from "react-dom";
 import { ApiPostCall } from "../../api/ApiCall";
 import { CippApiResults } from "../CippComponents/CippApiResults";
 import { useCippWizardDialog } from "./CippWizardDialogContext";
-import { CippWizardActionsRow } from "./CippWizardActionsRow";
 
 export const CippWizardStepButtons = (props) => {
   const {
@@ -48,14 +47,20 @@ export const CippWizardStepButtons = (props) => {
   };
 
   const buttonStack = (
-    <CippWizardActionsRow sx={dialogContext?.actionsEl ? {} : { mt: 3 }}>
+    <Stack
+      alignItems="center"
+      direction="row"
+      justifyContent="flex-end"
+      spacing={2}
+      sx={dialogContext?.actionsEl ? {} : { mt: 3 }}
+    >
       {dialogContext?.onClose && (
         <Button
           color="inherit"
           onClick={dialogContext.onClose}
           size="large"
           type="button"
-          sx={{ mr: { xs: 0, md: "auto" } }}
+          sx={{ mr: "auto" }}
         >
           Close
         </Button>
@@ -93,7 +98,7 @@ export const CippWizardStepButtons = (props) => {
           {dialogContext.completionButton.label}
         </Button>
       )}
-    </CippWizardActionsRow>
+    </Stack>
   );
 
   return (

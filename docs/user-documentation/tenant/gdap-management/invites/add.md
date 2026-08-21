@@ -36,4 +36,6 @@ To easily add users to these groups, you can do the following
 
 If multiple invites are generated but not used, the unused ones can be found on the . page, where onboarding can be started again later.
 
+***
+
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

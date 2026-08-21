@@ -34,14 +34,9 @@ export const CippWizard = (props) => {
     setActiveStep((prevState) => (prevState > 0 ? prevState - 1 : prevState));
   }, []);
 
-  // Counts against the VISIBLE steps. `steps` is the unfiltered prop — the onboarding
-  // wizard passes 14 and shows 3-7 — so clamping against it let activeStep run past the
-  // end of stepsWithVisibility, and the render below then read `.component` of undefined.
   const handleNext = useCallback(() => {
-    setActiveStep((prevState) =>
-      prevState < stepsWithVisibility.length - 1 ? prevState + 1 : prevState
-    );
-  }, [stepsWithVisibility.length]);
+    setActiveStep((prevState) => (prevState < steps.length - 1 ? prevState + 1 : prevState));
+  }, []);
 
   const content = useMemo(() => {
     const currentStep = stepsWithVisibility[activeStep];
@@ -62,7 +57,7 @@ export const CippWizard = (props) => {
         {...currentStep.componentProps}
       />
     );
-  }, [activeStep, handleNext, handleBack, stepsWithVisibility, formControl, postUrl]);
+  }, [activeStep, handleNext, handleBack, stepsWithVisibility, formControl]);
 
   // Get the maxWidth for the current step, fallback to global setting
   const currentStepMaxWidth = useMemo(() => {
@@ -90,9 +85,7 @@ export const CippWizard = (props) => {
         </CardContent>
       ) : (
         <CardContent>
-          {/* 48px under a three-line stepper is right; under the compact mobile header it
-              is dead space. */}
-          <Stack spacing={{ xs: 3, md: 6 }}>
+          <Stack spacing={6}>
             <WizardSteps
               postUrl={postUrl}
               activeStep={activeStep}
@@ -100,16 +93,7 @@ export const CippWizard = (props) => {
               steps={stepsWithVisibility}
             />
             <div>
-              {/* Below md this Container clamps nothing — maxWidth is md/lg — and its
-                  gutters only duplicate the ones CardContent already pays. disableGutters
-                  with px at md restores exactly Container's own value from md up. */}
-              <Container
-                maxWidth={currentStepMaxWidth}
-                disableGutters
-                sx={{ px: { md: 3 } }}
-              >
-                {content}
-              </Container>
+              <Container maxWidth={currentStepMaxWidth}>{content}</Container>
             </div>
           </Stack>
         </CardContent>

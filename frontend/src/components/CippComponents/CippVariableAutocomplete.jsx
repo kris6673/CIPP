@@ -277,12 +277,8 @@ export const CippVariableAutocomplete = React.memo(
             borderRadius: 1,
             maxHeight: 240,
             overflow: "auto",
-            // Clamped to the viewport: the Paper shrink-to-fits against unclamped variable
-            // descriptions, and popper.js can only shift a too-wide popper, not shrink it —
-            // at the 500px cap a phone got ~110px hanging off the right edge, scrolling the
-            // whole document sideways.
-            minWidth: "min(300px, calc(100vw - 32px))",
-            maxWidth: "min(500px, calc(100vw - 32px))",
+            minWidth: 300,
+            maxWidth: 500,
           }}
           onClick={(e) => {
             e.stopPropagation();

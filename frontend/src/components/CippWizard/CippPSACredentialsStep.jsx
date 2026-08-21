@@ -14,7 +14,6 @@ import { LoadingButton } from "@mui/lab";
 import { Quiz } from "@mui/icons-material";
 import { ApiPostCall } from "../../api/ApiCall";
 import { Box } from "@mui/system";
-import { CippWizardActionsRow } from "./CippWizardActionsRow";
 export const CippPSACredentialsStep = (props) => {
   const { values: initialValues, onPreviousStep, onNextStep } = props;
   const [values, setValues] = useState(initialValues);
@@ -211,14 +210,20 @@ export const CippPSACredentialsStep = (props) => {
             )}
           </>
         </Stack>
-        <CippWizardActionsRow sx={{ mt: 3 }}>
+        <Stack
+          alignItems="center"
+          direction="row"
+          justifyContent="flex-end"
+          spacing={2}
+          sx={{ mt: 3 }}
+        >
           <Button color="inherit" onClick={onPreviousStep} size="large" type="button">
             Back
           </Button>
           <Button size="large" type="submit" variant="contained">
             Next Step
           </Button>
-        </CippWizardActionsRow>
+        </Stack>
       </Stack>
     </form>
   );

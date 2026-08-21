@@ -502,7 +502,7 @@ const Page = () => {
         actions={actions}
         offCanvas={offCanvas}
         simpleColumns={simpleColumns}
-        dataSourceControls={reportDB.controls}
+        cardButton={reportDB.controls}
       />
 
       <Dialog open={codeOpen} maxWidth="lg" fullWidth>

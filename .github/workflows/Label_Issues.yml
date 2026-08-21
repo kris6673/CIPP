@@ -6,7 +6,7 @@ on:
       - opened
 jobs:
   label_issues_bugs:
-    if: github.repository_owner == 'CyberDrain' && contains(github.event.issue.title, 'Bug')
+    if: github.repository_owner == 'KelvinTegelaar' && contains(github.event.issue.title, 'Bug')
     runs-on: ubuntu-slim
     permissions:
       issues: write
@@ -14,9 +14,10 @@ jobs:
       - name: Label Issues
         uses: andymckay/labeler@e6c4322d0397f3240f0e7e30a33b5c5df2d39e90
         with:
-          add-labels: "bug"
+          add-labels: "not-assigned"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
   label_issues_frs:
-    if: github.repository_owner == 'CyberDrain' && contains(github.event.issue.title, 'Feature')
+    if: github.repository_owner == 'KelvinTegelaar' && contains(github.event.issue.title, 'Feature')
     runs-on: ubuntu-slim
     permissions:
       issues: write
@@ -24,4 +25,5 @@ jobs:
       - name: Label Issues
         uses: andymckay/labeler@e6c4322d0397f3240f0e7e30a33b5c5df2d39e90
         with:
-          add-labels: "Feature, no-priority"
+          add-labels: "enhancement, not-assigned"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}

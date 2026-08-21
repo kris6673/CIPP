@@ -1,4 +1,4 @@
-﻿function Get-CIPPImage {
+function Get-CIPPImage {
     <#
     .FUNCTIONALITY
         Internal
@@ -11,8 +11,8 @@
 
         Image payloads are often larger than a single table property/entity, so
         Add-CIPPAzDataTableEntity may store them across the original RowKey and
-        `{RowKey}-partN` rows. Get-CIPPAzDataTableEntity reassembles them, fetching
-        any part rows this filter does not match.
+        `{RowKey}-partN` rows. Filters must include those part rows or
+        Get-CIPPAzDataTableEntity cannot reassemble `data`.
     .PARAMETER PartitionKey
         Image kind / purpose (e.g. logo, brandingCover). Required.
     .PARAMETER Id
@@ -39,12 +39,12 @@
 
     $Table = Get-CIPPTable -TableName 'Images'
 
-    # Include OriginalEntityId so multi-row entities are fetched with their parts, matching the
-    # other large-entity reads in CIPP. Any part this misses is fetched by
-    # Get-AzDataTableLargeEntity before reassembly.
+    # Include OriginalEntityId so multi-row large entities are fetched with their parts.
+    # Filtering only on RowKey eq id drops `{id}-partN` rows and breaks reassembly.
+    # Match both string and guid Edm types (same pattern as other CIPP large-entity reads).
     $IdClauses = foreach ($ImageId in $Ids) {
         $SafeId = $ImageId.Replace("'", "''")
-        "(RowKey eq '$SafeId' or OriginalEntityId eq '$SafeId')"
+        "(RowKey eq '$SafeId' or OriginalEntityId eq '$SafeId' or OriginalEntityId eq guid'$SafeId')"
     }
     $Filter = "PartitionKey eq '$($PartitionKey.Replace("'","''"))' and ($($IdClauses -join ' or '))"
 

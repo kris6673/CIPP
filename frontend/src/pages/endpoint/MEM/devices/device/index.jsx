@@ -18,7 +18,6 @@ import {
   Group,
 } from '@mui/icons-material'
 import { HeaderedTabbedLayout } from '../../../../../layouts/HeaderedTabbedLayout'
-import { CippEntitySwitcher } from '../../../../../components/CippComponents/CippEntitySwitcher'
 import tabOptions from './tabOptions'
 import { CippCopyToClipBoard } from '../../../../../components/CippComponents/CippCopyToClipboard'
 import { getIntuneDeviceActions } from '../../../../../components/CippComponents/CippIntuneDeviceActions.jsx'
@@ -478,28 +477,6 @@ const Page = () => {
     <HeaderedTabbedLayout
       tabOptions={tabOptions}
       title={title}
-      titleControl={
-        <CippEntitySwitcher
-          title={title}
-          currentId={deviceId}
-          queryParamKey="deviceId"
-          entityName="device"
-          api={{
-            url: '/api/ListGraphRequest',
-            data: {
-              Endpoint: 'deviceManagement/managedDevices',
-              tenantFilter: router.query.tenantFilter ?? userSettingsDefaults.currentTenant,
-              // Intune endpoints reject $orderby/$count, so ordering happens client-side.
-              $select: 'id,deviceName,userPrincipalName',
-              $top: 999,
-            },
-            queryKey: `DeviceSwitcher-${router.query.tenantFilter ?? userSettingsDefaults.currentTenant}`,
-          }}
-          getPrimary={(device) => device.deviceName}
-          getSecondary={(device) => device.userPrincipalName}
-          sortByPrimary
-        />
-      }
       actions={deviceActions}
       actionsData={data}
       subtitle={subtitle}
@@ -515,7 +492,7 @@ const Page = () => {
         >
           <CippHead title={title} />
           <Grid container spacing={2}>
-            <Grid size={{ xs: 12, lg: 4 }}>
+            <Grid size={4}>
               <Card>
                 <CardHeader
                   title="Device Details"
@@ -679,7 +656,7 @@ const Page = () => {
                 </PropertyList>
               </Card>
             </Grid>
-            <Grid size={{ xs: 12, lg: 8 }}>
+            <Grid size={8}>
               <Stack spacing={3}>
                 <Typography variant="h6">Compliance Policies</Typography>
                 <CippBannerListCard

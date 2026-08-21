@@ -25,8 +25,7 @@ export const CippWizardOffboarding = (props) => {
   const currentTenant = formControl.watch('tenantFilter')
   const selectedUsers = useWatch({ control: formControl.control, name: 'user' })
   const [showAlert, setShowAlert] = useState(false)
-  const settings = useSettings()
-  const userOffboardingDefaults = settings?.offboardingDefaults
+  const userSettingsDefaults = useSettings().userSettingsDefaults
   const disableForwarding = useWatch({ control: formControl.control, name: 'disableForwarding' })
   const deleteUser = useWatch({ control: formControl.control, name: 'DeleteUser' })
   const convertToShared = useWatch({ control: formControl.control, name: 'ConvertToShared' })
@@ -90,24 +89,25 @@ export const CippWizardOffboarding = (props) => {
       const tenantDefaults = currentTenant?.addedFields?.offboardingDefaults
 
       if (tenantDefaults) {
-        // Apply tenant defaults; always clear OOO when the blob omits it so user defaults do not leak
+        // Apply tenant defaults
         Object.entries(tenantDefaults).forEach(([key, value]) => {
           formControl.setValue(key, value)
         })
-        formControl.setValue('OOO', tenantDefaults.OOO ?? '')
+        // Set the source indicator
         formControl.setValue('HIDDEN_defaultsSource', 'tenant')
-      } else if (userOffboardingDefaults) {
-        Object.entries(userOffboardingDefaults).forEach(([key, value]) => {
-          formControl.setValue(key, value)
+      } else if (userSettingsDefaults?.offboardingDefaults) {
+        // Apply user defaults if no tenant defaults
+        userSettingsDefaults.offboardingDefaults.forEach((setting) => {
+          formControl.setValue(setting.name, setting.value)
         })
-        formControl.setValue('OOO', userOffboardingDefaults.OOO ?? '')
+        // Set the source indicator
         formControl.setValue('HIDDEN_defaultsSource', 'user')
       }
 
       // Mark that we've applied defaults for this tenant
       formControl.setValue('HIDDEN_appliedDefaultsForTenant', currentTenantId)
     }
-  }, [currentTenant?.value, userOffboardingDefaults, formControl])
+  }, [currentTenant?.value, userSettingsDefaults, formControl])
 
   useEffect(() => {
     if (disableForwarding) {
@@ -123,7 +123,7 @@ export const CippWizardOffboarding = (props) => {
   return (
     <Stack spacing={4}>
       <Grid container spacing={4}>
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={6}>
           <Card variant="outlined">
             <CardHeader title="Offboarding Settings" />
             <Divider />
@@ -266,7 +266,7 @@ export const CippWizardOffboarding = (props) => {
           </Card>
         </Grid>
 
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={6}>
           <Card variant="outlined">
             <CardHeader title="Permissions and forwarding" />
             <Divider />
@@ -326,61 +326,6 @@ export const CippWizardOffboarding = (props) => {
                   },
                 }}
               />
-              <CippFormComponent
-                sx={{ m: 1 }}
-                name="AccessSendAs"
-                label="Grant Send As Access"
-                disabled={!!deleteUser}
-                type="autoComplete"
-                placeholder="Leave blank if not needed"
-                formControl={formControl}
-                multi
-                api={{
-                  labelField: (option) => `${option.displayName} (${option.userPrincipalName})`,
-                  valueField: 'id',
-                  url: '/api/ListGraphRequest',
-                  dataKey: 'Results',
-                  tenantFilter: currentTenant ? currentTenant.value : undefined,
-                  queryKey: `Offboarding-Users-${currentTenant ? currentTenant.value : 'default'}`,
-                  data: {
-                    Endpoint: 'users',
-                    manualPagination: true,
-                    $select: 'id,userPrincipalName,displayName',
-                    $count: true,
-                    $orderby: 'displayName',
-                    $top: 999,
-                  },
-                }}
-              />
-              <CippFormComponent
-                sx={{ m: 1 }}
-                name="AccessSendOnBehalf"
-                label="Grant Send on Behalf Access"
-                disabled={!!deleteUser}
-                type="autoComplete"
-                placeholder="Leave blank if not needed"
-                formControl={formControl}
-                multi
-                api={{
-                  labelField: (option) => `${option.displayName} (${option.userPrincipalName})`,
-                  valueField: 'id',
-                  url: '/api/ListGraphRequest',
-                  dataKey: 'Results',
-                  tenantFilter: currentTenant ? currentTenant.value : undefined,
-                  queryKey: `Offboarding-Users-${currentTenant ? currentTenant.value : 'default'}`,
-                  data: {
-                    Endpoint: 'users',
-                    manualPagination: true,
-                    $select: 'id,userPrincipalName,displayName',
-                    $count: true,
-                    $orderby: 'displayName',
-                    $top: 999,
-                  },
-                }}
-              />
-              <Typography variant="subtitle2" sx={{ mt: 3 }} gutterBottom>
-                OneDrive Access
-              </Typography>
               {deleteUser && (
                 <Alert severity="info" sx={{ mb: 1 }}>
                   When a user is deleted, their OneDrive is retained for 30 days by default unless
@@ -390,7 +335,7 @@ export const CippWizardOffboarding = (props) => {
               <CippFormComponent
                 sx={{ m: 1 }}
                 name="OnedriveAccess"
-                label="Grant OneDrive Full Access"
+                label="Grant Onedrive Full Access"
                 type="autoComplete"
                 placeholder="Leave blank if not needed"
                 formControl={formControl}
@@ -464,9 +409,6 @@ export const CippWizardOffboarding = (props) => {
                   disabled={!!deleteUser}
                 />
               </CippFormCondition>
-              <Typography variant="subtitle2" sx={{ mt: 3 }} gutterBottom>
-                Out of Office
-              </Typography>
               <Box
                 sx={deleteUser ? { pointerEvents: 'none', opacity: 0.5, userSelect: 'none' } : {}}
               >
@@ -478,10 +420,6 @@ export const CippWizardOffboarding = (props) => {
                   fullWidth
                   formControl={formControl}
                 />
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                  CIPP %variable% tokens (for example %tenantname%) stay literal here and are
-                  resolved when the offboarding job runs. %username% is not the offboarded user.
-                </Typography>
               </Box>
               {convertToShared && oversizedMailboxes.length > 0 && (
                 <Alert severity="warning" sx={{ mt: 2 }}>

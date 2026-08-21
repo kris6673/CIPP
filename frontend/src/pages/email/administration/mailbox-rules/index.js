@@ -114,7 +114,7 @@ const Page = () => {
         simpleColumns={simpleColumns}
         offCanvas={offCanvas}
         actions={actions}
-        dataSourceControls={reportDB.controls}
+        cardButton={reportDB.controls}
       />
       {reportDB.syncDialog}
     </>

@@ -78,4 +78,6 @@ Log entries are categorised by severity level:
 | Error       | ERR  |
 | Critical    | CRT  |
 
+***
+
 {% include "../../../../../.gitbook/includes/feature-request.md" %}
