@@ -103,4 +103,12 @@ Select **Save Settings** to store these options. Setting Check Interval to **Dis
 
 Note that if the container restarts for any reason, the latest image for the current release channel is pulled regardless of these settings.
 
+## Update History
+
+A table of the version changes recorded for this instance, newest first, so you can see when it landed on the build it is running and what it was on before. Each row gives the date and time the change was recorded, the version it moved from, the version it moved to, and the image tag it landed on, and the table can be searched, sorted, and exported like any other CIPP table.
+
+A change is recorded when the container starts on a different version from the one last seen, so the timestamp is when the new build first ran rather than when the image was published. The most recent 50 changes are shown.
+
+Until a change has been recorded the table is empty. Version transitions are recorded from the next update onward, so a newly deployed instance starts with an empty history rather than a backfilled one.
+
 {% include "../../../../../.gitbook/includes/feature-request.md" %}
