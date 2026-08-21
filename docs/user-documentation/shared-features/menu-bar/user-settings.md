@@ -54,8 +54,15 @@ A label on the card indicates which defaults are currently in effect: **Using Te
 | Remove Teams Phone DID                        | Removes the phone number assigned to the user in Teams.                |
 | Clear Immutable ID                            | Clears the user's immutable ID.                                        |
 | Disable OneDrive Sharing Links                | Disables the sharing links the user created in OneDrive.               |
+| Out of Office Message                         | Default automatic reply for offboardings. Leave blank to not set. Supports CIPP `%variable%` tokens (for example `%tenantname%` and tenant custom variables), which are resolved when the offboarding job runs. `%username%` is not the offboarded user. |
+
+An Out of Office message alone is enough for these defaults to count as configured for the user vs all-users precedence.
 
 A **Send results to** section chooses where the outcome of an offboarding is reported, with options for Webhook, E-mail, and PSA.
+
+{% hint style="info" %}
+If a tenant has its own offboarding defaults saved, those replace your personal defaults entirely for that tenant — including when the tenant message field is empty.
+{% endhint %}
 
 ## Portal Links Configuration
 

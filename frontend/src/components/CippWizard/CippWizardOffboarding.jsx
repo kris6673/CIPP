@@ -25,7 +25,8 @@ export const CippWizardOffboarding = (props) => {
   const currentTenant = formControl.watch('tenantFilter')
   const selectedUsers = useWatch({ control: formControl.control, name: 'user' })
   const [showAlert, setShowAlert] = useState(false)
-  const userSettingsDefaults = useSettings().userSettingsDefaults
+  const settings = useSettings()
+  const userOffboardingDefaults = settings?.offboardingDefaults
   const disableForwarding = useWatch({ control: formControl.control, name: 'disableForwarding' })
   const deleteUser = useWatch({ control: formControl.control, name: 'DeleteUser' })
   const convertToShared = useWatch({ control: formControl.control, name: 'ConvertToShared' })
@@ -89,25 +90,24 @@ export const CippWizardOffboarding = (props) => {
       const tenantDefaults = currentTenant?.addedFields?.offboardingDefaults
 
       if (tenantDefaults) {
-        // Apply tenant defaults
+        // Apply tenant defaults; always clear OOO when the blob omits it so user defaults do not leak
         Object.entries(tenantDefaults).forEach(([key, value]) => {
           formControl.setValue(key, value)
         })
-        // Set the source indicator
+        formControl.setValue('OOO', tenantDefaults.OOO ?? '')
         formControl.setValue('HIDDEN_defaultsSource', 'tenant')
-      } else if (userSettingsDefaults?.offboardingDefaults) {
-        // Apply user defaults if no tenant defaults
-        userSettingsDefaults.offboardingDefaults.forEach((setting) => {
-          formControl.setValue(setting.name, setting.value)
+      } else if (userOffboardingDefaults) {
+        Object.entries(userOffboardingDefaults).forEach(([key, value]) => {
+          formControl.setValue(key, value)
         })
-        // Set the source indicator
+        formControl.setValue('OOO', userOffboardingDefaults.OOO ?? '')
         formControl.setValue('HIDDEN_defaultsSource', 'user')
       }
 
       // Mark that we've applied defaults for this tenant
       formControl.setValue('HIDDEN_appliedDefaultsForTenant', currentTenantId)
     }
-  }, [currentTenant?.value, userSettingsDefaults, formControl])
+  }, [currentTenant?.value, userOffboardingDefaults, formControl])
 
   useEffect(() => {
     if (disableForwarding) {
@@ -478,6 +478,10 @@ export const CippWizardOffboarding = (props) => {
                   fullWidth
                   formControl={formControl}
                 />
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                  CIPP %variable% tokens (for example %tenantname%) stay literal here and are
+                  resolved when the offboarding job runs. %username% is not the offboarded user.
+                </Typography>
               </Box>
               {convertToShared && oversizedMailboxes.length > 0 && (
                 <Alert severity="warning" sx={{ mt: 2 }}>

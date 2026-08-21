@@ -22,6 +22,12 @@ function Invoke-CIPPOffboardingJob {
         $UserID = $User.id
         $DisplayName = $User.displayName
 
+        # Resolve OOO once; empty TipTap HTML must not enable automatic replies
+        $OooMessage = $null
+        if (-not (Test-CIPPHtmlIsEmpty -Html ([string]$Options.OOO))) {
+            $OooMessage = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $Options.OOO
+        }
+
         # Build dynamic batch of offboarding tasks based on selected options
         $Batch = [System.Collections.Generic.List[object]]::new()
 
@@ -117,13 +123,13 @@ function Invoke-CIPPOffboardingJob {
                 }
             }
             @{
-                Condition  = { ![string]::IsNullOrEmpty($Options.OOO) }
+                Condition  = { -not [string]::IsNullOrEmpty($OooMessage) }
                 Cmdlet     = 'Set-CIPPOutOfOffice'
                 Parameters = @{
                     tenantFilter    = $TenantFilter
                     UserID          = $Username
-                    InternalMessage = $Options.OOO
-                    ExternalMessage = $Options.OOO
+                    InternalMessage = $OooMessage
+                    ExternalMessage = $OooMessage
                     APIName         = $APIName
                     state           = 'Enabled'
                     Headers         = $Headers

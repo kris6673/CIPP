@@ -85,7 +85,7 @@ function Test-CIPPOffboardingRequest {
     if (-not $HasAction -and -not [string]::IsNullOrWhiteSpace([string]($Body.forward.value ?? $Body.forward))) {
         $HasAction = $true
     }
-    if (-not $HasAction -and -not [string]::IsNullOrWhiteSpace([string]$Body.OOO)) {
+    if (-not $HasAction -and -not (Test-CIPPHtmlIsEmpty -Html ([string]$Body.OOO))) {
         $HasAction = $true
     }
     if (-not $HasAction) {
