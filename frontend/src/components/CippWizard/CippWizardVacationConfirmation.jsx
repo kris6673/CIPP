@@ -23,6 +23,7 @@ export const CippWizardVacationConfirmation = (props) => {
   const values = useWatch({ control: formControl.control })
 
   const caExclusion = ApiPostCall({ relatedQueryKeys: ['VacationMode'] })
+  const auditExclusion = ApiPostCall({ relatedQueryKeys: ['VacationMode'] })
   const mailboxVacation = ApiPostCall({ relatedQueryKeys: ['VacationMode'] })
   const forwardingVacation = ApiPostCall({ relatedQueryKeys: ['VacationMode'] })
   const oooVacation = ApiPostCall({ relatedQueryKeys: ['VacationMode'] })
@@ -30,11 +31,13 @@ export const CippWizardVacationConfirmation = (props) => {
   const tenantFilter = values.tenantFilter?.value || values.tenantFilter
   const isSubmitting =
     caExclusion.isPending ||
+    auditExclusion.isPending ||
     mailboxVacation.isPending ||
     forwardingVacation.isPending ||
     oooVacation.isPending
   const hasSubmitted =
     caExclusion.isSuccess ||
+    auditExclusion.isSuccess ||
     mailboxVacation.isSuccess ||
     forwardingVacation.isSuccess ||
     oooVacation.isSuccess
@@ -55,7 +58,6 @@ export const CippWizardVacationConfirmation = (props) => {
         vacation: true,
         reference: values.reference || null,
         postExecution: values.postExecution || [],
-        excludeLocationAuditAlerts: values.excludeLocationAuditAlerts || false,
         // Only send the travel policy fields on the first request so the
         // temporary policy is scheduled once, not once per selected CA policy
         ...(index === 0 && createTravelPolicy
@@ -66,6 +68,20 @@ export const CippWizardVacationConfirmation = (props) => {
         url: '/api/ExecCAExclusion',
         data: policyData,
         bulkRequest: true,
+      })
+    }
+
+    if (values.excludeLocationAuditAlerts) {
+      auditExclusion.mutate({
+        url: '/api/ExecScheduleAuditExclusionVacation',
+        data: {
+          tenantFilter,
+          Users: values.Users,
+          startDate: values.startDate,
+          endDate: values.endDate,
+          reference: values.reference || null,
+          postExecution: values.postExecution || [],
+        },
       })
     }
 
@@ -226,6 +242,7 @@ export const CippWizardVacationConfirmation = (props) => {
       {(() => {
         const enabledCount = [
           values.enableCAExclusion,
+          values.excludeLocationAuditAlerts,
           values.enableMailboxPermissions,
           values.enableForwarding,
           values.enableOOO,
@@ -255,13 +272,6 @@ export const CippWizardVacationConfirmation = (props) => {
                             : 'Not selected'}
                         </Typography>
                       </div>
-                      {values.excludeLocationAuditAlerts && (
-                        <div>
-                          <Typography variant="body2" color="warning.main">
-                            Location-based audit log alerts will be excluded
-                          </Typography>
-                        </div>
-                      )}
                       {values.createTravelPolicy && (
                         <div>
                           <Typography variant="subtitle2" color="text.secondary">
@@ -280,6 +290,24 @@ export const CippWizardVacationConfirmation = (props) => {
                         </div>
                       )}
                     </Stack>
+                  </CardContent>
+                </Card>
+              </Grid>
+            )}
+
+            {values.excludeLocationAuditAlerts && (
+              <Grid size={{ md: mdSize, xs: 12 }}>
+                <Card variant="outlined" sx={{ height: '100%' }}>
+                  <CardHeader
+                    title="Location-Based Alerts"
+                    action={<Chip label="Enabled" color="primary" size="small" />}
+                  />
+                  <Divider />
+                  <CardContent>
+                    <Typography variant="body2">
+                      The users are excluded from location-based audit log alerts between the start
+                      and end date.
+                    </Typography>
                   </CardContent>
                 </Card>
               </Grid>
@@ -435,6 +463,7 @@ export const CippWizardVacationConfirmation = (props) => {
 
       {/* API Results */}
       {values.enableCAExclusion && <CippApiResults apiObject={caExclusion} />}
+      {values.excludeLocationAuditAlerts && <CippApiResults apiObject={auditExclusion} />}
       {values.enableMailboxPermissions && <CippApiResults apiObject={mailboxVacation} />}
       {values.enableForwarding && <CippApiResults apiObject={forwardingVacation} />}
       {values.enableOOO && <CippApiResults apiObject={oooVacation} />}

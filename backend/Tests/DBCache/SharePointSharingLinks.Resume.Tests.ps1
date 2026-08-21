@@ -308,23 +308,22 @@ Describe 'Per-drive sharing-links scan' {
         }
     }
 
-    Context 'Principal-mode full scan of a team-site drive' {
-        It 'permission-reads only items whose principal count deviates and captures a delta token' {
-            $ScanId = 'scan-principal-1'
+    Context 'full scan of a team-site drive' {
+        It 'walks the delta ground truth, prunes stale rows and stores the token' {
+            $ScanId = 'scan-team-1'
             Initialize-TestScan -ScanId $ScanId -TotalSites 1
             Add-CacheRow -RowKey 'SharePointSharingLinks-b!driveone_01GONE_permOld'
 
             Invoke-SiteAndDrives -SiteItem (New-SiteItem -ScanId $ScanId)
 
-            # Only the deviating list item (id 12) was read; its row carries the scan id.
-            $Rows = @((Get-FakeTableRows -TableName 'CippReportingDB') | Where-Object { $_.RowKey -like 'SharePointSharingLinks-b!driveone_01DRV12_*' })
+            $Rows = @((Get-FakeTableRows -TableName 'CippReportingDB') | Where-Object { $_.RowKey -like 'SharePointSharingLinks-b!driveone_01ITEMA_*' })
             $Rows.Count | Should -Be 1
             $Rows[0].RunId | Should -Be $ScanId
             # The full-scan prune removed what this scan did not rewrite.
             Get-CacheRowKeys | Should -Not -Contain 'SharePointSharingLinks-b!driveone_01GONE_permOld'
 
             $DriveState = Get-CIPPSharingLinksDriveState -TenantFilter 'contoso.com' -DriveId 'b!driveone'
-            $DriveState.DeltaLink | Should -BeLike '*token=captured'
+            $DriveState.DeltaLink | Should -BeLike '*token=fresh'
             $DriveState.LastScanId | Should -Be $ScanId
             $DriveState.LastFullScanUtc | Should -Not -BeNullOrEmpty
 
@@ -334,45 +333,12 @@ Describe 'Per-drive sharing-links scan' {
         }
     }
 
-    Context 'Principal-mode baseline detection' {
-        It 'derives the baseline from the dominant item count, not the inflated root permission list' {
-            $ScanId = 'scan-baseline-1'
-            Initialize-TestScan -ScanId $ScanId -TotalSites 1
-            # Root carries system entries (Limited Access etc.) that items never inherit: a
-            # root-derived baseline of 5 would invert the filter and flag the whole library.
-            $script:GraphGetHandler = {
-                param($Uri)
-                if ($Uri -match '/sites/[^/]+/drives\?') { return @([pscustomobject]@{ id = 'b!driveone'; name = 'Documents'; webUrl = 'https://contoso.sharepoint.com/sites/one/Shared%20Documents' }) }
-                if ($Uri -match '/drives/b!driveone/list\?') { return [pscustomobject]@{ id = 'list1' } }
-                if ($Uri -match '/drives/b!driveone/root/permissions') { return @(1..5 | ForEach-Object { [pscustomobject]@{ id = "g$_" } }) }
-                if ($Uri -match '/lists/list1/items\?') {
-                    return [pscustomobject]@{
-                        value = @(
-                            [pscustomobject]@{ id = '21'; fields = [pscustomobject]@{ PrincipalCount = 4 } }
-                            [pscustomobject]@{ id = '22'; fields = [pscustomobject]@{ PrincipalCount = 4 } }
-                            [pscustomobject]@{ id = '23'; fields = [pscustomobject]@{ PrincipalCount = 4 } }
-                            [pscustomobject]@{ id = '24'; fields = [pscustomobject]@{ PrincipalCount = 5 } } # the linked one
-                        )
-                    }
-                }
-                if ($Uri -match 'token=latest') { return New-DeltaPage -DeltaLink 'https://graph.microsoft.com/beta/drives/b!driveone/root/delta?token=captured' }
-                throw "Unrouted GET: $Uri"
-            }
-
-            Invoke-SiteAndDrives -SiteItem (New-SiteItem -ScanId $ScanId)
-
-            $LinkRows = @((Get-FakeTableRows -TableName 'CippReportingDB') | Where-Object { $_.RowKey -like 'SharePointSharingLinks-b!driveone_01DRV*' })
-            $LinkRows.Count | Should -Be 1
-            $LinkRows[0].RowKey | Should -BeLike '*01DRV24*'
-        }
-    }
-
-    Context 'Principal-mode scan with dropped permission reads' {
+    Context 'full scan with dropped permission reads' {
         It 'keeps existing rows and defers the sweep when batch reads are throttled away' {
-            $ScanId = 'scan-principal-drop-1'
+            $ScanId = 'scan-drop-1'
             Initialize-TestScan -ScanId $ScanId -TotalSites 1
             Add-CacheRow -RowKey 'SharePointSharingLinks-b!driveone_01SURVIVOR_permOld'
-            # Every Principal-mode driveItem read comes back throttled.
+            # Every permission read comes back throttled inside the batch.
             Mock New-GraphBulkRequest {
                 foreach ($Request in @($Requests)) {
                     [pscustomobject]@{ id = $Request.id; status = 429; body = $null }
