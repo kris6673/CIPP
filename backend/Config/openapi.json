@@ -29543,6 +29543,77 @@
         "x-cipp-role": "Identity.User.ReadWrite"
       }
     },
+    "/api/ExecRequirePasswordChange": {
+      "post": {
+        "summary": "ExecRequirePasswordChange",
+        "operationId": "ExecRequirePasswordChange",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Requires password change at next sign-in without resetting the password.\nSets passwordProfile.forceChangePasswordNextSignIn via Graph. Not supported for directory-synced users.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ID": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "ID",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.ReadWrite"
+      }
+    },
     "/api/ExecResetMFA": {
       "post": {
         "summary": "ExecResetMFA",
