@@ -38,6 +38,7 @@ const MATCH_DATE_TIME = /([dD]ate[tT]ime|[Ee]xpiration|[Tt]imestamp|[sS]tart[Dd]
 const ABSOLUTE_DATE_NAMES = new Set([
   'WindowStart', 'WindowEnd', 'CreatedUtc', 'DownloadedUtc', 'ProcessedUtc',
   'NextAttemptUtc', 'LastErrorUtc', 'LastPolledUtc',
+  'QueuedUtc', 'StartedUtc', 'CompletedUtc',
 ])
 const isDateTimeColumn = (key) =>
   TIME_AGO_NAMES.has(key) || ABSOLUTE_DATE_NAMES.has(key) || MATCH_DATE_TIME.test(key)
