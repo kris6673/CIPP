@@ -26,7 +26,7 @@ At the top of the page, a bar of key indicators gives an at-a-glance view of the
 | Memory       | Container memory used versus its limit, with the usage percentage.                                      |
 | CPU          | Container and application CPU usage.                                                                    |
 
-Below the indicator bar, a compact stats panel breaks the same areas down in more detail: the HTTP and BG pools (size, busy count, invocations, utilisation, average duration, and faults); Jobs (running, queued, completed, failed); the Limiter (active/maximum, waiting, and throttle status); Memory (container used and limit, application RSS, other processes, GC heap, committed, GC limit, usage percentage, and garbage-collection counts); and CPU (container, application, and other). Any figure that crosses a warning threshold is shown in red.
+Below the indicator bar, a compact stats panel breaks the same areas down in more detail: the HTTP and BG pools (size, busy count, invocations, utilisation, average duration, and faults); Jobs (running, queued, completed, failed, and skipped — stale queue entries whose task was already gone when picked up); the Limiter (active/maximum, waiting, and throttle status); Memory (container used and limit, application RSS, other processes, GC heap, committed, GC limit, usage percentage, and garbage-collection counts); and CPU (container, application, and other). Any figure that crosses a warning threshold is shown in red.
 
 ## Worker Pools
 
@@ -47,7 +47,7 @@ Two tables list every worker in the container: one for the HTTP pool, which hand
 
 ## Job Queue
 
-The Job Queue lists the background jobs known to the worker system, newest first. Queued jobs come from the durable job queue in table storage, so the list shows the full backlog of a large run — not just the handful of tasks the container has buffered for execution — and cancelling or reprioritizing a queued job takes effect even for work no container has picked up yet. Two toggles above the table control what is loaded: a status toggle (All, Queued, Running, Completed, Failed, or Cancelled) and a load limit (500, 2k, 5k, or 10k).
+The Job Queue lists the background jobs known to the worker system, newest first. Queued jobs come from the durable job queue in table storage, so the list shows the full backlog of a large run — not just the handful of tasks the container has buffered for execution — and cancelling or reprioritizing a queued job takes effect even for work no container has picked up yet. Two toggles above the table control what is loaded: a status toggle (All, Queued, Running, Completed, Failed, Cancelled, or Skipped) and a load limit (500, 2k, 5k, or 10k).
 
 The status toggle filters on the server, before the load limit is applied, so the limit applies to the selected status rather than to all jobs. This matters on a busy instance: with a large backlog of completed jobs, loading All would fill the entire limit with completed work and show no queued jobs at all. Select Queued to see the jobs still waiting to run, regardless of how much history sits behind them.
 
@@ -58,10 +58,12 @@ The status toggle filters on the server, before the load limit is applied, so th
 | Name            | The name of the job's function.                                         |
 | RunName         | The name of the run that the job belongs to, where applicable.          |
 | Priority        | The job's priority, where 0 is the highest.                             |
-| Status          | The job's current state, such as Queued, Running, Completed, or Failed. |
-| QueuedUtc       | The date and time the job was queued, in UTC.                           |
+| Status          | The job's current state, such as Queued, Running, Completed, or Failed. Skipped means the queue entry went stale — its task was gone or already finished by the time the job was picked up — and nothing was run; it is not a failure. |
+| QueuedUtc       | The date and time the job was queued.                                   |
 | WaitSeconds     | How long the job waited in the queue before it started running.         |
 | DurationSeconds | How long the job took to run.                                           |
+
+Selecting **More Info** on a row opens a panel with the full detail for that job, including the fields the table does not show: the job's id, when it started and completed, and the last error recorded for it.
 
 ### Table Actions
 

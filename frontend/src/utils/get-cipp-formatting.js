@@ -268,6 +268,9 @@ export const getCippFormatting = (
     'NextAttemptUtc',
     'LastErrorUtc',
     'LastPolledUtc',
+    'QueuedUtc', // Worker health job queue
+    'StartedUtc', // Worker health job queue
+    'CompletedUtc', // Worker health job queue
   ]
   if (absoluteDateArray.includes(cellName)) {
     if (data === null || data === undefined || data === '') {
@@ -276,9 +279,11 @@ export const getCippFormatting = (
     const dt = parseCippDate(data)
     if (isNaN(dt.getTime())) return isText ? '' : ''
     if (dt.getTime() === 0) return isText ? '' : 'Never'
-    // text mode: Date object so MRT sorts chronologically (toLocaleString for CSV export);
+    // text mode: Date object so MRT sorts chronologically — except when the caller can
+    // receive a rendered node ('both': off-canvas, card views) or explicitly wants a
+    // string (false: CSV export); a raw Date is not a valid React child.
     // cell mode: long absolute string in the browser's locale + timezone.
-    if (isText) return canReceive === false ? dt.toLocaleString() : dt
+    if (isText) return canReceive === 'both' || canReceive === false ? dt.toLocaleString() : dt
     return dt.toLocaleString()
   }
 
@@ -319,6 +324,7 @@ export const getCippFormatting = (
     'requestDate', // App Consent Requests
     'reviewedDate', // App Consent Requests
     'GeneratedAt', // Report Builder
+    'RecordedAt', // Container update history
     'directTenantAuthDate', // Direct tenant service account
     'ServiceAccountLastAuth', // Direct tenant service account
   ]

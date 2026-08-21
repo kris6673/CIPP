@@ -29,7 +29,7 @@ import { useForm, useWatch } from 'react-hook-form'
 import CippFormComponent from '../CippComponents/CippFormComponent'
 import CippButtonCard from '../CippCards/CippButtonCard'
 import { CippInfoBar } from '../CippCards/CippInfoBar'
-import { CippPropertyListCard } from '../CippCards/CippPropertyListCard'
+import { CippDataTable } from '../CippTable/CippDataTable'
 import { ApiGetCall, ApiPostCall } from '../../api/ApiCall'
 import { CippApiResults } from '../CippComponents/CippApiResults'
 import { useDialog } from '../../hooks/use-dialog'
@@ -323,27 +323,6 @@ export const CippContainerManagement = () => {
     ]
   }, [data, updateSettings, channelInfo.label, channelInfo.color])
 
-  // Version transitions recorded at warmup - answers "when did this instance land on the
-  // current build, and what was it on before?" without reading container logs.
-  const upgradeHistoryItems = useMemo(() => {
-    const history = data?.UpgradeHistory ?? []
-    if (!history.length) {
-      return [
-        {
-          label: 'No updates recorded',
-          value:
-            'Version transitions are recorded from the next update onward.',
-        },
-      ]
-    }
-    return history.map((event) => ({
-      label: formatUtcDate(event.RecordedAt) ?? 'Unknown time',
-      value: `v${event.PreviousVersion} → v${event.NewVersion}${
-        isUnset(event.ImageTag) ? '' : ` (${event.ImageTag})`
-      }`,
-    }))
-  }, [data?.UpgradeHistory])
-
   const channelChangePending =
     data?.ConfiguredChannel && data.ConfiguredChannel !== data.CurrentChannel
 
@@ -567,11 +546,20 @@ export const CippContainerManagement = () => {
           </Grid>
 
           <Grid size={{ xs: 12 }}>
-            <CippPropertyListCard
+            {/* Version transitions recorded at warmup - answers "when did this instance land
+                on the current build, and what was it on before?" without reading container
+                logs. Rows come newest first from the Status payload. */}
+            <CippDataTable
               title="Update History"
-              showDivider={false}
+              data={data?.UpgradeHistory ?? []}
               isFetching={containerStatus.isFetching}
-              propertyItems={upgradeHistoryItems}
+              refreshFunction={() => containerStatus.refetch()}
+              simpleColumns={[
+                'RecordedAt',
+                'PreviousVersion',
+                'NewVersion',
+                'ImageTag',
+              ]}
             />
           </Grid>
         </Grid>
