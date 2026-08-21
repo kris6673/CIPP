@@ -279,14 +279,6 @@
                   "logbook": {
                     "$ref": "#/components/schemas/LabelValue"
                   },
-                  "PsaTicketPriority": {
-                    "allOf": [
-                      {
-                        "$ref": "#/components/schemas/LabelValue"
-                      }
-                    ],
-                    "description": "The audit form posts the raw form values, so an autocomplete selection arrives as a {label, value} object - unwrap it to the bare Halo priority id before storing."
-                  },
                   "RowKey": {
                     "type": "string"
                   },
@@ -2184,87 +2176,6 @@
           }
         ],
         "x-cipp-role": "Tenant.Administration.ReadWrite"
-      }
-    },
-    "/api/AddEdgeApp": {
-      "post": {
-        "summary": "AddEdgeApp",
-        "operationId": "AddEdgeApp",
-        "tags": [
-          "Endpoint > Applications"
-        ],
-        "requestBody": {
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "AssignTo": {
-                    "type": "string"
-                  },
-                  "CustomGroup": {
-                    "type": "string"
-                  },
-                  "displayLanguageLocale": {
-                    "$ref": "#/components/schemas/LabelValue"
-                  },
-                  "edgeChannel": {
-                    "$ref": "#/components/schemas/LabelValue"
-                  },
-                  "excludeGroup": {
-                    "type": "string"
-                  },
-                  "IntuneBody": {
-                    "type": "string"
-                  },
-                  "selectedTenants": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "customerId": {
-                          "type": "string"
-                        }
-                      }
-                    }
-                  }
-                },
-                "additionalProperties": true,
-                "x-cipp-passthrough": true,
-                "description": "This endpoint forwards the request body onward rather than reading a fixed set of fields. The properties listed here are the ones it is known to read; others may be accepted."
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/StandardResults"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - invalid or missing bearer token"
-          },
-          "403": {
-            "description": "Forbidden - caller lacks the required RBAC role"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "x-cipp-role": "Endpoint.Application.ReadWrite",
-        "x-cipp-any-tenant": true,
-        "x-cipp-reads-via": [
-          "Get-CIPPEdgeAppBody"
-        ]
       }
     },
     "/api/AddEditTransportRule": {
@@ -5462,21 +5373,21 @@
                   },
                   "Name": {
                     "type": "string",
-                    "description": "Validate required fields. The \"create template from policy\" row action posts the policy row, which carries Name/PolicyName but no TemplateName."
+                    "description": "Validate required fields"
                   },
                   "PolicyName": {
-                    "type": "string",
-                    "description": "Set name and comments - prioritize template-specific fields, falling back to the policy name so a template made from a policy is not listed with a blank name."
+                    "type": "string"
                   },
                   "TemplateDescription": {
                     "type": "string"
                   },
                   "TemplateName": {
                     "type": "string",
-                    "description": "Validate required fields. The \"create template from policy\" row action posts the policy row, which carries Name/PolicyName but no TemplateName."
+                    "description": "Set name and comments - prioritize template-specific fields"
                   }
                 },
                 "required": [
+                  "Name",
                   "PolicyName"
                 ]
               }
@@ -16941,7 +16852,7 @@
                       },
                       "standardsTemplateId": {
                         "type": "string",
-                        "description": "tenantFilter is optional here - supplying it resolves the template the way the standard would for that tenant instead of comparing the stored template verbatim."
+                        "description": "Without this the comparison would report the policy as missing while remediation would happily overwrite an existing, similarly named one. Mirrors the candidate selection Set-CIPPIntunePolicy performs at deployment time."
                       },
                       "templateGuid": {
                         "type": "string",
@@ -16982,7 +16893,7 @@
                       },
                       "standardsTemplateId": {
                         "type": "string",
-                        "description": "tenantFilter is optional here - supplying it resolves the template the way the standard would for that tenant instead of comparing the stored template verbatim."
+                        "description": "Without this the comparison would report the policy as missing while remediation would happily overwrite an existing, similarly named one. Mirrors the candidate selection Set-CIPPIntunePolicy performs at deployment time."
                       },
                       "templateGuid": {
                         "type": "string",
@@ -21047,7 +20958,7 @@
           {
             "name": "TicketType",
             "in": "query",
-            "description": "Outcomes and priorities are scoped to a ticket type. The settings page sends the ticket type currently selected in the form so the lists follow the dropdown; without it both fall back to whatever ticket type was last saved. @() on each: PowerShell unrolls single-element output, so a ticket type with one outcome (or a lookup that answers with a single explanatory row) would otherwise serialise as a bare object and break callers that expect a list.",
+            "description": "Outcomes and priorities are scoped to a ticket type. The settings page sends the ticket type currently selected in the form so the lists follow the dropdown; without it both fall back to whatever ticket type was last saved.",
             "required": false,
             "schema": {
               "type": "string"
@@ -27558,9 +27469,6 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
@@ -41057,7 +40965,7 @@
                         "x-cipp-field-source": "storage"
                       },
                       "source": {
-                        "x-cipp-field-source": "storage,frontend"
+                        "x-cipp-field-source": "storage"
                       },
                       "templateCount": {
                         "x-cipp-field-source": "backend"
@@ -45808,10 +45716,6 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       },
-                      "PsaTicketPriority": {
-                        "type": "string",
-                        "x-cipp-field-source": "storage"
-                      },
                       "PsaTicketStrategy": {
                         "type": "string",
                         "x-cipp-field-source": "storage"
@@ -47308,6 +47212,15 @@
             }
           },
           {
+            "name": "maxPageBytes",
+            "in": "query",
+            "description": "Paged AllTenants cache reads only: target page size in bytes of raw JSON, clamped between 262144 and 8388608 (default 4000000). Pages always hold at least one whole tenant.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "name": "nextLink",
             "in": "query",
             "description": "Continue a manualPagination walk: pass back the @odata.nextLink returned with the previous page. Endpoint is still required, and the other query options are already encoded in the link.",
@@ -47981,8 +47894,34 @@
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "Lists all guest accounts in a tenant with a computed lifecycle status (Active, Pending Acceptance, Stale, Never Signed In or Disabled) based on the invitation state and sign-in activity. Supports UseReportDB=true to serve cached data from the reporting database; AllTenants always uses the cache.",
+        "description": "Lists all guest accounts in a tenant with a computed lifecycle status (Active, Pending Acceptance, Stale, Never Signed In or Disabled) based on the invitation state and sign-in activity. Supports UseReportDB=true to serve cached data from the reporting database; AllTenants always uses the cache. When manualPagination is set on a cached read, one page is returned per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
         "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink; cached reads only.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
           {
             "name": "staleDays",
             "in": "query",
@@ -48997,7 +48936,7 @@
                         "x-cipp-field-source": "storage"
                       },
                       "source": {
-                        "x-cipp-field-source": "storage,backend,frontend"
+                        "x-cipp-field-source": "storage,backend"
                       },
                       "templateCount": {
                         "x-cipp-field-source": "backend"
@@ -49830,7 +49769,7 @@
         "tags": [
           "CIPP > Core"
         ],
-        "description": "Lists CIPP platform audit logs with filtering by severity, date range, tenant, and user. Supports listing available log categories.",
+        "description": "Lists CIPP platform audit logs with filtering by severity, date range, tenant, and user. Supports listing available log categories, fetching a single entry, and server-side pagination via manualPagination/nextLink.",
         "parameters": [
           {
             "name": "API",
@@ -49857,15 +49796,6 @@
             }
           },
           {
-            "name": "Days",
-            "in": "query",
-            "description": "Days=N widens a filtered query to the last N calendar days (in the instance timezone). The scoped drawers (standard template, scheduled task, baseline run) use this: a run that finished last night otherwise shows an empty log early the next day, because the default window is \"today\" only.",
-            "required": false,
-            "schema": {
-              "type": "integer"
-            }
-          },
-          {
             "name": "EndDate",
             "in": "query",
             "required": false,
@@ -49876,6 +49806,7 @@
           {
             "name": "Filter",
             "in": "query",
+            "description": "When true, the Severity/User/Tenant/API/StartDate/EndDate query filters are applied; otherwise the current day is returned unfiltered.",
             "required": false,
             "schema": {
               "type": "boolean"
@@ -49892,9 +49823,37 @@
           {
             "name": "logentryid",
             "in": "query",
+            "description": "Return single log entry by RowKey. RowKeys are either legacy GUIDs or the inverted-ticks format Write-LogMessage writes; both use only hex digits and hyphens.",
             "required": false,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request plus a continuation token in Metadata.nextLink, which the frontend passes back as nextLink to fetch the next page. Pages walk the requested date range newest-day-first and, within a day, in RowKey order (newest-first for entries written with the inverted-ticks RowKey scheme).",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "description": "Rows to return per page, clamped between 50 and 1000. Defaults to 400.",
+            "required": false,
+            "schema": {
+              "type": "integer"
             }
           },
           {
@@ -50142,15 +50101,32 @@
         "tags": [
           "Email-Exchange > Administration"
         ],
-        "description": "Lists Exchange Online mailboxes for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
+        "description": "Lists Exchange Online mailboxes for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants. When manualPagination is also set, one page is returned per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
         "parameters": [
           {
-            "name": "Minimal",
+            "name": "manualPagination",
             "in": "query",
-            "description": "Picker mode: address autocompletes only need the address + name, so skip the heavy field set, the per-mailbox computed properties, and the extra Get-OrganizationConfig call.",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink; cached reads only.",
             "required": false,
             "schema": {
-              "type": "boolean"
+              "type": "string"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
             }
           },
           {
@@ -51493,8 +51469,34 @@
         "tags": [
           "Identity > Reports"
         ],
-        "description": "Lists users and their MFA registration status for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
+        "description": "Lists users and their MFA registration status for a tenant. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants. When manualPagination is also set, one page is returned per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
         "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink; cached reads only.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           },
@@ -51831,9 +51833,6 @@
                         "x-cipp-field-source": "storage"
                       },
                       "PsaTicketId": {
-                        "x-cipp-field-source": "storage"
-                      },
-                      "PsaTicketPriority": {
                         "x-cipp-field-source": "storage"
                       },
                       "Reference": {
@@ -54377,10 +54376,6 @@
                         "x-cipp-field-source": "storage"
                       },
                       "PsaTicketId": {
-                        "type": "string",
-                        "x-cipp-field-source": "storage"
-                      },
-                      "PsaTicketPriority": {
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       },
@@ -62160,9 +62155,6 @@
                       "PsaTicketId": {
                         "x-cipp-field-source": "storage"
                       },
-                      "PsaTicketPriority": {
-                        "x-cipp-field-source": "storage"
-                      },
                       "Reference": {
                         "x-cipp-field-source": "storage"
                       },
@@ -66363,9 +66355,6 @@
                       "x-cipp-field-source": "storage"
                     },
                     "PsaTicketId": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "PsaTicketPriority": {
                       "x-cipp-field-source": "storage"
                     },
                     "Reference": {
