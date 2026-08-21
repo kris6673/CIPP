@@ -18,6 +18,4 @@ Retrieving a BitLocker key returns a live recovery key in plain text, so treat t
 Disabling a device stops it authenticating but leaves the object in place, so the action can be reversed and the device's recovery keys stay available. Deleting is the destructive option, and a device that is still in use will simply register itself again the next time it is joined.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

@@ -54,6 +54,4 @@ Cancelling is per task, not per vacation. Cancelling the task that reverses a ch
 Because a vacation is several independent tasks rather than one object, use the **Reference** column to find every task belonging to the same schedule before cancelling anything.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

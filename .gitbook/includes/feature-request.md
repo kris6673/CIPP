@@ -1,6 +1,8 @@
 ---
-title: Feature Requests / Ideas
+title: Feature Requests/Ideas
 ---
+
+***
 
 # Feature Requests / Ideas
 

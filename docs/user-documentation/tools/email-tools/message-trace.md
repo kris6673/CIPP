@@ -54,6 +54,4 @@ The details dialog traces one message to one recipient, so a message delivered t
 | Action | What Exchange Online did to the message at that stage.                         |
 | Detail | The supporting detail for the event, including the reason for any failure.     |
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

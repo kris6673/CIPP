@@ -99,10 +99,22 @@ function New-CIPPCAPolicy {
         return $UserIds
     }
 
+    # Custom variables must be resolved before the dependency lookups below. The only other
+    # substitution point is the Graph request layer (New-GraphPOSTRequest), which runs after the
+    # named-location / auth-strength / auth-context name matching - leaving those comparing raw
+    # %tokens% against real display names, so a location that exists is never matched: a duplicate
+    # is created on every deploy and the policy body keeps the token, which Graph then rejects
+    # (1040: NamedLocation with id <displayName> does not exist in the directory).
+    $RawJSON = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $RawJSON -EscapeForJson
+
     $displayName = ($RawJSON | ConvertFrom-Json).displayName
 
     $JSONobj = $RawJSON | ConvertFrom-Json | Select-Object * -ExcludeProperty ID, GUID, *time*
-    Remove-EmptyArrays $JSONobj
+    # Canonicalize to full desired-state shape: an overwrite is a PATCH, and PATCH merges, so every
+    # managed key the template omits (stripped by older editors at save time) is added back as its
+    # cleared form - [] for assignments, null for condition blocks - or the tenant's deviations
+    # (extra excluded users, a different user set) survive every run and drift never converges.
+    Format-CIPPCAPolicy -Policy $JSONobj
     #Remove context as it does not belong in the payload.
     try {
         if ($JSONobj.grantControls) {
@@ -121,7 +133,8 @@ function New-CIPPCAPolicy {
                 $JSONobj.sessionControls.PSObject.Properties.Remove('disableResilienceDefaults')
             }
             if (@($JSONobj.sessionControls.PSObject.Properties).Count -eq 0) {
-                $JSONobj.PSObject.Properties.Remove('sessionControls')
+                # Null, not removed - a removed property leaves the tenant's session controls in place.
+                $JSONobj.sessionControls = $null
             }
         }
         if ($State -and $State -ne 'donotchange') {
@@ -519,15 +532,17 @@ function New-CIPPCAPolicy {
                     $groups = ($BulkResults | Where-Object { $_.id -eq 'groups' }).body.value
                 }
 
+                # Cleared collections stay cleared - piping an empty into the converters resolves a
+                # phantom entry and logs a "did not match any user" warning for something nobody asked for.
                 foreach ($userType in 'includeUsers', 'excludeUsers') {
-                    if ($JSONobj.conditions.users.PSObject.Properties.Name -contains $userType -and $JSONobj.conditions.users.$userType -notin 'All', 'None', 'GuestsOrExternalUsers') {
+                    if (@($JSONobj.conditions.users.$userType).Count -gt 0 -and $JSONobj.conditions.users.$userType -notin 'All', 'None', 'GuestsOrExternalUsers') {
                         $JSONobj.conditions.users.$userType = @(Convert-UserNameToId -userNames $JSONobj.conditions.users.$userType)
                     }
                 }
 
                 # Check the included and excluded groups
                 foreach ($groupType in 'includeGroups', 'excludeGroups') {
-                    if ($JSONobj.conditions.users.PSObject.Properties.Name -contains $groupType) {
+                    if (@($JSONobj.conditions.users.$groupType).Count -gt 0) {
                         $JSONobj.conditions.users.$groupType = @(Convert-GroupNameToId -groupNames $JSONobj.conditions.users.$groupType -CreateGroups $CreateGroups -TenantFilter $TenantFilter -GroupTemplates $GroupTemplates)
                     }
                 }
@@ -541,26 +556,6 @@ function New-CIPPCAPolicy {
     }
     $JSONobj.PSObject.Properties.Remove('LocationInfo')
     $JSONobj.PSObject.Properties.Remove('AuthContextInfo')
-    foreach ($condition in $JSONobj.conditions.users.PSObject.Properties.Name) {
-        $value = $JSONobj.conditions.users.$condition
-        if ($null -eq $value) {
-            $JSONobj.conditions.users.$condition = @()
-            continue
-        }
-        if ($value -is [string]) {
-            if ([string]::IsNullOrWhiteSpace($value)) {
-                $JSONobj.conditions.users.$condition = @()
-                continue
-            }
-        }
-        if ($value -is [array]) {
-            $nonWhitespaceItems = $value | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-            if ($nonWhitespaceItems.Count -eq 0) {
-                $JSONobj.conditions.users.$condition = @()
-                continue
-            }
-        }
-    }
     if ($DisableSD -eq $true) {
         # Check if Security Defaults is already disabled using preloaded or live data
         $SDPolicy = $PreloadedSecurityDefaults

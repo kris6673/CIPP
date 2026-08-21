@@ -34,6 +34,4 @@ Entra ID keeps soft-deleted objects for 30 days, after which they are removed au
 Restoring a user does not restore their mailbox content by itself. Exchange Online reconnects the mailbox when the account is restored within the retention window and still holds a licence, so check the mailbox afterwards rather than assuming it came back with the account.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

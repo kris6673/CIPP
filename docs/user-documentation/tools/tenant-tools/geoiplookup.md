@@ -49,6 +49,4 @@ The table lists every address recorded across all of your tenants, not just the 
 The whitelist actions write against the tenant in the tenant selector, not the tenant shown in the entry's **Partition Key**. Acting on another tenant's row while a different tenant is selected creates a second entry rather than changing the existing one.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

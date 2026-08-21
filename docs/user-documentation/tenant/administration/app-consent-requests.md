@@ -42,6 +42,4 @@ The table's own filter menu additionally offers Pending requests, Expired reques
 The permissions being requested are not shown in the table or the flyout, and completing the prompt that **Approve in Entra** opens grants those permissions on behalf of the entire organisation, not only the user who asked. Review the request in Entra, or the application itself, before approving.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

@@ -59,6 +59,4 @@ The status panel polls every few seconds while a run is active, so it updates wi
 The Global Administrator role is a highly privileged role that should be used with caution. GDAP Relationships with this role will not be eligible for auto-extend.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

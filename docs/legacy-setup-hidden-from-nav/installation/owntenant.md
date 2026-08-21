@@ -39,6 +39,4 @@ GDAP permissions will not apply, and you must directly assign roles to the servi
 6. Select one of the three modes. The default mode is "Multi Tenant - GDAP Mode"
 7. Clear the tenant cache. Users of CIPP now have access to the CSP Partner tenant, or to the single tenant it's been configured for.
 
-***
-
 {% include "../../../.gitbook/includes/feature-request.md" %}

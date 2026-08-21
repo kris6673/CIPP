@@ -52,6 +52,4 @@ These columns are drawn from the Graph resource type `secureScoreControlProfile`
 The single-tenant view is read-only and does not show how complete each recommendation is. To see completion, change a recommendation's status, or read its full remediation guidance, use ..
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

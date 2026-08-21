@@ -42,6 +42,4 @@ The **Check Roles** action opens a dialog listing every management role that inc
 
 This is the practical answer to "which role does CIPP need in order to call this". Where a cmdlet CIPP relies on is unavailable, the roles listed here are what needs granting to the service account or the application, depending on which context you searched in.
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

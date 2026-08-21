@@ -40,6 +40,4 @@ An account exposed in several breaches appears once per breached credential, so 
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>View User</td><td>Opens the <a data-mention href="breach-lookup.md">breach-lookup.md</a> page with the selected address already filled in, showing everything known about that individual account.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

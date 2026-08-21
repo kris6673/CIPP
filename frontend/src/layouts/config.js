@@ -45,6 +45,11 @@ export const nativeMenuItems = [
             permissions: ['Identity.User.*'],
           },
           {
+            title: 'Guest Users',
+            path: '/identity/administration/guest-users',
+            permissions: ['Identity.User.*'],
+          },
+          {
             title: 'Risky Users',
             path: '/identity/administration/risky-users',
             permissions: ['Identity.User.*'],
@@ -221,6 +226,7 @@ export const nativeMenuItems = [
         title: 'Standards & Drift',
         permissions: [
           'Tenant.Standards.*',
+          'Tenant.Baselines.*',
           'Tenant.BestPracticeAnalyser.*',
           'Tenant.DomainAnalyser.*',
         ],
@@ -231,12 +237,12 @@ export const nativeMenuItems = [
             permissions: ['Tenant.Standards.*'],
             scope: 'global',
           },
-          // Baselines mockup - hidden from the nav for now; reach it directly
+          // Baselines - hidden from the nav for now; reach it directly
           // at /tenant/baselines
           // {
           //   title: 'Baselines (Preview)',
           //   path: '/tenant/baselines',
-          //   permissions: ['Tenant.Standards.*'],
+          //   permissions: ['Tenant.Baselines.*'],
           //   scope: 'global',
           // },
           {
@@ -1090,6 +1096,11 @@ export const nativeMenuItems = [
           {
             title: 'Mailbox Restores',
             path: '/email/tools/mailbox-restores',
+            permissions: ['Exchange.Mailbox.*'],
+          },
+          {
+            title: 'Message Encryption',
+            path: '/email/tools/message-encryption',
             permissions: ['Exchange.Mailbox.*'],
           },
         ],

@@ -33,6 +33,4 @@ Expired snoozes stay listed until they are removed. They no longer suppress anyt
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Remove Snooze</td><td>Removes the snooze after confirmation, so the alert fires again for that item on its next run.</td><td>true</td></tr></tbody></table>
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

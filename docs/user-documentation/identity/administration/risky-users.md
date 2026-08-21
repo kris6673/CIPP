@@ -26,6 +26,4 @@ Dismissing a risk closes it without changing anything about the account. It does
 This page depends on Microsoft Entra ID Protection, which needs Entra ID P2 licensing. Tenants without it return no risk data, so an empty table means the feature is unavailable rather than that no user is at risk.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

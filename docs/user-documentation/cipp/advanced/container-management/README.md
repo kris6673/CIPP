@@ -8,6 +8,4 @@ These pages are limited to users with the `superadmin` role.
 Note that it may take some time for a role change to take effect.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

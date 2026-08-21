@@ -2,6 +2,10 @@
 
 Lists your custom tenant groups and gives you the tools to create and maintain them. Tenant groups are logical groupings of managed tenants that can be selected anywhere CIPP asks for a tenant filter, which saves you picking the same set of tenants by hand every time. A group is either static, where you choose its members explicitly, or dynamic, where CIPP evaluates a set of rules against your tenants and works out the membership for you.
 
+{% hint style="warning" %}
+Creating, editing and deleting a group, and re-running a dynamic group's rules, all require a role with unrestricted tenant access, meaning **Allowed Tenants** left as `AllTenants` with nothing in **Blocked Tenants**. A role scoped to particular tenants or tenant groups is refused these actions. See [roles.md](../../../../../setup/setting-up-cipp/roles.md "mention").
+{% endhint %}
+
 ## Action Buttons
 
 <details>
@@ -65,7 +69,5 @@ Check the Usage column before deleting a group. A group that is still referenced
 ## Table Actions
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Edit Group</td><td>Opens the edit.md page for the selected group, where you can change its name, description, and membership or rules.</td><td>false</td></tr><tr><td>Run Dynamic Rules</td><td>Forces an immediate re-evaluation of the group's membership rules rather than waiting for the next scheduled run. Only offered on groups with a dynamic group type. You are asked to confirm before the rules are run.</td><td>true</td></tr><tr><td>Delete Group</td><td>Permanently removes the selected group. You are asked to confirm before the group is deleted.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
-
-***
 
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

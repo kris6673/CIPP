@@ -143,6 +143,4 @@ _Unused licences trigger an orange warning status. You can click the badge in th
   * **Purpose:** Extracts metrics like licence usage and Secure Scores using tailored commands (e.g., `Get-CIPPLicenseOverview`).
   * **Benefit:** Provides actionable insights for tenant optimisation.
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

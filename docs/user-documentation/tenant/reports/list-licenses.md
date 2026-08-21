@@ -49,6 +49,4 @@ This report tries to make an estimate of the NCE term by calculating the dates. 
 This page accepts filters passed in the URL, so links from dashboards and other reports can open it pre-filtered to a particular SKU or tenant.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

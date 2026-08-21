@@ -41,6 +41,4 @@ Sections will usually be larger than Test Count and Custom Count added together.
 Only repositories you have write access to are offered when uploading. Where the list is empty, the repositories registered with your instance are all read-only, which includes the built-in CyberDrain ones.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

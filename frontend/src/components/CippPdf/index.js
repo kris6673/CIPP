@@ -14,6 +14,10 @@ export {
   REPORT_COLOURS,
   REPORT_SERIES_SEMANTIC,
   applyReportVariables,
+  applyFooterText,
+  applyWatermarkText,
+  FOOTER_MAX_LENGTH,
+  WATERMARK_MAX_LENGTH,
   REPORT_COLOUR_ROLES,
   asReportTheme,
   buildPalette,
@@ -81,3 +85,11 @@ export {
   normalizeLogoUploads,
   resolveCoverImage,
 } from './resolveCoverImage'
+
+export { useReportVariables } from './useReportVariables'
+export {
+  useBrandingSettings,
+  BRANDING_QUERY_KEY,
+  BRANDING_GALLERY_QUERY_KEY,
+  DEFAULT_BRANDING,
+} from './useBrandingSettings'

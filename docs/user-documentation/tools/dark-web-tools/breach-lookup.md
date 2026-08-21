@@ -38,6 +38,4 @@ Where the lookup could not be completed, an **Error** card reports that the conn
 Password data is generally only returned for domain lookups. A breach record for an individual account normally carries the breach's details rather than the credentials themselves, so **Partial Password Available** will often read No even where the account is genuinely affected.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

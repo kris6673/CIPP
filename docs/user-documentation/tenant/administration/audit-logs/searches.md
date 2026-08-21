@@ -48,6 +48,4 @@ The ledger honours the tenant selector at the top of CIPP. Choose All Tenants to
 
 To queue a search of your own rather than wait for the scheduled windows, use the Manual Searches tab.
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

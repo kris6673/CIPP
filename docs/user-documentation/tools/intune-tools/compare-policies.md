@@ -88,6 +88,4 @@ This handling applies only when both sides are settings catalog policies. Compar
 
 Beneath the differences, the complete configuration of each policy is shown in its own panel, headed **Source A Settings** and **Source B Settings** with the policy's name. These show everything each policy contains, not only the settings that differ, which is useful for reviewing a policy in full or confirming a setting that the comparison treated as matching.
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

@@ -5,7 +5,7 @@ on:
     - cron: "30 1 * * *"
 jobs:
   stale:
-    if: github.repository_owner == 'KelvinTegelaar'
+    if: github.repository_owner == 'CyberDrain'
     runs-on: ubuntu-slim
     # Only issues are processed (days-before-pr-* are -1), so no pull-requests
     # scope is needed. contents:write would only be required for delete-branch.

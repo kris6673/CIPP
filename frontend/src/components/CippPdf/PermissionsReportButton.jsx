@@ -12,7 +12,8 @@ import {
   Typography,
 } from '@mui/material'
 import { Close, Download, PictureAsPdf } from '@mui/icons-material'
-import { PDFViewer, PDFDownloadLink } from '@react-pdf/renderer'
+import { PDFDownloadLink } from '@react-pdf/renderer'
+import { CippPdfPreview } from './CippPdfPreview'
 import {
   AlertBox,
   Bold,
@@ -29,7 +30,8 @@ import {
   StatRow,
   severityColour,
 } from './index'
-import { useSettings } from '../../hooks/use-settings'
+import { useReportVariables } from './useReportVariables'
+import { useBrandingSettings } from './useBrandingSettings'
 
 const nz = (value) => Number(value ?? 0)
 const plural = (count, singular, pluralForm) =>
@@ -64,6 +66,7 @@ export const PermissionsReportDocument = ({
   brandingSettings,
   tenantName,
   generatedOn,
+  variables,
 }) => {
   const summary = permissionsData?.summary ?? {}
   const assignments = permissionsData?.assignments ?? []
@@ -93,6 +96,7 @@ export const PermissionsReportDocument = ({
       tenantName={tenantName}
       reportName="Permissions Report"
       generatedOn={generatedOn}
+      variables={variables}
       coverLabel="Access Review"
       coverTitle="Permissions"
       coverAccent="Report"
@@ -223,7 +227,7 @@ export const PermissionsReportDocument = ({
               />
             </>
           ) : (
-            <ClearBox title="✓ No tenant-wide grants found">
+            <ClearBox title="✔️ No tenant-wide grants found">
               No site or library grants access to Everyone, Everyone except external users, or All
               Users.
             </ClearBox>
@@ -258,7 +262,7 @@ export const PermissionsReportDocument = ({
               />
             </>
           ) : (
-            <ClearBox title="✓ No external grants found">
+            <ClearBox title="✔️ No external grants found">
               No guest or external identity holds a permission on a scanned site or library.
             </ClearBox>
           )}
@@ -298,7 +302,7 @@ export const PermissionsReportDocument = ({
               />
             </>
           ) : (
-            <ClearBox title="✓ Full Control is held through Owners groups">
+            <ClearBox title="✔️ Full Control is held through Owners groups">
               No user or directory group holds Full Control outside a site's Owners group.
             </ClearBox>
           )}
@@ -318,7 +322,7 @@ export const PermissionsReportDocument = ({
               whether each detachment was intentional and is still needed.
             </Paragraph>
           ) : (
-            <ClearBox title="✓ All libraries inherit from their site">
+            <ClearBox title="✔️ All libraries inherit from their site">
               Every scanned library takes its permissions from its site, so site-level access
               management covers them all.
             </ClearBox>
@@ -417,7 +421,8 @@ export const PermissionsReportDocument = ({
 export const PermissionsReportButton = ({ permissionsData, tenantName }) => {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [generatedOn, setGeneratedOn] = useState('')
-  const brandingSettings = useSettings()?.customBranding
+  const brandingSettings = useBrandingSettings()
+  const variables = useReportVariables()
   const hasData = !!permissionsData?.summary
 
   const handleOpen = () => {
@@ -433,6 +438,7 @@ export const PermissionsReportButton = ({ permissionsData, tenantName }) => {
       brandingSettings={brandingSettings}
       tenantName={tenantName}
       generatedOn={generatedOn}
+      variables={variables}
     />
   )
 
@@ -471,9 +477,14 @@ export const PermissionsReportButton = ({ permissionsData, tenantName }) => {
         </DialogTitle>
         <DialogContent dividers sx={{ p: 0 }}>
           {dialogOpen && (
-            <PDFViewer width="100%" height="100%">
+            <CippPdfPreview
+              width="100%"
+              height="100%"
+              title={`Permissions Report - ${tenantName}`}
+              fileName={`Permissions_Report_${tenantName}.pdf`}
+            >
               {documentNode}
-            </PDFViewer>
+            </CippPdfPreview>
           )}
         </DialogContent>
         <DialogActions>

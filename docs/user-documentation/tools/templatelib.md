@@ -88,6 +88,4 @@ Saving creates a scheduled task named after the tenant or repository, which perf
 Templates are compared before being written. Where a template already exists, carries the same source, and its content is unchanged, CIPP skips it rather than rewriting it, so a sync that reports no changes is working correctly.
 {% endhint %}
 
-***
-
 {% include "../../../.gitbook/includes/feature-request.md" %}

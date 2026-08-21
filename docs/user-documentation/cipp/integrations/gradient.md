@@ -87,6 +87,4 @@ When Gradient is enabled, CIPP alerts configured to deliver to a PSA are also se
 
 CIPP checks the delivery status of each alert after sending it, and records a failure in the CIPP logs where Gradient reports that the alert could not be delivered. If tickets are not appearing, the logs are the first place to look.
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

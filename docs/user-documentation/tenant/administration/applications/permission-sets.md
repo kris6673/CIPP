@@ -25,6 +25,4 @@ Sets are created by hand from this page, and also automatically by the **Create 
 Editing a permission set changes it for every application template that references it. The change does not reach tenants on its own: applications already deployed keep the permissions they were granted until the template is deployed again. Deleting a set leaves any template referencing it without its permissions.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

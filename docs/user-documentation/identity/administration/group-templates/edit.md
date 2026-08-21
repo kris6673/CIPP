@@ -12,6 +12,4 @@ Groups already created from a template are not affected by editing it. A templat
 Changing the group type on an existing template changes which settings apply to it. Values belonging to the previous type stay on the record but stop being offered, so a template switched from a Distribution List to a Security Group keeps its aliases without any way to see or clear them from this page. Where the type is wrong it is usually cleaner to create a new template and delete the old one.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

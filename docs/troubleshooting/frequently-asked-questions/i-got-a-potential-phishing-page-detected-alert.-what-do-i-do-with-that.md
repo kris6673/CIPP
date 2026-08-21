@@ -47,6 +47,4 @@ Since the standard is based on detecting the site's referrer, there are a number
 
 * Browser Extensions: Any browser extension that modifies the page's CSS could modify the site's referrer. A common extension that modifies the page's CSS is [Dark Reader](https://darkreader.org/).
 
-***
-
 {% include "../../../.gitbook/includes/feature-request.md" %}

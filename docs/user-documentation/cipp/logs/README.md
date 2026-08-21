@@ -69,6 +69,4 @@ Debug entries are excluded unless you explicitly select Debug in **Filter by Sev
 | Critical | A platform-level failure occurred. Reserved for situations where CIPP's own infrastructure is impacted, such as failures retrieving tenant lists or GDAP relationships. These indicate a problem with CIPP itself, not a specific tenant action. |
 | Debug    | Diagnostic information for troubleshooting. Only recorded when Debug Mode is enabled. Not included in notifications by default, and not returned unless Debug is selected in the severity filter.                                                |
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

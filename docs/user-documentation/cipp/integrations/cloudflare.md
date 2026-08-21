@@ -59,6 +59,4 @@ The per-integration toggles only appear once this integration is enabled and sav
 The same credentials are used everywhere. If your Hudu instance and your webhook endpoint sit behind different Cloudflare Access applications, the one service token needs to be accepted by both.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

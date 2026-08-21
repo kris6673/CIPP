@@ -38,6 +38,4 @@ This page lists every timer CIPP defines, including those tied to features that 
 This applies to every timer at once. There is no way to reset an individual schedule, and no record is kept of what the customised values were, so note anything you want to reinstate before resetting.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

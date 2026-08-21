@@ -12,7 +12,8 @@ import {
   Typography,
 } from '@mui/material'
 import { Close, Download, PictureAsPdf } from '@mui/icons-material'
-import { PDFViewer, PDFDownloadLink } from '@react-pdf/renderer'
+import { PDFDownloadLink } from '@react-pdf/renderer'
+import { CippPdfPreview } from './CippPdfPreview'
 import {
   AlertBox,
   Bold,
@@ -29,7 +30,8 @@ import {
   StatRow,
   severityColour,
 } from './index'
-import { useSettings } from '../../hooks/use-settings'
+import { useReportVariables } from './useReportVariables'
+import { useBrandingSettings } from './useBrandingSettings'
 
 const nz = (value) => Number(value ?? 0)
 const joinList = (value) => (Array.isArray(value) ? value.join(', ') : (value ?? ''))
@@ -60,6 +62,7 @@ export const SharingReportDocument = ({
   brandingSettings,
   tenantName,
   generatedOn,
+  variables,
 }) => {
   const summary = sharingData?.summary ?? {}
   const links = sharingData?.links ?? []
@@ -91,6 +94,7 @@ export const SharingReportDocument = ({
       tenantName={tenantName}
       reportName="Sharing Report"
       generatedOn={generatedOn}
+      variables={variables}
       coverLabel="Data Sharing Review"
       coverTitle="Sharing"
       coverAccent="Report"
@@ -208,7 +212,7 @@ export const SharingReportDocument = ({
               />
             </>
           ) : (
-            <ClearBox title="✓ No anonymous editable links">
+            <ClearBox title="✔️ No anonymous editable links">
               No anonymous link grants write access.
             </ClearBox>
           )}
@@ -243,7 +247,7 @@ export const SharingReportDocument = ({
               />
             </>
           ) : (
-            <ClearBox title="✓ All anonymous links expire">
+            <ClearBox title="✔️ All anonymous links expire">
               Every anonymous link has an expiry date set.
             </ClearBox>
           )}
@@ -281,7 +285,7 @@ export const SharingReportDocument = ({
               />
             </>
           ) : (
-            <ClearBox title="✓ No externally shared folders">
+            <ClearBox title="✔️ No externally shared folders">
               External and anonymous shares point at individual files rather than folders.
             </ClearBox>
           )}
@@ -313,7 +317,7 @@ export const SharingReportDocument = ({
               />
             </>
           ) : (
-            <ClearBox title="✓ No external recipients">
+            <ClearBox title="✔️ No external recipients">
               Nothing has been shared with an identity outside the organisation.
             </ClearBox>
           )}
@@ -408,7 +412,8 @@ export const SharingReportDocument = ({
 export const SharingReportButton = ({ sharingData, tenantName }) => {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [generatedOn, setGeneratedOn] = useState('')
-  const brandingSettings = useSettings()?.customBranding
+  const brandingSettings = useBrandingSettings()
+  const variables = useReportVariables()
   const hasData = !!sharingData?.summary
 
   const handleOpen = () => {
@@ -424,6 +429,7 @@ export const SharingReportButton = ({ sharingData, tenantName }) => {
       brandingSettings={brandingSettings}
       tenantName={tenantName}
       generatedOn={generatedOn}
+      variables={variables}
     />
   )
 
@@ -462,9 +468,14 @@ export const SharingReportButton = ({ sharingData, tenantName }) => {
         </DialogTitle>
         <DialogContent dividers sx={{ p: 0 }}>
           {dialogOpen && (
-            <PDFViewer width="100%" height="100%">
+            <CippPdfPreview
+              width="100%"
+              height="100%"
+              title={`Sharing Report - ${tenantName}`}
+              fileName={`Sharing_Report_${tenantName}.pdf`}
+            >
               {documentNode}
-            </PDFViewer>
+            </CippPdfPreview>
           )}
         </DialogContent>
         <DialogActions>
