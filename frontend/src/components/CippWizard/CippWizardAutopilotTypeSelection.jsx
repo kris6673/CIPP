@@ -1,7 +1,17 @@
-import { Avatar, Card, CardContent, Stack, SvgIcon, Typography } from '@mui/material'
+import {
+  Avatar,
+  Card,
+  CardContent,
+  Stack,
+  SvgIcon,
+  Typography,
+} from '@mui/material'
 import { useState, useEffect } from 'react'
 import { CippWizardStepButtons } from './CippWizardStepButtons'
-import { IdentificationIcon, RocketLaunchIcon } from '@heroicons/react/24/outline'
+import {
+  IdentificationIcon,
+  RocketLaunchIcon,
+} from '@heroicons/react/24/outline'
 
 export const CippWizardAutopilotTypeSelection = (props) => {
   const { onNextStep, formControl, currentStep, onPreviousStep } = props
@@ -78,7 +88,8 @@ export const CippWizardAutopilotTypeSelection = (props) => {
               sx={{
                 cursor: 'pointer',
                 ...(isSelected && {
-                  boxShadow: (theme) => `0px 0px 0px 2px ${theme.palette.primary.main}`,
+                  boxShadow: (theme) =>
+                    `0px 0px 0px 2px ${theme.palette.primary.main}`,
                 }),
                 '&:hover': {
                   ...(isSelected ? {} : { boxShadow: 8 }),
@@ -100,7 +111,9 @@ export const CippWizardAutopilotTypeSelection = (props) => {
                   </Avatar>
                   <Stack spacing={1}>
                     <Typography variant="h6">{option.label}</Typography>
-                    <Typography color="text.secondary">{option.description}</Typography>
+                    <Typography color="text.secondary">
+                      {option.description}
+                    </Typography>
                   </Stack>
                 </Stack>
               </CardContent>

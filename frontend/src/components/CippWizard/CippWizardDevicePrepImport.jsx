@@ -38,7 +38,9 @@ export const CippWizardDevicePrepImport = (props) => {
   } = props
   const tableData = useWatch({ control: formControl.control, name: name })
   // Seed from the form so navigating back to this step keeps the imported rows
-  const [newTableData, setTableData] = useState(() => formControl.getValues(name) || [])
+  const [newTableData, setTableData] = useState(
+    () => formControl.getValues(name) || []
+  )
   const fileInputRef = React.useRef(null)
   const [manualDialogOpen, setManualDialogOpen] = useState(false)
   const [manualInputs, setManualInputs] = useState([{}])
@@ -66,7 +68,8 @@ export const CippWizardDevicePrepImport = (props) => {
 
     rows.forEach((row, index) => {
       const missingFields = fields.filter(
-        (field) => !row[field.propertyName] || row[field.propertyName].trim() === ''
+        (field) =>
+          !row[field.propertyName] || row[field.propertyName].trim() === ''
       )
       if (missingFields.length > 0) {
         errors.push(
@@ -77,7 +80,9 @@ export const CippWizardDevicePrepImport = (props) => {
         return
       }
 
-      const commaFields = fields.filter((field) => row[field.propertyName].includes(','))
+      const commaFields = fields.filter((field) =>
+        row[field.propertyName].includes(',')
+      )
       if (commaFields.length > 0) {
         errors.push(
           `Row ${index + 1}: ${commaFields
@@ -115,7 +120,8 @@ export const CippWizardDevicePrepImport = (props) => {
             (field) =>
               header === field.propertyName ||
               header === field.friendlyName ||
-              (field.alternativePropertyNames && field.alternativePropertyNames.includes(header))
+              (field.alternativePropertyNames &&
+                field.alternativePropertyNames.includes(header))
           )
         })
 
@@ -141,7 +147,9 @@ export const CippWizardDevicePrepImport = (props) => {
             const hasPropertyName = headers.includes(field.propertyName)
             const hasFriendlyName = headers.includes(field.friendlyName)
             const hasAlternativeName = field.alternativePropertyNames
-              ? field.alternativePropertyNames.some((altName) => headers.includes(altName))
+              ? field.alternativePropertyNames.some((altName) =>
+                  headers.includes(altName)
+                )
               : false
             return !hasPropertyName && !hasFriendlyName && !hasAlternativeName
           })
@@ -156,7 +164,9 @@ export const CippWizardDevicePrepImport = (props) => {
                 return `"${formats.join('" or "')}"`
               })
               .join(', ')
-            setImportErrors([`CSV is missing required columns: ${missingFormats}`])
+            setImportErrors([
+              `CSV is missing required columns: ${missingFormats}`,
+            ])
             return
           }
         } else {
@@ -226,7 +236,9 @@ export const CippWizardDevicePrepImport = (props) => {
 
   const validateRows = (rows) => {
     const errors = collectRowErrors(
-      rows.filter((row) => Object.values(row).some((value) => value && value.trim() !== ''))
+      rows.filter((row) =>
+        Object.values(row).some((value) => value && value.trim() !== '')
+      )
     )
     setValidationErrors(errors)
     return errors.length === 0
@@ -234,7 +246,9 @@ export const CippWizardDevicePrepImport = (props) => {
 
   const handleManualAdd = () => {
     const newRows = manualInputs
-      .filter((row) => Object.values(row).some((value) => value && value.trim() !== ''))
+      .filter((row) =>
+        Object.values(row).some((value) => value && value.trim() !== '')
+      )
       .map((row) => {
         return fields.reduce((obj, field) => {
           obj[field.propertyName] = row[field.propertyName] || ''
@@ -267,13 +281,17 @@ export const CippWizardDevicePrepImport = (props) => {
   const lastField = fields[fields.length - 1]
 
   const handleKeyPress = (event, rowIndex) => {
-    if (event.key === 'Enter' && manualInputs[rowIndex]?.[lastField.propertyName]) {
+    if (
+      event.key === 'Enter' &&
+      manualInputs[rowIndex]?.[lastField.propertyName]
+    ) {
       if (rowIndex === manualInputs.length - 1) {
         const newRowIndex = manualInputs.length
         setManualInputs((prev) => [...prev, {}])
         // Wait for the next render cycle to set focus
         setTimeout(() => {
-          const newInput = inputRefs.current[newRowIndex]?.[fields[0].propertyName]
+          const newInput =
+            inputRefs.current[newRowIndex]?.[fields[0].propertyName]
           if (newInput) {
             newInput.focus()
           }
@@ -354,7 +372,11 @@ export const CippWizardDevicePrepImport = (props) => {
             >
               Import from CSV
             </Button>
-            <Button startIcon={<Add />} onClick={() => setManualDialogOpen(true)} size="small">
+            <Button
+              startIcon={<Add />}
+              onClick={() => setManualDialogOpen(true)}
+              size="small"
+            >
               Manual Import
             </Button>
           </Stack>
@@ -368,7 +390,12 @@ export const CippWizardDevicePrepImport = (props) => {
         formControl={formControl}
       />
 
-      <Dialog open={manualDialogOpen} onClose={handleDialogClose} maxWidth="lg" fullWidth>
+      <Dialog
+        open={manualDialogOpen}
+        onClose={handleDialogClose}
+        maxWidth="lg"
+        fullWidth
+      >
         <DialogTitle>Manual Import</DialogTitle>
         <DialogContent>
           <Stack spacing={2}>
@@ -413,10 +440,15 @@ export const CippWizardDevicePrepImport = (props) => {
                     label={field.friendlyName}
                     value={row[field.propertyName] || ''}
                     onChange={(e) =>
-                      handleManualInputChange(rowIndex, field.propertyName, e.target.value)
+                      handleManualInputChange(
+                        rowIndex,
+                        field.propertyName,
+                        e.target.value
+                      )
                     }
                     onKeyDown={(e) =>
-                      field.propertyName === lastField.propertyName && handleKeyPress(e, rowIndex)
+                      field.propertyName === lastField.propertyName &&
+                      handleKeyPress(e, rowIndex)
                     }
                     fullWidth
                     size="small"
@@ -448,7 +480,12 @@ export const CippWizardDevicePrepImport = (props) => {
               // Below md one row becomes one card instead of a horizontal scroller.
               if (isMobile) {
                 return (
-                  <Paper key={rowIndex} variant="outlined" data-testid="manual-row" sx={{ p: 2 }}>
+                  <Paper
+                    key={rowIndex}
+                    variant="outlined"
+                    data-testid="manual-row"
+                    sx={{ p: 2 }}
+                  >
                     <Stack
                       direction="row"
                       spacing={1}
@@ -457,7 +494,11 @@ export const CippWizardDevicePrepImport = (props) => {
                       useFlexGap
                     >
                       {rowNumber}
-                      <Typography variant="subtitle2" sx={{ flexGrow: 1, minWidth: 0 }} noWrap>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ flexGrow: 1, minWidth: 0 }}
+                        noWrap
+                      >
                         Device {rowIndex + 1}
                       </Typography>
                       <IconButton

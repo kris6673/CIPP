@@ -82,7 +82,10 @@ const Page = () => {
           {
             friendlyName: 'Manufacturer',
             propertyName: 'manufacturer',
-            alternativePropertyNames: ['Manufacturer name', 'oemManufacturerName'],
+            alternativePropertyNames: [
+              'Manufacturer name',
+              'oemManufacturerName',
+            ],
           },
           {
             friendlyName: 'Model',
@@ -92,7 +95,11 @@ const Page = () => {
           {
             friendlyName: 'Serial Number',
             propertyName: 'serialNumber',
-            alternativePropertyNames: ['Serial number', 'Device Serial Number', 'SerialNumber'],
+            alternativePropertyNames: [
+              'Serial number',
+              'Device Serial Number',
+              'SerialNumber',
+            ],
           },
         ],
         fileName: 'corporate-identifiers-template',
