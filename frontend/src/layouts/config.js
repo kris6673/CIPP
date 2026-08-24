@@ -76,8 +76,8 @@ export const nativeMenuItems = [
             permissions: ['Identity.User.*'],
           },
           {
-            title: 'Roles',
-            path: '/identity/administration/roles',
+            title: 'PIM',
+            path: '/identity/administration/pim',
             permissions: ['Identity.Role.*'],
           },
           {
