@@ -41639,8 +41639,34 @@
         "tags": [
           "Tenant > Conditional"
         ],
-        "description": "Lists Conditional Access policies for a tenant with resolved display names for users, groups, applications, and locations.",
+        "description": "Lists Conditional Access policies for a tenant with resolved display names for users, groups, applications, and locations. When manualPagination is set on an AllTenants read, one page is returned per request with a continuation token in Metadata.nextLink.",
         "parameters": [
+          {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request with a continuation token in Metadata.nextLink; AllTenants reads only.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           }
