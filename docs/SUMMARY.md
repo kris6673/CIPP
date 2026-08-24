@@ -20,6 +20,7 @@
   * [Recommended Roles](setup/maintaining-cipp/recommended-roles.md)
   * [Migrating to Hosted CIPP](setup/maintaining-cipp/migrating-to-hosted-cipp.md)
   * [Migrating to the Latest Version of CIPP](setup/maintaining-cipp/migrating-to-the-latest-version-of-cipp.md)
+  * [Migrating to the new infrastructure](setup/maintaining-cipp/migrating-to-the-new-infrastructure.md)
 * [Implementing CIPP](setup/implementation-guide/README.md)
   * [Recommended First Steps](setup/implementation-guide/recommended-first-steps.md)
   * [Standards Setup](setup/implementation-guide/standards-setup.md)
