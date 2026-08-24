@@ -251,6 +251,13 @@
                   "AlertComment": {
                     "type": "string"
                   },
+                  "becActions": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    },
+                    "description": "Which containment actions the 'becremediate' action runs (ListBECRemediationActions ids); empty = the default six."
+                  },
                   "conditions": {
                     "type": "array",
                     "items": {
@@ -4688,6 +4695,85 @@
         "x-cipp-reads-via": [
           "Get-CIPPOfficeAppBody"
         ]
+      }
+    },
+    "/api/AddPIMRoleSettingsTemplate": {
+      "post": {
+        "summary": "Create or update a PIM role settings template.",
+        "operationId": "AddPIMRoleSettingsTemplate",
+        "tags": [
+          "Identity > Administration > Roles"
+        ],
+        "description": "Saves a Privileged Identity Management role settings template. The settings are validated against CIPP's secure floor (activation must expire within 24 hours and require MFA or an authentication context plus a justification; eligibilities and active assignments must expire within a year; active assignments must require a justification). A template below the floor is rejected with the list of problems rather than silently adjusted. Pass GUID to update an existing template.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "description": {
+                    "type": "string"
+                  },
+                  "GUID": {
+                    "type": "string",
+                    "description": "Existing template GUID when editing."
+                  },
+                  "roles": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    },
+                    "description": "Roles (label/value pairs of role template ids) when roleScope is Custom."
+                  },
+                  "roleScope": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "PrivilegedRoles | AllRoles | Custom"
+                  },
+                  "settings": {
+                    "type": "string",
+                    "description": "Role activation, eligibility, assignment, approval and notification settings."
+                  },
+                  "templateName": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.ReadWrite",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/AddPolicy": {
@@ -14747,18 +14833,92 @@
         "x-cipp-role": "Tenant.Baselines.ReadWrite"
       }
     },
-    "/api/ExecBECCheck": {
+    "/api/ExecBECBulkCheck": {
       "get": {
-        "summary": "ExecBECCheck",
+        "summary": "Queues Business Email Compromise investigations for many users at once.",
+        "operationId": "ExecBECBulkCheck",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Queues one BEC investigation per user (at most 50 per request) as a single orchestration with a queue entry for progress. Accepts either an array of { UserIds, tenantFilter } items (the Users table bulk action) or one object with UserIds[]. Selection=ForeignSuccessfulSignIns picks every user with a successful sign-in in the last 7 days from outside their usage location instead of an explicit list. Each run gets its own case id; results appear on the BEC Reports page and each user's Compromise Remediation tab.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.Read"
+      }
+    },
+    "/api/ExecBECCheck": {
+      "post": {
+        "summary": "Reads, polls or starts a Business Email Compromise investigation.",
         "operationId": "ExecBECCheck",
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "Returns the business email compromise assessment for a user: sign-ins with a location analysis against the user's assigned usage location, mailbox rules and rule changes, trusted/blocked sender changes, OneDrive and SharePoint sharing link activity, added applications matched against the known-malicious catalog, MFA methods, Intune devices, sent mail, and tenant-wide password changes. If no cached result exists the check is queued as a background job and the response reports it as waiting, so poll rather than expecting results on the first call. Pass overwrite=true to force a fresh run.",
+        "description": "GET with GUID (or caseId) returns that run: while it is queued or running { Waiting = true, Progress } where Progress is the job status (queued until a worker picks it up, then running) and the per-step state the page renders; { Error, Progress } when it failed; otherwise the results payload with the server-side Score, per-collector Completeness and a Run block. A queued or running run whose progress has not moved for 20 minutes is marked failed by this poll (the worker restarted or the run was abandoned) and returned as { Error }. GET without a GUID returns the user's latest run as { GUID, Status } and starts nothing (GUID is null when the user has no runs). POST with tenantFilter, userid and userName queues a new run and returns its { GUID }; GET with overwrite=true does the same for older callers. Every run is the full investigation and is kept in the BecReports table; metadata only, never message content.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tenantFilter": {
+                    "type": "string"
+                  },
+                  "userid": {
+                    "type": "string",
+                    "description": "Object id of the user to investigate"
+                  },
+                  "userName": {
+                    "type": "string",
+                    "description": "The user's UPN (stored on the run and used by the collectors)"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
         "parameters": [
+          {
+            "name": "caseId",
+            "in": "query",
+            "description": "The run to read; GUID keeps the original poll contract",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "GUID",
             "in": "query",
+            "description": "The run to read; GUID keeps the original poll contract",
             "required": false,
             "schema": {
               "type": "string"
@@ -14767,9 +14927,10 @@
           {
             "name": "overwrite",
             "in": "query",
+            "description": "A POST body, or overwrite=true on GET, starts a new run",
             "required": false,
             "schema": {
-              "type": "boolean"
+              "type": "string"
             }
           },
           {
@@ -14778,6 +14939,7 @@
           {
             "name": "userid",
             "in": "query",
+            "description": "Object id of the user to investigate",
             "required": false,
             "schema": {
               "type": "string"
@@ -14786,6 +14948,7 @@
           {
             "name": "userName",
             "in": "query",
+            "description": "The user's UPN (stored on the run and used by the collectors)",
             "required": false,
             "schema": {
               "type": "string"
@@ -14799,40 +14962,34 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
                   "properties": {
-                    "Batch": {
+                    "CaseId": {
                       "x-cipp-field-source": "backend"
                     },
-                    "ETag": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "OrchestratorName": {
+                    "Containment": {
                       "x-cipp-field-source": "backend"
                     },
-                    "PartitionKey": {
-                      "x-cipp-field-source": "storage"
+                    "EvidenceCreatedAt": {
+                      "x-cipp-field-source": "backend"
                     },
-                    "Results": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
+                    "EvidenceSha256": {
+                      "x-cipp-field-source": "backend"
                     },
-                    "RowKey": {
-                      "x-cipp-field-source": "storage"
+                    "ExtractedAt": {
+                      "x-cipp-field-source": "backend"
                     },
-                    "SkipLog": {
+                    "RequestedAt": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "RequestedBy": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "Scope": {
                       "x-cipp-field-source": "backend"
                     },
                     "Status": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "Timestamp": {
-                      "type": "string",
-                      "x-cipp-field-source": "storage"
-                    },
-                    "UserId": {
-                      "x-cipp-field-source": "storage"
+                      "x-cipp-field-source": "backend"
                     }
                   }
                 }
@@ -14844,6 +15001,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -14854,13 +15014,14 @@
         "x-cipp-role": "Identity.User.Read"
       }
     },
-    "/api/ExecBECRemediate": {
+    "/api/ExecBECContentSearch": {
       "post": {
-        "summary": "ExecBECRemediate",
-        "operationId": "ExecBECRemediate",
+        "summary": "Creates, polls, purges or removes a Purview content search for a BEC case.",
+        "operationId": "ExecBECContentSearch",
         "tags": [
           "Identity > Administration > Users"
         ],
+        "description": "Action=Create builds a KQL query from Sender, Subject, StartDate and EndDate, creates the search across Locations ('All' or mailbox addresses) and starts it. Action=Status returns its state and item counts per location - counts only, never content. Action=Purge soft-deletes the found items through Purview: it needs the superadmin role and Confirmation equal to the search name; Purview removes at most 10 items per mailbox per run. Action=Remove deletes the search definition. CIPP-SAM needs the Purview Compliance Search role (and Search And Purge for Purge).",
         "requestBody": {
           "required": true,
           "content": {
@@ -14868,13 +15029,42 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "Action": {
+                    "type": "string",
+                    "description": "Create | Status | Purge | Remove"
+                  },
+                  "caseId": {
+                    "type": "string"
+                  },
+                  "Confirmation": {
+                    "type": "string",
+                    "description": "on Purge: must equal the search name"
+                  },
+                  "EndDate": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "Locations": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    }
+                  },
+                  "Name": {
+                    "type": "string",
+                    "description": "the search name (required for Status/Purge/Remove; generated on Create)"
+                  },
+                  "Sender": {
+                    "type": "string"
+                  },
+                  "StartDate": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "Subject": {
+                    "type": "string"
+                  },
                   "tenantFilter": {
-                    "type": "string"
-                  },
-                  "userid": {
-                    "type": "string"
-                  },
-                  "username": {
                     "type": "string"
                   }
                 },
@@ -14894,10 +15084,253 @@
                   "type": "object",
                   "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
                   "properties": {
-                    "Results": {
+                    "resultText": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "state": {
                       "x-cipp-field-source": "backend"
                     }
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.ReadWrite"
+      }
+    },
+    "/api/ExecBECEvidenceExport": {
+      "post": {
+        "summary": "Builds the evidence package for a Business Email Compromise run.",
+        "operationId": "ExecBECEvidenceExport",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Creates a ZIP for the run: results.json, one CSV per finding set, the containment history, every logbook entry stamped with the case id, the PDF report when pdfBase64 is supplied, and a manifest with the SHA-256 of every file. Stores it with the run (the run row records the package's SHA-256) and returns the manifest; download it with ListBECEvidence. Metadata only - nothing in the package is message content.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "caseId": {
+                    "type": "string"
+                  },
+                  "pdfBase64": {
+                    "type": "string",
+                    "description": "optional: the report PDF rendered in the browser, base64-encoded"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                  "properties": {
+                    "Bytes": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "CaseId": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "FileCount": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "Manifest": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "ZipSha256": {
+                      "x-cipp-field-source": "backend"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.Read"
+      }
+    },
+    "/api/ExecBECRemediate": {
+      "post": {
+        "summary": "Runs selectable Business Email Compromise containment for a user.",
+        "operationId": "ExecBECRemediate",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Runs the selected containment actions (see ListBECRemediationActions) for a user. With no Actions the original six steps run: reset password, block sign-in, revoke sessions, remove MFA methods, disable inbox rules, disable OneDrive sharing. Actions marked Critical require Confirmation to equal the user's UPN. Pass CaseId to resolve default targets (flagged consents, delegations, rules, devices) from that BEC run and to record the outcome on it; Parameters carries explicit per-action targets (MfaMethodIds, GrantIds, AppRoleAssignmentIds, ServicePrincipalIds, RuleIds, Delegations, TransportRuleIds, AddInIds, Protocols, MobileDeviceIds, RegisteredDeviceIds, CAPolicy).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Actions": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    },
+                    "description": "Action ids from ListBECRemediationActions; empty runs the default six"
+                  },
+                  "CaseId": {
+                    "type": "string",
+                    "description": "the BEC run whose findings supply default targets and which records the outcome"
+                  },
+                  "Confirmation": {
+                    "type": "string",
+                    "description": "must equal the user's UPN when a Critical action is selected"
+                  },
+                  "Parameters": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  },
+                  "userid": {
+                    "type": "string"
+                  },
+                  "username": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter",
+                  "userid",
+                  "username"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Derived from the Microsoft Graph entity it queries, and the fields the endpoint selects onto each record. The fields taken from Graph are the ones this endpoint selects, so they are what the response actually carries.",
+                  "properties": {
+                    "resultText": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "state": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph,backend"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.ReadWrite"
+      }
+    },
+    "/api/ExecBECReport": {
+      "post": {
+        "summary": "Manages a stored Business Email Compromise run.",
+        "operationId": "ExecBECReport",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Action=Delete removes a BEC run permanently: its results payload, its evidence package and the run row. Runs are otherwise kept indefinitely.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "type": "string",
+                    "description": "Currently only Delete"
+                  },
+                  "caseId": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
                 }
               }
             }
@@ -28452,6 +28885,129 @@
         "x-cipp-role": "Identity.User.ReadWrite"
       }
     },
+    "/api/ExecPIMRoleAssignment": {
+      "post": {
+        "summary": "Change a directory role assignment through PIM in the secure direction only.",
+        "operationId": "ExecPIMRoleAssignment",
+        "tags": [
+          "Identity > Administration > Roles"
+        ],
+        "description": "Converts a permanent assignment to eligible, grants a time-bound active assignment, extends or renews a time-bound assignment or eligibility, or removes an assignment. Every request must carry an expiration (a duration or an end date); permanent / no-expiration assignments are refused, as are changes to group-inherited rows, the CIPP-SAM application and the last active Global Administrator. Requires Entra ID P2.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Action": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "ConvertToEligible | GrantActive | Extend | Renew | Remove"
+                  },
+                  "AssignmentType": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "The row's current assignment type: Permanent | Active | ActivatedFromEligible | Eligible"
+                  },
+                  "DirectoryScopeId": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "'/' for the whole directory or '/administrativeUnits/{id}'."
+                  },
+                  "Duration": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "ISO 8601 lifetime such as PT4H or P1Y. Use either Duration or EndDateTime, not both."
+                  },
+                  "EndDateTime": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Absolute end (unix seconds or ISO 8601). Use either Duration or EndDateTime, not both."
+                  },
+                  "Justification": {
+                    "type": "string",
+                    "description": "Reason recorded on the PIM request and in the CIPP logbook."
+                  },
+                  "PrincipalId": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Object id of the user, group or service principal."
+                  },
+                  "RoleDefinitionId": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Role template id (roleDefinitionId as PIM reports it)."
+                  },
+                  "tenantFilter": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "TimeZone": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "IANA time zone of the browser (e.g. Australia/Perth); only used to word the end time in the result."
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.ReadWrite"
+      }
+    },
     "/api/ExecQuarantineManagement": {
       "post": {
         "summary": "ExecQuarantineManagement",
@@ -39635,6 +40191,359 @@
           }
         ],
         "x-cipp-role": "Identity.AuditLog.Read"
+      }
+    },
+    "/api/ListBECEvidence": {
+      "get": {
+        "summary": "Downloads the evidence package of a Business Email Compromise run.",
+        "operationId": "ListBECEvidence",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Streams the evidence ZIP that ExecBECEvidenceExport stored for the run as application/zip. Verify the download against the SHA-256 recorded on the run (EvidenceSha256 in ListBECReports). Without download=true the package's metadata is returned instead.",
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "download",
+            "in": "query",
+            "description": "true streams the ZIP; otherwise the package metadata is returned",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.Read"
+      }
+    },
+    "/api/ListBECPhishingSpread": {
+      "get": {
+        "summary": "Lists who else received mail from a sender, from message-trace metadata.",
+        "operationId": "ListBECPhishingSpread",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Given a sender address (and optionally a subject fragment), walks the message trace for the last N days and groups the recipients: address, internal or external, message count, first and last delivery and the subjects seen. Use it to find the spread of a phishing message from a compromised or look-alike sender. Metadata only - no message content is read.",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "description": "look-back in days (1-90)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sender",
+            "in": "query",
+            "description": "the sender to trace",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject",
+            "in": "query",
+            "description": "optional subject fragment to narrow the trace (case-insensitive contains)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "Complete": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Days": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "ExternalCount": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "InternalCount": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Recipients": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Sender": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "TotalMessages": {
+                        "x-cipp-field-source": "backend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.Read"
+      }
+    },
+    "/api/ListBECRemediationActions": {
+      "get": {
+        "summary": "Lists the available Business Email Compromise containment actions.",
+        "operationId": "ListBECRemediationActions",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Returns the catalog of containment actions ExecBECRemediate accepts - id, label, description, impact (Low/Medium/High/Critical), whether it is reversible and whether it runs by default - plus whether the caller holds the superadmin role (required for a Purview content-search purge).",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "Actions": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "DefaultSelected": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Description": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Id": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Impact": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "IsSuperAdmin": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Label": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Order": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "ParameterName": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Reversible": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "TargetSource": {
+                        "x-cipp-field-source": "backend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
+    "/api/ListBECReports": {
+      "get": {
+        "summary": "Lists Business Email Compromise runs.",
+        "operationId": "ListBECReports",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Lists every stored BEC run (case id, user, scope, status, threat level and score, when it was extracted, who requested it, whether evidence was exported) for a tenant, or for every tenant with tenantFilter=AllTenants. Optionally narrowed to one user with userId. Runs are kept until deleted; this list never reads the result payloads.",
+        "parameters": [
+          {
+            "name": "tenantFilter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "description": "Narrow the list to one user's run history",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields the endpoint selects onto each record, and the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "CaseId": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "ContainmentRuns": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "DisplayName": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "ErrorMessage": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "EvidenceCreatedAt": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "EvidenceSha256": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "ExtractedAt": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "HasEvidence": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "IncompleteCount": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Level": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "RequestedAt": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "RequestedBy": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "Scope": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "Score": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "Status": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "Tenant": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "UserId": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "UserPrincipalName": {
+                        "x-cipp-field-source": "backend,frontend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.Read",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/ListBPA": {
@@ -51579,6 +52488,133 @@
         "x-cipp-role": "Identity.User.Read"
       }
     },
+    "/api/ListPIMRoleSettingsTemplates": {
+      "get": {
+        "summary": "List PIM role settings templates.",
+        "operationId": "ListPIMRoleSettingsTemplates",
+        "tags": [
+          "Identity > Administration > Roles"
+        ],
+        "description": "Lists saved Privileged Identity Management role settings templates. A template names a set of roles and the activation, eligibility, assignment, approval and notification rules to enforce on them; the PIMRoleSettings standard deploys a template to tenants.",
+        "parameters": [
+          {
+            "name": "GUID",
+            "in": "query",
+            "description": "Return only the template with this GUID.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "description": "Return only the template with this GUID.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields written into the storage table it reads, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                    "properties": {
+                      "ETag": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "GUID": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "JSON": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "meetsSecureFloor": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Package": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "PartitionKey": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Permissions": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "roleCount": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "roleScope": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "RowKey": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "settings.activationMaxDuration": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "settings.activationRequires": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "settings.activationRequiresApproval": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "settings.activeAssignmentMaxDuration": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "settings.eligibilityMaxDuration": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "SHA": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "templateName": {
+                        "x-cipp-field-source": "storage,frontend"
+                      },
+                      "Timestamp": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "UpdatedBy": {
+                        "x-cipp-field-source": "storage,frontend"
+                      },
+                      "updatedDate": {
+                        "x-cipp-field-source": "frontend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/ListPotentialApps": {
       "post": {
         "summary": "ListPotentialApps",
@@ -52109,6 +53145,123 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ListRoleAssignments": {
+      "get": {
+        "summary": "List Entra directory role assignments with their PIM assignment type.",
+        "operationId": "ListRoleAssignments",
+        "tags": [
+          "Identity > Administration > Roles"
+        ],
+        "description": "Returns one row per principal, role and scope showing whether the assignment is Permanent (active with no end date), Active (time-bound), ActivatedFromEligible or Eligible, whether it is held directly or through a role-assignable group, the scope (directory or administrative unit), the principal type, the role's description and built-in flag, and the role's PIM policy summary. For a single tenant roles that nobody holds are included as Unassigned rows so the result is also the role catalogue. A single tenant is read live from Graph (Entra ID P2 tenants via PIM, others via unified RBAC where every assignment is permanent); AllTenants is served from the reporting cache.",
+        "parameters": [
+          {
+            "name": "includeUnassigned",
+            "in": "query",
+            "description": "Single tenant: also list roles that nobody holds (AssignmentType 'Unassigned'), so the result is the full role catalogue. Default true; set to false for assignments only.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "permanentOnly",
+            "in": "query",
+            "description": "Only return permanent (active, no end date) assignments.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "principalId",
+            "in": "query",
+            "description": "Restrict to one principal (object id), e.g. for the user view page.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "roleTemplateId",
+            "in": "query",
+            "description": "Restrict to one role template id.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "AssignmentType": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "EndDateTime": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "IsPrivilegedRole": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "MemberType": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "PolicySummary": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "PrincipalDisplayName": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "PrincipalType": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "PrincipalUserPrincipalName": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "RoleDisplayName": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Scope": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "Tenant": {
+                        "x-cipp-field-source": "frontend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.Read"
+      }
+    },
     "/api/ListRoles": {
       "get": {
         "summary": "ListRoles",
@@ -52116,7 +53269,7 @@
         "tags": [
           "Identity > Administration > Roles"
         ],
-        "description": "Lists a tenant's Entra ID role definitions along with the active members of each, via the unified RBAC API. Unlike the legacy /directoryRoles endpoint this includes every built-in and custom role definition, even ones with no assignments.",
+        "description": "Lists a tenant's Entra ID role definitions along with the members of each, via the unified RBAC API. Unlike the legacy /directoryRoles endpoint this includes every built-in and custom role definition, even ones with no assignments. On Entra ID P2 tenants each member carries its PIM assignment type (Permanent, Active, ActivatedFromEligible or Eligible) and the role carries permanent/eligible counts plus a summary of its PIM role settings.",
         "parameters": [
           {
             "$ref": "#/components/parameters/tenantFilter"
@@ -52133,10 +53286,19 @@
                     "type": "object",
                     "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
                     "properties": {
+                      "ActiveCount": {
+                        "x-cipp-field-source": "backend"
+                      },
                       "Description": {
                         "x-cipp-field-source": "backend"
                       },
                       "DisplayName": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "EligibleCount": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "HasPermanentMembers": {
                         "x-cipp-field-source": "backend"
                       },
                       "Id": {
@@ -52152,6 +53314,18 @@
                         "x-cipp-field-source": "backend"
                       },
                       "Members": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "PermanentCount": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "PIMCapable": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "PIMPolicy": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "PIMPolicySummary": {
                         "x-cipp-field-source": "backend"
                       },
                       "roleTemplateId": {
@@ -63257,6 +64431,78 @@
           }
         ],
         "x-cipp-role": "Identity.Role.ReadWrite"
+      }
+    },
+    "/api/RemovePIMRoleSettingsTemplate": {
+      "post": {
+        "summary": "Delete a PIM role settings template.",
+        "operationId": "RemovePIMRoleSettingsTemplate",
+        "tags": [
+          "Identity > Administration > Roles"
+        ],
+        "description": "Deletes a saved Privileged Identity Management role settings template by GUID. Tenants already configured from the template keep their settings.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "GUID": {
+                    "type": "string",
+                    "description": "GUID of the template to delete."
+                  },
+                  "ID": {
+                    "type": "string",
+                    "description": "GUID of the template to delete."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "ID",
+            "in": "query",
+            "description": "GUID of the template to delete.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.ReadWrite",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/RemovePolicy": {
