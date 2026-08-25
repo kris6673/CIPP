@@ -31,6 +31,14 @@ export const CippWizardOffboarding = (props) => {
   const deleteUser = useWatch({ control: formControl.control, name: 'DeleteUser' })
   const convertToShared = useWatch({ control: formControl.control, name: 'ConvertToShared' })
 
+  // The HaloPSA ticket box is only meaningful when that integration is configured.
+  const integrationSettings = ApiGetCall({
+    url: '/api/ListExtensionsConfig',
+    queryKey: 'ListExtensionsConfig',
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+  })
+
   // Pull cached mailbox sizes (storageUsedInBytes, keyed by UPN) only when relevant
   const mailboxUsage = ApiGetCall({
     url: '/api/ListMailboxes',
@@ -566,6 +574,27 @@ export const CippWizardOffboarding = (props) => {
                 formControl={formControl}
               />
             </Grid>
+
+            {integrationSettings?.data?.HaloPSA?.Enabled === true && (
+              <CippFormCondition
+                formControl={formControl}
+                field="postExecution.psa"
+                compareType="is"
+                compareValue={true}
+              >
+                <Grid size={{ sm: 12, xs: 12 }}>
+                  <CippFormComponent
+                    type="number"
+                    fullWidth
+                    label="HaloPSA Ticket"
+                    name="PsaTicketId"
+                    placeholder="Enter the related HaloPSA Ticket ID"
+                    helperText="The results are added to the associated ticket in HaloPSA as a note instead of raising a new ticket."
+                    formControl={formControl}
+                  />
+                </Grid>
+              </CippFormCondition>
+            )}
           </Grid>
         </CardContent>
       </Card>
