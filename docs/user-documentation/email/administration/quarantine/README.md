@@ -2,13 +2,14 @@
 
 This page lists the messages Microsoft Defender for Office 365 and Exchange Online Protection have quarantined for the selected tenant. From here you can inspect a message safely, trace how it arrived, and release, deny, or delete it without going into the Defender portal.
 
-Quarantine is split into three tabs, one for each type of quarantined item. This page covers the **Email** tab, which is the one you land on.
+Quarantine is split into four tabs. This page covers the **Email** tab, which is the one you land on.
 
 | Tab            | Contents                                                                                             |
 | -------------- | ------------------------------------------------------------------------------------------------------ |
 | Email          | Quarantined email messages, with the full set of investigation and remediation actions.              |
 | Files          | Files quarantined from SharePoint, OneDrive, and Microsoft Teams. See [files.md](files.md "mention"). |
 | Teams Messages | Quarantined Microsoft Teams messages. See [teams.md](teams.md "mention").                             |
+| User Reported  | Messages users reported as phishing, junk, or not junk. See [user-reported.md](user-reported.md "mention"). |
 
 ## Filters
 

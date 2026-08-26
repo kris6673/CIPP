@@ -331,6 +331,7 @@
     * [Quarantine](user-documentation/email/administration/quarantine/README.md)
       * [Files](user-documentation/email/administration/quarantine/files.md)
       * [Teams Messages](user-documentation/email/administration/quarantine/teams.md)
+      * [User Reported Messages](user-documentation/email/administration/quarantine/user-reported.md)
     * [Restricted Users](user-documentation/email/administration/restricted-users.md)
     * [Tenant Allow/Block Lists](user-documentation/email/administration/tenant-allow-block-lists.md)
     * [Tenant Allow/Block List Templates](user-documentation/email/administration/tenant-allow-block-list-templates.md)
