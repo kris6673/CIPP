@@ -1,5 +1,6 @@
 import { getCippFilterVariant } from '../../utils/get-cipp-filter-variant'
 import { getCippFormatting } from '../../utils/get-cipp-formatting'
+import { formatCellText } from './CippCellText'
 import { getCippTranslation } from '../../utils/get-cipp-translation'
 import { getCippColumnSize } from '../../utils/get-cipp-column-size'
 import { SKIP_RECURSION_KEYS as skipRecursion } from '../../utils/skip-recursion-keys'
@@ -299,7 +300,8 @@ export const utilColumnsFromAPI = (dataArray) => {
           }),
           Cell: ({ row }) => {
             const value = resolveValue(row.original)
-            return getCippFormatting(value, accessorKey)
+            const rendered = getCippFormatting(value, accessorKey)
+            return formatCellText(rendered, false)
           },
         }
 
