@@ -102,6 +102,11 @@ const Page = () => {
         size: "xl",
         actions: actions,
       }}
+      offCanvasOnRowClick={true}
+      rowOpen={{
+        link: '/cipp/scheduler/task?id=[RowKey]',
+        condition: (row) => Boolean(row?.RowKey),
+      }}
     />
   );
 };
