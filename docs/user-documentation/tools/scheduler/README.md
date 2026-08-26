@@ -10,6 +10,12 @@ Scheduling a task in the past makes it run at the next interval the scheduler ru
 
 The scheduler operates on 15-minute intervals, and no other cadence is available. A task created through the API for 10:10 runs at 10:15. A recurring task returns to a planned state immediately after it executes.
 
+A banner above the table counts down to the next scheduler run, shows the time it is due, and reports how many tasks that run will pick up. A task whose scheduled time has already passed stays **Planned** until that run, so a time in the recent past is not a sign the task has failed.
+
+The count covers the tasks currently listed, so it follows the **Show System Jobs** toggle: with system jobs hidden it counts only your own tasks. Tasks in a stuck state that the scheduler recovers on its own are not included.
+
+A second count appears whenever tasks are already being worked on. Once the scheduler picks a task up it leaves **Planned** and stops being due, so it moves out of the due count and is reported as in progress until it finishes. A task shown as **Pending** has therefore already been claimed rather than being sat waiting for the next run.
+
 ## Action Buttons
 
 <details>
