@@ -9,6 +9,7 @@ import {
   Email,
   ForwardToInbox,
   GroupAdd,
+  Launch,
   LockClock,
   LockPerson,
   LockReset,
@@ -473,6 +474,7 @@ export const useCippUserActions = () => {
       //tested
       label: 'View User',
       link: '/identity/administration/users/user?userId=[id]',
+      pinned: true,
       multiPost: false,
       icon: <EyeIcon />,
       color: 'success',
@@ -481,10 +483,21 @@ export const useCippUserActions = () => {
       //tested
       label: 'Edit User',
       link: '/identity/administration/users/user/edit?userId=[id]',
+      pinned: true,
       icon: <Edit />,
       color: 'success',
       target: '_self',
       condition: () => canWriteUser,
+    },
+    {
+      label: 'View in Entra',
+      link: 'https://entra.microsoft.com/[Tenant]/#view/Microsoft_AAD_UsersAndTenants/UserProfileMenuBlade/~/overview/userId/[id]',
+      pinned: true,
+      icon: <Launch />,
+      color: 'info',
+      target: '_blank',
+      multiPost: false,
+      external: true,
     },
     {
       label: 'Create Template from User',
