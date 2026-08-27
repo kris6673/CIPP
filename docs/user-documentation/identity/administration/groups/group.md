@@ -57,6 +57,4 @@ The group's owners listed the same way, with the same row action through to the 
 
 The groups this group belongs to, listed with the group name, its types, and whether it is security enabled and mail enabled. Row actions open the group's own page or its edit page.
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

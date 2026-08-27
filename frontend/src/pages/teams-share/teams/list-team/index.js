@@ -23,6 +23,7 @@ const Page = () => {
     {
       label: "Edit Group",
       link: "/identity/administration/groups/edit?groupId=[id]&groupType=Microsoft 365",
+      pinned: true,
       multiPost: false,
       color: "warning",
       icon: <Edit />,
@@ -62,9 +63,9 @@ const Page = () => {
             <Button component={Link} href="/teams-share/teams/list-team/add" startIcon={<GroupAdd />}>
               Add Team
             </Button>
-            {reportDB.controls}
           </Stack>
         }
+        dataSourceControls={reportDB.controls}
       />
       {reportDB.syncDialog}
     </>

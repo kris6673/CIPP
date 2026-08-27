@@ -16,6 +16,4 @@ Each row combines the details of a single consent with information about the app
 | Start Time      | When the consent was granted.                                                               |
 | Cache Timestamp | When the cached record was last refreshed. Shown in cached mode only.                       |
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

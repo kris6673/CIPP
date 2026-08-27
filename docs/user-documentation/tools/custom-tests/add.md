@@ -69,6 +69,4 @@ Runs the test against the tenant currently chosen in tenant-select.md and render
 Runs from this page are preview only. Results are stored only when a scheduled tenant test run executes the test with **Enable Script** turned on.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

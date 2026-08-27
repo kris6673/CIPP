@@ -35,17 +35,39 @@ function Invoke-CIPPStandardGroupTemplate {
     #>
     param($Tenant, $Settings)
 
-    $existingGroups = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999&$select=id,displayName,description,membershipRule' -tenantid $tenant
+    try {
+        $existingGroups = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999&$select=id,displayName,description,membershipRule' -tenantid $tenant -ErrorAction Stop
+    } catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -tenant $tenant -message "Group Template: could not read the tenant's existing groups, skipping this run to avoid creating duplicate groups. Error: $ErrorMessage" -sev 'Error'
+        return
+    }
 
     $Settings.groupTemplate ? ($Settings | Add-Member -NotePropertyName 'TemplateList' -NotePropertyValue $Settings.groupTemplate) : $null
 
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'GroupTemplate' and (RowKey eq '$($Settings.TemplateList.value -join "' or RowKey eq '")')"
-    $GroupTemplates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
+    # Resolve %variables% (e.g. %tenantname%) in the template body before any comparison. Groups are
+    # created through New-GraphPostRequest, which substitutes these tokens, so the tenant's actual
+    # group ends up named with the resolved value. Comparing the raw token-bearing name against it
+    # never matched, which recreated the group on every run and left the report permanently
+    # non-compliant. Replacement runs against the serialized JSON (escaped for that context), exactly
+    # as Push-CIPPStandard does for the settings.
+    $GroupTemplates = foreach ($TemplateJSON in (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON) {
+        if ($TemplateJSON -match '%') {
+            $TemplateJSON = Get-CIPPTextReplacement -TenantFilter $Tenant -Text $TemplateJSON -EscapeForJson
+        }
+        $TemplateJSON | ConvertFrom-Json
+    }
 
     if ('dynamicDistribution' -in $GroupTemplates.groupType) {
-        # Get dynamic distro list from exchange
-        $DynamicDistros = New-ExoRequest -cmdlet 'Get-DynamicDistributionGroup' -tenantid $tenant -Select 'Identity,Name,Alias,RecipientFilter,PrimarySmtpAddress'
+        try {
+            $DynamicDistros = New-ExoRequest -cmdlet 'Get-DynamicDistributionGroup' -tenantid $tenant -Select 'Identity,Name,Alias,RecipientFilter,PrimarySmtpAddress' -ErrorAction Stop
+        } catch {
+            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Group Template: could not read the tenant's existing dynamic distribution groups, skipping this run to avoid creating duplicate groups. Error: $ErrorMessage" -sev 'Error'
+            return
+        }
     }
 
     if ($Settings.remediate -eq $true) {

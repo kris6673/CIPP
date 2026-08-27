@@ -19,6 +19,4 @@ The data type and the multi-valued setting cannot be changed after creation. If 
 Only select the target objects you genuinely need. Directory objects are limited to 100 extension values per instance across all extensions.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

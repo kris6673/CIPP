@@ -24,6 +24,7 @@ const Page = () => {
   const actions = [
     {
       label: "Edit Reusable Setting",
+      pinned: true,
       link: isAllTenants
         ? "/endpoint/MEM/reusable-settings/edit?id=[id]&tenant=[Tenant]&tenantFilter=[Tenant]"
         : `/endpoint/MEM/reusable-settings/edit?id=[id]&tenant=${currentTenant}&tenantFilter=${currentTenant}`,
@@ -76,9 +77,9 @@ const Page = () => {
         cardButton={
           <Stack direction="row" spacing={1} alignItems="center">
             <CippReusableSettingsDeployDrawer requiredPermissions={["Endpoint.MEM.ReadWrite"]} />
-            {reportDB.controls}
           </Stack>
         }
+        dataSourceControls={reportDB.controls}
         apiUrl={reportDB.resolvedApiUrl}
         queryKey={reportDB.resolvedQueryKey}
         actions={actions}

@@ -9,6 +9,9 @@ function Invoke-CIPPBaselineGraduation {
         - time:     enteredStageAt + days/weeks has elapsed (unix seconds)
         - variable: a per-tenant custom variable (Get-CIPPTextReplacement's replacement map)
                     compared with eq/ne/startsWith/notStartsWith
+        - group:    the tenant is a member of the selected tenant group, evaluated fresh
+                    on every run - an 'All Tenants' baseline can gate a stage (say Intune
+                    policies) on an 'Intune licensed' group
         - success:  every standard rolled out by the stages reached so far is aligned
                     (Compliant or Accepted) on the tenant's resolved rows
         - manual:   never auto-advances (operator uses ExecBaselineStage)
@@ -22,6 +25,9 @@ function Invoke-CIPPBaselineGraduation {
     $Now = [int64]([datetimeoffset]::UtcNow.ToUnixTimeSeconds())
     $StateTable = Get-CippTable -tablename 'BaselineRolloutState'
     $ResolvedTable = Get-CippTable -tablename 'BaselineAlignment'
+    $Definitions = @(Get-CIPPBaselineDefinition)
+    $Groups = @()
+    try { $Groups = @(Get-TenantGroups) } catch { Write-Information "Invoke-CIPPBaselineGraduation: tenant group lookup failed: $($_.Exception.Message)" }
 
     foreach ($Baseline in @(Get-CIPPBaseline)) {
         foreach ($State in $Baseline.tenantStates) {
@@ -50,9 +56,32 @@ function Invoke-CIPPBaselineGraduation {
                             }
                         }
                     }
+                    'group' {
+                        # Membership gate: only tenants in the selected group ever advance.
+                        # Accepts the stored group ID or a hand-authored name, the same way
+                        # scope resolution does. Missing group/empty selection never advances.
+                        $GroupKey = "$($Condition.group.value ?? $Condition.group)"
+                        $Group = $Groups | Where-Object { $_.Id -eq $GroupKey -or $_.Name -eq $GroupKey } | Select-Object -First 1
+                        @($Group.Members.defaultDomainName) -contains $State.tenantFilter
+                    }
                     'success' {
-                        $RolledOut = @($Baseline.stages | Select-Object -First $State.currentStage |
-                                ForEach-Object { @($_.standards) } | Select-Object -Unique)
+                        # Package standards never resolve under their own key - expand
+                        # them so success means EVERY MEMBER template aligned, using the
+                        # same derived instance keys the resolver writes rows under.
+                        $RolledOut = [System.Collections.Generic.List[string]]::new()
+                        foreach ($StageDef in @($Baseline.stages | Select-Object -First $State.currentStage)) {
+                            foreach ($Config in @($StageDef.standardsConfig)) {
+                                if (-not $Config) { continue }
+                                $BaseName = ("$($Config.instance ?? $Config.standard)" -split '#')[0]
+                                $Definition = $Definitions | Where-Object { $_.name -eq $BaseName } | Select-Object -First 1
+                                if ($Definition.package) {
+                                    foreach ($Member in @(Expand-CIPPBaselineTemplatePackage -Definition $Definition -Config $Config)) { $RolledOut.Add("$($Member.instance)") }
+                                } else {
+                                    $RolledOut.Add("$($Config.instance)")
+                                }
+                            }
+                        }
+                        $RolledOut = @($RolledOut | Select-Object -Unique)
                         $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $State.tenantFilter
                         $Rows = @(Get-CIPPAzDataTableEntity @ResolvedTable -Filter "PartitionKey eq '$SafeTenant'")
                         $Aligned = 0
@@ -77,6 +106,7 @@ function Invoke-CIPPBaselineGraduation {
                 enteredStageAt  = $Now
                 firstDeployedAt = $State.firstDeployedAt ?? $State.enteredStageAt ?? $Now
             }
+            $null = Add-CIPPBaselineHistoryEvent -TenantFilter $State.tenantFilter -Standard $Baseline.templateName -Mode 'stage' -TriggeredBy 'schedule' -Outcome 'Stage Advanced' -Detail "Graduated to stage $($State.currentStage + 1) ($($NextStage.name)) - the stage's conditions were met"
             Write-LogMessage -API 'Baselines' -tenant $State.tenantFilter -message "Graduated $($State.tenantFilter) to stage $($State.currentStage + 1) ($($NextStage.name)) of baseline $($Baseline.templateName)." -Sev 'Info'
         }
     }

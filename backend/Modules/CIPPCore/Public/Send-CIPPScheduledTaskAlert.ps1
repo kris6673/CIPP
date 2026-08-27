@@ -149,12 +149,44 @@ function Send-CIPPScheduledTaskAlert {
         $EncodedTaskName = [System.Web.HttpUtility]::HtmlEncode($TaskInfo.Name)
         $EncodedTenantName = [System.Web.HttpUtility]::HtmlEncode($TenantFilter)
         $AlertHeader = "<div style=`"margin:0 0 14px;`"><p style=`"margin:0 0 2px;font-size:15px;font-weight:600;`">$EncodedTaskName</p><p style=`"margin:0;font-size:13px;opacity:0.75;`">Tenant: <strong>$EncodedTenantName</strong></p></div>"
-        $FinalResults = if ($Results -is [array] -and $Results[0] -is [string]) {
+        # Commands that also serve an HTTP caller return a single row carrying the result lines plus
+        # the extras that caller needs - New-CIPPUserTask hands back Results alongside Username,
+        # Password, CopyFrom and the whole Graph user object. Rendered as one row that becomes a
+        # column per key, so the readable lines end up squeezed beside a flattened Graph object.
+        # Split it instead: the result lines become the table, the rest follows underneath. Nothing
+        # is dropped, and $Results itself is untouched so the webhook payload and the stored task
+        # results keep the exact shape they have always had.
+        $EnvelopeRow = $null
+        if (@($Results).Count -eq 1) {
+            $SingleRow = @($Results)[0]
+            if ($null -ne $SingleRow -and $SingleRow -isnot [string]) {
+                $RowProps = @($SingleRow.PSObject.Properties)
+                if ($RowProps.Count -gt 1 -and $RowProps.Name -contains 'Results') { $EnvelopeRow = $SingleRow }
+            }
+        }
+
+        $FinalResults = if ($EnvelopeRow) {
+            @($EnvelopeRow.Results) | ConvertTo-Html -Fragment -Property @{ l = 'Results'; e = { $_ } }
+        } elseif ($Results -is [array] -and $Results[0] -is [string]) {
             $Results | ConvertTo-Html -Fragment -Property @{ l = 'Text'; e = { $_ } }
         } else {
             $Results | ForEach-Object { ConvertTo-AlertDisplayRow -Row $_ } | ConvertTo-Html -Fragment
         }
         $HTML = $FinalResults -replace '\[\[BR\]\]', '<br />' -replace '<table>', "$AlertHeader $TableDesign<table class=adaptiveTable>" | Out-String
+
+        # Everything the envelope carried besides the result lines, as field/value rows below the
+        # table rather than as extra columns beside it.
+        if ($EnvelopeRow) {
+            $ExtraRows = foreach ($Prop in $EnvelopeRow.PSObject.Properties) {
+                if ($Prop.Name -eq 'Results') { continue }
+                [pscustomobject]@{ Field = $Prop.Name; Value = (Format-AlertCellValue -Value $Prop.Value -Depth 1) }
+            }
+            if ($ExtraRows) {
+                $ExtraHtml = @($ExtraRows) | ConvertTo-Html -Fragment
+                $ExtraHtml = $ExtraHtml -replace '\[\[BR\]\]', '<br />' -replace '<table>', '<table class=adaptiveTable>' | Out-String
+                $HTML += "<p style=`"margin:16px 0 4px;font-size:13px;font-weight:600;opacity:0.75;`">Additional detail</p>$ExtraHtml"
+            }
+        }
 
         # For alert tasks, add per-row snooze links. The resolved URL is kept in scope so the
         # per-user PSA split below can build the same block from each user's own rows.
@@ -215,6 +247,13 @@ function Send-CIPPScheduledTaskAlert {
             '*psa*' {
                 $PsaSplitSent = $false
                 $TaskAffectedUser = $null
+                # A task can name the ticket the work came from, either explicitly (PsaTicketId, set
+                # from the ticket box on the wizards) or inside its free-text reference. Both travel
+                # with the alert so a PSA that recognises them can add the result to that ticket
+                # rather than opening a new one; the extension decides which wins. Every PSA call
+                # below carries them, so a split task's per-user notes land on the same ticket.
+                $PsaReference = $TaskInfo.Reference
+                $PsaTicketId = $TaskInfo.PsaTicketId
                 try {
                     $ExtConfigTable = Get-CIPPTable -TableName Extensionsconfig
                     $ExtConfig = (Get-CIPPAzDataTableEntity @ExtConfigTable).config | ConvertFrom-Json -ErrorAction SilentlyContinue
@@ -302,7 +341,7 @@ function Send-CIPPScheduledTaskAlert {
                                     if ([string]::IsNullOrWhiteSpace($GroupKey)) {
                                         # Rows without a usable user identifier - fall back to the
                                         # task-level affected user if one was resolved.
-                                        $GroupParams = @{ Type = 'psa'; Title = $title; HTMLContent = $GroupHTML; TenantFilter = $TenantFilter }
+                                        $GroupParams = @{ Type = 'psa'; Title = $title; HTMLContent = $GroupHTML; TenantFilter = $TenantFilter; PSAReference = $PsaReference; PSATicketId = $PsaTicketId }
                                         if ($TaskAffectedUser) { $GroupParams.AffectedUser = $TaskAffectedUser }
                                         Send-CIPPAlert @GroupParams
                                     } else {
@@ -313,7 +352,7 @@ function Send-CIPPScheduledTaskAlert {
                                             UPN         = $GroupKey
                                             DisplayName = $GroupDisplayName
                                         }
-                                        Send-CIPPAlert -Type 'psa' -Title $UserTitle -HTMLContent $GroupHTML -TenantFilter $TenantFilter -AffectedUser $AffectedUser
+                                        Send-CIPPAlert -Type 'psa' -Title $UserTitle -HTMLContent $GroupHTML -TenantFilter $TenantFilter -AffectedUser $AffectedUser -PSAReference $PsaReference -PSATicketId $PsaTicketId
                                     }
                                 }
                                 $PsaSplitSent = $true
@@ -325,12 +364,16 @@ function Send-CIPPScheduledTaskAlert {
                 }
 
                 if (-not $PsaSplitSent) {
-                    $PsaParams = @{ Type = 'psa'; Title = $title; HTMLContent = (ConvertTo-PSAHtml -Html $HTML); TenantFilter = $TenantFilter }
+                    $PsaParams = @{ Type = 'psa'; Title = $title; HTMLContent = (ConvertTo-PSAHtml -Html $HTML); TenantFilter = $TenantFilter; PSAReference = $PsaReference; PSATicketId = $PsaTicketId }
                     if ($TaskAffectedUser) { $PsaParams.AffectedUser = $TaskAffectedUser }
                     Send-CIPPAlert @PsaParams
                 }
             }
             '*email*' {
+                # Deliberately untouched by PsaTicketId: that field drives the PSA note only. What a
+                # mail-ingesting PSA threads on is whatever the operator put in Reference, which is
+                # already carried into the title above - stamping a ticket token onto every subject
+                # would push CIPP's own convention onto recipients who never asked for it.
                 $EmailParams = @{
                     Type         = 'email'
                     Title        = $title

@@ -17,19 +17,24 @@ function Invoke-ExecListAppId {
     #make sure we get the very latest version of the appid from kv:
     # Only overwrite the env vars with real values - $env:ApplicationID is the
     # process-wide "setup complete" signal, so assigning $null (missing row) removes
-    # it and assigning an error string makes a broken instance look configured.
+    # it and assigning an error string makes a broken instance look configured. Fresh
+    # deployments seed the vault with the deployment template's placeholder values
+    # rather than leaving the secrets absent, so a credential the setup wizard has not
+    # written yet reads back as 'LongApplicationId' instead of 404-ing - those count as
+    # unset too. Same placeholder set as Get-CIPPAuthentication.
+    $PlaceholderPattern = '^(LongApplicationId|AppSecret|RefreshToken|tenantId)$'
     if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true' -or $env:NonLocalHostAzurite -eq 'true') {
         $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
         $Secret = Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
-        if ($Secret.ApplicationID) { $env:ApplicationID = $Secret.ApplicationID }
-        if ($Secret.TenantID) { $env:TenantID = $Secret.TenantID }
+        if ($Secret.ApplicationID -and $Secret.ApplicationID -notmatch $PlaceholderPattern) { $env:ApplicationID = $Secret.ApplicationID }
+        if ($Secret.TenantID -and $Secret.TenantID -notmatch $PlaceholderPattern) { $env:TenantID = $Secret.TenantID }
     } else {
         $keyvaultname = Get-CippKeyVaultName
         try {
             $ApplicationID = (Get-CippKeyVaultSecret -AsPlainText -VaultName $keyvaultname -Name 'ApplicationID')
             $TenantID = (Get-CippKeyVaultSecret -AsPlainText -VaultName $keyvaultname -Name 'TenantID')
-            if ($ApplicationID) { $env:ApplicationID = $ApplicationID }
-            if ($TenantID) { $env:TenantID = $TenantID }
+            if ($ApplicationID -and $ApplicationID -notmatch $PlaceholderPattern) { $env:ApplicationID = $ApplicationID }
+            if ($TenantID -and $TenantID -notmatch $PlaceholderPattern) { $env:TenantID = $TenantID }
             Write-Information "Retrieving secrets from KeyVault: $keyvaultname. The AppId is $($env:ApplicationID) and the TenantId is $($env:TenantID)"
         } catch {
             Write-Information "Retrieving secrets from KeyVault: $keyvaultname. The AppId is $($env:ApplicationID) and the TenantId is $($env:TenantID)"

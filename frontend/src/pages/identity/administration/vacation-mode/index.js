@@ -16,6 +16,7 @@ const Page = () => {
     {
       label: "View Task Details",
       link: "/cipp/scheduler/task?id=[RowKey]",
+      pinned: true,
       icon: <EyeIcon />,
     },
     {
@@ -54,6 +55,11 @@ const Page = () => {
     {
       filterName: "CA Exclusion",
       value: [{ id: "Name", value: "CA Exclusion" }],
+      type: "column",
+    },
+    {
+      filterName: "Location Alerts",
+      value: [{ id: "Name", value: "Location Alert Exclusion" }],
       type: "column",
     },
     {
@@ -96,6 +102,10 @@ const Page = () => {
         ),
         size: "xl",
         actions: actions,
+      }}
+      rowOpen={{
+        link: '/cipp/scheduler/task?id=[RowKey]',
+        condition: (row) => Boolean(row?.RowKey),
       }}
     />
   );

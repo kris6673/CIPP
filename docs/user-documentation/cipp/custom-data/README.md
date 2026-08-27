@@ -83,6 +83,4 @@ Custom Data is most valuable when the attribute feeds something downstream rathe
 Plan the attribute name before you create it. Directory extensions are given a fixed prefix and schema properties can never be deleted, so renaming later means creating a replacement and migrating values.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

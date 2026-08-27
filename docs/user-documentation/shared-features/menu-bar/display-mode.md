@@ -13,6 +13,4 @@ Your choice applies immediately and is remembered on that device. Because it is 
 On narrow screens the icon is not shown in the menu bar. Use the **Light Mode** or **Dark Mode** entry in the account menu instead, reached from your avatar at the right of the menu bar.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

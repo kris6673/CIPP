@@ -80,6 +80,4 @@ For most tenants this is rarely needed. The daily job keeps results current on i
 | A tenant is never analysed                               | Check the tenant for repeated Graph failures. Tenants with a high error count are skipped until access is fixed.           |
 | Results not updating at all                              | Confirm CIPP and CIPP-API are up to date, and review the Domain Analyser entries in the CIPP logs.                         |
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

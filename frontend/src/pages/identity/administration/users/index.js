@@ -99,6 +99,10 @@ const Page = () => {
       apiDataKey="Results"
       actions={userActions}
       offCanvas={offCanvas}
+      rowOpen={{
+        link: '/identity/administration/users/user?userId=[id]',
+        condition: (row) => Boolean(row?.id),
+      }}
       simpleColumns={[
         'accountEnabled',
         'userPrincipalName',

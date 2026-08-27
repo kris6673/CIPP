@@ -55,6 +55,4 @@ The separator counts towards complexity. A passphrase using the default hyphen s
 Avoid setting the separator to a single space. Although the configuration will save, password generation rejects a whitespace-only separator, so credential creation will fail afterwards.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

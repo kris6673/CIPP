@@ -89,6 +89,4 @@ Permissions that appear in CIPP's curated set of risky permissions are marked wi
 Permission names and descriptions are resolved by looking up each resource API's service principal in the current tenant. Where an API has no service principal present, the group shows a warning and its permissions are listed as raw GUIDs until the API is provisioned in the tenant.
 {% endhint %}
 
-***
-
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

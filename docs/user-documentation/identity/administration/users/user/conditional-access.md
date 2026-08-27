@@ -65,6 +65,4 @@ Each of the tenant's Conditional Access policies is listed with what the evaluat
 Analysis Reasons is the column that earns its keep. A policy showing as not applying will usually name the single condition responsible, so it points straight at the assignment or condition to change rather than leaving you to compare the policy against your test settings by hand.
 {% endhint %}
 
-***
-
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

@@ -64,32 +64,17 @@ const deleteSettings = () => {
 };
 
 /**
- * Branding image payloads (data URLs) live in memory / ListUserSettings only.
- * Persisting them to localStorage exceeds quota once covers are uploaded.
+ * Branding is server state now, read via `useBrandingSettings`. Anything a previous version
+ * persisted here is dropped on load rather than migrated - it is a stale copy, and its image
+ * payloads used to exhaust the localStorage quota.
  */
 const stripPersistedBrandingBlobs = (settings) => {
-  if (!settings || typeof settings !== "object" || !settings.customBranding) {
+  if (!settings || typeof settings !== "object" || !("customBranding" in settings)) {
     return settings;
   }
 
-  const {
-    logo: _logo,
-    logoUploads: _logoUploads,
-    coverImage: _coverImage,
-    coverUploads: _coverUploads,
-    ...brandingMeta
-  } = settings.customBranding;
-
-  return {
-    ...settings,
-    customBranding: {
-      ...brandingMeta,
-      logo: null,
-      logoUploads: [],
-      coverImage: null,
-      coverUploads: [],
-    },
-  };
+  const { customBranding: _legacyBranding, ...rest } = settings;
+  return rest;
 };
 
 const storeSettings = (value) => {
@@ -130,24 +115,15 @@ const initialSettings = {
   currentTenant: null,
   showDevtools: false,
   showAdvancedTools: false,
-  customBranding: {
-    colour: "#F77F00",
-    logoImageId: null,
-    logoImageIds: [],
-    coverImageId: null,
-    coverImageIds: [],
-    coverStock: "/reportImages/soc.jpg",
-    logo: null,
-    logoUploads: [],
-    coverImage: null,
-    coverUploads: [],
-  },
   persistFilters: false,
   lastUsedFilters: {},
   breadcrumbMode: "hierarchical",
   bookmarkSidebar: true,
   bookmarkPopover: false,
   compactNav: false,
+  // 'auto' = card list below the md breakpoint, classic table at or above it.
+  // 'cards' / 'table' force one presentation everywhere (per-device escape hatch).
+  tableViewMode: "auto",
 };
 
 const initialState = {

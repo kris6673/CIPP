@@ -56,6 +56,4 @@ The reserved variables listed above behave differently: they are deliberately pa
 If you want to see how to combine Custom Variables and Tenant Groups to provide a way to "graduate" tenants through standards, see Using Custom Variables to Manage Standards Templates.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

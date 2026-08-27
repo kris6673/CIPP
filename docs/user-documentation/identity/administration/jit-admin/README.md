@@ -41,6 +41,4 @@ This table has no per-row actions. Elevation is granted from the Add JIT Admin p
 Under All Tenants the list is served from a cache rather than queried live. The first time it is opened, CIPP queues a background job to collect the data from every tenant and reports that it is still loading, so come back after a few minutes. Once built, the cache is reused for an hour before a fresh collection runs. Single-tenant views are always live.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

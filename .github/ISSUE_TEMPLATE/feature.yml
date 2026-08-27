@@ -1,9 +1,9 @@
 name: "✨ Feature request"
 description: "Suggest a new feature or improvement"
 title: "[Feature Request]: "
+type: "feature"
 labels:
   - "Feature"
-  - "enhancement"
   - "no-priority"
 
 body:
@@ -22,7 +22,7 @@ body:
         4. Feature requests that lack sufficient detail or feasibility may be closed at any time.
         5. **This request will auto-close in 14 days** if no meaningful progress or collaboration occurs.
         6. If you would like to work on this feature, comment `"I'd like to work on this please!"`
-        7. Any request that is detrimental to security or the product’s stability will be closed without notice.
+        7. Any request that is detrimental to security or the product's stability will be closed without notice.
 
   # Checkboxes for Confirmations
   - type: checkboxes
@@ -33,7 +33,7 @@ body:
       options:
         - label: "**I have searched existing feature requests** (open and closed) and found no duplicates."
           required: true
-        - label: "**me or my organization is currently an active sponsor of the product at the $99,- level."
+        - label: "**Me or my organization is currently an active sponsor of the product at the $99,- level."
           required: true
 
   - type: textarea

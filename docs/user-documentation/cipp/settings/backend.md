@@ -50,6 +50,4 @@ The commands in the flyout are generated with your own resource group, function 
 The **Command Reference** button is unavailable on hosted instances, since the commands operate on Azure resources a hosted client does not own.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

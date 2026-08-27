@@ -52,6 +52,16 @@ const Page = () => {
     $top: 999,
   }
 
+  // 'Visible to users?' in the MyApps portal is stored as the 'HideApp' tag on the service
+  // principal; a column filter on the (already-returned) tags collection surfaces hidden apps.
+  const filters = [
+    {
+      filterName: 'Hidden from MyApps portal',
+      value: [{ id: 'tags', value: 'HideApp' }],
+      type: 'column',
+    },
+  ]
+
   return (
     <CippTablePage
       title={pageTitle}
@@ -60,10 +70,19 @@ const Page = () => {
       apiDataKey="Results"
       actions={actions}
       offCanvas={offCanvas}
+      rowOpen={{
+        link: '/tenant/administration/applications/enterprise-app?spId=[id]&tenantFilter=[Tenant]',
+        condition: (row) => Boolean(row?.id),
+      }}
       simpleColumns={simpleColumns}
+      filters={filters}
       cardButton={
         <>
-          <Button component={Link} href="/tenant/tools/appapproval" startIcon={<RocketLaunch />}>
+          <Button
+            component={Link}
+            href="/tenant/tools/appapproval"
+            startIcon={<RocketLaunch />}
+          >
             Deploy Template
           </Button>
         </>

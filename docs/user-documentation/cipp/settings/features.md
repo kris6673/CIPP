@@ -31,6 +31,4 @@ CIPP maintains further internal flags that are not shown on this page. Those gov
 The Extended Info flyout lists exactly what a flag governs, namely the pages it shows, the API endpoints it enables, and any scheduled timers it controls. Check it before disabling a feature, so you know what stops working.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

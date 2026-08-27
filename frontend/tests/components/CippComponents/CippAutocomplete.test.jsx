@@ -305,4 +305,91 @@ describe('CippAutoComplete', () => {
       expect(options[0]).toHaveTextContent('Alpha')
     })
   })
+
+  // Multi-select clears the native input after chips are selected; HTML5 required must
+  // track selection state or submit falsely fails with "Please fill out this field".
+  describe('required HTML5 vs selection', () => {
+    it('marks the input required when empty, and keeps the label required', () => {
+      renderWithProviders(
+        <CippAutoComplete
+          multiple
+          creatable={false}
+          required
+          label="Permissions to remove"
+          options={OPTIONS}
+          onChange={() => {}}
+        />
+      )
+      const input = screen.getByRole('combobox')
+      expect(input).toBeRequired()
+      expect(document.querySelector('.Mui-required')).toBeTruthy()
+      expect(document.querySelector('.MuiFormLabel-asterisk')).toBeTruthy()
+    })
+
+    it('clears HTML5 required on the input after a multi selection, label stays required', async () => {
+      const user = userEvent.setup()
+      renderWithProviders(
+        <CippAutoComplete
+          multiple
+          creatable={false}
+          required
+          label="Permissions to remove"
+          options={OPTIONS}
+          onChange={() => {}}
+        />
+      )
+      await user.click(screen.getByRole('combobox'))
+      await user.click(await screen.findByRole('option', { name: 'Alpha' }))
+      expect(screen.getByRole('combobox')).not.toBeRequired()
+      expect(document.querySelector('.Mui-required')).toBeTruthy()
+      expect(document.querySelector('.MuiFormLabel-asterisk')).toBeTruthy()
+    })
+  })
+
+  // TextField forwards what it doesn't consume to the FormControl root, so a leak lands as a DOM attr
+  describe('prop routing', () => {
+    it('keeps autocomplete-only props off the DOM', () => {
+      const { container } = renderWithProviders(
+        <CippAutoComplete
+          multiple={false}
+          creatable={false}
+          options={OPTIONS}
+          onChange={() => {}}
+          noOptionsText="nothing here"
+        />
+      )
+      expect(container.querySelector('[nooptionstext]')).toBeNull()
+    })
+
+    it('routes variant to the text field, not to the autocomplete root', () => {
+      const { container } = renderWithProviders(
+        <CippAutoComplete
+          multiple={false}
+          creatable={false}
+          options={OPTIONS}
+          onChange={() => {}}
+          variant="outlined"
+        />
+      )
+      // outlined draws the notched fieldset/legend, the themed filled default does not
+      expect(container.querySelector('fieldset legend')).toBeTruthy()
+      expect(container.querySelector('[variant]')).toBeNull()
+    })
+
+    it('forwards filterSelectedOptions to the autocomplete, selected option stays listed', async () => {
+      const user = userEvent.setup()
+      renderWithProviders(
+        <CippAutoComplete
+          multiple={false}
+          creatable={false}
+          options={OPTIONS}
+          value={OPTIONS[0]}
+          onChange={() => {}}
+          filterSelectedOptions={false}
+        />
+      )
+      await user.click(screen.getByRole('combobox'))
+      expect(await screen.findByRole('option', { name: 'Alpha' })).toBeInTheDocument()
+    })
+  })
 })

@@ -55,6 +55,4 @@ Two actions sit at the bottom of each card:
 A domain that fails validation here is not necessarily misconfigured for its own purposes. Read the individual findings rather than treating the header icon as a verdict, particularly on domains that do not send mail.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

@@ -6,6 +6,4 @@ Have an error that you're unsure how to handle? Errors in most pages of CIPP wil
 Note that not every Microsoft returned error will be included in the docs site. These can also have additional information available with a search of the internet/Microsoft documentation.
 {% endhint %}
 
-***
-
 {% include "../../../.gitbook/includes/feature-request.md" %}

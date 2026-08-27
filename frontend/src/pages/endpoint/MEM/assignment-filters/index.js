@@ -38,6 +38,7 @@ const Page = () => {
     {
       label: "Edit Filter",
       link: "/endpoint/MEM/assignment-filters/edit?filterId=[id]",
+      pinned: true,
       multiPost: false,
       icon: <Edit />,
       color: "success",
@@ -88,9 +89,9 @@ const Page = () => {
             <Button component={Link} href="assignment-filters/add" startIcon={<Add />}>
               Add Assignment Filter
             </Button>
-            {reportDB.controls}
           </Stack>
         }
+        dataSourceControls={reportDB.controls}
         apiUrl={reportDB.resolvedApiUrl}
         queryKey={reportDB.resolvedQueryKey}
         actions={actions}

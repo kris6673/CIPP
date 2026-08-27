@@ -147,7 +147,6 @@ function Add-CIPPScheduledTask {
                 $Parameters.Headers = $Headers | Select-Object -Property 'x-forwarded-for', 'x-ms-client-principal', 'x-ms-client-principal-idp', 'x-ms-client-principal-name'
             }
 
-            $Parameters = ($Parameters | ConvertTo-Json -Depth 10 -Compress)
             $AdditionalProperties = [System.Collections.Hashtable]@{}
             foreach ($Prop in $task.AdditionalProperties) {
                 if ($null -eq $Prop.Value -or $Prop.Value -eq '' -or ($Prop.Value | Measure-Object).Count -eq 0) {
@@ -156,7 +155,6 @@ function Add-CIPPScheduledTask {
                 $AdditionalProperties[$Prop.Key] = $Prop.Value
             }
             $AdditionalProperties = ([PSCustomObject]$AdditionalProperties | ConvertTo-Json -Compress)
-            if ($Parameters -eq 'null') { $Parameters = '' }
 
 
             $Recurrence = if ([string]::IsNullOrEmpty($task.Recurrence.value)) {
@@ -223,6 +221,22 @@ function Add-CIPPScheduledTask {
                 }
             }
 
+            # Stored parameters are user input: strip any tenant-identifying parameter so the
+            # authorized task tenant is injected at execution instead of a stored value, and log
+            # when the stored value pointed somewhere other than the picked tenant.
+            foreach ($TenantParamName in @('TenantFilter', 'Tenant', 'TenantId')) {
+                if (-not $Parameters.ContainsKey($TenantParamName)) { continue }
+                $StoredTenantValue = $Parameters[$TenantParamName]
+                $StoredTenantString = [string]($StoredTenantValue.value ?? $StoredTenantValue)
+                if (![string]::IsNullOrWhiteSpace($StoredTenantString) -and $StoredTenantString -ne [string]$tenantFilter) {
+                    Write-LogMessage -headers $Headers -API 'ScheduledTask' -message "Task $($task.Name): parameter -$TenantParamName value '$StoredTenantString' does not match the selected tenant '$tenantFilter' and was removed; the task runs against the selected tenant." -Sev 'Error' -Tenant $tenantFilter
+                }
+                $Parameters.Remove($TenantParamName)
+            }
+
+            $Parameters = ($Parameters | ConvertTo-Json -Depth 10 -Compress)
+            if ($Parameters -eq 'null') { $Parameters = '' }
+
             $entity = @{
                 PartitionKey         = [string]'ScheduledTask'
                 TaskState            = [string]'Planned'
@@ -243,11 +257,20 @@ function Add-CIPPScheduledTask {
                 AlertComment         = [string]$task.AlertComment
                 CustomSubject        = [string]$task.CustomSubject
                 PsaTicketStrategy    = [string]($task.PsaTicketStrategy.value ?? $task.PsaTicketStrategy)
+                PsaTicketId          = [string]($task.PsaTicketId.value ?? $task.PsaTicketId)
             }
 
 
             if ($task.Tag) {
                 $entity['Tag'] = [string]$task.Tag
+            }
+
+            if ($Task.RowKey) {
+                # Editing replaces the entity, so carry the disabled state over to keep a disabled task disabled
+                $ExistingEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'ScheduledTask' and RowKey eq '$RowKey'" -Property RowKey, Disabled
+                if ($ExistingEntity.Disabled -eq $true) {
+                    $entity['Disabled'] = $true
+                }
             }
 
             # Always store DesiredStartTime if provided
@@ -274,31 +297,14 @@ function Add-CIPPScheduledTask {
                 $entity.Trigger = [string]($task.Trigger | ConvertTo-Json -Compress)
                 $TriggerType = $task.Trigger.Type.value ?? $task.Trigger.Type
                 if ($TriggerType -eq 'DeltaQuery') {
-                    $Parameters = @{}
-                    if ($task.Trigger.WatchedAttributes -and ($task.Trigger.WatchedAttributes | Measure-Object).Count -gt 0) {
-                        $Parameters.'$select' = $task.Trigger.WatchedAttributes | ForEach-Object { $_.value ?? $_ } -join ','
-                    }
-                    if ($task.Trigger.ResourceFilter) {
-                        $ResourceFilterValues = $task.Trigger.ResourceFilter | ForEach-Object { $_.value ?? $_ }
-                        $Parameters.'$filter' = "id eq '" + ($ResourceFilterValues -join "' or id eq '") + "'"
-                    }
                     $Resource = $task.Trigger.DeltaResource.value ?? $task.Trigger.DeltaResource
-
-                    if ($entity.TenantGroup) {
-                        $tenantFilter = $entity.TenantGroup | ConvertFrom-Json
-                    }
-                    $DeltaQuery = @{
-                        TenantFilter = $tenantFilter
-                        Resource     = $Resource
-                        Parameters   = $Parameters
-                        PartitionKey = $RowKey
-                    }
+                    $DeltaTenantFilter = if ($entity.TenantGroup) { $entity.TenantGroup | ConvertFrom-Json } else { $tenantFilter }
 
                     try {
-                        $null = New-GraphDeltaQuery @DeltaQuery
+                        $null = New-CIPPTaskDeltaQuery -Trigger $task.Trigger -TenantFilter $DeltaTenantFilter -PartitionKey $RowKey
                         Write-Information "Created delta query for resource $($Resource)"
                     } catch {
-                        Write-Warning "Failed to create delta query for resource $($Resource): $($_.Exception.Message)"
+                        throw "Failed to create delta query for resource $($Resource): $($_.Exception.Message)"
                     }
                 }
             }

@@ -8,6 +8,4 @@ Changing the destination attribute does not move or remove values already writte
 
 Saving a Reporting DB mapping re-registers the scheduled synchronisation tasks for the selected tenants.
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

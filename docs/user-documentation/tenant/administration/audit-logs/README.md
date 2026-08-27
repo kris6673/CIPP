@@ -36,6 +36,4 @@ The table respects the tenant selected at the top of CIPP. Choose All Tenants to
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>View Log</td><td>Opens the full structured view of the selected entry, including the raw audit record, any actions CIPP took, and geolocation for the originating IP address where one is available.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

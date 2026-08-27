@@ -71,6 +71,4 @@ Changing the UPN domain suffix signs every affected user out, and they have to s
 When the selection spans tenants, the users are grouped by tenant and updated tenant by tenant. Two limits follow from that. UPN Domain Suffix is withdrawn from the property list entirely, since a domain from one tenant means nothing in another. Manager and Sponsor stay available, but their picker only lists users from the first tenant in the selection, and the assignment will only succeed where an account with that name also exists in the other tenants. The wizard warns about both on screen.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

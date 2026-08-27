@@ -12,6 +12,8 @@ Two icons in the menu bar open the search dialog, each starting on a different s
 | Ctrl/Cmd + Shift + F | Opens search on **Users**.               |
 | Ctrl/Cmd + Alt + K   | Moves the cursor to the tenant selector. |
 
+Where the navigation has collapsed behind the menu button, the two icons are not shown, and search is opened from the **Universal Search** entry in your account menu. It fills the screen, the search types are offered as chips beneath the box so any of them is one tap away, and the results appear in the page rather than in a dropdown. Before you have typed anything, your bookmarks are listed instead. See [mobile-layout.md](../mobile-layout.md "mention").
+
 ## Search Types
 
 | Type         | What is searched                                                                        | Selecting a result                                             |
@@ -40,7 +42,5 @@ In the results list, matching text is shown in bold, and each result is labelled
 {% hint style="info" %}
 Results for users, groups, applications and licences come from the CIPP reporting database, so they are only as current as the last cache run. A record created moments ago will not appear until the cache next refreshes. Licence searches are matched first against the Microsoft SKU catalogue built into CIPP, and fall back to cached data only when the catalogue has no match.
 {% endhint %}
-
-***
 
 {% include "../../../../.gitbook/includes/feature-request.md" %}

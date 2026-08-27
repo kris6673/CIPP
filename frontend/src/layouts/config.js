@@ -45,6 +45,11 @@ export const nativeMenuItems = [
             permissions: ['Identity.User.*'],
           },
           {
+            title: 'Guest Users',
+            path: '/identity/administration/guest-users',
+            permissions: ['Identity.User.*'],
+          },
+          {
             title: 'Risky Users',
             path: '/identity/administration/risky-users',
             permissions: ['Identity.User.*'],
@@ -217,41 +222,32 @@ export const nativeMenuItems = [
         permissions: ['Tenant.Relationship.*'],
         scope: 'global',
       },
+      // Flag-gated swap: the Baselines feature flag lists this path in its Pages
+      // (hidden while the flag is off) and the classic Standards/Drift paths in
+      // HidesPages (hidden while it is on) - the two never show together.
+      {
+        title: 'Baselines',
+        path: '/tenant/baselines',
+        permissions: ['Tenant.Baselines.*'],
+        scope: 'global',
+      },
+      {
+        title: 'Domains Analyser',
+        path: '/tenant/standards/domains-analyser',
+        permissions: ['Tenant.DomainAnalyser.*'],
+        scope: 'global',
+      },
       {
         title: 'Standards & Drift',
-        permissions: [
-          'Tenant.Standards.*',
-          'Tenant.BestPracticeAnalyser.*',
-          'Tenant.DomainAnalyser.*',
-        ],
-        items: [
-          {
-            title: 'Standards Management',
-            path: '/tenant/standards/alignment',
-            permissions: ['Tenant.Standards.*'],
-            scope: 'global',
-          },
-          // Baselines mockup - hidden from the nav for now; reach it directly
-          // at /tenant/baselines
-          // {
-          //   title: 'Baselines (Preview)',
-          //   path: '/tenant/baselines',
-          //   permissions: ['Tenant.Standards.*'],
-          //   scope: 'global',
-          // },
-          {
-            title: 'Best Practice Analyser',
-            path: '/tenant/standards/bpa-report',
-            permissions: ['Tenant.BestPracticeAnalyser.*'],
-            scope: 'global',
-          },
-          {
-            title: 'Domains Analyser',
-            path: '/tenant/standards/domains-analyser',
-            permissions: ['Tenant.DomainAnalyser.*'],
-            scope: 'global',
-          },
-        ],
+        path: '/tenant/standards/alignment',
+        permissions: ['Tenant.Standards.*'],
+        scope: 'global',
+      },
+      {
+        title: 'Best Practice Analyser',
+        path: '/tenant/standards/bpa-report',
+        permissions: ['Tenant.BestPracticeAnalyser.*'],
+        scope: 'global',
       },
       {
         title: 'Conditional Access',
@@ -575,6 +571,7 @@ export const nativeMenuItems = [
           {
             title: 'Application Templates',
             path: '/endpoint/applications/templates',
+            docsPath: 'endpoint/applications/application-templates',
             permissions: ['Endpoint.Application.*'],
             scope: 'global',
           },
@@ -1046,28 +1043,33 @@ export const nativeMenuItems = [
           {
             title: 'Graph Explorer',
             path: '/tenant/tools/graph-explorer',
+            docsPath: 'tools/tenant-tools/graph-explorer',
             permissions: ['Tenant.Administration.*'],
           },
           {
             title: 'Tenant Lookup',
             path: '/tenant/tools/tenantlookup',
+            docsPath: 'tools/tenant-tools/tenantlookup',
             permissions: ['Tenant.Administration.*'],
             scope: 'global',
           },
           {
             title: 'Application Approval',
             path: '/tenant/tools/appapproval',
+            docsPath: 'tools/tenant-tools/appapproval',
             permissions: ['Tenant.Application.*'],
           },
           {
             title: 'Individual Domain Check',
             path: '/tenant/tools/individual-domains',
+            docsPath: 'tools/tenant-tools/individual-domains',
             permissions: ['Tenant.DomainAnalyser.*'],
             scope: 'global',
           },
           {
             title: 'IP Database',
             path: '/tenant/tools/geoiplookup',
+            docsPath: 'tools/tenant-tools/geoiplookup',
             permissions: ['CIPP.Core.*'],
             scope: 'global',
           },
@@ -1080,16 +1082,25 @@ export const nativeMenuItems = [
           {
             title: 'Message Trace',
             path: '/email/tools/message-trace',
+            docsPath: 'tools/email-tools/message-trace',
             permissions: ['Exchange.Mailbox.*'],
           },
           {
             title: 'Message Viewer',
             path: '/email/tools/message-viewer',
+            docsPath: 'tools/email-tools/message-viewer',
             permissions: ['Exchange.Mailbox.*'],
           },
           {
             title: 'Mailbox Restores',
             path: '/email/tools/mailbox-restores',
+            docsPath: 'tools/email-tools/mailbox-restores',
+            permissions: ['Exchange.Mailbox.*'],
+          },
+          {
+            title: 'Message Encryption',
+            path: '/email/tools/message-encryption',
+            docsPath: 'tools/email-tools/message-encryption',
             permissions: ['Exchange.Mailbox.*'],
           },
         ],
@@ -1101,6 +1112,7 @@ export const nativeMenuItems = [
           {
             title: 'Compare Policies',
             path: '/endpoint/MEM/compare-policies',
+            docsPath: 'tools/intune-tools/compare-policies',
             permissions: ['Endpoint.MEM.*'],
             scope: 'global',
           },
@@ -1113,12 +1125,14 @@ export const nativeMenuItems = [
           {
             title: 'Tenant Breach Lookup',
             path: '/tools/tenantbreachlookup',
+            docsPath: 'tools/dark-web-tools/tenant-breach-lookup',
             permissions: ['CIPP.Core.*'],
             scope: 'global',
           },
           {
             title: 'Breach Lookup',
             path: '/tools/breachlookup',
+            docsPath: 'tools/dark-web-tools/breach-lookup',
             permissions: ['CIPP.Core.*'],
             scope: 'global',
           },
@@ -1155,6 +1169,7 @@ export const nativeMenuItems = [
       {
         title: 'Scheduler',
         path: '/cipp/scheduler',
+        docsPath: 'tools/scheduler',
         roles: ['editor', 'admin', 'superadmin'],
         permissions: ['CIPP.Scheduler.*'],
       },

@@ -28,6 +28,4 @@ Properties cannot be deleted once the schema is created, regardless of status. R
 Schema extension properties are always single-valued. If you need to store a collection, use a multi-valued directory extension instead.
 {% endhint %}
 
-***
-
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

@@ -14,6 +14,7 @@ import { Chip, Link, SvgIcon, Tooltip } from '@mui/material'
 import NextLink from 'next/link'
 import { alpha } from '@mui/material/styles'
 import { Box } from '@mui/system'
+import { formatCellText, CippCellText } from '../components/CippTable/CippCellText'
 import { CippCopyToClipBoard } from '../components/CippComponents/CippCopyToClipboard'
 import { getCippLicenseTranslation } from './get-cipp-license-translation'
 import CippDataTableButton from '../components/CippTable/CippDataTableButton'
@@ -43,6 +44,22 @@ const getCountryNameFromCode = (countryCode) => {
   return country ? country.Name : countryCode
 }
 
+// Shared so the card list and the extended-info drawer can label a portal link with the
+// same glyph the table cell uses.
+export const portalIcons = {
+  portal_m365: CogIcon,
+  portal_exchange: MailOutline,
+  portal_entra: UserIcon,
+  portal_teams: UsersIcon,
+  portal_azure: ServerIcon,
+  portal_intune: LaptopWindows,
+  portal_security: Shield,
+  portal_compliance: CompassCalibration,
+  portal_sharepoint: Description,
+  portal_platform: PrecisionManufacturing,
+  portal_bi: BarChart,
+}
+
 export const getCippFormatting = (
   data,
   cellName,
@@ -61,20 +78,6 @@ export const getCippFormatting = (
         <Chip variant="outlined" label="No data" size="small" color="info" />
       </Box>
     )
-  }
-
-  const portalIcons = {
-    portal_m365: CogIcon,
-    portal_exchange: MailOutline,
-    portal_entra: UserIcon,
-    portal_teams: UsersIcon,
-    portal_azure: ServerIcon,
-    portal_intune: LaptopWindows,
-    portal_security: Shield,
-    portal_compliance: CompassCalibration,
-    portal_sharepoint: Description,
-    portal_platform: PrecisionManufacturing,
-    portal_bi: BarChart,
   }
 
   // Create a helper function to render chips with CollapsibleChipList
@@ -241,7 +244,7 @@ export const getCippFormatting = (
       )
     }
     const gb = bytes / 1024 / 1024 / 1024
-    return isText ? `${gb.toFixed(2)} GB` : `${gb.toFixed(2)} GB`
+    return formatCellText(`${gb.toFixed(2)} GB`, isText)
   }
 
   if (cellName === 'info.logoUrl') {
@@ -266,6 +269,9 @@ export const getCippFormatting = (
     'NextAttemptUtc',
     'LastErrorUtc',
     'LastPolledUtc',
+    'QueuedUtc', // Worker health job queue
+    'StartedUtc', // Worker health job queue
+    'CompletedUtc', // Worker health job queue
   ]
   if (absoluteDateArray.includes(cellName)) {
     if (data === null || data === undefined || data === '') {
@@ -274,9 +280,11 @@ export const getCippFormatting = (
     const dt = parseCippDate(data)
     if (isNaN(dt.getTime())) return isText ? '' : ''
     if (dt.getTime() === 0) return isText ? '' : 'Never'
-    // text mode: Date object so MRT sorts chronologically (toLocaleString for CSV export);
+    // text mode: Date object so MRT sorts chronologically — except when the caller can
+    // receive a rendered node ('both': off-canvas, card views) or explicitly wants a
+    // string (false: CSV export); a raw Date is not a valid React child.
     // cell mode: long absolute string in the browser's locale + timezone.
-    if (isText) return canReceive === false ? dt.toLocaleString() : dt
+    if (isText) return canReceive === 'both' || canReceive === false ? dt.toLocaleString() : dt
     return dt.toLocaleString()
   }
 
@@ -317,6 +325,7 @@ export const getCippFormatting = (
     'requestDate', // App Consent Requests
     'reviewedDate', // App Consent Requests
     'GeneratedAt', // Report Builder
+    'RecordedAt', // Container update history
     'directTenantAuthDate', // Direct tenant service account
     'ServiceAccountLastAuth', // Direct tenant service account
   ]
@@ -355,11 +364,11 @@ export const getCippFormatting = (
         data
       ) : (
         <Tooltip title={data} placement="top" arrow>
-          <span>{data.substring(0, 15)}...</span>
+          <CippCellText>{data.substring(0, 15)}...</CippCellText>
         </Tooltip>
       )
     }
-    return isText ? data : data
+    return formatCellText(data, isText)
   }
 
   // Handle log message field
@@ -370,11 +379,11 @@ export const getCippFormatting = (
         data
       ) : (
         <Tooltip title={data} placement="top" arrow>
-          <span>{data.substring(0, 120)}...</span>
+          <CippCellText>{data.substring(0, 120)}...</CippCellText>
         </Tooltip>
       )
     }
-    return isText ? data : data
+    return formatCellText(data, isText)
   }
 
   if (
@@ -452,7 +461,7 @@ export const getCippFormatting = (
     //domainAnalyser layouts
     //device by 86400 to get days, then return "days"
     const days = data / 86400
-    return isText ? `${days} days` : `${days} days`
+    return formatCellText(`${days} days`, isText)
   }
   if (cellName === 'DMARCPolicy') {
     if (data === 's') {
@@ -730,7 +739,7 @@ export const getCippFormatting = (
   if (cellName === 'standardName') {
     // Already resolved for templates; do a standards.json lookup for classic standards
     if (!data?.startsWith('standards.'))
-      return isText ? data : <span>{data}</span>
+      return formatCellText(data, isText)
     const baseName = data.split('.').slice(0, -1).join('.')
     const label =
       getStandards().find((s) => s.name === data)?.label ??
@@ -1051,6 +1060,20 @@ export const getCippFormatting = (
     )
   }
 
+  // handle role members
+  // Without this the CSV/PDF exports fall through to the generic object branch and emit raw
+  // JSON per member. The on-screen cell keeps rendering as the items button.
+  if (cellName === 'Members' && Array.isArray(data)) {
+    return isText ? (
+      data
+        .map((member) => member?.displayName || member?.userPrincipalName || member?.id)
+        .filter(Boolean)
+        .join(', ')
+    ) : (
+      <CippDataTableButton data={data} tableTitle="Members" />
+    )
+  }
+
   // Handle assigned licenses
   if (cellName === 'assignedLicenses') {
     var translatedLicenses = getCippLicenseTranslation(data)
@@ -1191,12 +1214,12 @@ export const getCippFormatting = (
       )
     } catch (e) {
       // If parsing fails, return the original string
-      return isText ? data : <span>{data}</span>
+      return formatCellText(data, isText)
     }
   }
 
   if (cellName === 'key') {
-    return isText ? data : getCippTranslation(data)
+    return formatCellText(getCippTranslation(data), isText)
   }
 
   // Handle CIPPExtendedProperties, parse JSON and display table of Name, Value
@@ -1490,5 +1513,5 @@ export const getCippFormatting = (
   }
 
   // Default case: return data as-is
-  return isText ? String(data) : <span>{data}</span>
+  return formatCellText(data, isText)
 }

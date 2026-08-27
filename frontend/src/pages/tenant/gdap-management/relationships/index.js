@@ -55,6 +55,10 @@ const Page = () => {
       queryKey="ListGDAPRelationships"
       actions={actions}
       offCanvas={offCanvas}
+      rowOpen={{
+        link: '/tenant/gdap-management/relationships/relationship?id=[id]',
+        condition: (row) => Boolean(row?.id),
+      }}
       simpleColumns={simpleColumns}
       maxHeightOffset="460px"
       filters={filters}

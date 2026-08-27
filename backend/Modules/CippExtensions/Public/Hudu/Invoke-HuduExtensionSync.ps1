@@ -207,6 +207,11 @@ function Invoke-HuduExtensionSync {
                 URL   = 'https://admin.teams.microsoft.com/?delegatedOrg={0}' -f $Tenant.defaultDomainName
                 Icon  = 'fas fa-users'
             }
+			@{
+                Title = 'SharePoint Portal'
+                URL   = 'https://admin.cloud.microsoft/Partner/beginclientsession.aspx?CTID={0}&CSDEST=SharePoint' -f $Tenant.customerId
+                Icon  = 'fas fa-sitemap'
+            }
             @{
                 Title = 'Azure Portal'
                 URL   = 'https://portal.azure.com/{0}' -f $Tenant.defaultDomainName
@@ -223,7 +228,7 @@ function Invoke-HuduExtensionSync {
         if ($Configuration.IncludeComplianceLink) {
             $Links.Add(@{
                     Title = 'Compliance Portal'
-                    URL   = 'https://compliance.microsoft.com/?tid={0}' -f $Tenant.customerId
+                    URL   = 'https://purview.microsoft.com/home?tid={0}' -f $Tenant.customerId
                     Icon  = 'fas fa-caret-up'
                 })
         }
@@ -780,7 +785,7 @@ function Invoke-HuduExtensionSync {
                     if ($EnableCIPP) {
                         $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/users/user?tenantFilter=$($Tenant.defaultDomainName)&userId=$($User.id)" -Icon 'far fa-eye' -Title 'CIPP - View User'))
                         $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/users/user/edit?tenantFilter=$($Tenant.defaultDomainName)&userId=$($User.id)" -Icon 'fas fa-user-cog' -Title 'CIPP - Edit User'))
-                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/users/user/bec?tenantFilter=$($Tenant.defaultDomainName)&userId=$($User.id))" -Icon 'fas fa-user-secret' -Title 'CIPP - BEC Tool'))
+                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/users/user/bec?tenantFilter=$($Tenant.defaultDomainName)&userId=$($User.id)" -Icon 'fas fa-user-secret' -Title 'CIPP - BEC Tool'))
                     }
 
                     [System.Collections.Generic.List[PSCustomObject]]$UserLinksFormatted = @()

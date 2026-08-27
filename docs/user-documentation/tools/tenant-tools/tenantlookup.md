@@ -34,6 +34,4 @@ Where the tenant has customised its sign-in experience, that branding is reprodu
 Branding is retrieved from the tenant's own sign-in service and is a helpful signal, not proof of identity. Treat a familiar-looking logo as a starting point for verification rather than confirmation that a domain belongs to who you expect.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

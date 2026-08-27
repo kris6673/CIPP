@@ -28,6 +28,7 @@ const Page = () => {
     {
       label: 'View Tenant Report',
       link: '/tenant/manage/applied-standards/?templateId=[GUID]',
+      pinned: true,
       icon: <EyeIcon />,
       color: 'info',
       target: '_self',
@@ -36,6 +37,7 @@ const Page = () => {
       label: 'Edit Template',
       //when using a link it must always be the full path /identity/administration/users/[id] for example.
       link: '/tenant/standards/templates/template?id=[GUID]&type=[type]',
+      pinned: true,
       icon: <Edit />,
       color: 'success',
       target: '_self',
@@ -189,14 +191,14 @@ const Page = () => {
                 disable the schedule. After conversion, please check the new templates to ensure
                 they are correct and re-enable the schedule.
               </Grid>
-              <Grid size={2}>
+              <Grid size={{ xs: 12, md: 2 }}>
                 <Button onClick={() => handleConversion()} variant={'contained'}>
                   Convert Legacy Standards
                 </Button>
               </Grid>
             </Alert>
           </Grid>
-          <Grid size={8}>
+          <Grid size={{ xs: 12, md: 8 }}>
             <CippApiResults apiObject={conversionApi} />
           </Grid>
         </Grid>

@@ -32,7 +32,8 @@ function Start-UserTasksOrchestrator {
         # Pending = orchestrator claimed but executor not yet started, Running = actively executing
         # Pick up: Planned, Failed-Planned, stuck Pending (>1hr - orphaned claim), or stuck Running/Processing (>4hr for large AllTenants tasks)
         $Filter = "PartitionKey eq 'ScheduledTask' and (TaskState eq 'Planned' or TaskState eq 'Failed - Planned' or (TaskState eq 'Pending' and Timestamp lt datetime'$1HourAgo') or (TaskState eq 'Running' and Timestamp lt datetime'$4HoursAgo') or (TaskState eq 'Processing' and Timestamp lt datetime'$4HoursAgo'))"
-        $tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+        # Disabled is filtered client side: an OData comparison excludes rows that lack the property, which is every task created before the flag existed
+        $tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { $_.Disabled -ne $true }
     }
 
     $Batch = [System.Collections.Generic.List[object]]::new()
@@ -105,7 +106,11 @@ function Start-UserTasksOrchestrator {
                         throw "Command '$($task.Command)' not found and no module could be resolved from the command name for scheduled task '$($task.Name)'."
                     }
                 }
-                $HasTenantFilter = $CommandInfo.Parameters.ContainsKey('TenantFilter')
+                # The task's authorized tenant is injected into the most specific tenant-identifying
+                # parameter the command declares - stored parameter values must never select the tenant.
+                $TenantParamNames = [array](@('TenantFilter', 'Tenant', 'TenantId') | Where-Object { $CommandInfo.Parameters.ContainsKey($_) })
+                $HasTenantFilter = $TenantParamNames.Count -gt 0
+                $PrimaryTenantParam = $TenantParamNames.Count -gt 0 ? $TenantParamNames[0] : $null
 
                 $ScheduledCommand = [pscustomobject]@{
                     Command      = $task.Command
@@ -127,7 +132,10 @@ function Start-UserTasksOrchestrator {
                     $AllTenantCommands = foreach ($Tenant in $TenantList | Where-Object { $_.defaultDomainName -notin $ExcludedTenants }) {
                         $NewParams = $task.Parameters.Clone()
                         if ($HasTenantFilter) {
+                            # TenantFilter always carries the execution tenant context; it is stripped
+                            # before splatting if the command does not declare it
                             $NewParams.TenantFilter = $Tenant.defaultDomainName
+                            $NewParams.$PrimaryTenantParam = $Tenant.defaultDomainName
                         }
                         # Clone TaskInfo to prevent shared object references
                         $TaskInfoClone = $task.PSObject.Copy()
@@ -169,6 +177,7 @@ function Start-UserTasksOrchestrator {
                             $NewParams = $task.Parameters.Clone()
                             if ($HasTenantFilter) {
                                 $NewParams.TenantFilter = $ExpandedTenant.value
+                                $NewParams.$PrimaryTenantParam = $ExpandedTenant.value
                             }
                             # Clone TaskInfo to prevent shared object references
                             $TaskInfoClone = $task.PSObject.Copy()
@@ -187,6 +196,7 @@ function Start-UserTasksOrchestrator {
                         # Fall back to treating as single tenant
                         if ($HasTenantFilter) {
                             $ScheduledCommand.Parameters['TenantFilter'] = $task.Tenant
+                            $ScheduledCommand.Parameters[$PrimaryTenantParam] = $task.Tenant
                         }
                         $Batch.Add($ScheduledCommand)
                     }
@@ -194,6 +204,7 @@ function Start-UserTasksOrchestrator {
                     # Handle single tenant
                     if ($HasTenantFilter) {
                         $ScheduledCommand.Parameters['TenantFilter'] = $task.Tenant
+                        $ScheduledCommand.Parameters[$PrimaryTenantParam] = $task.Tenant
                     }
                     $Batch.Add($ScheduledCommand)
                 }
@@ -250,6 +261,10 @@ function Start-UserTasksOrchestrator {
                     OrchestratorName = "UserTaskOrchestrator_$TenantName"
                     Batch            = $BatchWithQueue
                     SkipLog          = $true
+                    # User band: scheduled/run-now tasks must not queue behind P4 background fan-outs.
+                    # Explicit because the starter jobs that invoke this function expose no ambient
+                    # priority to inherit. Child orchestrations (e.g. OffboardingUser_*) inherit this.
+                    Priority         = 2
                 }
 
                 if ($PSCmdlet.ShouldProcess('Start-UserTasksOrchestrator', 'Starting Single-Tenant Tasks Orchestrator')) {
@@ -299,6 +314,8 @@ function Start-UserTasksOrchestrator {
                     OrchestratorName = "UserTaskOrchestrator_$($ParentTask.Name)"
                     Batch            = @($AllBatchItems)
                     SkipLog          = $true
+                    # User band - see the single-tenant orchestrator above.
+                    Priority         = 2
                     PostExecution    = @{
                         FunctionName = 'ScheduledTaskPostExecution'
                         Parameters   = @{

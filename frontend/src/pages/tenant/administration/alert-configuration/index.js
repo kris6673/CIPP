@@ -4,7 +4,15 @@ import { Layout as DashboardLayout } from '../../../../layouts/index.js' // had 
 import { TabbedLayout } from '../../../../layouts/TabbedLayout'
 import tabOptions from './tabOptions.json'
 import Link from 'next/link'
-import { CopyAll, Delete, Edit, NotificationAdd, Visibility } from '@mui/icons-material'
+import {
+  CopyAll,
+  Delete,
+  Edit,
+  NotificationAdd,
+  ToggleOff,
+  ToggleOn,
+  Visibility,
+} from '@mui/icons-material'
 
 const Page = () => {
   const pageTitle = 'Alerts'
@@ -12,12 +20,14 @@ const Page = () => {
     {
       label: 'View Task Details',
       link: '/cipp/scheduler/task?id=[RowKey]',
+      pinned: true,
       icon: <Visibility />,
       condition: (row) => row?.EventType === 'Scheduled Task',
     },
     {
       label: 'Edit Alert',
       link: '/tenant/administration/alert-configuration/alert?id=[RowKey]',
+      pinned: true,
       icon: <Edit />,
       color: 'success',
       target: '_self',
@@ -28,6 +38,37 @@ const Page = () => {
       icon: <CopyAll />,
       color: 'success',
       target: '_self',
+    },
+    {
+      label: 'Enable Alert',
+      type: 'POST',
+      url: '/api/ExecToggleAlert',
+      data: {
+        ID: 'RowKey',
+        EventType: 'EventType',
+        Disabled: '!false',
+      },
+      icon: <ToggleOn />,
+      relatedQueryKeys: 'ListAlertsQueue',
+      condition: (row) => row.Enabled !== true,
+      confirmText: 'Are you sure you want to enable this alert?',
+      multiPost: false,
+    },
+    {
+      label: 'Disable Alert',
+      type: 'POST',
+      url: '/api/ExecToggleAlert',
+      data: {
+        ID: 'RowKey',
+        EventType: 'EventType',
+        Disabled: '!true',
+      },
+      icon: <ToggleOff />,
+      relatedQueryKeys: 'ListAlertsQueue',
+      condition: (row) => row.Enabled === true,
+      confirmText:
+        'Are you sure you want to disable this alert? It will not run until you enable it again.',
+      multiPost: false,
     },
     {
       label: 'Delete Alert',
@@ -62,6 +103,7 @@ const Page = () => {
       simpleColumns={[
         'Tenants',
         'EventType',
+        'Enabled',
         'Conditions',
         'RepeatsEvery',
         'Actions',

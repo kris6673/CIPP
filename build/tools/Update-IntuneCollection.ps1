@@ -9,13 +9,10 @@
       backend\Config\intuneCollection.json     the whole catalog, read by
                                                Compare-CIPPIntuneObject.ps1 at runtime
       backend\Config\intuneCategories.json     the category records, whole
-      frontend\public\intune-definitions\      one file per setting definition, which is
-                                               what the UI fetches (see
+      frontend\public\intune-definitions\      256 bucket bundles of setting definitions,
+                                               which is what the UI fetches (see
                                                Split-IntuneCollection.ps1 for why)
       frontend\public\intuneCategories.json    the category records, whole
-      frontend\public\intuneCollection.json    the whole catalog again. Nothing reads it
-                                               since the UI moved to the per-definition
-                                               files; kept in step rather than stale.
 
     The definitions translate raw settingDefinitionIds into human-readable display
     names. Each carries categoryName for grouping, plus categoryId to join against
@@ -161,15 +158,6 @@ $apiPath = Join-Path $PSScriptRoot '..\..\backend\Config\intuneCollection.json'
 $json | Set-Content -Path $apiPath -Encoding utf8NoBOM
 Write-Host "Written: $(Resolve-Path $apiPath)" -ForegroundColor Green
 
-# The whole catalog in public/ as well. Nothing reads it - the UI fetches the per-definition files
-# written below - but it is kept in step rather than left to go stale, so anything still reaching
-# for it gets current data.
-$frontendPath = Join-Path $PSScriptRoot '..\..\frontend\public\intuneCollection.json'
-if (Test-Path (Split-Path $frontendPath)) {
-    $json | Set-Content -Path $frontendPath -Encoding utf8NoBOM
-    Write-Host "Written: $(Resolve-Path $frontendPath)" -ForegroundColor Green
-}
-
 # The category tree, kept whole in both places. A few hundred KB rather than the catalog's 18MB, so
 # unlike the settings themselves this is small enough to ship as one file and needs no splitting.
 if ($categories.Count -gt 0) {
@@ -186,8 +174,8 @@ if ($categories.Count -gt 0) {
     }
 }
 
-# Frontend: one file per definition rather than the whole catalog. The UI fetches only the
-# definitions a policy references - see Split-IntuneCollection.ps1 for why, and for the naming.
+# Frontend: 256 bucket bundles rather than the whole catalog. The UI fetches only the buckets a
+# policy references - see Split-IntuneCollection.ps1 for why, and for the naming.
 $splitScript = Join-Path $PSScriptRoot 'Split-IntuneCollection.ps1'
 & $splitScript -CollectionPath $apiPath
 

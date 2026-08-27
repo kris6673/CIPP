@@ -24,6 +24,4 @@ This table is view only. Cross-tenant access settings are changed in the Microso
 The partner name is not stored in the policy itself. CIPP looks up each partner's tenant ID against Microsoft to resolve it, so a partner whose tenant cannot be resolved shows a blank name with its details still available in the Tenant Info column.
 {% endhint %}
 
-***
-
 {% include "../../../../.gitbook/includes/feature-request.md" %}

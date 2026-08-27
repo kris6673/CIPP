@@ -94,6 +94,4 @@ Clicking a row opens the same detail flyout as the per-tenant view. The full det
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>View tenant dashboard</td><td>Opens this tab for the tenant the selected result belongs to.</td><td>false</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
-***
-
 {% include "../../../.gitbook/includes/feature-request.md" %}

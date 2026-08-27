@@ -29,8 +29,12 @@ frontend/node_modules/
 frontend/.next/
 frontend/out/
 
-# Docs / non-runtime
-docs/
+# Non-runtime. docs/ is NOT excluded: its markdown ships to /app/API/Docs and is indexed at
+# runtime by the SearchDocs MCP tool (Get-CippDocsIndex). Only the image tree is dropped.
+# This file is what applies to Dockerfile.release, which has no <dockerfile>.dockerignore of
+# its own — so excluding docs/ here breaks the release image's `COPY docs`, while leaving the
+# dev image (which reads build/Dockerfile.dockerignore) working. Keep the two in step.
+docs/.gitbook/
 .env
 build/.env.example
 

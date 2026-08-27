@@ -42,6 +42,4 @@ CIPP works out the relationship type from the relationship name.
 
 Lists the admin roles the customer has approved for this relationship. These are the roles the relationship is permitted to grant, which is not the same as the roles that have actually been assigned to your technicians.
 
-***
-
 {% include "../../../../../../.gitbook/includes/feature-request.md" %}

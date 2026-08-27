@@ -9,14 +9,21 @@ import tabOptions from "./tabOptions.json";
 // Saved Logs Configuration
 const savedLogsColumns = ["Timestamp", "Tenant", "Title", "Actions"];
 const savedLogsApiUrl = "/api/ListAuditLogs";
+const savedLogViewLink = "/tenant/administration/audit-logs/log?id=[LogId]";
 const savedLogsActions = [
   {
     label: "View Log",
-    link: "/tenant/administration/audit-logs/log?id=[LogId]",
+    link: savedLogViewLink,
+    pinned: true,
     color: "primary",
     icon: <EyeIcon />,
   },
 ];
+
+const offCanvas = {
+  extendedInfoFields: ["Timestamp", "Tenant", "Title"],
+  actions: savedLogsActions,
+};
 
 const Page = () => {
   // Preserves the previous behaviour: RelativeTime defaults to "7d" and is always sent.
@@ -51,6 +58,11 @@ const Page = () => {
       }`}
       apiData={apiParams}
       actions={savedLogsActions}
+      offCanvas={offCanvas}
+      rowOpen={{
+        link: savedLogViewLink,
+        condition: (row) => Boolean(row?.LogId),
+      }}
     />
   );
 };

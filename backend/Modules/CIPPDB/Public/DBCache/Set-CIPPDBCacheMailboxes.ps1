@@ -27,7 +27,7 @@ function Set-CIPPDBCacheMailboxes {
 
         # Get mailboxes and user details in a single bulk request
         $ZeroArchiveGuid = '00000000-0000-0000-0000-000000000000'
-        $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled,GrantSendOnBehalfTo,PersistedCapabilities,LitigationHoldEnabled,LitigationHoldDate,LitigationHoldDuration,ComplianceTagHoldApplied,RetentionHoldEnabled,InPlaceHolds,RetentionPolicy,RemotePowerShellEnabled,Guid,Identity,AutoExpandingArchiveEnabled'
+        $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled,GrantSendOnBehalfTo,PersistedCapabilities,LitigationHoldEnabled,LitigationHoldDate,LitigationHoldDuration,ComplianceTagHoldApplied,RetentionHoldEnabled,InPlaceHolds,RetentionPolicy,RemotePowerShellEnabled,Guid,Identity,AutoExpandingArchiveEnabled,IsExchangeCloudManaged,IsDirSynced,MailboxPlan,MailboxPlanId,RecipientLimits,AccountDisabled,AuditEnabled,AuditOwner,AuditDelegate,AuditAdmin,DefaultAuditSet'
         $BulkRequests = @(
             @{ CmdletInput = @{ CmdletName = 'Get-Mailbox'; Parameters = @{} } }
             @{ CmdletInput = @{ CmdletName = 'Get-User'; Parameters = @{} } }
@@ -87,6 +87,18 @@ function Set-CIPPDBCacheMailboxes {
                     InPlaceHolds,
                     RetentionPolicy,
                     GrantSendOnBehalfTo,
+                    IsExchangeCloudManaged,
+                    IsDirSynced,
+                    MailboxPlan,
+                    MailboxPlanId,
+                    PersistedCapabilities,
+                    RecipientLimits,
+                    AccountDisabled,
+                    AuditEnabled,
+                    AuditOwner,
+                    AuditDelegate,
+                    AuditAdmin,
+                    DefaultAuditSet,
                     @{ Name = 'RemotePowerShellEnabled'; Expression = { $MatchedUser.RemotePowerShellEnabled } },
                     @{ Name = 'Guid'; Expression = { $MatchedUser.Guid } },
                     @{ Name = 'Identity'; Expression = { $MatchedUser.Identity } }))

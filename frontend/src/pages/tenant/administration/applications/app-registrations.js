@@ -65,6 +65,10 @@ const Page = () => {
       apiDataKey="Results"
       actions={actions}
       offCanvas={offCanvas}
+      rowOpen={{
+        link: '/tenant/administration/applications/app-registration?appId=[appId]&tenantFilter=[Tenant]',
+        condition: (row) => Boolean(row?.appId),
+      }}
       simpleColumns={simpleColumns}
     />
   )
