@@ -224,7 +224,7 @@
   * [Incidents & Alerts](user-documentation/security/incidents/README.md)
     * [Incidents](user-documentation/security/incidents/list-incidents.md)
     * [Alerts](user-documentation/security/incidents/list-alerts.md)
-    * [MDO Alerts](user-documentation/security/incidents/list-mdo-alerts.md)
+    * [Defender Alerts](user-documentation/security/incidents/list-mdo-alerts.md)
     * [Check Alerts](user-documentation/security/incidents/list-check-alerts.md)
   * [Defender](user-documentation/security/defender/README.md)
     * [Defender Status](user-documentation/security/defender/list-defender.md)
