@@ -133,6 +133,10 @@ Click **Connect**. You'll be redirected to your normal Microsoft / CIPP sign-in 
 
 If your AI still asks for a client ID, it doesn't support automatic registration. Enter the Application (Client) ID of the API client you flagged _MCP Access Allowed_, and leave the secret empty.
 
+{% hint style="info" %}
+**Copilot Studio and Microsoft 365 Copilot agents are the exception.** They sign in as a confidential client with a **client secret** (not the secret-less flow above), so they need a manual setup. Follow [#copilot-studio-and-microsoft-365-copilot-agents](cipp-api.md#copilot-studio-and-microsoft-365-copilot-agents "mention") instead of this step.
+{% endhint %}
+
 {% hint style="warning" %}
 If you tried this URL before and it failed, your AI may have cached that result and will keep failing even after everything is fixed — Claude does this. Reconnect using a slightly different URL, for example `https://<your-cipp-api-url>/api/ExecMCP?retry=1`, which the AI treats as a new server.
 {% endhint %}
@@ -151,6 +155,79 @@ Ask your AI something like:
 > _Using CIPP, list all my tenants._
 
 If tools show up and return data, you're done.
+{% endstep %}
+{% endstepper %}
+
+## Copilot Studio and Microsoft 365 Copilot agents
+
+Copilot Studio (and Microsoft 365 Copilot agents) is the one supported client that **can't** use the automatic, no-client-ID/no-secret flow above. The Power Platform connector behind Copilot Studio signs in as a confidential client with a **client secret**, which Microsoft Entra requires you to wire up by hand. CIPP still pre-registers the callback for you when you run **Save to Azure** — you just supply the client ID, secret, and scopes in Copilot Studio's wizard.
+
+{% hint style="info" %}
+Do the [#cipp-mcp](cipp-api.md#cipp-mcp "mention") steps first (Enable MCP → create the MCP client → **Save to Azure**). Keep the MCP client's **Application (Client) ID** and **secret** handy — if you didn't save the secret, reset it with **Actions → Reset Application Secret**.
+{% endhint %}
+
+{% stepper %}
+{% step %}
+
+### Add the MCP server in Copilot Studio
+
+In your agent: **Tools → Add a tool → Model Context Protocol**. Set:
+
+| Field                           | Value                                                                                                          |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **Server name / description**   | Anything descriptive. The description drives whether the agent picks the tools — write it like an API docstring. |
+| **Streamable endpoint (Server URL)** | `https://<your-cipp-api-url>/api/ExecMCP`                                                                 |
+| **Authentication**              | **OAuth 2.0 → Manual**                                                                                        |
+
+{% endstep %}
+
+{% step %}
+
+### Fill the Manual OAuth fields
+
+| Field                 | Value                                                                            |
+| --------------------- | ------------------------------------------------------------------------------- |
+| **Client ID**         | The MCP client's **Application (Client) ID**.                                    |
+| **Client secret**     | That client's **secret** — not blank; Copilot Studio is a confidential client.  |
+| **Authorization URL** | `https://login.microsoftonline.com/<tenant-id>/oauth2/v2.0/authorize`           |
+| **Token URL**         | `https://login.microsoftonline.com/<tenant-id>/oauth2/v2.0/token`               |
+| **Refresh URL**       | Same as the Token URL.                                                           |
+| **Scopes**            | `https://<cipp-backend-host>/user_impersonation offline_access openid profile`  |
+
+- `<tenant-id>` is your CIPP tenant ID (shown on the CIPP-API page).
+- `<cipp-backend-host>` is CIPP's backend host — the `…azurewebsites.net` **Application ID URI** shown under **Expose an API** on the MCP client's app registration. It's the host in the `scope=` of the sign-in challenge, **not** your vanity `cipp.app` domain.
+
+{% hint style="warning" %}
+**Keep `offline_access` in the Scopes field.** It's what makes Entra issue a refresh token; without it, Copilot Studio re-prompts users to sign in roughly every hour.
+{% endhint %}
+
+{% endstep %}
+
+{% step %}
+
+### Save, then close the redirect loop
+
+Click **Create / Save**. Copilot Studio generates a **Redirect / callback URL**.
+
+- If it's `https://global.consent.azure-apim.net/redirect`, CIPP already registered it during Save to Azure — nothing to do.
+- If Copilot Studio shows a different (per-connector) URL, add it to the app registration: **Authentication → Add a platform → Web** → paste it → **Configure / Save**.
+
+{% hint style="warning" %}
+For Copilot Studio the callback goes on the **Web** platform — the opposite of the other AI clients (which use **Mobile and desktop applications**). A secret-based sign-in from a Mobile/desktop registration fails with `AADSTS700025`; a callback that was never added fails with `AADSTS50011`.
+{% endhint %}
+
+{% endstep %}
+
+{% step %}
+
+### Connect and test
+
+Click **Next → Create a new connection**, sign in with your Microsoft account and approve, then **Add to agent**. Ask the agent something like _"Using CIPP, list all my tenants."_ If the tools return data, you're done.
+
+{% hint style="info" %}
+If the agent ignores the server, the usual cause is a weak **Server description** — the orchestrator uses it to decide whether to call the tools at all. See [#scoping-copilot-tool-imports](cipp-api.md#scoping-copilot-tool-imports "mention") for staying within Copilot's tool limit.
+{% endhint %}
+
 {% endstep %}
 {% endstepper %}
 
