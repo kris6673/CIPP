@@ -120,6 +120,21 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
   const [internalValue, setInternalValue] = useState(null) // Track selected value internally
   const [open, setOpen] = useState(false) // Control popover open state
 
+  // Opt-in server-side search: instead of fetching every option once and filtering client-side,
+  // the typed text is sent to the API (api.searchParam) so the server returns only matches. Guarded
+  // by api.manualSearch so every existing autocomplete keeps its fetch-all-then-filter behaviour.
+  const manualSearch = !!api?.manualSearch
+  const searchParam = api?.searchParam ?? 'search'
+  const minSearchLength = api?.minSearchLength ?? 2
+  const [searchInput, setSearchInput] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+  useEffect(() => {
+    if (!manualSearch) return undefined
+    // Debounce so a fast typist fires one request, not one per keystroke.
+    const handle = setTimeout(() => setSearchTerm(searchInput.trim()), api?.searchDebounce ?? 400)
+    return () => clearTimeout(handle)
+  }, [searchInput, manualSearch, api?.searchDebounce])
+
   // Sync internalValue when external value or defaultValue prop changes (e.g., when editing a form)
   useEffect(() => {
     const currentValue = value !== undefined && value !== null ? value : defaultValue
@@ -173,20 +188,25 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
     const currentApi = apiRef.current
     if (currentApi) {
       const tenantScoped = !currentApi.excludeTenantFilter
+      const baseQueryKey =
+        tenantScoped && currentApi.queryKey
+          ? `${currentApi.queryKey}-${currentTenant}`
+          : currentApi.queryKey
+      // In manual-search mode, hold the request until enough characters are typed so an empty or
+      // one-letter field never triggers a fetch-all against the API.
+      const enoughChars = !manualSearch || searchTerm.length >= minSearchLength
       setGetRequestInfo({
         url: currentApi.url,
         data: {
           ...(tenantScoped ? { tenantFilter: currentTenant } : null),
           ...currentApi.data,
+          ...(manualSearch && searchTerm ? { [searchParam]: searchTerm } : null),
         },
-        waiting: true,
-        queryKey:
-          tenantScoped && currentApi.queryKey
-            ? `${currentApi.queryKey}-${currentTenant}`
-            : currentApi.queryKey,
+        waiting: manualSearch ? enoughChars : true,
+        queryKey: manualSearch ? `${baseQueryKey}-${searchParam}-${searchTerm}` : baseQueryKey,
       })
     }
-  }, [apiUrl, apiQueryKey, currentTenant])
+  }, [apiUrl, apiQueryKey, currentTenant, manualSearch, searchTerm, searchParam, minSearchLength])
 
   // After the data is fetched, combine and map it
   useEffect(() => {
@@ -426,7 +446,9 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
         fullWidth
         placeholder={placeholder}
         filterOptions={(options, params) => {
-          const filtered = filter(options, params)
+          // Server-side search already returned only matches; client-side substring filtering would
+          // wrongly hide ANR results (a display-name match whose address lacks the typed text).
+          const filtered = manualSearch ? [...options] : filter(options, params)
           const isExisting =
             options?.length > 0 &&
             options.some(
@@ -759,6 +781,15 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
           )
         }}
         {...other}
+        onInputChange={(event, newInputValue, reason) => {
+          other.onInputChange?.(event, newInputValue, reason)
+          if (!manualSearch) return
+          if (reason === 'input') {
+            setSearchInput(newInputValue)
+          } else if (reason === 'clear') {
+            setSearchInput('')
+          }
+        }}
       />
       {api?.templateView && (
         <CippOffCanvas
