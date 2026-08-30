@@ -38,13 +38,14 @@ If the username and Primary Domain name together match an existing account's use
 
 **Settings**
 
-| Setting                               | Description                                                                                                                                   |
-| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Create password manually              | When off, CIPP generates a password and returns it in the result. When on, a **Password** field appears for a password of your own.           |
-| Require password change at next logon | Forces the user to set a new password the first time they sign in.                                                                            |
-| Usage Location                        | The country the account is licensed in. Required before licences can be assigned, and defaults to the usage location set in your preferences. |
-| Licenses                              | The licences to assign. Each option shows how many units are currently available.                                                             |
-| Remove all licenses                   | Strips every licence from the account, which is mainly useful when a template or a copied user has brought licences in that are not wanted.   |
+| Setting                               | Description                                                                                                                                                                    |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Create password manually              | When off, CIPP generates a password and returns it in the result. When on, a **Password** field appears for a password of your own.                                            |
+| Require password change at next logon | Forces the user to set a new password the first time they sign in.                                                                                                             |
+| Enforce Per-User MFA                  | When enabled, sets the per-user MFA state to Enforced after the account is created. This is for tenants without Conditional Access; do not combine with CA-based MFA policies. |
+| Usage Location                        | The country the account is licensed in. Required before licences can be assigned, and defaults to the usage location set in your preferences.                                  |
+| Licenses                              | The licences to assign. Each option shows how many units are currently available.                                                                                              |
+| Remove all licenses                   | Strips every licence from the account, which is mainly useful when a template or a copied user has brought licences in that are not wanted.                                    |
 
 {% hint style="info" %}
 When the sherweb.md integration is enabled and a selected licence shows `(0 available)`, a **Purchase new licence?** switch appears along with a **Sherweb License** selector. Choosing this purchases a new licence under your terms with Sherweb and assigns it to the user once it becomes available.
@@ -172,9 +173,11 @@ Temporary Access Pass must be enabled in the tenant's authentication method poli
 The Add User page at `/identity/administration/users/add` can be pre-filled from the URL, which makes it possible to launch user creation from a PSA or documentation system with the details already populated. The page is reached by URL only, as user creation from the Users page now opens the Add User drawer instead. Any query string parameter matching a form field name is applied to the form, for example:
 
 {% code overflow="wrap" %}
+
 ```
 https://yourcipp.app/identity/administration/users/add?tenantFilter=contoso.onmicrosoft.com&city=Rotterdam
 ```
+
 {% endcode %}
 
 | Query string       | Field                                                                                                        |
@@ -209,9 +212,11 @@ Values are applied to the matching form fields when the page loads, so check the
 The query string below can be used as the basis of an AutoTask LiveLink, substituting the AutoTask variables for your own.
 
 {% code overflow="wrap" %}
+
 ```
 ?tenantFilter=<UDF-TenantId(tblCustomers)>&primDomain=<ACCOUNTWEBSITEADDRESS>&usageLocation=NL&city=<CITY>&country=<COUNTRY>&streetAddress=<ACCOUNTADDRESS1>&companyName=<ACCOUNTNAME>&businessPhones%5B0%5D=<ACCOUNTPHONE>&postalCode=<ACCOUNTPOSTALCODE>&givenName=<CONTACTFIRSTNAME>&surname=<CONTACTLASTNAME>
 ```
+
 {% endcode %}
 
 {% include "../../../../../.gitbook/includes/feature-request.md" %}
