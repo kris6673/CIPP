@@ -226,6 +226,14 @@ const Page = () => {
                 label="Who sent it?"
                 placeholder="Type an email address and press Enter"
                 helperText="Leave empty to include every sender"
+                api={{
+                  url: '/api/ListMailboxes',
+                  labelField: (option) => option.UPN,
+                  valueField: 'UPN',
+                  queryKey: `ListMailboxes-${tenantFilter}`,
+                  manualSearch: true,
+                  searchParam: 'Anr',
+                }}
                 formControl={formControl}
               />
             </Grid>
@@ -239,6 +247,14 @@ const Page = () => {
                 label="Who was it sent to?"
                 placeholder="Type an email address and press Enter"
                 helperText="Leave empty to include every recipient"
+                api={{
+                  url: '/api/ListMailboxes',
+                  labelField: (option) => option.UPN,
+                  valueField: 'UPN',
+                  queryKey: `ListMailboxes-${tenantFilter}`,
+                  manualSearch: true,
+                  searchParam: 'Anr',
+                }}
                 formControl={formControl}
               />
             </Grid>

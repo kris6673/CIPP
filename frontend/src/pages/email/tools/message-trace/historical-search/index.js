@@ -232,7 +232,15 @@ const Page = () => {
               creatable={true}
               name="senderAddress"
               label="Sender Addresses"
-              helperText="Up to 100; wildcards like *@domain.com are supported"
+              helperText="Pick a mailbox, or type any address; wildcards like *@domain.com are supported (up to 100)"
+              api={{
+                url: '/api/ListMailboxes',
+                labelField: (option) => option.UPN,
+                valueField: 'UPN',
+                queryKey: `ListMailboxes-${tenantFilter}`,
+                manualSearch: true,
+                searchParam: 'Anr',
+              }}
               formControl={formControl}
             />
           </Grid>
@@ -244,7 +252,15 @@ const Page = () => {
               creatable={true}
               name="recipientAddress"
               label="Recipient Addresses"
-              helperText="Up to 100; wildcards like *@domain.com are supported"
+              helperText="Pick a mailbox, or type any address; wildcards like *@domain.com are supported (up to 100)"
+              api={{
+                url: '/api/ListMailboxes',
+                labelField: (option) => option.UPN,
+                valueField: 'UPN',
+                queryKey: `ListMailboxes-${tenantFilter}`,
+                manualSearch: true,
+                searchParam: 'Anr',
+              }}
               formControl={formControl}
             />
           </Grid>
@@ -296,10 +312,21 @@ const Page = () => {
           </Grid>
           <Grid size={{ xs: 12, md: 6 }}>
             <CippFormComponent
-              type="textField"
+              type="autoComplete"
+              freeSolo
+              multiple={true}
+              creatable={true}
               name="notifyAddress"
               label="Notify Address"
-              helperText="Internal address to email when the search completes"
+              helperText="Internal mailbox to email when the search completes; pick a mailbox or type an address"
+              api={{
+                url: '/api/ListMailboxes',
+                labelField: (option) => option.UPN,
+                valueField: 'UPN',
+                queryKey: `ListMailboxes-${tenantFilter}`,
+                manualSearch: true,
+                searchParam: 'Anr',
+              }}
               formControl={formControl}
             />
           </Grid>

@@ -415,6 +415,17 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
     return resolvedDefaultValue
   }, [resolvedDefaultValue, multiple, lookupOptionByValue])
 
+  // In manual-search mode, show the spinner for the whole "typing settled -> results back" window,
+  // including the debounce delay before the request fires, so the field never looks idle mid-search.
+  const searchPending =
+    manualSearch &&
+    searchInput.trim().length >= minSearchLength &&
+    searchInput.trim() !== searchTerm
+  const showLoading = actionGetRequest.isFetching || isFetching || searchPending
+  // freeSolo hides the popup icon (and its spinner), so a loading state needs to live in the input's
+  // end adornment instead - the standard MUI loading pattern.
+  const isFreeSolo = !!other?.freeSolo
+
   return (
     <>
       <Autocomplete
@@ -430,7 +441,10 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
           }
           setOpen(false)
         }}
-        disabled={disabled || actionGetRequest.isFetching || isFetching}
+        disabled={
+          disabled ||
+          (!manualSearch && (actionGetRequest.isFetching || isFetching))
+        }
         popupIcon={
           actionGetRequest.isFetching || isFetching ? (
             <CircularProgress color="inherit" size={20} />
@@ -592,7 +606,7 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
         renderInput={(params) => {
           // Handle custom action button inside the TextField
           const { InputProps, ...otherParams } = params
-          const modifiedInputProps =
+          const baseInputProps =
             customAction && customAction.position === 'inside'
               ? {
                   ...InputProps,
@@ -643,6 +657,33 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
                   ),
                 }
               : InputProps
+
+          // In freeSolo mode the popup-icon spinner is not rendered, so surface the loading state as
+          // an end-adornment spinner instead. The inline-flex wrapper vertically centres the small
+          // spinner against the taller clear button beside it.
+          const modifiedInputProps =
+            showLoading && isFreeSolo
+              ? {
+                  ...baseInputProps,
+                  endAdornment: (
+                    <>
+                      <Box
+                        component="span"
+                        sx={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          height: 28,
+                          mr: 0.5,
+                          verticalAlign: 'middle',
+                        }}
+                      >
+                        <CircularProgress color="inherit" size={18} />
+                      </Box>
+                      {baseInputProps?.endAdornment}
+                    </>
+                  ),
+                }
+              : baseInputProps
 
           return (
             <Stack direction="row" spacing={1}>
