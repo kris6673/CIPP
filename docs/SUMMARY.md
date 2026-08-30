@@ -383,6 +383,7 @@
     * [IP Database](user-documentation/tools/tenant-tools/geoiplookup.md)
   * [Email Tools](user-documentation/tools/email-tools/README.md)
     * [Message Trace](user-documentation/tools/email-tools/message-trace.md)
+    * [Historical Search](user-documentation/tools/email-tools/historical-search.md)
     * [Message Viewer](user-documentation/tools/email-tools/message-viewer.md)
     * [Mailbox Restores](user-documentation/tools/email-tools/mailbox-restores.md)
     * [Message Encryption](user-documentation/tools/email-tools/message-encryption.md)
