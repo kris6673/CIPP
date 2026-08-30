@@ -382,11 +382,15 @@ export const ReleaseNotesDialog = forwardRef((_props, ref) => {
     }
   }, [isEligible, releaseCatalog.length, releaseListQuery.error])
 
+  // Phones always go fullscreen — a centred md dialog wastes the viewport and
+  // fights the bottom-sheet pickers. Desktop Expand still toggles fullScreen.
+  const fullScreen = isExpanded || isMobile
+
   return (
     <Dialog
-      fullScreen={isExpanded}
+      fullScreen={fullScreen}
       fullWidth
-      maxWidth={isExpanded ? 'xl' : 'md'}
+      maxWidth={fullScreen ? 'xl' : 'md'}
       onClose={handleRemindLater}
       open={open}
       scroll="paper"
@@ -394,10 +398,10 @@ export const ReleaseNotesDialog = forwardRef((_props, ref) => {
         sx: {
           display: 'flex',
           flexDirection: 'column',
-          ...(isExpanded
+          ...(isExpanded && !isMobile
             ? {
-                m: { xs: 0, sm: 2 },
-                height: { xs: '100%', sm: 'calc(100% - 32px)' },
+                m: { sm: 2 },
+                height: { sm: 'calc(100% - 32px)' },
               }
             : {}),
         },
@@ -470,17 +474,28 @@ export const ReleaseNotesDialog = forwardRef((_props, ref) => {
           <Close fontSize="small" />
         </IconButton>
       </DialogTitle>
-      <DialogContent dividers sx={{ pt: 1, flex: 1, display: 'flex' }}>
+      <DialogContent
+        dividers
+        sx={{
+          pt: 1,
+          pb: 0,
+          flex: 1,
+          display: 'flex',
+          // Drop MUI's default side padding; prose padding lives on the scroll box /
+          // banners instead. Theme hides the mobile gutter entirely below `lg`.
+          px: 0,
+        }}
+      >
         <Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
           {releaseListQuery.error ? (
-            <Typography color="error" variant="body2">
+            <Typography color="error" variant="body2" sx={{ px: { xs: 2, md: 3 } }}>
               We couldn't load additional releases right now. The latest release notes are shown
               below.
               {releaseListQuery.error?.message ? ` (${releaseListQuery.error.message})` : ''}
             </Typography>
           ) : null}
           {gfmSupport.error ? (
-            <Typography color="warning.main" variant="body2">
+            <Typography color="warning.main" variant="body2" sx={{ px: { xs: 2, md: 3 } }}>
               Displaying these release notes without GitHub-flavoured markdown enhancements due to a
               parsing issue. Formatting may look different.
             </Typography>
@@ -490,7 +505,7 @@ export const ReleaseNotesDialog = forwardRef((_props, ref) => {
               <CircularProgress />
             </Box>
           ) : releaseListQuery.error ? (
-            <Typography color="error" variant="body2">
+            <Typography color="error" variant="body2" sx={{ px: { xs: 2, md: 3 } }}>
               We couldn't load the release notes right now. You can view them on GitHub instead.
               {releaseListQuery.error?.message ? ` (${releaseListQuery.error.message})` : ''}
             </Typography>
@@ -500,10 +515,12 @@ export const ReleaseNotesDialog = forwardRef((_props, ref) => {
                 flexGrow: 1,
                 // dvh tracks the visible viewport; 100vh over-reports it on mobile browsers
                 // with collapsing chrome, so the notes ran past the bottom of the screen.
-                maxHeight: isExpanded
+                maxHeight: fullScreen
                   ? { xs: 'calc(100dvh - 200px)', md: 'calc(100vh - 260px)' }
                   : 600,
                 overflowY: 'auto',
+                // Padding is on the scroll box so the markdown stays clear of any track.
+                px: { xs: 2, md: 3 },
                 // Release notes are GitHub markdown: long URLs, commit SHAs and fenced code
                 // are single unbreakable tokens that otherwise widen the dialog and push the
                 // text off the right edge. Wrap prose; let code and tables scroll themselves.

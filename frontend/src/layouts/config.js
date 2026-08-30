@@ -346,7 +346,7 @@ export const nativeMenuItems = [
             permissions: ['Security.Alert.*'],
           },
           {
-            title: 'MDO Alerts',
+            title: 'Defender Alerts',
             path: '/security/incidents/list-mdo-alerts',
             permissions: ['Security.Alert.*'],
           },
@@ -948,6 +948,11 @@ export const nativeMenuItems = [
           'Exchange.Group.*',
         ],
         items: [
+          {
+            title: 'Mail Flow Statistics',
+            path: '/email/reports/mail-flow-statistics',
+            permissions: ['Exchange.Mailbox.*'],
+          },
           {
             title: 'Mailbox Statistics',
             path: '/email/reports/mailbox-statistics',

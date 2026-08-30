@@ -1657,6 +1657,28 @@ export function extractCAPolicyJSON(formValues) {
         delete cleaned.sessionControls[key];
       }
     }
+    // signInFrequency.value comes off the "number" form field as a Number (or null when
+    // empty), but Graph types it Int32 — coerce it. When frequencyInterval is everyTime,
+    // Graph requires value/type to be null rather than merely absent; drop them here and
+    // let the backend canonicalizer supply the explicit nulls at deploy.
+    const signInFrequency = cleaned.sessionControls.signInFrequency;
+    if (signInFrequency) {
+      if (
+        signInFrequency.value !== undefined &&
+        signInFrequency.value !== null &&
+        signInFrequency.value !== ""
+      ) {
+        signInFrequency.value = Number(signInFrequency.value);
+      }
+      const frequencyInterval =
+        typeof signInFrequency.frequencyInterval === "object"
+          ? signInFrequency.frequencyInterval?.value
+          : signInFrequency.frequencyInterval;
+      if (frequencyInterval === "everyTime") {
+        delete signInFrequency.value;
+        delete signInFrequency.type;
+      }
+    }
     // `disableResilienceDefaults` defaults to false from the switch even when
     // untouched. Left in place it keeps `sessionControls` non-empty, so Graph
     // never persists it on read
