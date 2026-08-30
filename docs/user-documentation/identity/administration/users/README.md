@@ -73,12 +73,12 @@ Extra directory attributes can be added to this form under [user-settings.md](..
 | Field                      | Description                                                                                                                                                 |
 | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Shared Mailboxes           | The shared mailboxes the new user should be given access to. Only shared mailboxes in the tenant can be selected.                                           |
-| Shared Mailbox Permissions | Any combination of `Full Access`, `Send As` and `Send on Behalf`. Defaults to `Full Access`, which also automaps the mailbox so Outlook adds it on its own. |
+| Shared Mailbox Permissions | Any combination of `Full Access`, `Full Access (no Automapping)`, `Send As` and `Send on Behalf`. Defaults to `Full Access`, which also automaps the mailbox so Outlook adds it on its own; the no-automapping variant grants the same access but leaves adding the mailbox to the user. |
 | Shared Calendars           | The shared mailboxes whose calendar the user should be given access to.                                                                                     |
 | Shared Calendar Permission | The access level granted on those calendars: `Editor`, `Reviewer`, `Limited Details` or `Availability Only`. Defaults to `Editor`.                          |
 
 {% hint style="info" %}
-Exchange cannot add a calendar to someone's Outlook directly, so CIPP grants calendar access with a sharing invitation, which the user accepts by clicking the link in the email they receive. Mailbox access needs no invitation: with Full Access, automapping adds the mailbox to Outlook by itself. Only the permission levels listed above are offered for calendars, as those are the ones Exchange sends an invitation for.
+Exchange cannot add a calendar to someone's Outlook directly, so CIPP grants calendar access with a sharing invitation, which the user accepts by clicking the link in the email they receive. Mailbox access needs no invitation: with Full Access, automapping adds the mailbox to Outlook by itself, unless the no-automapping variant was chosen. Only the permission levels listed above are offered for calendars, as those are the ones Exchange sends an invitation for.
 
 A newly created user is not a usable Exchange recipient for the first few minutes, so both grants are queued as scheduled tasks that run 15 minutes after creation. Their progress, and any failure, can be followed on the [scheduler](../../../tools/scheduler/ "mention")page.
 {% endhint %}
