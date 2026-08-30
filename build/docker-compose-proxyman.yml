@@ -1,0 +1,38 @@
+# Proxyman interception overlay for the dev loop — OPT-IN, layer it on top of
+# docker-compose-all.yml (or docker-compose-no-frontend.yml):
+#
+#   1. In Proxyman: Certificate > Install Certificate on this Mac (once).
+#   2. pwsh build/tools/Export-ProxymanCert.ps1   # -> build/config/proxyman-ca.pem
+#   3. docker compose -p cipp \
+#        -f build/docker-compose-all.yml \
+#        -f build/docker-compose-proxyman.yml up --watch
+#
+# Why an override instead of editing docker-compose-all.yml: interception is a
+# deliberate debugging session, not the default loop, and the cert is machine-local.
+#
+# The cipp-api container runs the distroless Craft image (no shell, no
+# update-ca-certificates), so we can't bake the cert into a trust store at runtime.
+# Instead we mount the PEM and point OpenSSL — which PowerShell 7 / .NET use for TLS
+# validation on Linux — at it with SSL_CERT_FILE, while SSL_CERT_DIR keeps the image's
+# own system roots so non-proxied HTTPS still validates.
+services:
+  cipp-api:
+    environment:
+      # Proxyman's re-signing CA (+ any intermediates). MITM'd Graph/EXO/Microsoft
+      # traffic is re-signed by this, so trusting it is all that's needed to intercept.
+      - SSL_CERT_FILE=/proxyman/proxyman-ca.pem
+      # Preserve the base image's roots for anything Proxyman is NOT intercepting.
+      - SSL_CERT_DIR=/etc/ssl/certs
+      # Route outbound HTTPS through Proxyman on the host. 9090 is Proxyman's default
+      # HTTP-proxy port — change here if you moved it (Proxyman > Settings > Proxy).
+      - HTTP_PROXY=http://host.docker.internal:9090
+      - HTTPS_PROXY=http://host.docker.internal:9090
+      # Keep intra-stack + loopback traffic direct so azurite (plain HTTP) and the
+      # Next.js proxy target don't get funneled through Proxyman.
+      - NO_PROXY=azurite,cipp-frontend,cipp-storybook,localhost,127.0.0.1,169.254.169.254,.local
+    volumes:
+      - ./config/proxyman-ca.pem:/proxyman/proxyman-ca.pem:ro
+    # host-gateway resolves host.docker.internal to the Mac on Linux engines; Docker
+    # Desktop for Mac provides it already, but declaring it is harmless and portable.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
