@@ -160,6 +160,16 @@ export const CippOffboardingDefaultSettings = (props) => {
             ),
           },
           {
+            label: 'Wipe Mobile Devices (account data only)',
+            value: (
+              <CippFormComponent
+                type="switch"
+                name="offboardingDefaults.WipeMobile"
+                formControl={formControl}
+              />
+            ),
+          },
+          {
             label: 'Remove all Mobile Devices',
             value: (
               <CippFormComponent
