@@ -148,6 +148,60 @@ Wait for the restore to complete—CIPP will import your original configuration 
 
 ***
 
+### 6. Set Up Single Sign-On
+
+Single sign-on does not come across with the migration. The sign-in app's credentials live in the instance's Key Vault rather than in the backup, and the four secrets copied in Step 3 belong to the CIPP-SAM application, which handles tenant management rather than sign-in. Your hosted instance therefore starts with no sign-in configuration and prompts you to complete authentication setup.
+
+The hosted instance also answers on a new hostname, and the sign-in app needs a redirect URI of `https://<hostname>/.auth/login/aad/callback` that matches it. A hostname without one fails sign-in with `AADSTS50011`.
+
+There are two ways to finish this. Creating a new app registration is simpler and is what most migrations should do.
+
+#### Option A: Let CIPP create a new app registration
+
+{% stepper %}
+{% step %}
+In your **hosted** instance, go to **CIPP** → **Advanced** → **Authentication** → **SSO**, or work through the **Complete Authentication Setup** prompt if the instance is showing one.
+{% endstep %}
+
+{% step %}
+Select **Create SSO App**. CIPP creates a fresh `CIPP-SSO` app registration in your partner tenant, gives it a redirect URI for the hosted hostname, and stores the credentials.
+{% endstep %}
+
+{% step %}
+Once the hosted instance signs in successfully, delete the old `CIPP-SSO` app registration left behind by the self-hosted instance from Entra. Two registrations of the same name are otherwise easy to confuse later.
+{% endstep %}
+{% endstepper %}
+
+#### Option B: Reuse the self-hosted app registration
+
+Worth doing if you have scoped Conditional Access policies to the existing `CIPP-SSO` enterprise app and would rather not reapply them.
+
+{% stepper %}
+{% step %}
+While you are still in the Key Vault in Step 3, copy the values of the `SSOAppId` and `SSOAppSecret` secrets as well. The client secret cannot be read back from Entra afterwards, so collecting it here saves generating a new one.
+{% endstep %}
+
+{% step %}
+In Entra, open the `CIPP-SSO` app registration → **Authentication**, and add a **Web** redirect URI of `https://<hosted-hostname>/.auth/login/aad/callback`. Leave the existing URIs in place until the migration is finished.
+{% endstep %}
+
+{% step %}
+In your **hosted** instance, go to **CIPP** → **Advanced** → **Authentication** → **SSO**, expand **Manual configuration (advanced)**, paste the App ID and secret, and select **Save Manual Configuration**. The instance restarts, which can take up to 60 seconds.
+{% endstep %}
+{% endstepper %}
+
+{% hint style="warning" %}
+If you add a custom domain in Step 5 **after** setting up single sign-on, the new hostname has no redirect URI yet and sign-in on it fails. Select **Refresh Sign-in URLs** on the SSO page to add one. The action is additive and never removes a URI.
+{% endhint %}
+
+{% hint style="info" %}
+Being able to sign in is not the same as having access. Confirm the accounts that should reach CIPP are listed with the right roles on the [cipp-users.md](../../user-documentation/cipp/advanced/authentication/cipp-users.md "mention") page.
+{% endhint %}
+
+For the full picture, including what CIPP creates in your tenant, multi-tenant sign-in, and what to do if you cannot sign in at all, see [sso.md](../../user-documentation/cipp/advanced/authentication/sso.md "mention").
+
+***
+
 ### That’s It!
 
 Your instance and settings now live in the fully managed, **CyberDrain-hosted** version of CIPP.
