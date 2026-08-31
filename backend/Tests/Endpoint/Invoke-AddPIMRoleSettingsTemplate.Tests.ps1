@@ -20,7 +20,10 @@ BeforeAll {
 
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/PIM/ConvertTo-CIPPPIMRoleSettings.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/PIM/Test-CIPPPIMRoleSettingsFloor.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/PIM/ConvertFrom-CIPPPIMPolicyRules.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/PIM/Repair-CIPPPIMRoleSettingsFloor.ps1')
 
+    function Get-CIPPPIMRolePolicies { param($TenantFilter) }
     function Get-CippTable { param($tablename) @{} }
     function Get-CIPPAzDataTableEntity { param($Filter) }
     function Add-CIPPAzDataTableEntity { param($Entity, $Force) }
@@ -121,5 +124,92 @@ Describe 'Invoke-AddPIMRoleSettingsTemplate' {
         $script:Saved.RowKey | Should -Be 'abc'
         ($script:Saved.JSON | ConvertFrom-Json).createdBy | Should -Be 'first@cipp'
         ($script:Saved.JSON | ConvertFrom-Json).updatedBy | Should -Be 'tester@cipp'
+    }
+
+    Context 'capture from a role' {
+        BeforeEach {
+            # Roles & PIM page action: no settings, no roleScope, just the role to capture.
+            $script:CaptureBody = @{
+                captureRoleId   = '644ef478-e28f-4e28-b9dc-3fdde9aa0b1f'
+                captureRoleName = 'Printer Administrator'
+                tenantFilter    = 'tenant.example.com'
+                roleScope       = $null
+                roles           = @()
+                settings        = $null
+                description     = ''
+            }
+        }
+
+        It 'captures a compliant role exactly, with no adjustments' {
+            Mock Get-CIPPPIMRolePolicies {
+                @([pscustomobject]@{
+                        RoleDefinitionId = '644ef478-e28f-4e28-b9dc-3fdde9aa0b1f'
+                        PolicyId         = 'DirectoryRole_p1'
+                        Rules            = @(
+                            @{ id = 'Expiration_EndUser_Assignment'; isExpirationRequired = $true; maximumDuration = 'PT4H' }
+                            @{ id = 'Enablement_EndUser_Assignment'; enabledRules = @('MultiFactorAuthentication', 'Justification') }
+                            @{ id = 'Expiration_Admin_Eligibility'; isExpirationRequired = $true; maximumDuration = 'P180D' }
+                            @{ id = 'Expiration_Admin_Assignment'; isExpirationRequired = $true; maximumDuration = 'P90D' }
+                            @{ id = 'Enablement_Admin_Assignment'; enabledRules = @('MultiFactorAuthentication', 'Justification') }
+                        )
+                    })
+            }
+            $Response = Invoke-AddPIMRoleSettingsTemplate -Request (New-TemplateRequest -Body $script:CaptureBody)
+            $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+            $Stored = $script:Saved.JSON | ConvertFrom-Json
+            $Stored.settings.activationMaxDuration | Should -Be 'PT4H'
+            $Stored.settings.activationRequires | Should -Be 'MFA'
+            $Stored.settings.eligibilityMaxDuration | Should -Be 'P180D'
+            $Stored.settings.activeAssignmentMaxDuration | Should -Be 'P90D'
+            $Stored.roleScope | Should -Be 'Custom'
+            @($Stored.roles).value | Should -Be '644ef478-e28f-4e28-b9dc-3fdde9aa0b1f'
+            $Stored.description | Should -Match 'Captured from the Printer Administrator role'
+            @($Response.Body.Results | Where-Object { $_ -isnot [string] -and $_.resultText -match 'Raised to the secure floor' }).Count | Should -Be 0
+        }
+
+        It 'raises a below-floor role to the floor and reports every raise' {
+            Mock Get-CIPPPIMRolePolicies {
+                # Entra defaults: no MFA on activation, permanent eligibility and active allowed.
+                @([pscustomobject]@{
+                        RoleDefinitionId = '644ef478-e28f-4e28-b9dc-3fdde9aa0b1f'
+                        PolicyId         = 'DirectoryRole_p1'
+                        Rules            = @(
+                            @{ id = 'Expiration_EndUser_Assignment'; isExpirationRequired = $true; maximumDuration = 'PT8H' }
+                            @{ id = 'Enablement_EndUser_Assignment'; enabledRules = @('Justification') }
+                            @{ id = 'Expiration_Admin_Eligibility'; isExpirationRequired = $false; maximumDuration = 'P365D' }
+                            @{ id = 'Expiration_Admin_Assignment'; isExpirationRequired = $false; maximumDuration = 'P180D' }
+                            @{ id = 'Enablement_Admin_Assignment'; enabledRules = @('Justification') }
+                        )
+                    })
+            }
+            $Response = Invoke-AddPIMRoleSettingsTemplate -Request (New-TemplateRequest -Body $script:CaptureBody)
+            $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+            $Stored = $script:Saved.JSON | ConvertFrom-Json
+            $Stored.settings.activationRequires | Should -Be 'MFA'
+            $Stored.settings.eligibilityMaxDuration | Should -Be 'P365D'
+            $Stored.settings.activeAssignmentMaxDuration | Should -Be 'P365D'
+            $Raises = @($Response.Body.Results | Where-Object { $_ -isnot [string] -and $_.resultText -match 'Raised to the secure floor' })
+            $Raises.Count | Should -Be 3
+            ($Raises.resultText -join ' ') | Should -Match 'MFA'
+            ($Raises.resultText -join ' ') | Should -Match 'Eligible assignments'
+            ($Raises.resultText -join ' ') | Should -Match 'Active assignments'
+            Should -Invoke Write-LogMessage -Times 3 -ParameterFilter { $Sev -eq 'Warning' -and $message -match 'raised to the secure floor' }
+        }
+
+        It 'returns 400 when the role has no PIM policy in the tenant' {
+            Mock Get-CIPPPIMRolePolicies { @() }
+            $Response = Invoke-AddPIMRoleSettingsTemplate -Request (New-TemplateRequest -Body $script:CaptureBody)
+            $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::BadRequest)
+            ($Response.Body.Results -join ' ') | Should -Match 'No PIM role management policy'
+            Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
+        }
+
+        It 'requires a single tenant to capture from' {
+            $script:CaptureBody.tenantFilter = 'AllTenants'
+            $Response = Invoke-AddPIMRoleSettingsTemplate -Request (New-TemplateRequest -Body $script:CaptureBody)
+            $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::BadRequest)
+            ($Response.Body.Results -join ' ') | Should -Match 'single tenantFilter'
+            Should -Invoke Add-CIPPAzDataTableEntity -Times 0 -Exactly
+        }
     }
 }

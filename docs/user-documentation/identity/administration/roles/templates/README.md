@@ -4,7 +4,7 @@ description: Define Privileged Identity Management role settings once and deploy
 
 # PIM Templates
 
-The **PIM Templates** tab of the Roles & PIM page lists the role settings templates. A PIM template describes how a set of Entra directory roles must behave in Privileged Identity Management: how long an activation may last, what an administrator has to prove and write down to activate, whether someone has to approve, how long eligible and active assignments may exist, and who is notified. The **PIM Role Settings Template** standard deploys a template to a tenant and reports drift from it.
+The **PIM Templates** tab of the Roles & PIM page lists the role settings templates. Besides building one by hand, the **Create template from role settings** action on the Roles & Assignments tab captures a role's current settings from a tenant into a new template; values below the secure floor are raised to the closest allowed value and every raise is reported. A PIM template describes how a set of Entra directory roles must behave in Privileged Identity Management: how long an activation may last, what an administrator has to prove and write down to activate, whether someone has to approve, how long eligible and active assignments may exist, and who is notified. The **PIM Role Settings Template** standard deploys a template to a tenant and reports drift from it.
 
 ## The secure floor
 

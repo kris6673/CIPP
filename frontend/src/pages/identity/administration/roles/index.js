@@ -1,6 +1,8 @@
 import { useRouter } from 'next/router'
 import { Box } from '@mui/material'
+import { PostAdd } from '@mui/icons-material'
 import { useSettings } from '../../../../hooks/use-settings'
+import { usePermissions } from '../../../../hooks/use-permissions'
 import { Layout as DashboardLayout } from '../../../../layouts/index.js'
 import { TabbedLayout } from '../../../../layouts/TabbedLayout'
 import { CippTablePage } from '../../../../components/CippComponents/CippTablePage.jsx'
@@ -46,11 +48,47 @@ const Page = () => {
   const pageTitle = 'Roles & Assignments'
   const router = useRouter()
   const currentTenant = useSettings().currentTenant
+  const { checkPermissions } = usePermissions()
+  const canWriteRole = checkPermissions(['Identity.Role.ReadWrite'])
   // Deep links (alerts, the user page) narrow the list to one role or principal.
   const { roleTemplateId, principalId } = router.query
   const apiData = {}
   if (roleTemplateId) apiData.roleTemplateId = roleTemplateId
   if (principalId) apiData.principalId = principalId
+
+  const actions = [
+    {
+      label: 'Create template from role settings',
+      type: 'POST',
+      icon: <PostAdd />,
+      url: '/api/AddPIMRoleSettingsTemplate',
+      data: {
+        captureRoleId: 'RoleDefinitionId',
+        captureRoleName: 'RoleDisplayName',
+        tenantFilter: 'Tenant',
+      },
+      fields: [
+        {
+          type: 'textField',
+          name: 'templateName',
+          label: 'Template name',
+          required: true,
+          validators: { required: 'A template name is required' },
+        },
+        {
+          type: 'textField',
+          name: 'description',
+          label: 'Description (optional)',
+        },
+      ],
+      confirmText:
+        "Create a PIM role settings template from the current PIM settings of [RoleDisplayName]? Anything below CIPP's secure floor is raised to it, and every raised value is listed in the results.",
+      relatedQueryKeys: ['ListPIMRoleSettingsTemplates*'],
+      hideBulk: true,
+      condition: (row) =>
+        canWriteRole && !!row?.PIMCapable && !!row?.PolicySummary,
+    },
+  ]
 
   const filters = [
     {
@@ -109,6 +147,7 @@ const Page = () => {
       'PIMCapable',
     ],
     children: (row) => <RoleAssignmentsPanel row={row} />,
+    actions: actions,
   }
 
   return (
@@ -117,6 +156,7 @@ const Page = () => {
       apiUrl="/api/ListPIMRoles"
       apiData={apiData}
       queryKey={`ListPIMRoles-${currentTenant}`}
+      actions={actions}
       offCanvas={offCanvas}
       filters={filters}
       simpleColumns={[
