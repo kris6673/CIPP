@@ -34,7 +34,7 @@ import { CippUserSwitcher } from '../../../../../components/CippComponents/CippU
 import { SvgIcon, Typography } from '@mui/material'
 import { CippBannerListCard } from '../../../../../components/CippCards/CippBannerListCard'
 import { CippTimeAgo } from '../../../../../components/CippComponents/CippTimeAgo'
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, useEffect, useState, useRef } from 'react'
 import { useCippUserActions } from '../../../../../components/CippComponents/CippUserActions'
 import { useCippRoleAssignmentActions } from '../../../../../components/CippComponents/CippRoleAssignmentActions'
 import { EyeIcon, PencilIcon } from '@heroicons/react/24/outline'
@@ -288,6 +288,7 @@ const Page = () => {
   const userBulkRequest = ApiPostCall({
     urlFromData: true,
   })
+  const bulkFetchedForId = useRef(null)
 
   const roleAssignments = ApiGetCall({
     url: `/api/ListRoleAssignments?principalId=${userId}&tenantFilter=${
@@ -333,11 +334,12 @@ const Page = () => {
       })
     }
 
+    bulkFetchedForId.current = userId
     userBulkRequest.mutate({
       url: '/api/ListGraphBulkRequest',
       data: {
         Requests: requests,
-        tenantFilter: userSettingsDefaults.currentTenant,
+        tenantFilter: router.query.tenantFilter ?? userSettingsDefaults.currentTenant,
         noPaginateIds: ['signInLogs', 'signInPreferences'],
       },
     })
@@ -348,7 +350,7 @@ const Page = () => {
       userId &&
       userSettingsDefaults.currentTenant &&
       userRequest.isSuccess &&
-      !userBulkRequest.isSuccess
+      bulkFetchedForId.current !== userId
     ) {
       refreshFunction()
     }
@@ -356,7 +358,6 @@ const Page = () => {
     userId,
     userSettingsDefaults.currentTenant,
     userRequest.isSuccess,
-    userBulkRequest.isSuccess,
   ])
 
   const bulkData = userBulkRequest?.data?.data ?? []
