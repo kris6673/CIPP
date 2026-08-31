@@ -33,3 +33,13 @@ If you've started the sponsorship process and are ready to enhance your manageme
 {% hint style="info" %}
 If you are unsure about whether your clients' environments are GDAP ready, or need more information about the process, continue to the [gdap-invite-wizard.md](../installation/gdap-invite-wizard.md "mention") page for more granular details & next steps.
 {% endhint %}
+
+## Sponsorship Billing
+
+Sponsorship is billed by GitHub, not by CyberDrain, and GitHub Sponsors has no billing cycle of its own. A sponsorship always takes the billing date, payment method and receipt already set on the GitHub account that starts it. If that account's paid plan is billed annually, the sponsorship is billed annually on the same renewal date, and it appears on the same receipt as your other GitHub charges. If the account is billed monthly, the sponsorship is billed monthly.
+
+This catches people out when a sponsorship started from an account on annual billing produces a single yearly charge rather than the monthly one they expected. Check your account's billing date and payment method at [github.com/settings/billing](https://github.com/settings/billing) before you subscribe, and change the account's billing frequency first if you want the sponsorship charged differently.
+
+{% hint style="info" %}
+Changing a sponsorship amount later applies from the next renewal rather than adjusting the period already paid for.
+{% endhint %}
