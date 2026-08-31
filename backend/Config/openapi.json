@@ -251,13 +251,6 @@
                   "AlertComment": {
                     "type": "string"
                   },
-                  "becActions": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "#/components/schemas/LabelValue"
-                    },
-                    "description": "Which containment actions the 'becremediate' action runs (ListBECRemediationActions ids); empty = the default six."
-                  },
                   "conditions": {
                     "type": "array",
                     "items": {
@@ -14833,92 +14826,18 @@
         "x-cipp-role": "Tenant.Baselines.ReadWrite"
       }
     },
-    "/api/ExecBECBulkCheck": {
-      "get": {
-        "summary": "Queues Business Email Compromise investigations for many users at once.",
-        "operationId": "ExecBECBulkCheck",
-        "tags": [
-          "Identity > Administration > Users"
-        ],
-        "description": "Queues one BEC investigation per user (at most 50 per request) as a single orchestration with a queue entry for progress. Accepts either an array of { UserIds, tenantFilter } items (the Users table bulk action) or one object with UserIds[]. Selection=ForeignSuccessfulSignIns picks every user with a successful sign-in in the last 7 days from outside their usage location instead of an explicit list. Each run gets its own case id; results appear on the BEC Reports page and each user's Compromise Remediation tab.",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - invalid or missing bearer token"
-          },
-          "403": {
-            "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "x-cipp-role": "Identity.User.Read"
-      }
-    },
     "/api/ExecBECCheck": {
-      "post": {
-        "summary": "Reads, polls or starts a Business Email Compromise investigation.",
+      "get": {
+        "summary": "ExecBECCheck",
         "operationId": "ExecBECCheck",
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "GET with GUID (or caseId) returns that run: while it is queued or running { Waiting = true, Progress } where Progress is the job status (queued until a worker picks it up, then running) and the per-step state the page renders; { Error, Progress } when it failed; otherwise the results payload with the server-side Score, per-collector Completeness and a Run block. A queued or running run whose progress has not moved for 20 minutes is marked failed by this poll (the worker restarted or the run was abandoned) and returned as { Error }. GET without a GUID returns the user's latest run as { GUID, Status } and starts nothing (GUID is null when the user has no runs). POST with tenantFilter, userid and userName queues a new run and returns its { GUID }; GET with overwrite=true does the same for older callers. Every run is the full investigation and is kept in the BecReports table; metadata only, never message content.",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "tenantFilter": {
-                    "type": "string"
-                  },
-                  "userid": {
-                    "type": "string",
-                    "description": "Object id of the user to investigate"
-                  },
-                  "userName": {
-                    "type": "string",
-                    "description": "The user's UPN (stored on the run and used by the collectors)"
-                  }
-                },
-                "required": [
-                  "tenantFilter"
-                ]
-              }
-            }
-          }
-        },
+        "description": "Returns the business email compromise assessment for a user: sign-ins with a location analysis against the user's assigned usage location, mailbox rules and rule changes, trusted/blocked sender changes, OneDrive and SharePoint sharing link activity, added applications matched against the known-malicious catalog, MFA methods, Intune devices, sent mail, and tenant-wide password changes. If no cached result exists the check is queued as a background job and the response reports it as waiting, so poll rather than expecting results on the first call. Pass overwrite=true to force a fresh run.",
         "parameters": [
-          {
-            "name": "caseId",
-            "in": "query",
-            "description": "The run to read; GUID keeps the original poll contract",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
           {
             "name": "GUID",
             "in": "query",
-            "description": "The run to read; GUID keeps the original poll contract",
             "required": false,
             "schema": {
               "type": "string"
@@ -14927,10 +14846,9 @@
           {
             "name": "overwrite",
             "in": "query",
-            "description": "A POST body, or overwrite=true on GET, starts a new run",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "boolean"
             }
           },
           {
@@ -14939,7 +14857,6 @@
           {
             "name": "userid",
             "in": "query",
-            "description": "Object id of the user to investigate",
             "required": false,
             "schema": {
               "type": "string"
@@ -14948,7 +14865,6 @@
           {
             "name": "userName",
             "in": "query",
-            "description": "The user's UPN (stored on the run and used by the collectors)",
             "required": false,
             "schema": {
               "type": "string"
@@ -14962,34 +14878,40 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                  "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                   "properties": {
-                    "CaseId": {
+                    "Batch": {
                       "x-cipp-field-source": "backend"
                     },
-                    "Containment": {
+                    "ETag": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "OrchestratorName": {
                       "x-cipp-field-source": "backend"
                     },
-                    "EvidenceCreatedAt": {
-                      "x-cipp-field-source": "backend"
+                    "PartitionKey": {
+                      "x-cipp-field-source": "storage"
                     },
-                    "EvidenceSha256": {
-                      "x-cipp-field-source": "backend"
+                    "Results": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
                     },
-                    "ExtractedAt": {
-                      "x-cipp-field-source": "backend"
+                    "RowKey": {
+                      "x-cipp-field-source": "storage"
                     },
-                    "RequestedAt": {
-                      "x-cipp-field-source": "backend"
-                    },
-                    "RequestedBy": {
-                      "x-cipp-field-source": "backend"
-                    },
-                    "Scope": {
+                    "SkipLog": {
                       "x-cipp-field-source": "backend"
                     },
                     "Status": {
-                      "x-cipp-field-source": "backend"
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Timestamp": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "UserId": {
+                      "x-cipp-field-source": "storage"
                     }
                   }
                 }
@@ -15001,191 +14923,6 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "x-cipp-role": "Identity.User.Read"
-      }
-    },
-    "/api/ExecBECContentSearch": {
-      "post": {
-        "summary": "Creates, polls, purges or removes a Purview content search for a BEC case.",
-        "operationId": "ExecBECContentSearch",
-        "tags": [
-          "Identity > Administration > Users"
-        ],
-        "description": "Action=Create builds a KQL query from Sender, Subject, StartDate and EndDate, creates the search across Locations ('All' or mailbox addresses) and starts it. Action=Status returns its state and item counts per location - counts only, never content. Action=Purge soft-deletes the found items through Purview: it needs the superadmin role and Confirmation equal to the search name; Purview removes at most 10 items per mailbox per run. Action=Remove deletes the search definition. CIPP-SAM needs the Purview Compliance Search role (and Search And Purge for Purge).",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "Action": {
-                    "type": "string",
-                    "description": "Create | Status | Purge | Remove"
-                  },
-                  "caseId": {
-                    "type": "string"
-                  },
-                  "Confirmation": {
-                    "type": "string",
-                    "description": "on Purge: must equal the search name"
-                  },
-                  "EndDate": {
-                    "type": "string",
-                    "format": "date-time"
-                  },
-                  "Locations": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "#/components/schemas/LabelValue"
-                    }
-                  },
-                  "Name": {
-                    "type": "string",
-                    "description": "the search name (required for Status/Purge/Remove; generated on Create)"
-                  },
-                  "Sender": {
-                    "type": "string"
-                  },
-                  "StartDate": {
-                    "type": "string",
-                    "format": "date-time"
-                  },
-                  "Subject": {
-                    "type": "string"
-                  },
-                  "tenantFilter": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "tenantFilter"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
-                  "properties": {
-                    "resultText": {
-                      "x-cipp-field-source": "backend"
-                    },
-                    "state": {
-                      "x-cipp-field-source": "backend"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
-          "401": {
-            "description": "Unauthorized - invalid or missing bearer token"
-          },
-          "403": {
-            "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "x-cipp-role": "Identity.User.ReadWrite"
-      }
-    },
-    "/api/ExecBECEvidenceExport": {
-      "post": {
-        "summary": "Builds the evidence package for a Business Email Compromise run.",
-        "operationId": "ExecBECEvidenceExport",
-        "tags": [
-          "Identity > Administration > Users"
-        ],
-        "description": "Creates a ZIP for the run: results.json, one CSV per finding set, the containment history, every logbook entry stamped with the case id, the PDF report when pdfBase64 is supplied, and a manifest with the SHA-256 of every file. Stores it with the run (the run row records the package's SHA-256) and returns the manifest; download it with ListBECEvidence. Metadata only - nothing in the package is message content.",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "caseId": {
-                    "type": "string"
-                  },
-                  "pdfBase64": {
-                    "type": "string",
-                    "description": "optional: the report PDF rendered in the browser, base64-encoded"
-                  },
-                  "tenantFilter": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "tenantFilter"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
-                  "properties": {
-                    "Bytes": {
-                      "x-cipp-field-source": "backend"
-                    },
-                    "CaseId": {
-                      "x-cipp-field-source": "backend"
-                    },
-                    "FileCount": {
-                      "x-cipp-field-source": "backend"
-                    },
-                    "Manifest": {
-                      "x-cipp-field-source": "backend"
-                    },
-                    "ZipSha256": {
-                      "x-cipp-field-source": "backend"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - invalid or missing bearer token"
-          },
-          "403": {
-            "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
           }
         },
         "security": [
@@ -15198,12 +14935,11 @@
     },
     "/api/ExecBECRemediate": {
       "post": {
-        "summary": "Runs selectable Business Email Compromise containment for a user.",
+        "summary": "ExecBECRemediate",
         "operationId": "ExecBECRemediate",
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "Runs the selected containment actions (see ListBECRemediationActions) for a user. With no Actions the original six steps run: reset password, block sign-in, revoke sessions, remove MFA methods, disable inbox rules, disable OneDrive sharing. Actions marked Critical require Confirmation to equal the user's UPN. Pass CaseId to resolve default targets (flagged consents, delegations, rules, devices) from that BEC run and to record the outcome on it; Parameters carries explicit per-action targets (MfaMethodIds, GrantIds, AppRoleAssignmentIds, ServicePrincipalIds, RuleIds, Delegations, TransportRuleIds, AddInIds, Protocols, MobileDeviceIds, RegisteredDeviceIds, CAPolicy).",
         "requestBody": {
           "required": true,
           "content": {
@@ -15211,24 +14947,6 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "Actions": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "#/components/schemas/LabelValue"
-                    },
-                    "description": "Action ids from ListBECRemediationActions; empty runs the default six"
-                  },
-                  "CaseId": {
-                    "type": "string",
-                    "description": "the BEC run whose findings supply default targets and which records the outcome"
-                  },
-                  "Confirmation": {
-                    "type": "string",
-                    "description": "must equal the user's UPN when a Critical action is selected"
-                  },
-                  "Parameters": {
-                    "type": "string"
-                  },
                   "tenantFilter": {
                     "type": "string"
                   },
@@ -15236,83 +14954,6 @@
                     "type": "string"
                   },
                   "username": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "tenantFilter",
-                  "userid",
-                  "username"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "description": "Derived from the Microsoft Graph entity it queries, and the fields the endpoint selects onto each record. The fields taken from Graph are the ones this endpoint selects, so they are what the response actually carries.",
-                  "properties": {
-                    "resultText": {
-                      "x-cipp-field-source": "backend"
-                    },
-                    "state": {
-                      "type": "string",
-                      "x-cipp-field-source": "graph,backend"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
-          "401": {
-            "description": "Unauthorized - invalid or missing bearer token"
-          },
-          "403": {
-            "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "x-cipp-role": "Identity.User.ReadWrite"
-      }
-    },
-    "/api/ExecBECReport": {
-      "post": {
-        "summary": "Manages a stored Business Email Compromise run.",
-        "operationId": "ExecBECReport",
-        "tags": [
-          "Identity > Administration > Users"
-        ],
-        "description": "Action=Delete removes a BEC run permanently: its results payload, its evidence package and the run row. Runs are otherwise kept indefinitely.",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "Action": {
-                    "type": "string",
-                    "description": "Currently only Delete"
-                  },
-                  "caseId": {
-                    "type": "string"
-                  },
-                  "tenantFilter": {
                     "type": "string"
                   }
                 },
@@ -15330,7 +14971,12 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                  "properties": {
+                    "Results": {
+                      "x-cipp-field-source": "backend"
+                    }
+                  }
                 }
               }
             }
@@ -40191,359 +39837,6 @@
           }
         ],
         "x-cipp-role": "Identity.AuditLog.Read"
-      }
-    },
-    "/api/ListBECEvidence": {
-      "get": {
-        "summary": "Downloads the evidence package of a Business Email Compromise run.",
-        "operationId": "ListBECEvidence",
-        "tags": [
-          "Identity > Administration > Users"
-        ],
-        "description": "Streams the evidence ZIP that ExecBECEvidenceExport stored for the run as application/zip. Verify the download against the SHA-256 recorded on the run (EvidenceSha256 in ListBECReports). Without download=true the package's metadata is returned instead.",
-        "parameters": [
-          {
-            "name": "caseId",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "download",
-            "in": "query",
-            "description": "true streams the ZIP; otherwise the package metadata is returned",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "$ref": "#/components/parameters/tenantFilter"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - invalid or missing bearer token"
-          },
-          "403": {
-            "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "x-cipp-role": "Identity.User.Read"
-      }
-    },
-    "/api/ListBECPhishingSpread": {
-      "get": {
-        "summary": "Lists who else received mail from a sender, from message-trace metadata.",
-        "operationId": "ListBECPhishingSpread",
-        "tags": [
-          "Identity > Administration > Users"
-        ],
-        "description": "Given a sender address (and optionally a subject fragment), walks the message trace for the last N days and groups the recipients: address, internal or external, message count, first and last delivery and the subjects seen. Use it to find the spread of a phishing message from a compromised or look-alike sender. Metadata only - no message content is read.",
-        "parameters": [
-          {
-            "name": "days",
-            "in": "query",
-            "description": "look-back in days (1-90)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "sender",
-            "in": "query",
-            "description": "the sender to trace",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "subject",
-            "in": "query",
-            "description": "optional subject fragment to narrow the trace (case-insensitive contains)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "$ref": "#/components/parameters/tenantFilter"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
-                    "properties": {
-                      "Complete": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "Days": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "ExternalCount": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "InternalCount": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "Recipients": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "Sender": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "TotalMessages": {
-                        "x-cipp-field-source": "backend"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - invalid or missing bearer token"
-          },
-          "403": {
-            "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "x-cipp-role": "Identity.User.Read"
-      }
-    },
-    "/api/ListBECRemediationActions": {
-      "get": {
-        "summary": "Lists the available Business Email Compromise containment actions.",
-        "operationId": "ListBECRemediationActions",
-        "tags": [
-          "Identity > Administration > Users"
-        ],
-        "description": "Returns the catalog of containment actions ExecBECRemediate accepts - id, label, description, impact (Low/Medium/High/Critical), whether it is reversible and whether it runs by default - plus whether the caller holds the superadmin role (required for a Purview content-search purge).",
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
-                    "properties": {
-                      "Actions": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "DefaultSelected": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "Description": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "Id": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "Impact": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "IsSuperAdmin": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "Label": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "Order": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "ParameterName": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "Reversible": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "TargetSource": {
-                        "x-cipp-field-source": "backend"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - invalid or missing bearer token"
-          },
-          "403": {
-            "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "x-cipp-role": "Identity.User.Read",
-        "x-cipp-any-tenant": true
-      }
-    },
-    "/api/ListBECReports": {
-      "get": {
-        "summary": "Lists Business Email Compromise runs.",
-        "operationId": "ListBECReports",
-        "tags": [
-          "Identity > Administration > Users"
-        ],
-        "description": "Lists every stored BEC run (case id, user, scope, status, threat level and score, when it was extracted, who requested it, whether evidence was exported) for a tenant, or for every tenant with tenantFilter=AllTenants. Optionally narrowed to one user with userId. Runs are kept until deleted; this list never reads the result payloads.",
-        "parameters": [
-          {
-            "name": "tenantFilter",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "userId",
-            "in": "query",
-            "description": "Narrow the list to one user's run history",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "description": "Derived from the fields the endpoint selects onto each record, and the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
-                    "properties": {
-                      "CaseId": {
-                        "x-cipp-field-source": "backend,frontend"
-                      },
-                      "ContainmentRuns": {
-                        "x-cipp-field-source": "backend,frontend"
-                      },
-                      "DisplayName": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "ErrorMessage": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "EvidenceCreatedAt": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "EvidenceSha256": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "ExtractedAt": {
-                        "x-cipp-field-source": "backend,frontend"
-                      },
-                      "HasEvidence": {
-                        "x-cipp-field-source": "backend,frontend"
-                      },
-                      "IncompleteCount": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "Level": {
-                        "x-cipp-field-source": "backend,frontend"
-                      },
-                      "RequestedAt": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "RequestedBy": {
-                        "x-cipp-field-source": "backend,frontend"
-                      },
-                      "Scope": {
-                        "x-cipp-field-source": "backend,frontend"
-                      },
-                      "Score": {
-                        "x-cipp-field-source": "backend,frontend"
-                      },
-                      "Status": {
-                        "x-cipp-field-source": "backend,frontend"
-                      },
-                      "Tenant": {
-                        "x-cipp-field-source": "backend,frontend"
-                      },
-                      "UserId": {
-                        "x-cipp-field-source": "backend"
-                      },
-                      "UserPrincipalName": {
-                        "x-cipp-field-source": "backend,frontend"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - invalid or missing bearer token"
-          },
-          "403": {
-            "description": "Forbidden - caller lacks the required RBAC role"
-          },
-          "500": {
-            "description": "Internal server error"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "x-cipp-role": "Identity.User.Read",
-        "x-cipp-any-tenant": true
       }
     },
     "/api/ListBPA": {
