@@ -1,45 +1,59 @@
 import { useRouter } from 'next/router'
+import { Box } from '@mui/material'
 import { Layout as DashboardLayout } from '../../../../layouts/index.js'
 import { TabbedLayout } from '../../../../layouts/TabbedLayout'
 import { CippTablePage } from '../../../../components/CippComponents/CippTablePage.jsx'
+import { CippDataTable } from '../../../../components/CippTable/CippDataTable'
 import { useCippRoleAssignmentActions } from '../../../../components/CippComponents/CippRoleAssignmentActions'
 import tabOptions from './tabOptions.json'
 
+// Drill-in panel: the role's assignments with the secure-direction actions (convert to
+// eligible, grant time-bound, extend, renew, remove). The rows are embedded in the role row,
+// so opening a role costs no extra request.
+const RoleAssignmentsPanel = ({ row }) => {
+  const actions = useCippRoleAssignmentActions({
+    relatedQueryKeys: ['ListPIMRoles*', 'ListRoleAssignments*'],
+  })
+  return (
+    <Box sx={{ mt: 2 }}>
+      <CippDataTable
+        title="Assignments"
+        data={row?.Assignments ?? []}
+        actions={actions}
+        simpleColumns={[
+          'PrincipalDisplayName',
+          'PrincipalUserPrincipalName',
+          'PrincipalType',
+          'AssignmentType',
+          'MemberType',
+          'Scope',
+          'EndDateTime',
+        ]}
+      />
+    </Box>
+  )
+}
+
 /**
- * Roles and their assignments in one table: one row per principal x role x scope with the PIM
- * assignment type, plus one row per role nobody holds (AssignmentType 'Unassigned') so the
- * role catalogue is here too. Single tenant reads live; AllTenants reads the reporting cache
- * (which has no catalogue rows).
+ * One row per role, like the classic Roles page, with the PIM breakdown on top: how many
+ * principals hold the role permanently, eligibly or time-bound, and the role's PIM policy
+ * summary. Clicking a role expands it into its assignments with the secure-direction actions.
+ * Single tenant reads live (roles nobody holds included); AllTenants reads the reporting
+ * cache, which has no catalogue rows.
  */
 const Page = () => {
   const pageTitle = 'Roles & Assignments'
   const router = useRouter()
-  // Deep links (user page, alerts) narrow the list to one role or principal.
+  // Deep links (alerts, the user page) narrow the list to one role or principal.
   const { roleTemplateId, principalId } = router.query
   const apiData = {}
   if (roleTemplateId) apiData.roleTemplateId = roleTemplateId
   if (principalId) apiData.principalId = principalId
-  const actions = useCippRoleAssignmentActions()
 
   const filters = [
     {
-      filterName: 'Permanent admins',
-      value: [{ id: 'AssignmentType', value: 'Permanent' }],
-      type: 'column',
-    },
-    {
-      filterName: 'Eligible',
-      value: [{ id: 'AssignmentType', value: 'Eligible' }],
-      type: 'column',
-    },
-    {
-      filterName: 'Time-bound active',
-      value: [{ id: 'AssignmentType', value: 'Active' }],
-      type: 'column',
-    },
-    {
-      filterName: 'Activated from eligible',
-      value: [{ id: 'AssignmentType', value: 'ActivatedFromEligible' }],
+      filterName: 'Roles with permanent admins',
+      value: [{ id: 'HasPermanentMembers', value: 'Yes' }],
       type: 'column',
     },
     {
@@ -48,16 +62,11 @@ const Page = () => {
       type: 'column',
     },
     {
-      filterName: 'Permanent privileged admins',
+      filterName: 'Privileged roles with permanent admins',
       value: [
-        { id: 'AssignmentType', value: 'Permanent' },
+        { id: 'HasPermanentMembers', value: 'Yes' },
         { id: 'IsPrivilegedRole', value: 'Yes' },
       ],
-      type: 'column',
-    },
-    {
-      filterName: 'Inherited through a group',
-      value: [{ id: 'MemberType', value: 'Group' }],
       type: 'column',
     },
     {
@@ -72,7 +81,7 @@ const Page = () => {
     },
     {
       filterName: 'Roles nobody holds',
-      value: [{ id: 'AssignmentType', value: 'Unassigned' }],
+      value: [{ id: 'IsAssigned', value: 'No' }],
       type: 'column',
     },
     {
@@ -86,43 +95,35 @@ const Page = () => {
     extendedInfoFields: [
       'RoleDisplayName',
       'RoleDescription',
-      'RoleIsBuiltIn',
       'RoleDefinitionId',
-      'PrincipalDisplayName',
-      'PrincipalUserPrincipalName',
-      'PrincipalType',
-      'AssignmentType',
-      'MemberType',
-      'Scope',
-      'StartDateTime',
-      'EndDateTime',
-      'Source',
+      'RoleIsBuiltIn',
+      'IsPrivilegedRole',
+      'MemberCount',
+      'PermanentCount',
+      'EligibleCount',
+      'ActiveCount',
       'PolicySummary',
       'PolicyBelowFloor',
       'PIMCapable',
     ],
-    actions: actions,
+    children: (row) => <RoleAssignmentsPanel row={row} />,
   }
 
   return (
     <CippTablePage
       title={pageTitle}
-      apiUrl="/api/ListRoleAssignments"
+      apiUrl="/api/ListPIMRoles"
       apiData={apiData}
-      queryKey={`ListRoleAssignments-${roleTemplateId ?? 'all'}-${principalId ?? 'all'}`}
-      actions={actions}
+      queryKey={`ListPIMRoles-${roleTemplateId ?? 'all'}-${principalId ?? 'all'}`}
       offCanvas={offCanvas}
       filters={filters}
       simpleColumns={[
         'Tenant',
         'RoleDisplayName',
-        'PrincipalDisplayName',
-        'PrincipalUserPrincipalName',
-        'PrincipalType',
-        'AssignmentType',
-        'MemberType',
-        'Scope',
-        'EndDateTime',
+        'Members',
+        'PermanentCount',
+        'EligibleCount',
+        'ActiveCount',
         'IsPrivilegedRole',
         'PolicySummary',
       ]}
