@@ -71,9 +71,53 @@ Set-Content -Path $resolved -Value $out -NoNewline -Encoding ascii
 
 $count = ([regex]::Matches($out, 'BEGIN CERTIFICATE')).Count
 Write-Host "Wrote $count certificate block(s) to $resolved" -ForegroundColor Green
-Write-Host "Start the dev stack with Proxyman interception via the launcher (auto-detects this file):" -ForegroundColor Cyan
+
+# ── Combined trust bundle ─────────────────────────────────────────────────────
+# The cipp-api container runs the distroless Craft image and reaches Microsoft over
+# TLS the system proxy (Proxyman) re-signs, so it must trust Proxyman's CA. The
+# overlay bind-mounts a bundle OVER the image's own root store — a single file, so
+# it must contain the image's 217 real roots too, or every non-intercepted host
+# breaks. We pull those roots straight out of the image (exact match to the runtime)
+# and append Proxyman. Needs Docker; if it's unavailable we skip the bundle and the
+# launcher simply won't enable interception (safe, un-proxied stack).
+$bundlePath = Join-Path $dir 'proxyman-ca-bundle.pem'
+$imageRootsPath = '/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem'  # Azure Linux/Mariner
+$image = $env:CRAFT_DEV_IMAGE; if (-not $image) { $image = 'ghcr.io/cyberdrain/craft:dev' }
+
+if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
+    Write-Warning "Docker not found — skipping combined bundle. Interception stays OFF until you re-run this with Docker available."
+    return
+}
+
+$baseRoots = Join-Path ([System.IO.Path]::GetTempPath()) 'craft-tls-ca-bundle.pem'
+# Prefer the running cipp-api (guaranteed same image); else spin a throwaway container.
+$srcContainer = (& docker ps --filter 'name=cipp-api' --format '{{.Names}}' 2>$null | Select-Object -First 1)
+$tmpContainer = $null
+try {
+    if (-not $srcContainer) {
+        $tmpContainer = 'cipp-catrust-' + [Guid]::NewGuid().ToString('N').Substring(0, 8)
+        & docker create --name $tmpContainer $image | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "Could not create a container from $image to read its root store." }
+        $srcContainer = $tmpContainer
+    }
+    & docker cp "${srcContainer}:${imageRootsPath}" $baseRoots | Out-Null
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path $baseRoots)) { throw "Could not copy $imageRootsPath out of $srcContainer." }
+}
+finally {
+    if ($tmpContainer) { & docker rm -f $tmpContainer 2>$null | Out-Null }
+}
+
+$roots = (Get-Content -Raw $baseRoots) -replace "`r`n", "`n"
+$bundle = ($roots.TrimEnd() + "`n" + $out.TrimEnd() + "`n") -replace "`r`n", "`n"
+Set-Content -Path $bundlePath -Value $bundle -NoNewline -Encoding ascii
+Remove-Item $baseRoots -ErrorAction SilentlyContinue
+
+$bundleCount = ([regex]::Matches($bundle, 'BEGIN CERTIFICATE')).Count
+Write-Host "Wrote combined trust bundle ($bundleCount certs = image roots + Proxyman) to $bundlePath" -ForegroundColor Green
+Write-Host "Start the dev stack with Proxyman trust via the launcher (auto-detects the bundle):" -ForegroundColor Cyan
 if ($onWindows) {
     Write-Host "  build/tools/Start-Cipp-Dev-Windows-docker.ps1"
 } else {
     Write-Host "  build/tools/Start-CippDev.sh"
 }
+Write-Host "Note: traffic already routes through Proxyman via the system proxy — this only adds trust." -ForegroundColor DarkGray

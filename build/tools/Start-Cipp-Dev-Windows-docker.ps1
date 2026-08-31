@@ -70,7 +70,7 @@ $frontendEncoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($
 # Auto-enable Proxyman interception when the exported CA is present (parity with the
 # macOS/Linux Start-CippDev.sh launcher). Drop config/proxyman-ca.pem in via
 # Export-ProxymanCert.ps1 and the overlay layers on automatically; remove it for a plain stack.
-$proxymanOverlay = if (Test-Path (Join-Path $dockerpath 'config/proxyman-ca.pem')) { ' -f docker-compose-proxyman.yml' } else { '' }
+$proxymanOverlay = if (Test-Path (Join-Path $dockerpath 'config/proxyman-ca-bundle.pem')) { ' -f docker-compose-proxyman.yml' } else { '' }
 $dockerCommand = "try { ./tools/build-dev-modules.ps1; docker compose -f docker-compose-no-frontend.yml$proxymanOverlay up --pull always --watch } catch { Write-Error `$_.Exception.Message } finally { Read-Host 'Press Enter to exit' }"
 $dockerEncoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($dockerCommand))
 $watcherCommand = 'try { ./tools/Watch-Cipp-Dev-Modules.ps1 -SkipInitialBuild } catch { Write-Error $_.Exception.Message } finally { Read-Host "Press Enter to exit" }'
