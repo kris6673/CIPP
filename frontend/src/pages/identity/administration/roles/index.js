@@ -1,5 +1,6 @@
 import { useRouter } from 'next/router'
 import { Box } from '@mui/material'
+import { useSettings } from '../../../../hooks/use-settings'
 import { Layout as DashboardLayout } from '../../../../layouts/index.js'
 import { TabbedLayout } from '../../../../layouts/TabbedLayout'
 import { CippTablePage } from '../../../../components/CippComponents/CippTablePage.jsx'
@@ -44,6 +45,7 @@ const RoleAssignmentsPanel = ({ row }) => {
 const Page = () => {
   const pageTitle = 'Roles & Assignments'
   const router = useRouter()
+  const currentTenant = useSettings().currentTenant
   // Deep links (alerts, the user page) narrow the list to one role or principal.
   const { roleTemplateId, principalId } = router.query
   const apiData = {}
@@ -114,7 +116,7 @@ const Page = () => {
       title={pageTitle}
       apiUrl="/api/ListPIMRoles"
       apiData={apiData}
-      queryKey={`ListPIMRoles-${roleTemplateId ?? 'all'}-${principalId ?? 'all'}`}
+      queryKey={`ListPIMRoles-${currentTenant}-${roleTemplateId ?? 'all'}-${principalId ?? 'all'}`}
       offCanvas={offCanvas}
       filters={filters}
       simpleColumns={[
