@@ -116,7 +116,7 @@ const Page = () => {
       title={pageTitle}
       apiUrl="/api/ListPIMRoles"
       apiData={apiData}
-      queryKey={`ListPIMRoles-${currentTenant}-${roleTemplateId ?? 'all'}-${principalId ?? 'all'}`}
+      queryKey={`ListPIMRoles-${currentTenant}`}
       offCanvas={offCanvas}
       filters={filters}
       simpleColumns={[

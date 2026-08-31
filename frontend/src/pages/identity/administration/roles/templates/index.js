@@ -2,6 +2,7 @@ import { Button } from '@mui/material'
 import { AddBox, Delete, Edit, GitHub } from '@mui/icons-material'
 import Link from 'next/link'
 import { ApiGetCall } from '../../../../../api/ApiCall'
+import { useSettings } from '../../../../../hooks/use-settings'
 import { CippTablePage } from '../../../../../components/CippComponents/CippTablePage.jsx'
 import { CippPropertyListCard } from '../../../../../components/CippCards/CippPropertyListCard'
 import { Layout as DashboardLayout } from '../../../../../layouts/index.js'
@@ -12,6 +13,7 @@ import tabOptions from '../tabOptions.json'
 
 const Page = () => {
   const pageTitle = 'PIM Templates'
+  const currentTenant = useSettings().currentTenant
   const integrations = ApiGetCall({
     url: '/api/ListExtensionsConfig',
     queryKey: 'Integrations',
@@ -114,7 +116,7 @@ const Page = () => {
     <CippTablePage
       title={pageTitle}
       apiUrl="/api/ListPIMRoleSettingsTemplates"
-      queryKey="ListPIMRoleSettingsTemplates"
+      queryKey={`ListPIMRoleSettingsTemplates-${currentTenant}`}
       tenantInTitle={false}
       actions={actions}
       cardButton={
