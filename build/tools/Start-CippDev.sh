@@ -19,15 +19,15 @@ BUILD_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$BUILD_DIR"
 
 BASE_COMPOSE="${BASE_COMPOSE:-docker-compose-all.yml}"
-CERT="config/proxyman-ca.pem"
+BUNDLE="config/proxyman-ca-bundle.pem"
 
 FILES=(-f "$BASE_COMPOSE")
-if [ -s "$CERT" ]; then
+if [ -s "$BUNDLE" ]; then
     FILES+=(-f docker-compose-proxyman.yml)
-    echo "🔎 Proxyman cert detected ($CERT) — interception overlay ENABLED."
-    echo "   (outbound HTTPS from cipp-api routes through host.docker.internal:9090)"
+    echo "🔎 Proxyman trust bundle detected ($BUNDLE) — cipp-api will trust Proxyman's CA."
+    echo "   (traffic already routes through Proxyman via the system proxy; this adds trust)"
 else
-    echo "ℹ️  No Proxyman cert ($CERT) — running the plain dev stack."
+    echo "ℹ️  No Proxyman trust bundle ($BUNDLE) — running the plain dev stack."
     echo "   Enable interception with: pwsh build/tools/Export-ProxymanCert.ps1"
 fi
 
