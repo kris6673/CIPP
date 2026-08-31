@@ -12,10 +12,13 @@ import { CippDirectTenantDeploy } from './CippDirectTenantDeploy.jsx'
 import { CippGDAPTenantSetup } from './CippGDAPTenantSetup.jsx'
 import { CippIndirectResellerLink } from './CippIndirectResellerLink.jsx'
 import { CippGDAPTenantOnboarding } from './CippGDAPTenantOnboarding.jsx'
+import { CippAuthMethodStep } from './CippAuthMethodStep.jsx'
+import { CippCertificateAuthStep } from './CippCertificateAuthStep.jsx'
 import {
   BuildingOfficeIcon,
   CloudIcon,
   CpuChipIcon,
+  KeyIcon,
 } from '@heroicons/react/24/outline'
 import { useRouter } from 'next/router'
 
@@ -69,6 +72,13 @@ const OnboardingWizardPage = ({ mode, samAppPresent, completionButton }) => {
       label: 'Manually enter credentials',
       value: 'Manual',
     },
+    {
+      description:
+        'Switch an existing setup to authenticate with the SAM certificate instead of the client secret. The client secret is kept as a rollback.',
+      icon: <KeyIcon />,
+      label: 'Use certificate authentication',
+      value: 'CertificateAuth',
+    },
   ]
 
   // On the blocking first-run gate, AddTenant and CreateApp are noise: both need an
@@ -108,6 +118,13 @@ const OnboardingWizardPage = ({ mode, samAppPresent, completionButton }) => {
         valuesKey: 'SyncTool',
         options: visibleOptions,
       },
+    },
+    {
+      description: 'Authentication',
+      component: CippAuthMethodStep,
+      showStepWhen: (values) =>
+        values?.selectedOption === 'CreateApp' ||
+        values?.selectedOption === 'FirstSetup',
     },
     {
       description: 'Application',
@@ -181,6 +198,11 @@ const OnboardingWizardPage = ({ mode, samAppPresent, completionButton }) => {
       description: 'Manually enter credentials',
       component: CippDeploymentStep,
       showStepWhen: (values) => values?.selectedOption === 'Manual',
+    },
+    {
+      description: 'Certificate Authentication',
+      component: CippCertificateAuthStep,
+      showStepWhen: (values) => values?.selectedOption === 'CertificateAuth',
     },
     {
       description: 'Confirmation',

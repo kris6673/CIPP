@@ -37,7 +37,12 @@ export const CippSAMDeploy = (props) => {
 
     createSamApp.mutate({
       url: "/api/ExecCreateSamApp",
-      data: { access_token: tokenData.accessToken },
+      data: {
+        access_token: tokenData.accessToken,
+        // Certificate-only setups create no client secret; the backend registers the SAM
+        // certificate and enables certificate authentication instead.
+        certificateOnly: formControl.getValues("authMethod") === "certificate",
+      },
     });
   };
 
