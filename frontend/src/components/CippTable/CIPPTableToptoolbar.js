@@ -724,11 +724,14 @@ export const CIPPTableToptoolbar = React.memo(
         // for a column via `filterFn` on its value entry. Start from filterFnDefaults so
         // every column any preset ever overrides gets an explicit entry here — falling
         // back to 'contains' — then layer this preset's own overrides on top.
+        // Object.create(null) (no Object.prototype in the chain) so a preset entry with
+        // id "__proto__" can't hit the prototype setter via this bracket assignment —
+        // it just becomes a normal own property, same as any other column id.
         const filterFnOverrides = Array.isArray(filter)
           ? filter.reduce((acc, f) => {
               if (f?.id && f?.filterFn) acc[f.id] = f.filterFn
               return acc
-            }, {})
+            }, Object.create(null))
           : {}
         table.setColumnFilterFns({ ...filterFnDefaults, ...filterFnOverrides })
         table.setColumnFilters(filter)
