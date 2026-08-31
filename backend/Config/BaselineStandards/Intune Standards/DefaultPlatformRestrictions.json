@@ -4,9 +4,9 @@
   "cat": "Intune Standards",
   "tag": [],
   "impact": "High Impact",
-  "helpText": "Sets the default enrollment platform restrictions, controlling which device platforms may enroll and whether personally-owned devices of each platform are allowed.",
-  "executiveText": "Controls which kinds of device can enrol into management, and whether employees may enrol personal devices. This keeps unmanaged or unsupported platforms off corporate resources.",
-  "docsDescription": "Sets the default device enrollment platform restrictions for Android, Android for Work, iOS, macOS and Windows.",
+  "helpText": "Sets the default enrollment platform restrictions, controlling which device platforms may enroll, whether personally-owned devices of each platform are allowed, and the minimum/maximum OS version each platform may enroll with.",
+  "executiveText": "Controls which kinds of device can enrol into management, whether employees may enrol personal devices, and how up to date a device's operating system must be to enrol. This keeps unmanaged, unsupported or out-of-date platforms off corporate resources.",
+  "docsDescription": "Sets the default device enrollment platform restrictions for Android, Android for Work, iOS, macOS and Windows, including optional minimum and maximum OS version limits per platform.",
   "impactColour": "warning",
   "addedDate": "2024-07-15",
   "powershellEquivalent": "Graph API",
@@ -31,6 +31,18 @@
       "label": "Block personally owned Android (work profile)",
       "default": false
     },
+    "osMinimumVersionAndroidForWork": {
+      "type": "textField",
+      "label": "Android (work profile) minimum OS version",
+      "omitWhenBlank": true,
+      "default": ""
+    },
+    "osMaximumVersionAndroidForWork": {
+      "type": "textField",
+      "label": "Android (work profile) maximum OS version",
+      "omitWhenBlank": true,
+      "default": ""
+    },
     "platformAndroidBlocked": {
       "type": "switch",
       "label": "Block Android (device administrator) platform",
@@ -41,6 +53,18 @@
       "label": "Block personally owned Android (device administrator)",
       "default": false
     },
+    "osMinimumVersionAndroid": {
+      "type": "textField",
+      "label": "Android (device administrator) minimum OS version",
+      "omitWhenBlank": true,
+      "default": ""
+    },
+    "osMaximumVersionAndroid": {
+      "type": "textField",
+      "label": "Android (device administrator) maximum OS version",
+      "omitWhenBlank": true,
+      "default": ""
+    },
     "platformiOSBlocked": {
       "type": "switch",
       "label": "Block iOS platform",
@@ -50,6 +74,18 @@
       "type": "switch",
       "label": "Block personally owned iOS",
       "default": false
+    },
+    "osMinimumVersioniOS": {
+      "type": "textField",
+      "label": "iOS/iPadOS minimum OS version",
+      "omitWhenBlank": true,
+      "default": ""
+    },
+    "osMaximumVersioniOS": {
+      "type": "textField",
+      "label": "iOS/iPadOS maximum OS version",
+      "omitWhenBlank": true,
+      "default": ""
     },
     "platformMacOSBlocked": {
       "type": "switch",
@@ -70,6 +106,18 @@
       "type": "switch",
       "label": "Block personally owned Windows",
       "default": false
+    },
+    "osMinimumVersionWindows": {
+      "type": "textField",
+      "label": "Windows minimum OS version",
+      "omitWhenBlank": true,
+      "default": ""
+    },
+    "osMaximumVersionWindows": {
+      "type": "textField",
+      "label": "Windows maximum OS version",
+      "omitWhenBlank": true,
+      "default": ""
     }
   },
   "read": {
@@ -83,17 +131,23 @@
       "androidForWorkRestriction": {
         "@odata.type": "microsoft.graph.deviceEnrollmentPlatformRestriction",
         "platformBlocked": "%platformAndroidForWorkBlocked%",
-        "personalDeviceEnrollmentBlocked": "%personalAndroidForWorkBlocked%"
+        "personalDeviceEnrollmentBlocked": "%personalAndroidForWorkBlocked%",
+        "osMinimumVersion": "%osMinimumVersionAndroidForWork%",
+        "osMaximumVersion": "%osMaximumVersionAndroidForWork%"
       },
       "androidRestriction": {
         "@odata.type": "microsoft.graph.deviceEnrollmentPlatformRestriction",
         "platformBlocked": "%platformAndroidBlocked%",
-        "personalDeviceEnrollmentBlocked": "%personalAndroidBlocked%"
+        "personalDeviceEnrollmentBlocked": "%personalAndroidBlocked%",
+        "osMinimumVersion": "%osMinimumVersionAndroid%",
+        "osMaximumVersion": "%osMaximumVersionAndroid%"
       },
       "iosRestriction": {
         "@odata.type": "microsoft.graph.deviceEnrollmentPlatformRestriction",
         "platformBlocked": "%platformiOSBlocked%",
-        "personalDeviceEnrollmentBlocked": "%personaliOSBlocked%"
+        "personalDeviceEnrollmentBlocked": "%personaliOSBlocked%",
+        "osMinimumVersion": "%osMinimumVersioniOS%",
+        "osMaximumVersion": "%osMaximumVersioniOS%"
       },
       "macOSRestriction": {
         "@odata.type": "microsoft.graph.deviceEnrollmentPlatformRestriction",
@@ -103,7 +157,9 @@
       "windowsRestriction": {
         "@odata.type": "microsoft.graph.deviceEnrollmentPlatformRestriction",
         "platformBlocked": "%platformWindowsBlocked%",
-        "personalDeviceEnrollmentBlocked": "%personalWindowsBlocked%"
+        "personalDeviceEnrollmentBlocked": "%personalWindowsBlocked%",
+        "osMinimumVersion": "%osMinimumVersionWindows%",
+        "osMaximumVersion": "%osMaximumVersionWindows%"
       }
     }
   }
