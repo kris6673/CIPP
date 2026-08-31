@@ -12,7 +12,6 @@ import { CippDirectTenantDeploy } from './CippDirectTenantDeploy.jsx'
 import { CippGDAPTenantSetup } from './CippGDAPTenantSetup.jsx'
 import { CippIndirectResellerLink } from './CippIndirectResellerLink.jsx'
 import { CippGDAPTenantOnboarding } from './CippGDAPTenantOnboarding.jsx'
-import { CippAuthMethodStep } from './CippAuthMethodStep.jsx'
 import { CippCertificateAuthStep } from './CippCertificateAuthStep.jsx'
 import {
   BuildingOfficeIcon,
@@ -118,13 +117,6 @@ const OnboardingWizardPage = ({ mode, samAppPresent, completionButton }) => {
         valuesKey: 'SyncTool',
         options: visibleOptions,
       },
-    },
-    {
-      description: 'Authentication',
-      component: CippAuthMethodStep,
-      showStepWhen: (values) =>
-        values?.selectedOption === 'CreateApp' ||
-        values?.selectedOption === 'FirstSetup',
     },
     {
       description: 'Application',
