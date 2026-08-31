@@ -4697,7 +4697,7 @@
         "tags": [
           "Identity > Administration > Roles"
         ],
-        "description": "Saves a Privileged Identity Management role settings template. The settings are validated against CIPP's secure floor (activation must expire within 24 hours and require MFA or an authentication context plus a justification; eligibilities and active assignments must expire within a year; active assignments must require a justification). A template below the floor is rejected with the list of problems rather than silently adjusted. Pass GUID to update an existing template.",
+        "description": "Saves a Privileged Identity Management role settings template. The settings are validated against CIPP's secure floor (activation must expire within 24 hours and require MFA or an authentication context plus a justification; eligibilities and active assignments must expire within a year; active assignments must require a justification). A template below the floor is rejected with the list of problems rather than silently adjusted. Pass GUID to update an existing template. Pass captureRoleId with a tenantFilter to build the settings from that role's current PIM policy in the tenant instead of supplying them: values below the secure floor are raised to the closest value the floor allows and every raise is reported in the results.",
         "requestBody": {
           "required": false,
           "content": {
@@ -4705,6 +4705,17 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "captureRoleId": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "Capture mode: build the settings from a role's current PIM policy in a tenant."
+                  },
+                  "captureRoleName": {
+                    "type": "string"
+                  },
                   "description": {
                     "type": "string"
                   },
@@ -4728,11 +4739,13 @@
                     "description": "PrivilegedRoles | AllRoles | Custom"
                   },
                   "settings": {
-                    "type": "string",
-                    "description": "Role activation, eligibility, assignment, approval and notification settings."
+                    "type": "string"
                   },
                   "templateName": {
                     "type": "string"
+                  },
+                  "tenantFilter": {
+                    "$ref": "#/components/schemas/LabelValue"
                   }
                 }
               }
