@@ -18,15 +18,19 @@ services:
     image: mcr.microsoft.com/azure-storage/azurite:latest
     container_name: cipp-azurite
     restart: unless-stopped
+    # The prestart guard empties regenerable cache tables when the LokiJS file has
+    # grown past the point where azurite can load it without OOM crash-looping.
+    entrypoint: ["/bin/sh", "-c"]
     command: >
-      azurite
+      "node /azurite-prestart.js /workspace &&
+      exec azurite
       --blobHost 0.0.0.0
       --queueHost 0.0.0.0
       --tableHost 0.0.0.0
       --location /workspace
       --loose
       --skipApiVersionCheck
-      --disableTelemetry
+      --disableTelemetry"
     ports:
       - "10000:10000"
       - "10001:10001"
@@ -36,6 +40,7 @@ services:
       - NODE_OPTIONS=--max-old-space-size=8192
     volumes:
       - cipp-ng_azurite-data:/workspace
+      - ./tools/azurite-prestart.js:/azurite-prestart.js:ro
     networks:
       - cipp-network
 
