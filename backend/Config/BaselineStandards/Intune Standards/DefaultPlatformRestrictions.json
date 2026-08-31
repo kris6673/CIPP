@@ -34,12 +34,14 @@
     "osMinimumVersionAndroidForWork": {
       "type": "textField",
       "label": "Android (work profile) minimum OS version",
+      "helperText": "Example: 11.0. Leave blank to not enforce a minimum.",
       "omitWhenBlank": true,
       "default": ""
     },
     "osMaximumVersionAndroidForWork": {
       "type": "textField",
       "label": "Android (work profile) maximum OS version",
+      "helperText": "Example: 14.0. Leave blank to not enforce a maximum.",
       "omitWhenBlank": true,
       "default": ""
     },
@@ -56,12 +58,14 @@
     "osMinimumVersionAndroid": {
       "type": "textField",
       "label": "Android (device administrator) minimum OS version",
+      "helperText": "Example: 10.0. Leave blank to not enforce a minimum.",
       "omitWhenBlank": true,
       "default": ""
     },
     "osMaximumVersionAndroid": {
       "type": "textField",
       "label": "Android (device administrator) maximum OS version",
+      "helperText": "Example: 13.0. Leave blank to not enforce a maximum.",
       "omitWhenBlank": true,
       "default": ""
     },
@@ -78,12 +82,14 @@
     "osMinimumVersioniOS": {
       "type": "textField",
       "label": "iOS/iPadOS minimum OS version",
+      "helperText": "Example: 16.1. Leave blank to not enforce a minimum.",
       "omitWhenBlank": true,
       "default": ""
     },
     "osMaximumVersioniOS": {
       "type": "textField",
       "label": "iOS/iPadOS maximum OS version",
+      "helperText": "Example: 18.0. Leave blank to not enforce a maximum.",
       "omitWhenBlank": true,
       "default": ""
     },
@@ -110,12 +116,14 @@
     "osMinimumVersionWindows": {
       "type": "textField",
       "label": "Windows minimum OS version",
+      "helperText": "Example: 10.0.19045.0. Leave blank to not enforce a minimum.",
       "omitWhenBlank": true,
       "default": ""
     },
     "osMaximumVersionWindows": {
       "type": "textField",
       "label": "Windows maximum OS version",
+      "helperText": "Example: 10.0.22631.0. Leave blank to not enforce a maximum.",
       "omitWhenBlank": true,
       "default": ""
     }

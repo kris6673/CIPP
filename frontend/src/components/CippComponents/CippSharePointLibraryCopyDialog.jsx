@@ -220,8 +220,7 @@ const LibraryCopyStatusPanel = ({ status, operationId, refreshing, onRefresh }) 
         <Card variant="outlined">
           <Grid container>
             {metrics.map((metric) => (
-              // compact label/value tiles sit two-up at 390px by design: mobile-layout-ok
-              <Grid key={metric.label} size={{ xs: 6, sm: 4 }} sx={{ p: 2 }}>
+              <Grid key={metric.label} size={{ xs: 12, sm: 4 }} sx={{ p: 2 }}>
                 <Typography variant="overline" color="text.secondary" display="block">
                   {metric.label}
                 </Typography>
