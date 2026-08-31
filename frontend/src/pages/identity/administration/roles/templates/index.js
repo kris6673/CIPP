@@ -23,7 +23,7 @@ const Page = () => {
     {
       label: 'Edit Template',
       icon: <Edit />,
-      link: '/identity/administration/pim/templates/edit?id=[GUID]',
+      link: '/identity/administration/roles/templates/edit?id=[GUID]',
     },
     {
       label: 'Save to GitHub',
@@ -120,7 +120,7 @@ const Page = () => {
       cardButton={
         <Button
           component={Link}
-          href="/identity/administration/pim/templates/add"
+          href="/identity/administration/roles/templates/add"
           startIcon={<AddBox />}
         >
           Add PIM Template

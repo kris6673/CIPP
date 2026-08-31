@@ -2,9 +2,9 @@
 description: Review every Entra role and role assignment with its PIM assignment type and move access in the secure direction
 ---
 
-# PIM
+# Roles & PIM
 
-The PIM page has two tabs: **Roles & Assignments**, covered here, and [PIM Templates](templates/README.md), the role settings templates the **PIM Role Settings Template** standard deploys.
+The Roles & PIM page has two tabs: **Roles & Assignments**, covered here, and [PIM Templates](templates/README.md), the role settings templates the **PIM Role Settings Template** standard deploys.
 
 ## Roles & Assignments
 
