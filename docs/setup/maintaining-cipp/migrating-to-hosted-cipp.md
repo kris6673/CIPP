@@ -202,6 +202,73 @@ For the full picture, including what CIPP creates in your tenant, multi-tenant s
 
 ***
 
+### 7. Decommission the Old Self-Hosted Instance
+
+The migration is one way, and until the hosted instance is proven the old resource group is your only way back. Your hosted instance also sits in a different Azure subscription, so nothing about the old one is tidied up for you. Run on the hosted instance for a few days first and confirm all of the following before deleting anything.
+
+{% stepper %}
+{% step %}
+**You can sign in to the hosted instance** with single sign-on, and the accounts that need access are on the CIPP Users list.
+{% endstep %}
+
+{% step %}
+**Your configuration came across.** Check that your tenants, standards templates, scheduled tasks and integrations are all present after the restore.
+{% endstep %}
+
+{% step %}
+**A scheduled task has actually run.** A restored schedule that has not fired yet has not proved anything.
+{% endstep %}
+
+{% step %}
+**Your custom domain resolves to the hosted instance**, if you moved one across in Step 5.
+{% endstep %}
+{% endstepper %}
+
+#### Your logs do not come across
+
+{% hint style="warning" %}
+The backup covers configuration, not history. Your CIPP logs live in a table called `CippLogs` in the old instance's storage account, and restoring a backup does not bring them with it. Deleting the old resource group deletes them permanently, and there is no way to import them into a hosted instance afterwards.
+{% endhint %}
+
+Decide what you need before you delete anything. Log entries are kept for the retention period set on [README.md](../../user-documentation/cipp/settings/README.md "mention"), 90 days by default, so anything older than that has already been cleaned up.
+
+There are two ways to keep what remains.
+
+| Approach | What to do |
+| -------- | ---------- |
+| Copy the logs out | On the **old** instance, use [siem.md](../../user-documentation/cipp/settings/siem.md "mention") to generate a read-only SAS URL for the `CippLogs` table, then pull the table into your SIEM or an archive. The URL stops working when the storage account is deleted, so copy the data itself rather than filing the URL away for later. |
+| Keep the storage account | Delete every other resource in the resource group and leave the storage account in place. The logs stay queryable through a SAS URL, at a fraction of the cost of running the old instance. |
+
+{% hint style="success" %}
+Keep the backup file you downloaded in Step 1, whatever you decide about the resource group. It is the one thing that survives the old instance being deleted, and it costs nothing to file away.
+{% endhint %}
+
+#### Delete the resource group
+
+{% stepper %}
+{% step %}
+Remove the custom domain from the old instance first, if you have not already done so in Step 5. A domain left bound there cannot be used on the hosted instance.
+{% endstep %}
+
+{% step %}
+In the Azure portal, open the resource group holding the old CIPP instance and check what is in it. A CIPP deployment creates a Web App or Function App, an App Service Plan, an Application Insights component, a storage account and a Key Vault. If anything unrelated to CIPP was deployed into the same resource group, delete the CIPP resources individually instead of deleting the whole group.
+{% endstep %}
+
+{% step %}
+Delete the resource group, or the individual resources you identified.
+{% endstep %}
+{% endstepper %}
+
+{% hint style="info" %}
+Deleting the resource group puts the Key Vault into a soft-deleted state rather than removing it, and its name stays reserved for the retention period, 90 days by default. CIPP deployments do not turn on purge protection, so if you need that name back sooner you can purge the vault from **Key Vaults** > **Manage deleted vaults** in the Azure portal. A soft-deleted standard vault does not incur charges.
+{% endhint %}
+
+{% hint style="info" %}
+If you let the hosted instance create a new sign-in app registration in Step 6, the old `CIPP-SSO` app registration is still sitting in your Entra tenant. It is not part of the resource group, so deleting the group leaves it behind.
+{% endhint %}
+
+***
+
 ### That’s It!
 
 Your instance and settings now live in the fully managed, **CyberDrain-hosted** version of CIPP.
