@@ -13,6 +13,11 @@ function Invoke-SherwebMigration {
         return
     }
 
+    if ($Config.AutoMigrations -ne $true) {
+        Write-Information "Sherweb automated migration is disabled, skipping migration check for $TenantFilter"
+        return
+    }
+
     # Get licenses within the transfer window (renewing within 7 days)
     $Licenses = Get-CIPPLicenseOverview -TenantFilter $TenantFilter | Where-Object {
         $null -ne $_.TermInfo -and ($_.TermInfo | Where-Object { $_.DaysUntilRenew -le 7 -and $_.DaysUntilRenew -ge 0 })
