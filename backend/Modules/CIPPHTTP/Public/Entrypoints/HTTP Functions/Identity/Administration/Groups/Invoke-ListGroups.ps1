@@ -47,15 +47,15 @@ function Invoke-ListGroups {
                     $PageSize = [Math]::Min([Math]::Max([int]$Request.Query.PageSize, 100), 5000)
                 }
                 # Continuation token from the previous page's Metadata.nextLink; opaque to callers.
-                $Page = Get-CIPPGroupsReport -TenantFilter $TenantFilter -PageSize $PageSize -ContinuationToken $Request.Query.nextLink -ErrorAction Stop
+                # Stream the cached blobs as raw JSON so member arrays are never re-parsed here.
+                $Page = Get-CIPPGroupsReport -TenantFilter $TenantFilter -PageSize $PageSize -ContinuationToken $Request.Query.nextLink -AsRawJson -ErrorAction Stop
                 $Metadata = @{}
                 if ($Page.NextToken) { $Metadata.nextLink = $Page.NextToken }
+                $MetadataJson = ConvertTo-Json -InputObject $Metadata -Depth 5 -Compress
                 return ([HttpResponseContext]@{
-                        StatusCode = [HttpStatusCode]::OK
-                        Body       = [PSCustomObject]@{
-                            Results  = @($Page.Items)
-                            Metadata = $Metadata
-                        }
+                        StatusCode  = [HttpStatusCode]::OK
+                        ContentType = 'application/json'
+                        Body        = '{"Results":' + $Page.CippPagedJson + ',"Metadata":' + $MetadataJson + '}'
                     })
             }
             $GraphRequest = Get-CIPPGroupsReport -TenantFilter $TenantFilter -ErrorAction Stop

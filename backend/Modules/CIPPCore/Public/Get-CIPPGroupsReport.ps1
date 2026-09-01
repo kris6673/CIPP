@@ -17,7 +17,11 @@ function Get-CIPPGroupsReport {
         [Parameter(Mandatory = $true)]
         [string]$TenantFilter,
         [int]$PageSize,
-        [string]$ContinuationToken
+        [string]$ContinuationToken,
+        # Return one page as { CippPagedJson; NextToken }: the stored blobs stitched into a
+        # JSON array verbatim, with per-row CacheTimestamp/Tenant spliced in. No member array
+        # is ever deserialized on the read path.
+        [switch]$AsRawJson
     )
 
     if ($PageSize -gt 0) {
@@ -25,6 +29,35 @@ function Get-CIPPGroupsReport {
         if ($TenantFilter -ne 'AllTenants' -and -not $ContinuationToken -and @($Page.Items).Count -eq 0 -and -not $Page.NextToken) {
             throw "No groups data found in reporting database for $TenantFilter. Sync the report data first."
         }
+
+        if ($AsRawJson) {
+            $IsAllTenants = $TenantFilter -eq 'AllTenants'
+            $Builder = [System.Text.StringBuilder]::new()
+            $null = $Builder.Append('[')
+            $First = $true
+            foreach ($Item in $Page.Items) {
+                $Blob = [string]$Item.Data
+                if ([string]::IsNullOrWhiteSpace($Blob)) { continue }
+                $Blob = $Blob.Trim()
+                if ($Blob[0] -ne '{') { continue }
+                if (-not $First) { $null = $Builder.Append(',') }
+                $First = $false
+                # Emit the blob verbatim, then splice the two row-level fields onto its closing
+                # brace. membersCsv/ownersCsv already live in the blob (written at cache time).
+                $null = $Builder.Append($Blob, 0, $Blob.Length - 1)
+                $null = $Builder.Append(',"CacheTimestamp":').Append((ConvertTo-Json -InputObject $Item.Timestamp -Compress))
+                if ($IsAllTenants) {
+                    $null = $Builder.Append(',"Tenant":').Append((ConvertTo-Json -InputObject ([string]$Item.PartitionKey) -Compress))
+                }
+                $null = $Builder.Append('}')
+            }
+            $null = $Builder.Append(']')
+            return [PSCustomObject]@{
+                CippPagedJson = $Builder.ToString()
+                NextToken     = $Page.NextToken
+            }
+        }
+
         $Results = [System.Collections.Generic.List[PSCustomObject]]::new()
         foreach ($Item in $Page.Items) {
             try {

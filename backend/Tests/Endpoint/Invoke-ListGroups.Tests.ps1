@@ -8,10 +8,18 @@ BeforeAll {
     class HttpResponseContext {
         [int]$StatusCode
         [object]$Body
+        [object]$ContentType
+    }
+
+    # Paged path returns a raw-JSON string Body; the legacy path returns an object.
+    function ConvertFrom-ResponseBody {
+        param($Response)
+        if ($Response.Body -is [string]) { return ($Response.Body | ConvertFrom-Json) }
+        return $Response.Body
     }
 
     # Stub every CIPP helper the exercised paths call so Pester's Mock has a command to replace.
-    function Get-CIPPGroupsReport { param($TenantFilter, $PageSize, $ContinuationToken) }
+    function Get-CIPPGroupsReport { param($TenantFilter, $PageSize, $ContinuationToken, [switch]$AsRawJson) }
     function New-GraphGetRequest { param($uri, $tenantid) }
     function New-GraphBulkRequest { param($Requests, $tenantid) }
     function Get-GraphBulkResultByID { param($Results, $ID) }
@@ -43,6 +51,17 @@ BeforeAll {
             Tenant      = 'contoso.onmicrosoft.com'
         }
     }
+
+    # Mirror what Get-CIPPGroupsReport -AsRawJson returns: the group blobs pre-stitched
+    # into a JSON array string, with a continuation token.
+    function New-GroupsPageJson {
+        param([object[]]$Rows, [string]$NextToken)
+        $parts = foreach ($row in $Rows) { $row | ConvertTo-Json -Depth 10 -Compress }
+        [PSCustomObject]@{
+            CippPagedJson = '[' + ($parts -join ',') + ']'
+            NextToken     = $NextToken
+        }
+    }
 }
 
 Describe 'Invoke-ListGroups report database branch' {
@@ -66,10 +85,7 @@ Describe 'Invoke-ListGroups report database branch' {
 
     It 'returns { Results, Metadata } pages with members intact when manualPagination is set' {
         Mock -CommandName Get-CIPPGroupsReport -MockWith {
-            [PSCustomObject]@{
-                Items     = @((New-GroupRow 'g1'))
-                NextToken = 'contoso.onmicrosoft.com|Groups-abc'
-            }
+            New-GroupsPageJson -Rows @((New-GroupRow 'g1')) -NextToken 'contoso.onmicrosoft.com|Groups-abc'
         }
 
         $response = Invoke-ListGroups -Request (New-GroupsRequest -Query @{
@@ -77,29 +93,33 @@ Describe 'Invoke-ListGroups report database branch' {
             }) -TriggerMetadata $null
 
         $response.StatusCode | Should -Be 200
-        $response.Body.Results | Should -HaveCount 1
-        $response.Body.Results[0].members[0].userPrincipalName | Should -Be 'u1@contoso.com'
-        $response.Body.Metadata.nextLink | Should -Be 'contoso.onmicrosoft.com|Groups-abc'
+        $response.ContentType | Should -Be 'application/json'
+        $response.Body | Should -BeOfType [string]
+        $body = ConvertFrom-ResponseBody $response
+        $body.Results | Should -HaveCount 1
+        $body.Results[0].members[0].userPrincipalName | Should -Be 'u1@contoso.com'
+        $body.Metadata.nextLink | Should -Be 'contoso.onmicrosoft.com|Groups-abc'
         # PageSize 7 is below the 100 floor and must be clamped; the incoming token is
-        # forwarded verbatim.
+        # forwarded verbatim, and the read runs in raw-JSON mode.
         Should -Invoke Get-CIPPGroupsReport -Times 1 -ParameterFilter {
-            $TenantFilter -eq 'AllTenants' -and $PageSize -eq 100 -and $ContinuationToken -eq 'prev|token'
+            $TenantFilter -eq 'AllTenants' -and $PageSize -eq 100 -and $ContinuationToken -eq 'prev|token' -and $AsRawJson
         }
     }
 
     It 'omits nextLink on the final page but keeps the paged shape and default size' {
         Mock -CommandName Get-CIPPGroupsReport -MockWith {
-            [PSCustomObject]@{ Items = @((New-GroupRow 'g1')); NextToken = $null }
+            New-GroupsPageJson -Rows @((New-GroupRow 'g1')) -NextToken $null
         }
 
         $response = Invoke-ListGroups -Request (New-GroupsRequest -Query @{
                 UseReportDB = 'true'; manualPagination = 'true'
             }) -TriggerMetadata $null
 
-        $response.Body.Results | Should -HaveCount 1
-        $response.Body.Metadata.nextLink | Should -BeNullOrEmpty
-        $response.Body.PSObject.Properties.Name | Should -Contain 'Metadata'
-        Should -Invoke Get-CIPPGroupsReport -Times 1 -ParameterFilter { $PageSize -eq 1000 }
+        $body = ConvertFrom-ResponseBody $response
+        $body.Results | Should -HaveCount 1
+        $body.Metadata.nextLink | Should -BeNullOrEmpty
+        $body.PSObject.Properties.Name | Should -Contain 'Metadata'
+        Should -Invoke Get-CIPPGroupsReport -Times 1 -ParameterFilter { $PageSize -eq 750 }
     }
 
     It 'returns InternalServerError when the paged report read fails' {
