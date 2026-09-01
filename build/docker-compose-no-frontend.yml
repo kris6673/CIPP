@@ -13,9 +13,9 @@ services:
       --skipApiVersionCheck
       --disableTelemetry
     ports:
-      - "10000:10000"
-      - "10001:10001"
-      - "10002:10002"
+      - "127.0.0.1:10000:10000"
+      - "127.0.0.1:10001:10001"
+      - "127.0.0.1:10002:10002"
     environment:
       - AZURITE_ACCOUNTS=devstoreaccount1:Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==
       - NODE_OPTIONS=--max-old-space-size=8192
@@ -37,7 +37,7 @@ services:
     container_name: cipp-api
     restart: unless-stopped
     ports:
-      - "5196:8080"
+      - "127.0.0.1:5196:8080"
     # ── B2 sim (Azure App Service Basic B2: 2 vCPU, 3.5 GB) ──
     # Caps total container memory + disables swap so OOM behaves like B2; cpus:2
     # makes .NET report ProcessorCount=2. Comment out for the light dev loop.
