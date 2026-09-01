@@ -252,11 +252,23 @@ function Invoke-ListConditionalAccessPolicies {
                 if ($ManualPagination -and $Page.NextToken) {
                     $Metadata | Add-Member -NotePropertyName 'nextLink' -NotePropertyValue $Page.NextToken
                 }
-                $Policies = $Rows | Select-CippAllowedTenantData -TenantProperty 'Tenant'
-                # Output all policies from all tenants the caller is allowed to see
-                foreach ($policy in $Policies) {
-                    ($policy.Policy | ConvertFrom-Json)
+                # Each cached Policy blob is already the final shape; stitch the allowed rows
+                # into Results verbatim instead of parsing and letting Craft re-serialize.
+                $AllowedRows = @($Rows | Select-CippAllowedTenantData -TenantProperty 'Tenant')
+                $JsonParts = [System.Collections.Generic.List[string]]::new($AllowedRows.Count)
+                foreach ($Row in $AllowedRows) {
+                    $Blob = [string]$Row.Policy
+                    if ([string]::IsNullOrWhiteSpace($Blob)) { continue }
+                    $Blob = $Blob.Trim()
+                    if ($Blob[0] -eq '{' -or $Blob[0] -eq '[') { $JsonParts.Add($Blob) }
                 }
+                $ResultsJson = '[' + ($JsonParts -join ',') + ']'
+                $MetadataJson = ConvertTo-Json -InputObject $Metadata -Depth 5 -Compress
+                return ([HttpResponseContext]@{
+                        StatusCode  = [HttpStatusCode]::OK
+                        ContentType = 'application/json'
+                        Body        = '{"Results":' + $ResultsJson + ',"Metadata":' + $MetadataJson + '}'
+                    })
             }
         }
         $StatusCode = [HttpStatusCode]::OK

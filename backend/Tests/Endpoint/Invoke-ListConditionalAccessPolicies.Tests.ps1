@@ -8,6 +8,14 @@ BeforeAll {
     class HttpResponseContext {
         [int]$StatusCode
         [object]$Body
+        [object]$ContentType
+    }
+
+    # Rows-exist path returns a raw-JSON string Body; queue/cold paths return an object.
+    function ConvertFrom-ResponseBody {
+        param($Response)
+        if ($Response.Body -is [string]) { return ($Response.Body | ConvertFrom-Json) }
+        return $Response.Body
     }
 
     # Stub every CIPP helper the exercised paths call so Pester's Mock has a command to replace.
@@ -73,14 +81,31 @@ Describe 'Invoke-ListConditionalAccessPolicies AllTenants' {
         $response = Invoke-ListConditionalAccessPolicies -Request (New-CaRequest -Query @{ manualPagination = 'true'; PageSize = '10' }) -TriggerMetadata $null
 
         $response.StatusCode | Should -Be 200
-        $response.Body.Results | Should -HaveCount 2
-        $response.Body.Results.id | Should -Contain 'p1'
-        $response.Body.Metadata.nextLink | Should -Be 'CAPolicy|some-guid'
+        $response.ContentType | Should -Be 'application/json'
+        $response.Body | Should -BeOfType [string]
+        $body = ConvertFrom-ResponseBody $response
+        $body.Results | Should -HaveCount 2
+        $body.Results.id | Should -Contain 'p1'
+        $body.Metadata.nextLink | Should -Be 'CAPolicy|some-guid'
         Should -Invoke Get-CIPPPagedTableRows -Times 1 -ParameterFilter {
             ($PartitionKeys -join ',') -eq 'CAPolicy' -and $PageSize -eq 250 -and
             ($ExtraFilterClauses -join '') -like 'Timestamp ge datetime*'
         }
         Should -Invoke Start-CIPPOrchestrator -Times 0
+    }
+
+    It 'stitches the cached Policy blob verbatim without a parse round-trip' {
+        $rowA = New-CacheRow 'a.com' 'p1'
+        Mock -CommandName Get-CIPPPagedTableRows -MockWith {
+            [PSCustomObject]@{ Rows = @($rowA); NextToken = $null }
+        }.GetNewClosure()
+
+        $response = Invoke-ListConditionalAccessPolicies -Request (New-CaRequest -Query @{ manualPagination = 'true' }) -TriggerMetadata $null
+
+        # Exact stored blob bytes must appear verbatim; a parse + re-serialize would restyle them.
+        $response.Body | Should -BeLike ('*' + $rowA.Policy + '*')
+        $body = ConvertFrom-ResponseBody $response
+        $body.Results.id | Should -Be 'p1'
     }
 
     It 'omits nextLink on the final page' {
@@ -90,8 +115,9 @@ Describe 'Invoke-ListConditionalAccessPolicies AllTenants' {
 
         $response = Invoke-ListConditionalAccessPolicies -Request (New-CaRequest -Query @{ manualPagination = 'true' }) -TriggerMetadata $null
 
-        $response.Body.Results | Should -HaveCount 1
-        $response.Body.Metadata.nextLink | Should -BeNullOrEmpty
+        $body = ConvertFrom-ResponseBody $response
+        $body.Results | Should -HaveCount 1
+        $body.Metadata.nextLink | Should -BeNullOrEmpty
         Should -Invoke Get-CIPPPagedTableRows -Times 1 -ParameterFilter { $PageSize -eq 5000 }
     }
 
@@ -106,7 +132,8 @@ Describe 'Invoke-ListConditionalAccessPolicies AllTenants' {
     It 'does not re-queue when an empty page arrives mid-walk' {
         $response = Invoke-ListConditionalAccessPolicies -Request (New-CaRequest -Query @{ manualPagination = 'true'; nextLink = 'CAPolicy|stale' }) -TriggerMetadata $null
 
-        @($response.Body.Results) | Should -HaveCount 0
+        $body = ConvertFrom-ResponseBody $response
+        @($body.Results) | Should -HaveCount 0
         Should -Invoke Start-CIPPOrchestrator -Times 0
         Should -Invoke New-CippQueueEntry -Times 0
     }
@@ -118,8 +145,9 @@ Describe 'Invoke-ListConditionalAccessPolicies AllTenants' {
 
         $response = Invoke-ListConditionalAccessPolicies -Request (New-CaRequest) -TriggerMetadata $null
 
-        $response.Body.Results | Should -HaveCount 3
-        $response.Body.Metadata.nextLink | Should -BeNullOrEmpty
+        $body = ConvertFrom-ResponseBody $response
+        $body.Results | Should -HaveCount 3
+        $body.Metadata.nextLink | Should -BeNullOrEmpty
         Should -Invoke Get-CIPPPagedTableRows -Times 0
         Should -Invoke Get-CIPPAzDataTableEntity -Times 1
     }
