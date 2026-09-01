@@ -120,6 +120,15 @@ Deploys Microsoft 365 Apps using Intune's built-in Office suite deployment.
 | Use Custom XML Configuration    | Replaces the options above with a configuration XML of your own.                                                                                                                                                            |
 | Custom Office Configuration XML | The configuration to apply when the switch above is enabled. Every other Office option on this form is ignored when custom XML is supplied. Use the [Office Customization Tool](https://config.office.com/) to generate it. |
 
+**Microsoft Edge**
+
+Deploys Microsoft Edge using Intune's built-in Edge deployment. Nothing is packaged or uploaded; Intune installs it from Microsoft's own source. Edge is a singleton per tenant, so a tenant that already has it is skipped rather than given a second copy.
+
+| Field            | Description                                                                                                              |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Edge Channel     | The servicing channel the installation follows: Stable, Beta or Dev. Required.                                            |
+| Display Language | The language the browser interface is shown in. Optional, and left to the device's own language when it is not set. |
+
 **Custom Application**
 
 Packages a pair of PowerShell scripts as a Win32 application, for anything that is not covered by the other types.
