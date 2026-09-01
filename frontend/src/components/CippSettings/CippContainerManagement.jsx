@@ -17,7 +17,7 @@ import {
   Schedule,
   Layers,
   Sell,
-  HelpOutline,
+  HelpOutlined,
   Refresh,
   CloudSync,
   RestartAlt,
@@ -148,7 +148,7 @@ export const CippContainerManagement = () => {
     if (channelLabels[value]) return channelLabels[value].label
     const pinned = /-([0-9a-f]{7})$/.exec(value ?? '')
     if (pinned)
-      return `${value.replace(/-[0-9a-f]{7}$/, '')} — pinned ${pinned[1]}`
+      return `${value.replace(/-[0-9a-f]{7}$/, '')} — pinned ${pinned[1]}`;
     return value
   }
 
@@ -280,7 +280,7 @@ export const CippContainerManagement = () => {
     ])
 
     const updateState = !updateSettings?.LastCheck
-      ? { label: 'Never checked', color: 'primary', icon: <HelpOutline /> }
+      ? { label: 'Never checked', color: 'primary', icon: <HelpOutlined /> }
       : updateSettings.UpdateAvailable
         ? { label: 'Update available', color: 'info', icon: <NewReleases /> }
         : { label: 'Up to date', color: 'success', icon: <CheckCircle /> }
@@ -368,10 +368,11 @@ export const CippContainerManagement = () => {
         <Stack
           direction="row"
           spacing={1}
-          justifyContent="flex-end"
-          flexWrap="wrap"
           useFlexGap
-        >
+          sx={{
+            justifyContent: "flex-end",
+            flexWrap: "wrap"
+          }}>
           {/* Re-reads the Status endpoint only. Distinct from "Check for Updates", which hits the
               container registry and can trip auto-restart when an update is found. */}
           <Button
@@ -533,7 +534,9 @@ export const CippContainerManagement = () => {
                 />
 
                 {checksDisabled && (
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" sx={{
+                    color: "text.secondary"
+                  }}>
                     Checks are off, so the preferred time and auto-restart have
                     no effect. You can still check manually with Check for
                     Updates.
@@ -644,7 +647,7 @@ export const CippContainerManagement = () => {
         </DialogActions>
       </Dialog>
     </>
-  )
+  );
 }
 
 export default CippContainerManagement
