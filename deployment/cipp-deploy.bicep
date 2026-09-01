@@ -123,6 +123,29 @@ resource webApp 'Microsoft.Web/sites@2024-11-01' = {
       http20Enabled: true
       use32BitWorkerProcess: false
       healthCheckPath: '/api/setup/health'
+      // Health check cannot replace an unhealthy app on a single-instance plan, so recycle
+      // the container ourselves when the health endpoint itself keeps erroring. Path-scoped
+      // so application-level 5xx on user endpoints can never trip a recycle.
+      autoHealEnabled: true
+      autoHealRules: {
+        triggers: {
+          statusCodes: [
+            {
+              status: 500
+              subStatus: 0
+              win32Status: 0
+              count: 5
+              timeInterval: '00:10:00'
+              path: '/api/setup/health'
+            }
+          ]
+        }
+        actions: {
+          actionType: 'Recycle'
+          // never recycle a container younger than 10 minutes - protects slow cold starts
+          minProcessExecutionTime: '00:10:00'
+        }
+      }
       appSettings: [
         {
           name: 'AzureWebJobsStorage'
