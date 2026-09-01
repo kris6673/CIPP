@@ -47494,7 +47494,7 @@
           {
             "name": "nextLink",
             "in": "query",
-            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers. Stream the cached blobs as raw JSON so member arrays are never re-parsed here.",
             "required": false,
             "schema": {
               "type": "string"
