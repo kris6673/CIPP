@@ -407,6 +407,7 @@
   * [Template Library](user-documentation/tools/templatelib.md)
   * [Catalog](user-documentation/tools/community-repos/README.md)
     * [Browse All Templates](user-documentation/tools/community-repos/browse-all-templates.md)
+  * [Template Package Manager](user-documentation/tools/template-packages.md)
   * [Scheduler](user-documentation/tools/scheduler/README.md)
     * [View Scheduled Task Details](user-documentation/tools/scheduler/task.md)
 * [CIPP](user-documentation/cipp/README.md)
