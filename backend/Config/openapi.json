@@ -4387,6 +4387,64 @@
         "x-cipp-role": "Identity.Role.ReadWrite"
       }
     },
+    "/api/AddJITRoleTemplate": {
+      "post": {
+        "summary": "AddJITRoleTemplate",
+        "operationId": "AddJITRoleTemplate",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Creates a JIT Role Template - a named allow-list of directory roles that can be assigned to a\nCIPP custom role to restrict which roles that role's members may grant via JIT Admin.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "roles": {
+                    "type": "string"
+                  },
+                  "templateName": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "templateName"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.ReadWrite"
+      }
+    },
     "/api/AddMSPApp": {
       "post": {
         "summary": "AddMSPApp",
@@ -9189,6 +9247,68 @@
                   "GUID",
                   "templateName",
                   "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.ReadWrite"
+      }
+    },
+    "/api/EditJITRoleTemplate": {
+      "post": {
+        "summary": "EditJITRoleTemplate",
+        "operationId": "EditJITRoleTemplate",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Updates an existing JIT Role Template.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "GUID": {
+                    "type": "string"
+                  },
+                  "roles": {
+                    "type": "string"
+                  },
+                  "templateName": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "GUID",
+                  "templateName"
                 ]
               }
             }
@@ -16569,9 +16689,14 @@
                       "x-cipp-field-source": "backend"
                     },
                     "RowKey": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "SASUrl": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SecretValue": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "severity": {
@@ -18022,6 +18147,9 @@
                 "type": "object",
                 "properties": {
                   "Action": {
+                    "type": "string"
+                  },
+                  "AllowedRolesTemplate": {
                     "type": "string"
                   },
                   "AllowedTenants": {
@@ -23569,7 +23697,11 @@
                 "type": "object",
                 "properties": {
                   "AdminRoles": {
-                    "$ref": "#/components/schemas/LabelValue"
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    },
+                    "description": "Enforce the caller's allowed JIT roles (from the JIT Role Template on their custom role). Get-CIPPJITAdminAllowedRoles is authoritative and fails closed for restricted callers, so we trust its result rather than swallowing errors here."
                   },
                   "Domain": {
                     "$ref": "#/components/schemas/LabelValue"
@@ -24189,6 +24321,7 @@
                       "x-cipp-field-source": "graph-entity"
                     },
                     "RowKey": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "samlMetadataUrl": {
@@ -24196,6 +24329,10 @@
                       "x-cipp-field-source": "graph-entity"
                     },
                     "SASUrl": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SecretValue": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "serviceManagementReference": {
@@ -27746,7 +27883,7 @@
                     "type": "boolean"
                   },
                   "standardsExcludeAllTenants": {
-                    "type": "string"
+                    "type": "boolean"
                   }
                 }
               }
@@ -27790,6 +27927,9 @@
                     },
                     "RowKey": {
                       "type": "string",
+                      "x-cipp-field-source": "storage,backend"
+                    },
+                    "StandardsExcludeAllTenants": {
                       "x-cipp-field-source": "storage,backend"
                     },
                     "Status": {
@@ -31917,7 +32057,7 @@
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "Sends a test MFA push notification to a user's authenticator app and reports whether it was approved. Used to confirm a user's MFA registration works. This causes a real prompt on the user's device.",
+        "description": "Sends a test MFA push notification to a user's authenticator app and reports whether it was approved, or - when an OTP code is supplied - verifies that typed code without sending a push. Used to confirm a user's MFA registration works. The push path causes a real prompt on the user's device.",
         "requestBody": {
           "required": true,
           "content": {
@@ -31925,6 +32065,10 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "OTP": {
+                    "type": "string",
+                    "description": "When an OTP code is supplied we verify that code instead of sending a push notification."
+                  },
                   "TenantFilter": {
                     "type": "string"
                   },
@@ -31946,10 +32090,366 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                  "description": "Derived from the Microsoft Graph entity it queries, and the fields the endpoint selects onto each record. This endpoint returns the Graph response as-is without selecting fields, so these are the properties the entity CAN carry (x-cipp-field-source: graph-entity) rather than a proven projection - Graph returns a default subset unless asked otherwise.",
                   "properties": {
+                    "aboutMe": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "accountEnabled": {
+                      "type": "boolean",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "ageGroup": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "assignedLicenses": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "assignedPlans": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "authorizationInfo": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "birthday": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "businessPhones": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "city": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "cloudLicensing": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "cloudRealtimeCommunicationInfo": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "companyName": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "consentProvidedForMinor": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "country": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "createdDateTime": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "creationType": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "customSecurityAttributes": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "deletedDateTime": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "department": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "deviceEnrollmentLimit": {
+                      "type": "integer",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "deviceKeys": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "displayName": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "employeeHireDate": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "employeeId": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "employeeLeaveDateTime": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "employeeOrgData": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "employeeType": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "externalUserState": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "externalUserStateChangeDateTime": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "faxNumber": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "givenName": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "hireDate": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "id": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "identities": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "identityGovernance": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "identityParentId": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "imAddresses": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "infoCatalogs": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "interests": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "isLicenseReconciliationNeeded": {
+                      "type": "boolean",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "isManagementRestricted": {
+                      "type": "boolean",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "isResourceAccount": {
+                      "type": "boolean",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "jobTitle": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "lastPasswordChangeDateTime": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "legalAgeGroupClassification": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "licenseAssignmentStates": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "mail": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "mailboxSettings": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "mailNickname": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "mobilePhone": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "mySite": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "officeLocation": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "onPremisesDistinguishedName": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "onPremisesDomainName": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "onPremisesExtensionAttributes": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "onPremisesImmutableId": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "onPremisesLastSyncDateTime": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "onPremisesProvisioningErrors": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "onPremisesSamAccountName": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "onPremisesSecurityIdentifier": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "onPremisesSipInfo": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "onPremisesSyncEnabled": {
+                      "type": "boolean",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "onPremisesUserPrincipalName": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "otherMails": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "passwordPolicies": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "passwordProfile": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "pastProjects": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "postalCode": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "preferredDataLocation": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "preferredLanguage": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "preferredName": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "print": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "provisionedPlans": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "proxyAddresses": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "refreshTokensValidFromDateTime": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "responsibilities": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
                     "Results": {
                       "x-cipp-field-source": "backend"
+                    },
+                    "schools": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "securityIdentifier": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "serviceProvisioningErrors": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "showInAddressList": {
+                      "type": "boolean",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "signInActivity": {
+                      "type": "object",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "signInSessionsValidFromDateTime": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "skills": {
+                      "type": "array",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "state": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "streetAddress": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "surname": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "usageLocation": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "userPrincipalName": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
+                    },
+                    "userType": {
+                      "type": "string",
+                      "x-cipp-field-source": "graph-entity"
                     }
                   }
                 }
@@ -35994,9 +36494,14 @@
                       "x-cipp-field-source": "storage"
                     },
                     "RowKey": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "SASUrl": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SecretValue": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "TenantId": {
@@ -36421,9 +36926,14 @@
                       "x-cipp-field-source": "backend"
                     },
                     "RowKey": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "SASUrl": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SecretValue": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "TenantId": {
@@ -48726,6 +49236,145 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ListJITAllowedRoles": {
+      "get": {
+        "summary": "ListJITAllowedRoles",
+        "operationId": "ListJITAllowedRoles",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Returns the directory roles the calling user is permitted to assign via JIT Admin, based on the\nJIT Role Template(s) attached to their CIPP custom role(s). When the caller is unrestricted the\nfull role catalog is available (Restricted = false).",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
+    "/api/ListJITRoleTemplates": {
+      "get": {
+        "summary": "ListJITRoleTemplates",
+        "operationId": "ListJITRoleTemplates",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Lists JIT Role Templates - named allow-lists of directory roles used to restrict which roles a\nCIPP custom role may assign via JIT Admin.",
+        "parameters": [
+          {
+            "name": "GUID",
+            "in": "query",
+            "description": "If a specific GUID is requested, filter to that template",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields written into the storage table it reads, and the columns the CIPP UI renders. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                    "properties": {
+                      "createdBy": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "createdDate": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "ETag": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "GUID": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "JSON": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Package": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "PartitionKey": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Permissions": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "roles": {
+                        "x-cipp-field-source": "frontend"
+                      },
+                      "RowKey": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "SHA": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Source": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "templateName": {
+                        "x-cipp-field-source": "storage,frontend"
+                      },
+                      "Timestamp": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "UpdatedBy": {
+                        "x-cipp-field-source": "storage"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/ListKnownIPDb": {
       "get": {
         "summary": "ListKnownIPDb",
@@ -56406,7 +57055,7 @@
         "tags": [
           "Teams-Sharepoint"
         ],
-        "description": "Lists SharePoint sites or OneDrive usage for a tenant. Requires a Type parameter (SharePointSiteUsage or OneDriveUsageAccount). Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
+        "description": "Lists SharePoint sites or OneDrive usage for a tenant. Requires a Type parameter (SharePointSiteUsage or OneDriveUsageAccount). SharePoint live data uses SPO admin RLD plus Graph enrichment; OneDrive live data uses Graph usage reports. Supports UseReportDB=true query parameter to retrieve cached data from the reporting database for significantly better performance, especially when querying AllTenants.",
         "parameters": [
           {
             "$ref": "#/components/parameters/tenantFilter"
@@ -58678,6 +59327,9 @@
                       },
                       "RowKey": {
                         "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "StandardsExcludeAllTenants": {
                         "x-cipp-field-source": "storage"
                       },
                       "Status": {
@@ -63748,6 +64400,71 @@
         "tags": [
           "Identity > Administration > Users"
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ID": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "ID",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.Role.ReadWrite"
+      }
+    },
+    "/api/RemoveJITRoleTemplate": {
+      "post": {
+        "summary": "RemoveJITRoleTemplate",
+        "operationId": "RemoveJITRoleTemplate",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Deletes a JIT Role Template.",
         "requestBody": {
           "required": false,
           "content": {

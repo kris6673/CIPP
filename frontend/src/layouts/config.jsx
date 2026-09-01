@@ -92,6 +92,12 @@ export const nativeMenuItems = [
             scope: 'global',
           },
           {
+            title: 'JIT Role Templates',
+            path: '/identity/administration/jit-role-templates',
+            permissions: ['Identity.Role.*'],
+            scope: 'global',
+          },
+          {
             title: 'Vacation Mode',
             path: '/identity/administration/vacation-mode',
             permissions: ['Identity.User.*'],
@@ -1181,6 +1187,13 @@ export const nativeMenuItems = [
         path: '/tools/community-repos',
         roles: ['editor', 'admin', 'superadmin'],
         permissions: ['CIPP.Core.*'],
+        scope: 'global',
+      },
+      {
+        title: 'Template Package Manager',
+        path: '/tools/template-packages',
+        roles: ['editor', 'admin', 'superadmin'],
+        permissions: ['Tenant.ConditionalAccess.*', 'Endpoint.MEM.*'],
         scope: 'global',
       },
       {
