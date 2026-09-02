@@ -1,6 +1,6 @@
 # Group Usage Report
 
-This report lists every group in the selected tenant together with where it is actually used — Conditional Access policies, Intune assignments, role assignments, application assignments, group-based licensing and transport rules. Groups nothing references are marked as unused, which makes this the quickest way to find groups that can be cleaned up, and to check what would break before removing one.
+This report lists every group in the selected tenant together with where it is actually used: Conditional Access policies, Intune assignments, Entra role assignments, enterprise application assignments, group-based licensing, Microsoft Teams, nested group membership and Exchange transport rules. Groups nothing references are marked as unused, which makes this the quickest way to find groups that can be cleaned up, and to check what would break before removing one.
 
 ## Filters
 
@@ -13,12 +13,18 @@ This report lists every group in the selected tenant together with where it is a
 
 ## Table Details
 
-The table is served from the CIPP reporting database cache rather than live Graph calls, so it loads instantly. **Used Locations** names the systems that reference the group, **Used In** lists the specific policies or assignments, and **Usage Count** totals them; **Is Used** rolls that up to a simple Yes/No.
+| Column         | Description                                                                                                                                                    |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Display Name   | The name of the group.                                                                                                                                        |
+| Group Type     | The kind of group, worked out by CIPP from the group's underlying flags: Microsoft 365, Mail-Enabled Security, Security or Distribution List.                |
+| Mail           | The group's email address, where it has one.                                                                                                                  |
+| Used Locations | The categories of place that reference the group: Conditional Access, Intune, Entra Roles, Enterprise Applications, Licensing, Teams, Exchange or Group Nesting (membership of another group). Blank when the group is unused. |
+| Used In        | The specific policy, assignment or rule behind each reference, one entry per match.                                                                           |
+| Usage Count    | How many references **Used In** lists.                                                                                                                        |
+| Is Used        | Whether the group has any references at all. No when **Usage Count** is zero.                                                                                 |
 
-The filter menu ships with shortcuts for the common questions: unused groups, groups used in Conditional Access, groups used in Intune, and groups used for licensing.
-
-## Refreshing the data
-
-Because the report reads from cache, changes in the tenant appear after the next sync. The sync button on the page refreshes every data source the report depends on (groups, Conditional Access, Intune, roles, applications, licenses, transport rules); this can take a few minutes for larger tenants.
+{% hint style="info" %}
+This report joins several independently cached data sources: groups, Conditional Access, Intune, roles, applications, licences and transport rules. The **Sync** button here refreshes all of them together, which can take a few minutes for larger tenants.
+{% endhint %}
 
 {% include "../../../../.gitbook/includes/feature-request.md" %}
