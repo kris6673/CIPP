@@ -1,13 +1,13 @@
 # Historical Search
 
-Historical Search runs asynchronous message trace and mail protection reports inside Exchange Online, covering up to 90 days of data in a single search. Where Message Trace answers "where is this message right now", Historical Search produces a downloadable CSV report over a longer window — the report is prepared by Exchange Online in the background and delivered when it completes. It shares the Message Trace page as its second tab.
+Historical Search runs asynchronous message trace and mail protection reports inside Exchange Online, covering up to 90 days of data in a single search. Where Message Trace answers "where is this message right now", Historical Search produces a downloadable CSV report over a longer window: the report is prepared by Exchange Online in the background and delivered when it completes. It shares the Message Trace page as its second tab.
 
 {% hint style="info" %}
 Historical searches cover up to <mark style="color:blue;">90 days</mark> of data and return up to <mark style="color:blue;">100,000 rows</mark> per report as CSV. Each tenant may start <mark style="color:blue;">250 searches per day</mark>, and cancelled searches still count toward that quota. Large searches can take several hours to complete.
 {% endhint %}
 
 {% hint style="warning" %}
-**Downloading the CSV requires a customer-tenant admin login.** Microsoft's report download endpoint is not GDAP-aware, so a delegated partner session cannot retrieve the file. To get a completed report, either sign in to the customer tenant as an admin holding the Message Tracking role (Global Administrator or Exchange Administrator) and use **Download CSV** there, or set a **Notify Address** in the customer tenant when starting the search so Exchange Online emails the CSV on completion. Starting, monitoring and cancelling searches all work normally over delegated access — only the file download is affected.
+**Downloading the CSV requires a customer-tenant admin login.** Microsoft's report download endpoint is not GDAP-aware, so a delegated partner session cannot retrieve the file. To get a completed report, either sign in to the customer tenant as an admin holding the Message Tracking role (Global Administrator or Exchange Administrator) and use **Download CSV** there, or set a **Notify Address** in the customer tenant when starting the search so Exchange Online emails the CSV on completion. Starting, monitoring and cancelling searches all work normally over delegated access; only the file download is affected.
 {% endhint %}
 
 ## Search Jobs
