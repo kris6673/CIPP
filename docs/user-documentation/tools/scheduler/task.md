@@ -10,7 +10,7 @@ The task's name is shown as the page heading.
 
 <summary>View Logs</summary>
 
-Opens a flyout showing the logbook entries recorded against this task, which is where to look when an execution failed and the result itself is not explanatory.
+Opens a flyout showing the logbook entries recorded against this task from the last seven days, which is where to look when an execution failed and the result itself is not explanatory.
 
 </details>
 

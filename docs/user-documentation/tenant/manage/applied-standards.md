@@ -12,7 +12,7 @@ The Applied Standards Report shows, for a single tenant, every standard in a cho
 
 ## Selecting a Template
 
-A **Template** selector at the top of the page chooses which standards template to report on, and a search box narrows the standards shown to those matching the text entered. A **Logs** button opens the log entries recorded for this standard against the current tenant.
+A **Template** selector at the top of the page chooses which standards template to report on, and a search box narrows the standards shown to those matching the text entered. A **Logs** button opens the log entries recorded for this standard against the current tenant, covering the last seven days.
 
 ## Filters
 
