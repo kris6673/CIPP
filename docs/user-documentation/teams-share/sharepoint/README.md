@@ -30,6 +30,7 @@ A storage bar above the table shows how much of the tenant's overall SharePoint 
 
 | Column                        | Description                                                                              |
 | ----------------------------- | ---------------------------------------------------------------------------------------- |
+| Libraries                     | The site's top-level document libraries, reached through a **View libraries** button.    |
 | Display Name                  | The name of the site.                                                                    |
 | Created Date Time             | When the site was created.                                                               |
 | Owner Principal Name          | The user recorded as the site's owner.                                                   |
@@ -41,6 +42,22 @@ A storage bar above the table shows how much of the tenant's overall SharePoint 
 | Web Url                       | The address of the site.                                                                 |
 
 The Extended Info flyout also lists the site's members, showing each person's name, email address, the site group they belong to, whether they are a guest, and whether they are a site administrator.
+
+## Libraries
+
+The **Libraries** column opens a dialog listing the site's top-level document libraries, sorted by storage used.
+
+| Column          | Description                                                                                                                                                             |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Display Name    | The library's name.                                                                                                                                                    |
+| Site Type       | The kind of library, for example Document Library or Site Pages.                                                                                                       |
+| File Count      | The number of files stored in the library.                                                                                                                             |
+| Storage Used    | How much storage the library is using.                                                                                                                                 |
+| Versions (est.) | An estimate of the storage taken up by old file versions, worked out by subtracting the library's current file and metadata size from its total size. Shown as a raw byte count rather than a formatted size. |
+| % of Site       | The library's storage as a percentage of the site's total storage used.                                                                                                |
+| Web Url         | The address of the library.                                                                                                                                            |
+
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Open library</td><td>Opens the library in SharePoint, in a new browser tab.</td><td>false</td></tr></tbody></table>
 
 ## Table Actions
 
