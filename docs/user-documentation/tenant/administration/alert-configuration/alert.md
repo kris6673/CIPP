@@ -95,6 +95,14 @@ Shown for scripted alerts when PSA is one of the selected actions. It overrides 
 
 Whichever option matches your current HaloPSA integration setting is labelled as the integration default.
 
+### PSA Ticket Priority
+
+Shown for both alert types when Generate a PSA ticket (or PSA) is one of the selected actions, and only while the HaloPSA integration is enabled. Overrides the HaloPSA Default Priority for tickets raised by this alert, restricted to the priorities available on the integration's Ticket Type. Leave it blank to use the integration default.
+
+{% hint style="info" %}
+The dropdown is shown disabled with an explanation instead of a priority list when there is nothing valid to offer: no Ticket Type is set on the integration yet, the configured Ticket Type has no SLA attached (so HaloPSA is left to apply its own priority regardless of any selection here), or the priority list could not be loaded.
+{% endhint %}
+
 ### Custom Subject
 
 Overrides the default notification subject with your own text. The value is prefixed with the tenant default domain name for easier filtering, giving `$TenantDomain - $CustomSubject`. Leave it blank to use the default subject format.
