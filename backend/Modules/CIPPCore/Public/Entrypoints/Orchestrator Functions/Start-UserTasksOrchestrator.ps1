@@ -119,17 +119,62 @@ function Start-UserTasksOrchestrator {
                     FunctionName = 'ExecScheduledCommand'
                 }
 
-                if ($task.Tenant -eq 'AllTenants') {
-                    $ExcludedTenants = @($task.excludedTenants -split ',' | Where-Object { $_ })
-                    if ($task.excludedTenantGroups) {
-                        # Expand excluded tenant groups at runtime so membership changes are honored
-                        $ExcludedGroups = $task.excludedTenantGroups | ConvertFrom-Json -ErrorAction SilentlyContinue
-                        if ($ExcludedGroups) {
-                            $ExcludedTenants = @($ExcludedTenants + (Expand-CIPPTenantGroups -TenantFilter $ExcludedGroups).value | Where-Object { $_ })
-                        }
+                # Scope is resolved on every run so group membership stays current, as
+                # Test-CIPPAuditLogRules does for audit alerts.
+                $Selection = if ($task.Tenants) {
+                    @($task.Tenants | ConvertFrom-Json -ErrorAction SilentlyContinue)
+                } elseif ($task.TenantGroup) {
+                    @($task.TenantGroup | ConvertFrom-Json -ErrorAction SilentlyContinue)
+                }
+
+                # Rows predating runtime expansion merged a snapshot of every unselected tenant into
+                # excludedTenants, indistinguishable from the operator's own picks, so it is ignored
+                # for those. excludedTenantGroups was never part of that snapshot and always applies.
+                # A selection containing the AllTenants sentinel never got a snapshot written either,
+                # so its exclusions are the operator's and must be kept.
+                $IsLegacySnapshot = $task.Tenants -and -not $task.TenantSelectionVersion -and ($Selection.value -notcontains 'AllTenants')
+                $ExcludedTenants = [System.Collections.Generic.List[string]]::new()
+                if ($task.excludedTenants) {
+                    $StoredExclusions = @($task.excludedTenants -split ',' | Where-Object { $_ })
+                    if ($IsLegacySnapshot) {
+                        Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Task $($task.Name): ignored $($StoredExclusions.Count) stale snapshot exclusions, tenant group membership is now resolved at runtime" -Sev 'Info'
+                    } else {
+                        $ExcludedTenants.AddRange([string[]]$StoredExclusions)
                     }
-                    Write-Host "Excluded Tenants from this task: $ExcludedTenants"
-                    $AllTenantCommands = foreach ($Tenant in $TenantList | Where-Object { $_.defaultDomainName -notin $ExcludedTenants }) {
+                }
+                if ($task.excludedTenantGroups) {
+                    $ExcludedGroups = $task.excludedTenantGroups | ConvertFrom-Json -ErrorAction SilentlyContinue
+                    if ($ExcludedGroups) {
+                        $ExcludedTenants.AddRange([string[]]@((Expand-CIPPTenantGroups -TenantFilter $ExcludedGroups).value | Where-Object { $_ }))
+                    }
+                }
+
+                $TargetTenants = $null
+                $ResolvedScope = $false
+                if ($Selection) {
+                    try {
+                        $Expanded = Expand-CIPPTenantGroups -TenantFilter $Selection
+                    } catch {
+                        # Must not fall through to the single-tenant path below: Tenant is the
+                        # AllTenants sentinel for a multi-entry selection. Fail the task instead.
+                        throw "Failed to expand tenant selection for task $($task.Name): $($_.Exception.Message)"
+                    }
+                    # Non-group entries pass through unexpanded, so the sentinel survives.
+                    $TargetTenants = if ($Expanded.value -contains 'AllTenants') {
+                        $TenantList
+                    } else {
+                        @($TenantList | Where-Object { $_.defaultDomainName -in $Expanded.value })
+                    }
+                    $ResolvedScope = $true
+                } elseif ($task.Tenant -eq 'AllTenants') {
+                    # An explicit *All Tenants pick, with no selection stored alongside it
+                    $TargetTenants = $TenantList
+                    $ResolvedScope = $true
+                }
+
+                if ($ResolvedScope) {
+                    Write-Information "Task $($task.Name): $(@($TargetTenants).Count) tenants in scope, $($ExcludedTenants.Count) excluded"
+                    $FanOutCommands = foreach ($Tenant in $TargetTenants | Where-Object { $_.defaultDomainName -notin $ExcludedTenants }) {
                         $NewParams = $task.Parameters.Clone()
                         if ($HasTenantFilter) {
                             # TenantFilter always carries the execution tenant context; it is stripped
@@ -146,62 +191,27 @@ function Start-UserTasksOrchestrator {
                             FunctionName = 'ExecScheduledCommand'
                         }
                     }
-                    $Batch.AddRange(@($AllTenantCommands))
-                } elseif ($task.TenantGroup) {
-                    # Handle tenant groups - expand group to individual tenants
-                    try {
-                        $TenantGroupObject = $task.TenantGroup | ConvertFrom-Json
-                        Write-Host "Expanding tenant group: $($TenantGroupObject.label) with ID: $($TenantGroupObject.value)"
-
-                        # Create a tenant filter object for expansion
-                        $TenantFilterForExpansion = @([PSCustomObject]@{
-                                type  = 'Group'
-                                value = $TenantGroupObject.value
-                                label = $TenantGroupObject.label
-                            })
-
-                        # Expand the tenant group to individual tenants
-                        $ExpandedTenants = Expand-CIPPTenantGroups -TenantFilter $TenantFilterForExpansion
-
-                        $ExcludedTenants = @($task.excludedTenants -split ',' | Where-Object { $_ })
-                        if ($task.excludedTenantGroups) {
-                            # Expand excluded tenant groups at runtime so membership changes are honored
-                            $ExcludedGroups = $task.excludedTenantGroups | ConvertFrom-Json -ErrorAction SilentlyContinue
-                            if ($ExcludedGroups) {
-                                $ExcludedTenants = @($ExcludedTenants + (Expand-CIPPTenantGroups -TenantFilter $ExcludedGroups).value | Where-Object { $_ })
-                            }
+                    if (@($FanOutCommands).Count -gt 0) {
+                        $Batch.AddRange(@($FanOutCommands))
+                    } else {
+                        # Every selected group resolved empty, or was deleted. Close the run out here:
+                        # the row is already Pending, and with no batch item no orchestrator or post
+                        # execution runs, so it would be reclaimed as stale every hour and a recurring
+                        # task would never advance its schedule.
+                        $NextRun = Get-CIPPScheduledTaskNextRun -Recurrence $task.Recurrence -ScheduledTime $task.ScheduledTime
+                        $EmptyScopeEntity = @{
+                            PartitionKey = $task.PartitionKey
+                            RowKey       = $task.RowKey
+                            Results      = 'No tenants in scope for this task.'
+                            ExecutedTime = "$currentUnixTime"
+                            TaskState    = $NextRun -gt 0 ? 'Planned' : 'Completed'
                         }
-                        Write-Host "Excluded Tenants from this task: $ExcludedTenants"
-
-                        $GroupTenantCommands = foreach ($ExpandedTenant in $ExpandedTenants | Where-Object { $_.value -notin $ExcludedTenants }) {
-                            $NewParams = $task.Parameters.Clone()
-                            if ($HasTenantFilter) {
-                                $NewParams.TenantFilter = $ExpandedTenant.value
-                                $NewParams.$PrimaryTenantParam = $ExpandedTenant.value
-                            }
-                            # Clone TaskInfo to prevent shared object references
-                            $TaskInfoClone = $task.PSObject.Copy()
-                            [pscustomobject]@{
-                                Command      = $task.Command
-                                Parameters   = $NewParams
-                                TaskInfo     = $TaskInfoClone
-                                FunctionName = 'ExecScheduledCommand'
-                            }
-                        }
-                        $Batch.AddRange(@($GroupTenantCommands))
-                    } catch {
-                        Write-Host "Error expanding tenant group: $($_.Exception.Message)"
-                        Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Failed to expand tenant group for task $($task.Name): $($_.Exception.Message)" -sev Error
-
-                        # Fall back to treating as single tenant
-                        if ($HasTenantFilter) {
-                            $ScheduledCommand.Parameters['TenantFilter'] = $task.Tenant
-                            $ScheduledCommand.Parameters[$PrimaryTenantParam] = $task.Tenant
-                        }
-                        $Batch.Add($ScheduledCommand)
+                        if ($NextRun -gt 0) { $EmptyScopeEntity.ScheduledTime = "$NextRun" }
+                        $null = Update-AzDataTableEntity -Force @Table -Entity $EmptyScopeEntity
+                        Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Task $($task.Name): no tenants in scope, nothing to run" -Sev 'Info'
                     }
                 } else {
-                    # Handle single tenant
+                    # Single tenant
                     if ($HasTenantFilter) {
                         $ScheduledCommand.Parameters['TenantFilter'] = $task.Tenant
                         $ScheduledCommand.Parameters[$PrimaryTenantParam] = $task.Tenant
