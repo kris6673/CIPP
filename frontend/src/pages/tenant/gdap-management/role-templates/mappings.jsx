@@ -2,11 +2,12 @@ import { TabbedLayout } from "../../../../layouts/TabbedLayout";
 import { Layout as DashboardLayout } from "../../../../layouts/index";
 import tabOptions from "../tabOptions";
 import { CippTablePage } from "../../../../components/CippComponents/CippTablePage.jsx";
-import { Alert, Button, Link as MuiLink, Tooltip, Typography } from "@mui/material";
+import { Alert, Button, Link as MuiLink, SvgIcon, Tooltip, Typography } from "@mui/material";
 import { Box, Stack } from "@mui/system";
 import Link from "next/link";
 import { useCallback, useMemo } from "react";
 import { Healing, Tune } from "@mui/icons-material";
+import ArrowLeftIcon from "@mui/icons-material/ArrowLeft";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { ApiGetCall } from "../../../../api/ApiCall";
 import { CippApiDialog } from "../../../../components/CippComponents/CippApiDialog";
@@ -144,6 +145,18 @@ const Page = () => {
             )}
             <Button component={Link} href="/tenant/gdap-management/roles/add" startIcon={<Tune />}>
               Map an existing group (Advanced)
+            </Button>
+            {/* The parent tab stays highlighted here, so it cannot be clicked to go back. */}
+            <Button
+              component={Link}
+              href="/tenant/gdap-management/role-templates"
+              startIcon={
+                <SvgIcon fontSize="small">
+                  <ArrowLeftIcon />
+                </SvgIcon>
+              }
+            >
+              Back
             </Button>
           </>
         }
