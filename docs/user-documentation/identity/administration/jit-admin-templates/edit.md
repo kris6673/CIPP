@@ -1,6 +1,6 @@
 # Edit JIT Admin Template
 
-This page changes a saved JIT Admin template. It is reached from the **Edit Template** action on the [.](./ "mention") page, and opens the template's stored values in the same form used to create one. The fields and the settings that appear for each choice are described on [add-jit-admin-template.md](add-jit-admin-template.md "mention").
+This page changes a saved JIT Admin template. It is reached from the **Edit Template** action on the [.](./ "mention") page, and opens the template's stored values in the same form used to create one. The fields and the settings that appear for each choice are described on [add.md](add.md "mention").
 
 Saving overwrites the existing template in place rather than creating a second one, because the template keeps its identifier through the edit. Who created the template and when is preserved, and CIPP additionally records who last modified it.
 

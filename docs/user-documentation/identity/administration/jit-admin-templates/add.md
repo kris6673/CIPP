@@ -19,7 +19,8 @@ The template is created for the tenant selected in the top menu; there is no ten
 
 | Field                        | Description                                                                                                                         |
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Default Roles                | The Entra ID directory roles the template assigns.                                                                                  |
+| Apply JIT Role Template      | Picks one or more [JIT Role Templates](../jit-role-templates/README.md "mention") and adds their roles into Default Roles below. Selections are additive to whatever Default Roles already holds, and everything stays editable afterwards. |
+| Default Roles                | The Entra ID directory roles the template assigns. If your CIPP role has a [JIT Role Template](../jit-role-templates/README.md "mention") assigned, only the roles it allows are offered here. |
 | Default Groups               | The groups the account is added to. Not available on an All Tenants template, since group identifiers do not carry between tenants. |
 | Default Duration             | How long the elevation lasts, which sets the end date on the JIT admin form. Optional.                                              |
 | Default Expiration Action    | What happens to the account when the elevation ends. Required.                                                                      |
