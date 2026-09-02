@@ -227,6 +227,27 @@ Describe 'Invoke-ListLogs pagination' {
             $Filter -match "PartitionKey ge '20250610' and PartitionKey le '20250610'"
         }
     }
+
+    It 'widens a filtered query without dates to the last N days via Days, on both paths' {
+        # The scoped log drawers pass Days=N so a run that finished last night is still
+        # visible early the next day. Timezone is pinned to UTC by the harness.
+        $script:FakeLogRows = @()
+        $Today = [DateTime]::UtcNow.Date
+        $From = $Today.AddDays(-6).ToString('yyyyMMdd')
+        $To = $Today.ToString('yyyyMMdd')
+
+        $null = Invoke-ListLogs -Request (New-LogsRequest -Query @{ Filter = 'true'; Days = '7' }) -TriggerMetadata $null
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter {
+            $Filter -match "PartitionKey ge '$From' and PartitionKey le '$To'"
+        }
+
+        # Paged: the day walk covers the same seven partitions (all empty here) and completes.
+        $response = Invoke-ListLogs -Request (New-LogsRequest -Query @{ Filter = 'true'; Days = '7'; manualPagination = 'true' }) -TriggerMetadata $null
+        $response.Body.Metadata.nextLink | Should -BeNullOrEmpty
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 7 -Exactly -ParameterFilter { $Filter -match "PartitionKey eq '" }
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { $Filter -match "PartitionKey eq '$From'" }
+        Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter { $Filter -match "PartitionKey eq '$To'" }
+    }
 }
 
 Describe 'Invoke-ListLogs single entry' {
