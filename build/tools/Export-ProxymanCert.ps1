@@ -114,10 +114,38 @@ Remove-Item $baseRoots -ErrorAction SilentlyContinue
 
 $bundleCount = ([regex]::Matches($bundle, 'BEGIN CERTIFICATE')).Count
 Write-Host "Wrote combined trust bundle ($bundleCount certs = image roots + Proxyman) to $bundlePath" -ForegroundColor Green
-Write-Host "Start the dev stack with Proxyman trust via the launcher (auto-detects the bundle):" -ForegroundColor Cyan
+
+# ── build/.env: activate the optional mounts baked into the compose files ──────
+# The compose files carry optional CA mounts that default to a /dev/null no-op; they
+# turn on only when these vars are set. Docker Compose auto-loads build/.env for
+# interpolation (project dir = the compose file's folder), so a plain `docker compose
+# up` — or a `docker restart` of an already-created container — keeps Proxyman trust
+# without any -f overlay to remember. Deleting build/.env (or the bundle) disables it.
+$envPath = Join-Path $dir '.env'
+$envLines = @(
+    '# Machine-local — written by Export-ProxymanCert.ps1. Activates the optional Proxyman'
+    '# CA mounts in docker-compose-all.yml / docker-compose-no-frontend.yml. Gitignored.'
+    'CIPP_API_CA_MOUNT=./config/proxyman-ca-bundle.pem:/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem:ro'
+    'CIPP_NODE_CA_MOUNT=./config/proxyman-ca-bundle.pem:/certs/proxyman-ca-bundle.pem:ro'
+    'CIPP_NODE_CA=/certs/proxyman-ca-bundle.pem'
+)
+# Preserve any unrelated vars already in build/.env; only manage our three keys.
+$managed = 'CIPP_API_CA_MOUNT', 'CIPP_NODE_CA_MOUNT', 'CIPP_NODE_CA'
+if (Test-Path $envPath) {
+    $kept = Get-Content $envPath | Where-Object {
+        $line = $_
+        -not ($managed | Where-Object { $line -match "^\s*$_\s*=" }) -and $line -notmatch '^# Machine-local — written by Export-ProxymanCert'
+    }
+    $envLines = @($kept) + $envLines
+}
+Set-Content -Path $envPath -Value (($envLines -join "`n") + "`n") -NoNewline -Encoding ascii
+Write-Host "Activated Proxyman trust in $envPath (survives plain 'docker compose up' / restart)" -ForegroundColor Green
+
+Write-Host "Apply by (re)creating the stack — e.g.:" -ForegroundColor Cyan
 if ($onWindows) {
     Write-Host "  build/tools/Start-Cipp-Dev-Windows-docker.ps1"
 } else {
-    Write-Host "  build/tools/Start-CippDev.sh"
+    Write-Host "  ./cipp-dev-switch.sh main    # or: build/tools/Start-CippDev.sh"
 }
 Write-Host "Note: traffic already routes through Proxyman via the system proxy — this only adds trust." -ForegroundColor DarkGray
+Write-Host "To disable: delete build/.env (or build/config/proxyman-ca-bundle.pem) and recreate the stack." -ForegroundColor DarkGray
