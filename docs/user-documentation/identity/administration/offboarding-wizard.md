@@ -48,6 +48,7 @@ The options are pre-filled from your saved offboarding defaults each time the te
 | Remove user's mailbox permissions  | Removes the user's access to every other mailbox.                                                               |
 | Remove user's calendar permissions | Removes the user's access to every other calendar.                                                              |
 | Remove all Rules                   | Deletes the inbox rules on the user's mailbox.                                                                  |
+| Wipe Mobile Devices (account data only) | Wipes only the Exchange account data (mail, contacts, calendar) from each mobile device registered on the mailbox, without removing the device itself or its personal data. Delivered the next time the device connects to Exchange, and needs a modern ActiveSync client; an older device fails the wipe rather than falling back to a full device wipe. |
 | Remove all Mobile Devices          | Removes the mobile devices registered against the mailbox.                                                      |
 | Remove from all groups             | Removes the user from every group they belong to.                                                               |
 | Remove Licenses                    | Strips every licence from the account.                                                                          |
@@ -66,6 +67,10 @@ Deleting the user removes the mailbox with it, so it cannot be combined with con
 
 {% hint style="warning" %}
 Converting a mailbox that is at or near 50 GB may fail, and a converted mailbox over that size stops receiving mail once its licence is removed unless an Exchange Online Plan 2 licence is assigned. The wizard checks the size of the selected mailboxes and warns before you submit.
+{% endhint %}
+
+{% hint style="info" %}
+The account-only wipe is issued before sessions are revoked, sign-in is disabled or mobile devices are removed, whatever order those settings appear in above. The wipe depends on the account still being able to authenticate and the device's ActiveSync partnership still existing at the point it is issued.
 {% endhint %}
 
 ## Permissions and forwarding
