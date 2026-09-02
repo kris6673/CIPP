@@ -152,7 +152,9 @@ function Invoke-ExecAppServiceDomains {
             }
 
             'CheckDns' {
-                $HostName = Get-CleanHostname ($Request.Body.Hostname ?? $Request.Query.Hostname)
+                $HostName = $Request.Body.Hostname ?? $Request.Query.Hostname
+                if ([string]::IsNullOrWhiteSpace($HostName)) { throw 'Hostname is required' }
+                $HostName = Get-CleanHostname $HostName
 
                 # DoH resolver lives in the DNSHealth module; import + initialize it the same way the
                 # domain health endpoint does before resolving.
@@ -226,7 +228,9 @@ function Invoke-ExecAppServiceDomains {
             }
 
             'AddBinding' {
-                $HostName = Get-CleanHostname ($Request.Body.Hostname ?? $Request.Query.Hostname)
+                $HostName = $Request.Body.Hostname ?? $Request.Query.Hostname
+                if ([string]::IsNullOrWhiteSpace($HostName)) { throw 'Hostname is required' }
+                $HostName = Get-CleanHostname $HostName
                 if ($HostName -like '*.azurewebsites.net') { throw 'The default *.azurewebsites.net hostname is managed by Azure and cannot be added.' }
 
                 $AppService = Get-CIPPAppServiceSite
@@ -264,7 +268,9 @@ function Invoke-ExecAppServiceDomains {
             }
 
             'AddCertificate' {
-                $HostName = Get-CleanHostname ($Request.Body.Hostname ?? $Request.Query.Hostname)
+                $HostName = $Request.Body.Hostname ?? $Request.Query.Hostname
+                if ([string]::IsNullOrWhiteSpace($HostName)) { throw 'Hostname is required' }
+                $HostName = Get-CleanHostname $HostName
                 if ($HostName -like '*.azurewebsites.net') { throw 'The default hostname is already secured by Azure.' }
                 if ($HostName.StartsWith('*.')) { throw 'App Service Managed Certificates do not support wildcard domains. Upload your own certificate in the Azure Portal instead.' }
 
@@ -282,7 +288,9 @@ function Invoke-ExecAppServiceDomains {
             }
 
             'Remove' {
-                $HostName = Get-CleanHostname ($Request.Body.Hostname ?? $Request.Query.Hostname)
+                $HostName = $Request.Body.Hostname ?? $Request.Query.Hostname
+                if ([string]::IsNullOrWhiteSpace($HostName)) { throw 'Hostname is required' }
+                $HostName = Get-CleanHostname $HostName
                 if ($HostName -like '*.azurewebsites.net') { throw 'The default *.azurewebsites.net hostname cannot be removed.' }
 
                 $AppService = Get-CIPPAppServiceSite
