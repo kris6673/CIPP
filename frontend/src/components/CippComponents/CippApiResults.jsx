@@ -291,6 +291,10 @@ export const CippApiResults = (props) => {
     setFinalResults((prev) => prev.map((r) => (r.id === id ? { ...r, visible: false } : r)))
   }, [])
 
+  const handleCloseAllResults = useCallback(() => {
+    setFinalResults((prev) => prev.map((r) => ({ ...r, visible: false })))
+  }, [])
+
   const toggleDetails = useCallback((id) => {
     setShowDetails((prev) => ({ ...prev, [id]: !prev[id] }))
   }, [])
@@ -356,6 +360,18 @@ export const CippApiResults = (props) => {
           variant="outlined"
           severity={
             failedActionCount === 0 ? 'success' : successActionCount === 0 ? 'error' : 'warning'
+          }
+          action={
+            <Tooltip title="Dismiss all results">
+              <IconButton
+                aria-label="dismiss all results"
+                color="inherit"
+                size="small"
+                onClick={handleCloseAllResults}
+              >
+                <Close fontSize="inherit" />
+              </IconButton>
+            </Tooltip>
           }
         >
           <Typography variant="body2">
