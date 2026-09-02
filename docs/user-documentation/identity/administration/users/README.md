@@ -169,55 +169,8 @@ Actions you do not have permission for stay in the menu but are greyed out. Conv
 Temporary Access Pass must be enabled in the tenant's authentication method policy before a pass can be created, otherwise the action fails. CIPP checks the policy when the dialog opens and warns you if it is not enabled. See [Configure Temporary Access Pass to register passwordless authentication methods](https://learn.microsoft.com/en-us/entra/identity/authentication/howto-authentication-temporary-access-pass) for the tenant side of the configuration.
 {% endhint %}
 
-## Add User Query String Support
-
-The Add User page at `/identity/administration/users/add` can be pre-filled from the URL, which makes it possible to launch user creation from a PSA or documentation system with the details already populated. The page is reached by URL only, as user creation from the Users page now opens the Add User drawer instead. Any query string parameter matching a form field name is applied to the form, for example:
-
-{% code overflow="wrap" %}
-
-```
-https://yourcipp.app/identity/administration/users/add?tenantFilter=contoso.onmicrosoft.com&city=Rotterdam
-```
-
-{% endcode %}
-
-| Query string       | Field                                                                                                        |
-| ------------------ | ------------------------------------------------------------------------------------------------------------ |
-| tenantFilter       | Selects the tenant. Accepts the default domain name, the tenant ID or the initial `.onmicrosoft.com` domain. |
-| givenName          | First Name                                                                                                   |
-| surname            | Last Name                                                                                                    |
-| displayName        | Display Name                                                                                                 |
-| username           | Username, the part before the @ symbol                                                                       |
-| primDomain         | Primary Domain name                                                                                          |
-| addedAliases       | Aliases, one per line, separated by `%0A`                                                                    |
-| jobTitle           | Job Title                                                                                                    |
-| department         | Department                                                                                                   |
-| companyName        | Company Name                                                                                                 |
-| streetAddress      | Street                                                                                                       |
-| city               | City                                                                                                         |
-| state              | State/Province                                                                                               |
-| postalCode         | Postal Code                                                                                                  |
-| country            | Country                                                                                                      |
-| mobilePhone        | Mobile #                                                                                                     |
-| businessPhones\[0] | Business #, encoded as `businessPhones%5B0%5D`                                                               |
-| otherMails         | Alternate Email Addresses                                                                                    |
-| usageLocation      | Usage Location, as a two-letter country code                                                                 |
-| MustChangePass     | Require password change at next logon                                                                        |
-
-{% hint style="info" %}
-Values are applied to the matching form fields when the page loads, so check the fields backed by a dropdown, such as Primary Domain name and Usage Location, before submitting.
+{% hint style="danger" %}
+The standalone Add User page at `/identity/administration/users/add`, reached by URL only, and its support for pre-filling the form from URL query string parameters (including the AutoTask LiveLink pattern this page used to document) have been removed. User creation from the Users page now opens the Add User drawer described above, which does not read query string parameters. A PSA or documentation system linking to that URL to launch a pre-filled user creation will need a different integration approach.
 {% endhint %}
-
-### AutoTask LiveLink
-
-The query string below can be used as the basis of an AutoTask LiveLink, substituting the AutoTask variables for your own.
-
-{% code overflow="wrap" %}
-
-```
-?tenantFilter=<UDF-TenantId(tblCustomers)>&primDomain=<ACCOUNTWEBSITEADDRESS>&usageLocation=NL&city=<CITY>&country=<COUNTRY>&streetAddress=<ACCOUNTADDRESS1>&companyName=<ACCOUNTNAME>&businessPhones%5B0%5D=<ACCOUNTPHONE>&postalCode=<ACCOUNTPOSTALCODE>&givenName=<CONTACTFIRSTNAME>&surname=<CONTACTLASTNAME>
-```
-
-{% endcode %}
 
 {% include "../../../../../.gitbook/includes/feature-request.md" %}
