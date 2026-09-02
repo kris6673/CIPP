@@ -31,6 +31,10 @@ A filter menu restricts which standards are listed. Each option shows a count.
 
 Standards are grouped under their category headings, each shown as a card pairing the **Expected Configuration** from the template with the value found in the tenant. Where a configuration has several properties, they are broken out one by one so it is clear which part differs. Each standard is marked Compliant or Non-Compliant, and where the tenant is not licensed for a standard, a notice explains that the required licences are missing rather than reporting a failure.
 
+{% hint style="info" %}
+Where a standard's Intune, Conditional Access or reusable settings template has been deleted from the template library, the card is marked Non-Compliant and names the deleted template instead of showing the usual Expected Configuration and Current Tenant values, and says to remove it from the standards template or select the template again.
+{% endhint %}
+
 Labels on each card identify what is being shown and how the standard runs:
 
 | Label          | Meaning                                                                |
@@ -49,6 +53,7 @@ Standards based on an Intune template carry a **Compare** button, which opens a 
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | Not deployed notice | Shown where the policy does not exist in the tenant at all, naming the policy that is missing.                                           |
 | Summary             | States whether the two are identical, or how many differences were found.                                                                |
+| Assignments differ  | Shown when the standard also verifies assignments and the tenant's do not match what the standard expects, listing why. Only settings are compared above it, so this can appear even when the summary reports the two as identical. |
 | Differences table   | Lists each differing property with its Baseline and Tenant values, and whether the values differ or the setting exists on only one side. |
 | Full settings       | The complete configuration of both the baseline and the tenant policy.                                                                   |
 
