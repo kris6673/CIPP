@@ -12,10 +12,9 @@ Opens a drawer for building a template. Give it a **Template Name** and an optio
 
 For each application, choose a type under **Select Application Type** and complete the same fields the Application Deployment drawer asks for, described on [list.md](list.md "mention"). Set the assignment for that application, then select **Add App to Template**. The application appears in the list at the top of the drawer, where it can be edited or removed, and the type selector resets so the next one can be added. The save button is disabled until at least one application has been added, and shows how many the template currently holds.
 
-There are three differences from the deployment drawer worth knowing:
+There are two differences from the deployment drawer worth knowing:
 
 * MSP Vendor App entries ask for the vendor's keys, URLs and IDs directly rather than once per tenant. Enter a literal value where it is the same everywhere, or reference a CIPP custom variable such as `%DattoSiteID%` where it differs. Typing `%` opens a browser of the available variables. Variables are resolved per tenant at deployment, so the value only needs defining once per tenant.
-* Store App entries have no **Install as system** switch. Chocolatey and Custom Application entries keep theirs.
 * The assignment is saved into the template itself, and can be overridden per deployment later.
 
 After saving, the drawer stays open so a variation can be adjusted and saved as a second template.
