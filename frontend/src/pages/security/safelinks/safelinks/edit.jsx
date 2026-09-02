@@ -59,7 +59,7 @@ const Page = () => {
   return (
     <>
       <CippFormPage
-        title={`Edit Safe Links Policy: ${PolicyName}`}
+        title={PolicyName ? `Safe Links Policy: ${PolicyName}` : "Safe Links Policy"}
         backButtonTitle="Safe Links Overview"
         formPageType="Edit"
         formControl={formControl}
