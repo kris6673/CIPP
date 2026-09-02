@@ -129,6 +129,10 @@ You can review the available alerts embedded below or navigate to [https://resou
 The **Alert on Huntress or CIPP Rogue Apps detected** alert checks tenants against both the public Huntress RogueApps feed and a list curated by CIPP, so it can report applications that do not appear on the Huntress website. See [rogue-apps.md](rogue-apps.md "mention") for how the list is built and which applications the CIPP list contains.
 {% endhint %}
 
+{% hint style="warning" %}
+The **Alert on OneDrive accounts with over-long paths** alert reads from a cache that CIPP does not refresh on a schedule, unlike most alert data. Run **Refresh CIPPDB Cache** for the **OneDrive Long Paths** cache type on the tenant from [tenants.md](../../../cipp/settings/tenants.md "mention") before relying on this alert, and again whenever you want it to reflect current data. It stores each affected user's UPN and a count of long paths only, never file or folder names.
+{% endhint %}
+
 {% @cipp-external-webpage-block/cyberdrain url="https://resources.cipp.app/?tab=alerts" fullWidth="true" %}
 
 {% include "../../../../../.gitbook/includes/feature-request.md" %}
