@@ -171,7 +171,9 @@ export const MobileNav = (props) => {
           placeholder="Search navigation…"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          inputProps={{ enterKeyHint: "search", "aria-label": "Search navigation" }}
+          slotProps={{
+            input: { enterKeyHint: "search", "aria-label": "Search navigation" },
+          }}
           startAdornment={
             <InputAdornment position="start">
               <Search fontSize="small" />

@@ -34,7 +34,12 @@ const MemoTextField = React.memo(function MemoTextField({
   // Autocomplete hands the input wiring (combobox role, refs, keyboard handlers,
   // popup/clear adornments) to renderInput via params.slotProps — merge our styling
   // into those slots instead of replacing them, or the field stops being a combobox.
-  const { slotProps: acSlotProps = {}, ...otherParams } = params
+  const {
+    slotProps: acSlotProps = {},
+    inputProps: _legacyInputProps,
+    InputProps: _legacyInputPropsCapital,
+    ...otherParams
+  } = params
 
   return (
     <Tooltip title={label || ''} placement="top" arrow>

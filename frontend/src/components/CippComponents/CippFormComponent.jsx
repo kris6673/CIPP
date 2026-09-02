@@ -221,7 +221,23 @@ export const CippFormComponent = (props) => {
         </>
       );
 
-    case "textField":
+    case "textField": {
+      const {
+        inputProps: legacyInputProps,
+        InputProps: legacyInputPropsCapital,
+        slotProps: textFieldSlotProps,
+        ...textFieldRest
+      } = other;
+      const mergedTextFieldSlotProps = withShrinkLabel({
+        ...textFieldSlotProps,
+        ...(legacyInputProps
+          ? { htmlInput: { ...textFieldSlotProps?.htmlInput, ...legacyInputProps } }
+          : {}),
+        ...(legacyInputPropsCapital
+          ? { input: { ...textFieldSlotProps?.input, ...legacyInputPropsCapital } }
+          : {}),
+      });
+
       return (
         <>
           <Tooltip title={label || ""} placement="top" arrow>
@@ -234,10 +250,10 @@ export const CippFormComponent = (props) => {
                 render={({ field }) =>
                   !disableVariables ? (
                     <CippTextFieldWithVariables
-                      {...other}
+                      {...textFieldRest}
                       variant="filled"
                       fullWidth
-                      slotProps={withShrinkLabel(other.slotProps)}
+                      slotProps={mergedTextFieldSlotProps}
                       label={label}
                       value={field.value || ""}
                       onChange={field.onChange}
@@ -248,12 +264,13 @@ export const CippFormComponent = (props) => {
                     <TextField
                       variant="filled"
                       fullWidth
-                      {...other}
+                      {...textFieldRest}
                       label={label}
                       value={field.value || ""}
                       onChange={field.onChange}
                       onBlur={field.onBlur}
-                      slotProps={withShrinkLabel(other.slotProps)} />
+                      slotProps={mergedTextFieldSlotProps}
+                    />
                   )
                 }
               />
@@ -273,6 +290,7 @@ export const CippFormComponent = (props) => {
           )}
         </>
       );
+    }
     case "colorPicker":
       return (
         <>
@@ -673,7 +691,18 @@ export const CippFormComponent = (props) => {
         </>
       );
 
-    case "datePicker":
+    case "datePicker": {
+      const {
+        inputProps: _legacyInputProps,
+        InputProps: _legacyInputPropsCapital,
+        renderInput: _renderInput,
+        inputFormat: _inputFormat,
+        dateTimeType,
+        slotProps: datePickerSlotProps,
+        ...datePickerRest
+      } = other;
+      const fieldError = get(errors, convertedName, {})?.message;
+
       return (
         <>
           <div>
@@ -685,7 +714,6 @@ export const CippFormComponent = (props) => {
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                   <Box sx={{ flexGrow: 1 }}>
                     <DateTimePicker
-                      slotProps={{ textField: { fullWidth: true } }}
                       sx={{
                         "& .MuiPickersSectionList-root": {
                           paddingTop: "10px",
@@ -693,7 +721,7 @@ export const CippFormComponent = (props) => {
                         },
                       }}
                       views={
-                        other.dateTimeType === "date"
+                        dateTimeType === "date"
                           ? ["year", "month", "day"]
                           : ["year", "month", "day", "hours", "minutes"]
                       }
@@ -710,24 +738,23 @@ export const CippFormComponent = (props) => {
                       onClose={field.onBlur}
                       ampm={false}
                       minutesStep={15}
-                      inputFormat="yyyy/MM/dd HH:mm" // Display format
-                      renderInput={(inputProps) => (
-                        <TextField
-                          {...inputProps}
-                          {...other}
-                          fullWidth
-                          error={!!errors[convertedName]}
-                          helperText={get(errors, convertedName, {})?.message}
-                          variant="filled"
-                        />
-                      )}
-                      {...other}
+                      {...datePickerRest}
+                      slotProps={{
+                        ...datePickerSlotProps,
+                        textField: {
+                          fullWidth: true,
+                          variant: "filled",
+                          error: !!fieldError,
+                          helperText: fieldError,
+                          ...datePickerSlotProps?.textField,
+                        },
+                      }}
                     />
                   </Box>
                   <Button
                     variant="outlined"
                     size="small"
-                    disabled={other?.disabled}
+                    disabled={datePickerRest?.disabled}
                     onClick={() => {
                       const now = new Date();
                       // Always round down to the previous 15-minute mark, unless exactly on a 15-min mark
@@ -761,10 +788,11 @@ export const CippFormComponent = (props) => {
             </Typography>
           )}
           <Typography variant="subtitle3" color="error">
-            {get(errors, convertedName, {})?.message}
+            {fieldError}
           </Typography>
         </>
       );
+    }
 
     case "file":
       return (
@@ -811,7 +839,7 @@ export const CippFormComponent = (props) => {
                     id={`file-input-${convertedName}`}
                     type="file"
                     sx={{ display: "none" }}
-                    inputProps={{ ...other }}
+                    slotProps={{ input: { ...other } }}
                     onChange={(e) => {
                       const file = e.target.files[0];
                       field.onChange(file);
