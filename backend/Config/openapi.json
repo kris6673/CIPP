@@ -279,6 +279,14 @@
                   "logbook": {
                     "$ref": "#/components/schemas/LabelValue"
                   },
+                  "PsaTicketPriority": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/LabelValue"
+                      }
+                    ],
+                    "description": "The audit form posts the raw form values, so an autocomplete selection arrives as a {label, value} object - unwrap it to the bare Halo priority id before storing."
+                  },
                   "RowKey": {
                     "type": "string"
                   },
@@ -2176,6 +2184,87 @@
           }
         ],
         "x-cipp-role": "Tenant.Administration.ReadWrite"
+      }
+    },
+    "/api/AddEdgeApp": {
+      "post": {
+        "summary": "AddEdgeApp",
+        "operationId": "AddEdgeApp",
+        "tags": [
+          "Endpoint > Applications"
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "AssignTo": {
+                    "type": "string"
+                  },
+                  "CustomGroup": {
+                    "type": "string"
+                  },
+                  "displayLanguageLocale": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "edgeChannel": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "excludeGroup": {
+                    "type": "string"
+                  },
+                  "IntuneBody": {
+                    "type": "string"
+                  },
+                  "selectedTenants": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "customerId": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                },
+                "additionalProperties": true,
+                "x-cipp-passthrough": true,
+                "description": "This endpoint forwards the request body onward rather than reading a fixed set of fields. The properties listed here are the ones it is known to read; others may be accepted."
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Endpoint.Application.ReadWrite",
+        "x-cipp-any-tenant": true,
+        "x-cipp-reads-via": [
+          "Get-CIPPEdgeAppBody"
+        ]
       }
     },
     "/api/AddEditTransportRule": {
@@ -5373,21 +5462,21 @@
                   },
                   "Name": {
                     "type": "string",
-                    "description": "Validate required fields"
+                    "description": "Validate required fields. The \"create template from policy\" row action posts the policy row, which carries Name/PolicyName but no TemplateName."
                   },
                   "PolicyName": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Set name and comments - prioritize template-specific fields, falling back to the policy name so a template made from a policy is not listed with a blank name."
                   },
                   "TemplateDescription": {
                     "type": "string"
                   },
                   "TemplateName": {
                     "type": "string",
-                    "description": "Set name and comments - prioritize template-specific fields"
+                    "description": "Validate required fields. The \"create template from policy\" row action posts the policy row, which carries Name/PolicyName but no TemplateName."
                   }
                 },
                 "required": [
-                  "Name",
                   "PolicyName"
                 ]
               }
@@ -16852,7 +16941,7 @@
                       },
                       "standardsTemplateId": {
                         "type": "string",
-                        "description": "Without this the comparison would report the policy as missing while remediation would happily overwrite an existing, similarly named one. Mirrors the candidate selection Set-CIPPIntunePolicy performs at deployment time."
+                        "description": "tenantFilter is optional here - supplying it resolves the template the way the standard would for that tenant instead of comparing the stored template verbatim."
                       },
                       "templateGuid": {
                         "type": "string",
@@ -16893,7 +16982,7 @@
                       },
                       "standardsTemplateId": {
                         "type": "string",
-                        "description": "Without this the comparison would report the policy as missing while remediation would happily overwrite an existing, similarly named one. Mirrors the candidate selection Set-CIPPIntunePolicy performs at deployment time."
+                        "description": "tenantFilter is optional here - supplying it resolves the template the way the standard would for that tenant instead of comparing the stored template verbatim."
                       },
                       "templateGuid": {
                         "type": "string",
@@ -20958,7 +21047,7 @@
           {
             "name": "TicketType",
             "in": "query",
-            "description": "Outcomes and priorities are scoped to a ticket type. The settings page sends the ticket type currently selected in the form so the lists follow the dropdown; without it both fall back to whatever ticket type was last saved.",
+            "description": "Outcomes and priorities are scoped to a ticket type. The settings page sends the ticket type currently selected in the form so the lists follow the dropdown; without it both fall back to whatever ticket type was last saved. @() on each: PowerShell unrolls single-element output, so a ticket type with one outcome (or a lookup that answers with a single explanatory row) would otherwise serialise as a bare object and break callers that expect a list.",
             "required": false,
             "schema": {
               "type": "string"
@@ -27469,6 +27558,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
@@ -40965,7 +41057,7 @@
                         "x-cipp-field-source": "storage"
                       },
                       "source": {
-                        "x-cipp-field-source": "storage"
+                        "x-cipp-field-source": "storage,frontend"
                       },
                       "templateCount": {
                         "x-cipp-field-source": "backend"
@@ -45742,6 +45834,10 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       },
+                      "PsaTicketPriority": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
                       "PsaTicketStrategy": {
                         "type": "string",
                         "x-cipp-field-source": "storage"
@@ -48988,7 +49084,7 @@
                         "x-cipp-field-source": "storage"
                       },
                       "source": {
-                        "x-cipp-field-source": "storage,backend"
+                        "x-cipp-field-source": "storage,backend,frontend"
                       },
                       "templateCount": {
                         "x-cipp-field-source": "backend"
@@ -49848,6 +49944,15 @@
             }
           },
           {
+            "name": "Days",
+            "in": "query",
+            "description": "Days=N widens a filtered query to the last N calendar days (in the instance timezone), so the scoped drawers still show a run that finished last night. Ignored when dates are given.",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "name": "EndDate",
             "in": "query",
             "required": false,
@@ -50162,6 +50267,15 @@
             "required": false,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "Minimal",
+            "in": "query",
+            "description": "Picker mode: address autocompletes only need the address + name, so skip the heavy field set, the per-mailbox computed properties, and the extra Get-OrganizationConfig call.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
             }
           },
           {
@@ -51885,6 +51999,9 @@
                         "x-cipp-field-source": "storage"
                       },
                       "PsaTicketId": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "PsaTicketPriority": {
                         "x-cipp-field-source": "storage"
                       },
                       "Reference": {
@@ -54428,6 +54545,10 @@
                         "x-cipp-field-source": "storage"
                       },
                       "PsaTicketId": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "PsaTicketPriority": {
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       },
@@ -62207,6 +62328,9 @@
                       "PsaTicketId": {
                         "x-cipp-field-source": "storage"
                       },
+                      "PsaTicketPriority": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "Reference": {
                         "x-cipp-field-source": "storage"
                       },
@@ -66407,6 +66531,9 @@
                       "x-cipp-field-source": "storage"
                     },
                     "PsaTicketId": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "PsaTicketPriority": {
                       "x-cipp-field-source": "storage"
                     },
                     "Reference": {
