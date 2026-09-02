@@ -69,6 +69,10 @@ services:
       - CRAFT_DEV_FRONTEND_URL=http://host.docker.internal:3000
     volumes:
       - ./config/appsettings.Local.Development.json:/app/appsettings.Development.json:ro
+      # Optional Proxyman TLS trust — see docker-compose-all.yml for the full rationale.
+      # /dev/null no-op unless build/.env sets CIPP_API_CA_MOUNT. (Windows runs the frontend
+      # on the host, so only the backend container needs trust injected here.)
+      - "${CIPP_API_CA_MOUNT:-/dev/null:/dev/null:ro}"
       # Live backend source. rw because runtime permission extraction writes
       # Config/function-permissions.json back into the repo (gitignored).
       - ../backend:/app/API

@@ -25,13 +25,7 @@ Reports are listed newest first. This list is loaded per tenant, so select a spe
 
 ## Table Actions
 
-| Action                  | Effect                                                                                                                         |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Preview Message         | Renders the reported message safely inside CIPP, without loading remote content or executing anything in it.                   |
-| View Message Headers    | Shows the full internet headers of the reported message.                                                                       |
-| Download Message (.eml) | Downloads the reported message as an `.eml` file for offline analysis.                                                          |
-| View Message Trace      | Runs a message trace on the reported message and shows each delivery event.                                                    |
-| Block Sender            | Adds the sender address to the tenant's Tenant Allow/Block List as a block entry, with an optional note and expiration choice. |
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Preview Message</td><td>Renders the reported message safely inside CIPP, without loading remote content or executing anything in it. Greyed out where the report carries no message ID.</td><td>false</td></tr><tr><td>View Message Headers</td><td>Shows the full internet headers of the reported message. Greyed out where the report carries no message ID.</td><td>false</td></tr><tr><td>Download Message (.eml)</td><td>Downloads the reported message as an <code>.eml</code> file for offline analysis. Greyed out where the report carries no message ID.</td><td>false</td></tr><tr><td>View Message Trace</td><td>Runs a message trace on the reported message and shows each delivery event. Greyed out where the report carries no message ID.</td><td>false</td></tr><tr><td>Block Sender</td><td>Adds the sender to the tenant's <a data-mention href="../tenant-allow-block-lists.md">tenant-allow-block-lists.md</a> as a blocked sender, with an optional note and expiration choice. Greyed out where the report has no sender address.</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 ## Where the message content comes from
 
@@ -40,3 +34,5 @@ The Submissions store itself only holds the report, not the message, so for the 
 {% hint style="info" %}
 The mailbox fallback needs the `Mail.Read` application permission on your Secure Application Model application, which CIPP does not request by default. Without it, preview and download still work for reported messages that are in quarantine, and the actions report a clear error for the rest. The remaining actions on this page work without it.
 {% endhint %}
+
+{% include "../../../../../.gitbook/includes/feature-request.md" %}

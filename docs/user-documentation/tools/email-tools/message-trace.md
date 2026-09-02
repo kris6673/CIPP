@@ -7,7 +7,7 @@ Exchange Online holds <mark style="color:blue;">90 days</mark> of message trace 
 {% endhint %}
 
 {% hint style="warning" %}
-Message Trace uses the Microsoft Graph message trace API, which requires the **`ExchangeMessageTrace.Read.All`** permission — added to the CIPP-SAM application, so refresh CPV permissions on your tenants after updating. The first search in a tenant also provisions Microsoft's **Transport Data Platform** service principal automatically; Microsoft can take a few hours to activate it, during which CIPP falls back to the `Get-MessageTraceV2` cmdlet so results are still returned. A short notice appears above the results while the fallback is in use.
+Message Trace uses the Microsoft Graph message trace API, which requires the **`ExchangeMessageTrace.Read.All`** permission. It has been added to the CIPP-SAM application, so refresh CPV permissions on your tenants after updating. The first search in a tenant also provisions Microsoft's **Transport Data Platform** service principal automatically; Microsoft can take a few hours to activate it, during which CIPP falls back to the `Get-MessageTraceV2` cmdlet so results are still returned. A short notice appears above the results while the fallback is in use.
 {% endhint %}
 
 ## Find a message
@@ -50,7 +50,7 @@ Below are the default columns displayed in the table. Additional columns, includ
 
 ## Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>View Details</td><td>Opens the <a data-mention href="message-trace.md#message-trace-details">#message-trace-details</a>panel showing each routing event recorded for the selected message and recipient.</td><td>true</td></tr><tr><td>View in Explorer</td><td>Opens the message in Threat Explorer in the Microsoft Defender portal, under Email &#x26; Collaboration, with the message already filtered.</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>View Details</td><td>Opens the <a data-mention href="message-trace.md#message-trace-details">#message-trace-details</a> panel showing each routing event recorded for the selected message and recipient.</td><td>true</td></tr><tr><td>View in Explorer</td><td>Opens the message in Threat Explorer in the Microsoft Defender portal, under Email &#x26; Collaboration, with the message already filtered.</td><td>false</td></tr></tbody></table>
 
 ## Message Trace Details
 

@@ -1,34 +1,31 @@
 #!/usr/bin/env bash
 # macOS/Linux dev-loop launcher.
 #
-# Wraps `docker compose ... up` and AUTO-ENABLES Proxyman interception when the
-# exported CA is present: if build/config/proxyman-ca.pem exists (and is non-empty),
-# the docker-compose-proxyman.yml overlay is layered on automatically. Delete/rename
-# the PEM and the next launch is a plain, un-proxied stack — no flags to remember.
+# Proxyman trust is NOT applied by this script anymore — it lives in the compose files
+# as optional CA mounts that turn on when build/.env sets them (written by
+# build/tools/Export-ProxymanCert.ps1). Docker Compose auto-loads build/.env, so a plain
+# `docker compose up` and a `docker restart` both keep Proxyman trust with no -f overlay
+# to remember. This launcher just runs compose and reports whether trust is active.
 #
 # Usage (run from anywhere):
 #   build/tools/Start-CippDev.sh                 # up --pull always --watch (default)
 #   build/tools/Start-CippDev.sh up -d           # any `docker compose` args pass through
 #   BASE_COMPOSE=docker-compose-no-frontend.yml build/tools/Start-CippDev.sh
 #
-# To turn interception on: pwsh build/tools/Export-ProxymanCert.ps1
+# To turn Proxyman trust on: pwsh build/tools/Export-ProxymanCert.ps1
 set -euo pipefail
 
-# build/ dir holds the compose files and the relative ./config path they reference.
+# build/ dir holds the compose files, build/.env, and the relative ./config paths.
 BUILD_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$BUILD_DIR"
 
 BASE_COMPOSE="${BASE_COMPOSE:-docker-compose-all.yml}"
-BUNDLE="config/proxyman-ca-bundle.pem"
 
-FILES=(-f "$BASE_COMPOSE")
-if [ -s "$BUNDLE" ]; then
-    FILES+=(-f docker-compose-proxyman.yml)
-    echo "🔎 Proxyman trust bundle detected ($BUNDLE) — cipp-api will trust Proxyman's CA."
+if [ -s .env ] && grep -q '^CIPP_API_CA_MOUNT=' .env; then
+    echo "🔎 Proxyman trust ACTIVE (build/.env) — containers trust Proxyman's CA."
     echo "   (traffic already routes through Proxyman via the system proxy; this adds trust)"
 else
-    echo "ℹ️  No Proxyman trust bundle ($BUNDLE) — running the plain dev stack."
-    echo "   Enable interception with: pwsh build/tools/Export-ProxymanCert.ps1"
+    echo "ℹ️  Proxyman trust OFF — plain dev stack. Enable with: pwsh build/tools/Export-ProxymanCert.ps1"
 fi
 
 # Default action mirrors the documented header of docker-compose-all.yml; anything
@@ -38,4 +35,4 @@ if [ "$#" -eq 0 ]; then
 fi
 
 set -x
-exec docker compose -p cipp "${FILES[@]}" "$@"
+exec docker compose -p cipp -f "$BASE_COMPOSE" "$@"

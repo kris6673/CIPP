@@ -123,6 +123,13 @@ services:
       #- REGION_NAME=eastus
     volumes:
       - ./config/appsettings.Local.Development.json:/app/appsettings.Development.json:ro
+      # Optional Proxyman TLS trust. We proxy at the SYSTEM level, so Docker routes this
+      # container's outbound HTTPS through Proxyman, which re-signs certs — the distroless
+      # runtime must trust Proxyman's CA or all Graph/token calls fail. When build/.env sets
+      # CIPP_API_CA_MOUNT (written by build/tools/Export-ProxymanCert.ps1) this mounts the
+      # combined roots+Proxyman bundle OVER the image root store; unset, it is a /dev/null
+      # no-op so contributors without Proxyman are unaffected. See docs in Export-ProxymanCert.ps1.
+      - "${CIPP_API_CA_MOUNT:-/dev/null:/dev/null:ro}"
       # Live backend source. rw because runtime permission extraction writes
       # Config/function-permissions.json back into the repo (gitignored).
       - ../backend:/app/API
@@ -183,10 +190,17 @@ services:
       - "127.0.0.1:3000:3000"
     environment:
       - CHOKIDAR_USEPOLLING=true # Watch for file changes so the dev server reloads when frontend source files change
+      # Optional Proxyman TLS trust for yarn/npm fetches. The system proxy re-signs the
+      # registry's cert, so a fresh `yarn install` fails with SELF_SIGNED_CERT_IN_CHAIN
+      # unless Node trusts Proxyman's CA. build/.env sets CIPP_NODE_CA to the mounted
+      # bundle path when enabled; empty (default) is a no-op Node ignores silently.
+      - NODE_EXTRA_CA_CERTS=${CIPP_NODE_CA:-}
     volumes:
       - ../frontend:/app
       - cipp-frontend_node_modules:/app/node_modules
       - cipp-frontend_out_dev:/app/out/dev
+      # Paired with NODE_EXTRA_CA_CERTS above; /dev/null no-op when CIPP_NODE_CA_MOUNT is unset.
+      - "${CIPP_NODE_CA_MOUNT:-/dev/null:/dev/null:ro}"
     # cipp-storybook shares this container's node_modules volume and must not run its own
     # `yarn install` against it. A TCP connect to the dev server is the signal that install
     # finished AND next dev is listening — cheap, and it doesn't wait on a route compile the
@@ -234,10 +248,13 @@ services:
     environment:
       - CHOKIDAR_USEPOLLING=true # story/source edits trigger a rebuild over the bind mount
       - NODE_OPTIONS=--max-old-space-size=4096
+      # Optional Proxyman TLS trust (playwright/npx fetches); see cipp-frontend above.
+      - NODE_EXTRA_CA_CERTS=${CIPP_NODE_CA:-}
     volumes:
       - ../frontend:/app
       - cipp-frontend_node_modules:/app/node_modules
       - cipp-storybook_playwright:/root/.cache/ms-playwright
+      - "${CIPP_NODE_CA_MOUNT:-/dev/null:/dev/null:ro}"
     depends_on:
       cipp-frontend:
         condition: service_healthy

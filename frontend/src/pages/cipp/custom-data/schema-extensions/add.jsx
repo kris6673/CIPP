@@ -37,6 +37,9 @@ const Page = () => {
     defaultValues: {
       properties: [],
       status: "InDevelopment",
+      // Without a default, targetTypes.validate ran against undefined the moment the DOM-leak
+      // stopped swallowing the `validate` prop below.
+      targetTypes: [],
     },
   });
 
@@ -192,9 +195,11 @@ const Page = () => {
                           onChange={(e) => handlePropertyChange(index, "type", e.target.value)}
                           options={propertyTypeOptions}
                           required={true}
-                          validate={(value) => {
-                            if (value) return true;
-                            return "Please select a property type.";
+                          validators={{
+                            validate: (value) => {
+                              if (value) return true;
+                              return "Please select a property type.";
+                            },
                           }}
                         />
                       </Box>
