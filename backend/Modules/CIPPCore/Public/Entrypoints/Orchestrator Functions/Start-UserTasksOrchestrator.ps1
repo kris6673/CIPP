@@ -120,33 +120,17 @@ function Start-UserTasksOrchestrator {
                 }
 
                 # Scope is resolved on every run so group membership stays current, as
-                # Test-CIPPAuditLogRules does for audit alerts.
-                $Selection = if ($task.Tenants) {
+                # Test-CIPPAuditLogRules does for audit alerts. The stored selection is only trusted
+                # on a row the execution gates also read as multi-tenant, otherwise the fan-out here
+                # and Push-ExecScheduledCommand would disagree about the task's shape.
+                $UsesStoredSelection = $task.Tenants -and $task.Tenant -eq 'AllTenants'
+                if ($task.Tenants -and -not $UsesStoredSelection) {
+                    Write-Information "Task $($task.Name): ignoring the stored selection, Tenant is '$($task.Tenant)' rather than AllTenants"
+                }
+                $Selection = if ($UsesStoredSelection) {
                     @($task.Tenants | ConvertFrom-Json -ErrorAction SilentlyContinue)
                 } elseif ($task.TenantGroup) {
                     @($task.TenantGroup | ConvertFrom-Json -ErrorAction SilentlyContinue)
-                }
-
-                # Rows predating runtime expansion merged a snapshot of every unselected tenant into
-                # excludedTenants, indistinguishable from the operator's own picks, so it is ignored
-                # for those. excludedTenantGroups was never part of that snapshot and always applies.
-                # A selection containing the AllTenants sentinel never got a snapshot written either,
-                # so its exclusions are the operator's and must be kept.
-                $IsLegacySnapshot = $task.Tenants -and -not $task.TenantSelectionVersion -and ($Selection.value -notcontains 'AllTenants')
-                $ExcludedTenants = [System.Collections.Generic.List[string]]::new()
-                if ($task.excludedTenants) {
-                    $StoredExclusions = @($task.excludedTenants -split ',' | Where-Object { $_ })
-                    if ($IsLegacySnapshot) {
-                        Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Task $($task.Name): ignored $($StoredExclusions.Count) stale snapshot exclusions, tenant group membership is now resolved at runtime" -Sev 'Info'
-                    } else {
-                        $ExcludedTenants.AddRange([string[]]$StoredExclusions)
-                    }
-                }
-                if ($task.excludedTenantGroups) {
-                    $ExcludedGroups = $task.excludedTenantGroups | ConvertFrom-Json -ErrorAction SilentlyContinue
-                    if ($ExcludedGroups) {
-                        $ExcludedTenants.AddRange([string[]]@((Expand-CIPPTenantGroups -TenantFilter $ExcludedGroups).value | Where-Object { $_ }))
-                    }
                 }
 
                 $TargetTenants = $null
@@ -170,6 +154,33 @@ function Start-UserTasksOrchestrator {
                     # An explicit *All Tenants pick, with no selection stored alongside it
                     $TargetTenants = $TenantList
                     $ResolvedScope = $true
+                }
+
+                # Rows predating runtime expansion merged a snapshot of every unselected tenant into
+                # excludedTenants, indistinguishable from the operator's own picks, so it is ignored
+                # for those. A selection carrying the AllTenants sentinel never had a snapshot
+                # written, so its exclusions are the operator's and are kept. excludedTenantGroups
+                # was never part of the snapshot either and always applies.
+                $IsLegacySnapshot = $UsesStoredSelection -and -not $task.TenantSelectionVersion -and ($Selection.value -notcontains 'AllTenants')
+                $ExcludedTenants = [System.Collections.Generic.List[string]]::new()
+                if ($task.excludedTenants) {
+                    $StoredExclusions = @($task.excludedTenants -split ',' | Where-Object { $_ })
+                    if ($IsLegacySnapshot) {
+                        # Only report a snapshot that would actually have dropped a tenant in scope
+                        # now, or every run of every legacy row logs the same no-op indefinitely.
+                        $Reinstated = @($StoredExclusions | Where-Object { $_ -in $TargetTenants.defaultDomainName })
+                        if ($Reinstated.Count -gt 0) {
+                            Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Task $($task.Name): ignored $($Reinstated.Count) stale snapshot exclusions, tenant group membership is now resolved at runtime" -Sev 'Info'
+                        }
+                    } else {
+                        $ExcludedTenants.AddRange([string[]]$StoredExclusions)
+                    }
+                }
+                if ($task.excludedTenantGroups) {
+                    $ExcludedGroups = $task.excludedTenantGroups | ConvertFrom-Json -ErrorAction SilentlyContinue
+                    if ($ExcludedGroups) {
+                        $ExcludedTenants.AddRange([string[]]@((Expand-CIPPTenantGroups -TenantFilter $ExcludedGroups).value | Where-Object { $_ }))
+                    }
                 }
 
                 if ($ResolvedScope) {
@@ -221,13 +232,19 @@ function Start-UserTasksOrchestrator {
             } catch {
                 $errorMessage = $_.Exception.Message
 
-                $null = Update-AzDataTableEntity -Force @Table -Entity @{
+                # Failed is terminal - the pickup filter only reads Planned and Failed - Planned - so
+                # a recurring task parked there never runs again. A transient failure here (a tenant
+                # or group table read, say) must not permanently stop it.
+                $NextRun = Get-CIPPScheduledTaskNextRun -Recurrence $task.Recurrence -ScheduledTime $task.ScheduledTime
+                $FailureEntity = @{
                     PartitionKey = $task.PartitionKey
                     RowKey       = $task.RowKey
                     Results      = "$errorMessage"
                     ExecutedTime = "$currentUnixTime"
-                    TaskState    = 'Failed'
+                    TaskState    = $NextRun -gt 0 ? 'Failed - Planned' : 'Failed'
                 }
+                if ($NextRun -gt 0) { $FailureEntity.ScheduledTime = "$NextRun" }
+                $null = Update-AzDataTableEntity -Force @Table -Entity $FailureEntity
                 Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Failed to execute task $($task.Name): $errorMessage" -sev Error
             }
         }

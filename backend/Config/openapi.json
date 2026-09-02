@@ -45782,7 +45782,7 @@
                         "x-cipp-field-source": "storage"
                       },
                       "ExecutedTime": {
-                        "x-cipp-field-source": "frontend"
+                        "x-cipp-field-source": "storage,frontend"
                       },
                       "Hidden": {
                         "type": "boolean",
@@ -54351,6 +54351,9 @@
                       },
                       "excludedTenants": {
                         "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "ExecutedTime": {
                         "x-cipp-field-source": "storage"
                       },
                       "Hidden": {

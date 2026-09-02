@@ -127,7 +127,9 @@ Describe 'Start-UserTasksOrchestrator tenant scope resolution' {
         $Scoped | Should -Not -Contain 'd.onmicrosoft.com'
     }
 
-    It 'logs the snapshot exclusions it ignored' {
+    It 'logs only the snapshot exclusions that were actually in scope' {
+        # b is in group-1 and was being wrongly excluded; d is in neither group, so dropping it from
+        # the snapshot changes nothing and is not worth reporting.
         Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
             New-TaskRow @{
                 Tenants         = $script:TwoGroupSelection
@@ -137,7 +139,21 @@ Describe 'Start-UserTasksOrchestrator tenant scope resolution' {
 
         Start-UserTasksOrchestrator
 
-        ($script:LoggedMessages -join "`n") | Should -Match 'ignored 2 stale snapshot exclusions'
+        ($script:LoggedMessages -join "`n") | Should -Match 'ignored 1 stale snapshot exclusions'
+    }
+
+    It 'stays quiet when a legacy snapshot would not have changed the outcome' {
+        # Otherwise every legacy row logs the same no-op on every run, forever.
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            New-TaskRow @{
+                Tenants         = $script:TwoGroupSelection
+                excludedTenants = 'd.onmicrosoft.com'
+            }
+        }
+
+        Start-UserTasksOrchestrator
+
+        ($script:LoggedMessages -join "`n") | Should -Not -Match 'stale snapshot exclusions'
     }
 
     It 'applies excludedTenants on a versioned row' {
@@ -238,6 +254,37 @@ Describe 'Start-UserTasksOrchestrator tenant scope resolution' {
         $Failed = @($script:TaskUpdates | Where-Object { $_.TaskState -eq 'Failed' })
         $Failed | Should -HaveCount 1
         $Failed[0].Results | Should -Match 'Failed to expand tenant selection'
+    }
+
+    It 'keeps a recurring task alive when expansion throws' {
+        # Failed is terminal, so parking a recurring task there on a transient table read would stop
+        # it permanently.
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            New-TaskRow @{ Tenants = $script:TwoGroupSelection; TenantSelectionVersion = 2; Recurrence = '1d' }
+        }
+        Mock -CommandName Expand-CIPPTenantGroups -MockWith { throw 'tenant group store unavailable' }
+        Mock -CommandName Get-CIPPScheduledTaskNextRun -MockWith { 1700000000 }
+
+        Start-UserTasksOrchestrator
+
+        $Failed = @($script:TaskUpdates | Where-Object { $_.TaskState -like 'Failed*' })
+        $Failed | Should -HaveCount 1
+        $Failed[0].TaskState | Should -Be 'Failed - Planned'
+        $Failed[0].ScheduledTime | Should -Be '1700000000'
+    }
+
+    It 'ignores a stored selection on a row the execution gates read as single-tenant' {
+        # Tenant is not the AllTenants literal, so Push-ExecScheduledCommand would treat any fan-out
+        # here as a single-tenant run: no per-tenant results, and concurrent parent-row writes.
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            New-TaskRow @{ Tenant = 'a.onmicrosoft.com'; Tenants = $script:TwoGroupSelection }
+        }
+
+        Start-UserTasksOrchestrator
+
+        $Scoped = Get-ScopedTenants
+        $Scoped | Should -HaveCount 1
+        $Scoped | Should -Contain 'a.onmicrosoft.com'
     }
 
     It 'reschedules a recurring task whose groups all resolved empty' {
