@@ -53,50 +53,10 @@ function Invoke-ListStandardsCompare {
     # selected template's own definition is read so its overridden standards still count as in scope
     # (Get-CIPPStandards only emits the template that won the merge).
     if ($TemplateFilter) {
-        $TemplatesTable = Get-CIPPTable -TableName 'templates'
-        $SafeTemplateId = ConvertTo-CIPPODataFilterValue -Value $TemplateFilter -Type String
-        $SelectedTemplate = Get-CIPPAzDataTableEntity @TemplatesTable -Filter "PartitionKey eq 'StandardsTemplateV2' and RowKey eq '$SafeTemplateId'"
-        $SelectedStandards = try { ($SelectedTemplate.JSON | ConvertFrom-Json -Depth 100 -ErrorAction Stop).standards } catch { $null }
-        $PackageRows = @{}
-        foreach ($Property in @($SelectedStandards.PSObject.Properties)) {
-            $StandardName = $Property.Name
-            $Config = $Property.Value
-            switch ($StandardName) {
-                { $_ -in @('IntuneTemplate', 'ConditionalAccessTemplate') } {
-                    $Partition = if ($_ -eq 'IntuneTemplate') { 'IntuneTemplate' } else { 'CATemplate' }
-                    foreach ($Item in @($Config)) {
-                        if ($Item.TemplateList.value) { $null = $ScopedTemplateGuids.Add([string]$Item.TemplateList.value) }
-                        foreach ($Tag in @($Item.'TemplateList-Tags')) {
-                            $TagValue = if ($Tag.value) { [string]$Tag.value } else { [string]$Tag }
-                            if (-not $TagValue) { continue }
-                            if (-not $PackageRows.ContainsKey($Partition)) {
-                                $PackageRows[$Partition] = @(Get-CIPPAzDataTableEntity @TemplatesTable -Filter "PartitionKey eq '$Partition'" | Where-Object { $_.Package })
-                            }
-                            foreach ($Row in ($PackageRows[$Partition] | Where-Object { $_.Package -eq $TagValue })) {
-                                $null = $ScopedTemplateGuids.Add([string]$Row.RowKey)
-                            }
-                        }
-                    }
-                }
-                'QuarantineTemplate' {
-                    foreach ($Item in @($Config)) {
-                        $DisplayName = $Item.displayName.value ?? $Item.displayName
-                        if ($DisplayName) { $null = $ScopedQuarantineNames.Add([string]$DisplayName) }
-                    }
-                }
-                'ReusableSettingsTemplate' {
-                    foreach ($Item in @($Config)) {
-                        foreach ($Ref in @($Item.TemplateList)) {
-                            $Id = if ($Ref.value) { [string]$Ref.value } else { [string]$Ref }
-                            if ($Id) { $null = $ScopedStandardKeys.Add("standards.ReusableSettingsTemplate.$Id") }
-                        }
-                    }
-                }
-                default {
-                    $null = $ScopedStandardKeys.Add("standards.$StandardName")
-                }
-            }
-        }
+        $TemplateScope = Get-CIPPStandardsTemplateScope -TemplateId $TemplateFilter
+        $ScopedStandardKeys.UnionWith($TemplateScope.StandardKeys)
+        $ScopedTemplateGuids.UnionWith($TemplateScope.TemplateGuids)
+        $ScopedQuarantineNames.UnionWith($TemplateScope.QuarantineNames)
     }
 
     $Filters = [system.collections.generic.list[string]]::new()
