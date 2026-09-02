@@ -23,6 +23,8 @@ function Invoke-ListStandardsCompare {
 
     $ScopedTemplateGuids = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     $ScopedQuarantineNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    # Plain standard keys in scope (standards.<Name>, and one key per reusable settings template).
+    $ScopedStandardKeys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     foreach ($Entry in $StandardList) {
         switch ($Entry.Standard) {
             { $_ -in @('IntuneTemplate', 'ConditionalAccessTemplate') } {
@@ -32,15 +34,74 @@ function Invoke-ListStandardsCompare {
                 $DisplayName = $Entry.Settings.displayName.value ?? $Entry.Settings.displayName
                 if ($DisplayName) { $null = $ScopedQuarantineNames.Add($DisplayName) }
             }
+            'ReusableSettingsTemplate' {
+                foreach ($Item in @($Entry.Settings.TemplateList)) {
+                    $Id = if ($Item.value) { [string]$Item.value } else { [string]$Item }
+                    if ($Id) { $null = $ScopedStandardKeys.Add("standards.ReusableSettingsTemplate.$Id") }
+                }
+            }
+            default {
+                if ($Entry.Standard) { $null = $ScopedStandardKeys.Add("standards.$($Entry.Standard)") }
+            }
+        }
+    }
+
+    # A report row carries the id of the template whose settings last ran the standard. With the
+    # three-tier merge that is the tenant-specific or group template, so filtering rows on that id
+    # hid every standard an AllTenants template shares with a more specific one and the page said
+    # the data had never been collected. Rows are matched on the standard key instead, and the
+    # selected template's own definition is read so its overridden standards still count as in scope
+    # (Get-CIPPStandards only emits the template that won the merge).
+    if ($TemplateFilter) {
+        $TemplatesTable = Get-CIPPTable -TableName 'templates'
+        $SafeTemplateId = ConvertTo-CIPPODataFilterValue -Value $TemplateFilter -Type String
+        $SelectedTemplate = Get-CIPPAzDataTableEntity @TemplatesTable -Filter "PartitionKey eq 'StandardsTemplateV2' and RowKey eq '$SafeTemplateId'"
+        $SelectedStandards = try { ($SelectedTemplate.JSON | ConvertFrom-Json -Depth 100 -ErrorAction Stop).standards } catch { $null }
+        $PackageRows = @{}
+        foreach ($Property in @($SelectedStandards.PSObject.Properties)) {
+            $StandardName = $Property.Name
+            $Config = $Property.Value
+            switch ($StandardName) {
+                { $_ -in @('IntuneTemplate', 'ConditionalAccessTemplate') } {
+                    $Partition = if ($_ -eq 'IntuneTemplate') { 'IntuneTemplate' } else { 'CATemplate' }
+                    foreach ($Item in @($Config)) {
+                        if ($Item.TemplateList.value) { $null = $ScopedTemplateGuids.Add([string]$Item.TemplateList.value) }
+                        foreach ($Tag in @($Item.'TemplateList-Tags')) {
+                            $TagValue = if ($Tag.value) { [string]$Tag.value } else { [string]$Tag }
+                            if (-not $TagValue) { continue }
+                            if (-not $PackageRows.ContainsKey($Partition)) {
+                                $PackageRows[$Partition] = @(Get-CIPPAzDataTableEntity @TemplatesTable -Filter "PartitionKey eq '$Partition'" | Where-Object { $_.Package })
+                            }
+                            foreach ($Row in ($PackageRows[$Partition] | Where-Object { $_.Package -eq $TagValue })) {
+                                $null = $ScopedTemplateGuids.Add([string]$Row.RowKey)
+                            }
+                        }
+                    }
+                }
+                'QuarantineTemplate' {
+                    foreach ($Item in @($Config)) {
+                        $DisplayName = $Item.displayName.value ?? $Item.displayName
+                        if ($DisplayName) { $null = $ScopedQuarantineNames.Add([string]$DisplayName) }
+                    }
+                }
+                'ReusableSettingsTemplate' {
+                    foreach ($Item in @($Config)) {
+                        foreach ($Ref in @($Item.TemplateList)) {
+                            $Id = if ($Ref.value) { [string]$Ref.value } else { [string]$Ref }
+                            if ($Id) { $null = $ScopedStandardKeys.Add("standards.ReusableSettingsTemplate.$Id") }
+                        }
+                    }
+                }
+                default {
+                    $null = $ScopedStandardKeys.Add("standards.$StandardName")
+                }
+            }
         }
     }
 
     $Filters = [system.collections.generic.list[string]]::new()
     if ($TenantFilter) {
         $Filters.Add("PartitionKey eq '{0}'" -f $TenantFilter)
-    }
-    if ($TemplateFilter) {
-        $Filters.Add("TemplateId eq '{0}'" -f $TemplateFilter)
     }
     $Filter = $Filters -join ' and '
 
@@ -68,6 +129,9 @@ function Invoke-ListStandardsCompare {
             }
             $DecodedName = -join $Chars
             if (-not $ScopedQuarantineNames.Contains($DecodedName)) { continue }
+        } elseif ($TemplateFilter -and $Standard.TemplateId -ne $TemplateFilter -and -not $ScopedStandardKeys.Contains($FieldName)) {
+            # Not written by this template and not one of its standards: belongs to another template.
+            continue
         }
 
         # decode field names that are hex encoded (e.g. QuarantineTemplates)
