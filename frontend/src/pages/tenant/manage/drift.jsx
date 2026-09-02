@@ -2479,21 +2479,10 @@ const ManageDriftPage = () => {
         </Menu>
       ))}
 
-      {/* Hidden ExecutiveReportButton that gets triggered programmatically */}
+      {/* Hidden ExecutiveReportButton that gets triggered programmatically; it loads its own
+          report data, so it takes no tenant props. */}
       <Box sx={{ position: 'absolute', top: -9999, left: -9999 }}>
-        <ExecutiveReportButton
-          ref={reportButtonRef}
-          tenantName={currentTenantData?.displayName || tenantFilter}
-          tenantId={currentTenantData?.customerId}
-          userStats={{
-            licensedUsers: 0, // These would come from actual user data APIs
-            unlicensedUsers: 0,
-            guests: 0,
-            globalAdmins: 0,
-          }}
-          standardsData={standardsApi.data}
-          organizationData={currentTenantData}
-        />
+        <ExecutiveReportButton ref={reportButtonRef} />
       </Box>
     </HeaderedTabbedLayout>
   );
