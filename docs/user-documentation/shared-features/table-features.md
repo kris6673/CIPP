@@ -112,7 +112,9 @@ On some pages a single click anywhere in a row opens that flyout directly, witho
 
 Where a row has a page of its own, holding Ctrl (Cmd on a Mac) while clicking, or clicking with the middle mouse button, opens that page in a new browser tab. Under All Tenants the new tab carries the row's own tenant, so you arrive on the tenant the row belongs to rather than the one selected in CIPP. Rows with nothing to open, and rows missing the detail the destination needs, do nothing.
 
-Clicking a button, link, checkbox or menu inside a row does that control's job and nothing else. Selecting text is left alone in the same way: dragging across a cell, or clicking while text is selected, does not open the flyout.
+Clicking a button, link, checkbox or menu inside a row does that control's job and nothing else. Selecting text is left alone in the same way: dragging across a cell, or clicking while text is selected, does not open the flyout, and right-clicking while text is selected gives you the browser's own menu so you can copy what you have highlighted.
+
+The cursor shows what you are over. Plain cell text carries an I-beam and can be selected and copied. Chips, buttons, links and checkboxes carry a hand, and on pages where a click opens the preview the rest of the row carries a hand as well.
 
 ## Column Options
 
