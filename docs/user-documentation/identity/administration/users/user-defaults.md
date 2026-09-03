@@ -1,6 +1,6 @@
-# User Defaults
+# User Templates
 
-User default templates hold the settings applied to new users at creation time, so an operator filling in the Add User form starts from a filled-in page rather than a blank one. Templates belong to the tenant selected in CIPP, and one template per tenant can be marked as the default.
+User Templates hold the settings applied to new users at creation time, so an operator filling in the Add User form starts from a filled-in page rather than a blank one. Templates belong to the tenant selected in CIPP, and one template per tenant can be marked as the default.
 
 ## Add Template
 
@@ -48,7 +48,7 @@ A template can list the tenant's shared mailboxes that every new user should get
 {% hint style="info" %}
 Mailbox access with `Full Access` is automapped, so Outlook adds the mailbox on its own; choose `Full Access (no Automapping)` to grant the same access without that. When both variants are selected, the no-automapping one wins. Calendar access cannot work that way: it is granted with a sharing invitation, and the user adds the calendar by clicking the link in the email they receive.
 
-Since a brand-new user is not a usable Exchange recipient right away, both grants are queued as scheduled tasks that run **15 minutes after the user is created**, visible under [scheduler](../../tools/scheduler/ "mention"). For calendars, only the access levels Exchange sends an invitation for are offered: `Editor`, `Reviewer`, `Limited Details` and `Availability Only`.
+Since a brand-new user is not a usable Exchange recipient right away, both grants are queued as scheduled tasks that run **15 minutes after the user is created**, visible under [scheduler](../../../tools/scheduler/ "mention"). For calendars, only the access levels Exchange sends an invitation for are offered: `Editor`, `Reviewer`, `Limited Details` and `Availability Only`.
 {% endhint %}
 
 Each permission level is granted by its own task, so a mailbox with both `Full Access` and `Send As` produces two entries in the Scheduler. Only mailboxes that are genuinely shared mailboxes in the tenant are granted: anything else in the list is skipped and reported on the user creation results, and if the tenant's shared mailboxes cannot be read at all, no shared access is granted.
@@ -69,4 +69,4 @@ Each permission level is granted by its own task, so a mailbox with both `Full A
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Edit Template</td><td>Opens the selected template to allow you to change the attributes that were previously set.</td><td>false</td></tr><tr><td>Delete Template</td><td>Opens a modal to confirm deletion of the selected template(s)</td><td>true</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
-{% include "../../../../.gitbook/includes/feature-request.md" %}
+{% include "../../../../../.gitbook/includes/feature-request.md" %}

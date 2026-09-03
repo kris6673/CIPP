@@ -19,7 +19,7 @@ Creates a single user in the selected tenant. **Create User** submits the form, 
 | Field                             | Description                                                                                                                                                                                                       |
 | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Copy properties from another user | Pre-fills the form from an existing user's name, job, address and contact details. Licences and group memberships are not copied by this selector.                                                                |
-| User Template (optional)          | Applies a saved user template, filling in the properties, licences, groups and shared access it defines. Templates are managed on the [user-defaults.md](../../../tenant/manage/user-defaults.md "mention") page. |
+| User Template (optional)          | Applies a saved user template, filling in the properties, licences, groups and shared access it defines. Templates are managed on the [user-defaults.md](user-defaults.md "mention") page. |
 
 **Identity**
 
