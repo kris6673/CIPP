@@ -20,7 +20,7 @@ function Get-CIPPSPOSiteBulk {
     Array of full site URLs to read.
 
     .PARAMETER MaxConcurrency
-    Upper bound on in-flight requests (default 8); the SPO connection pool caps it to 10 regardless.
+    Upper bound on in-flight requests (default 8); the SPO connection pool caps it to 5 regardless.
 
     .PARAMETER UseCertificate
     Authenticate app-only with the SAM certificate (SharePoint app-only requires it).

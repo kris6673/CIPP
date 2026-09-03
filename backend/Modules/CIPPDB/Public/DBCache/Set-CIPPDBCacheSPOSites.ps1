@@ -28,6 +28,25 @@ function Set-CIPPDBCacheSPOSites {
 
         $Sites = @(Get-CIPPSPOSite -TenantFilter $TenantFilter -UseCertificate | Where-Object { $_ -and $_.Url })
 
+        # The tenant-wide site enumeration (GetSitePropertiesFromSharePoint) hardcodes
+        # ShowPeoplePickerSuggestionsForGuestUsers to False for EVERY site - only the per-site
+        # GetSitePropertiesByUrl returns its real value (confirmed on a live tenant: enumeration False,
+        # single-site True). Every other property the enumeration returns is accurate, so correct just
+        # this one field with an authoritative concurrent per-site read; cache consumers (the
+        # SPGuestPeoplePicker standard) then see the true value instead of a uniform False.
+        $PeoplePicker = @{}
+        if ($Sites.Count -gt 0) {
+            try {
+                foreach ($Result in @(Get-CIPPSPOSiteBulk -TenantFilter $TenantFilter -SiteUrls @($Sites.Url) -MaxConcurrency 5 -UseCertificate)) {
+                    if ($Result.Success -and $Result.Site) {
+                        $PeoplePicker["$($Result.SiteUrl)"] = [bool]$Result.Site.ShowPeoplePickerSuggestionsForGuestUsers
+                    }
+                }
+            } catch {
+                Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "SPOSites: authoritative People Picker read failed; falling back to the enumeration value for this run: $($_.Exception.Message)" -sev Warning
+            }
+        }
+
         # Admin-manageable per-site settings (mirrors Invoke-ListSiteProperties' field set, plus the
         # People Picker and unmanaged-device policy). Enum values stay numeric as CSOM returns them.
         $Rows = @($Sites | Select-Object `
@@ -37,7 +56,8 @@ function Set-CIPPDBCacheSPOSites {
             SharingAllowedDomainList, SharingBlockedDomainList, OverrideTenantAnonymousLinkExpirationPolicy,
             AnonymousLinkExpirationInDays, LockState, StorageMaximumLevel, StorageWarningLevel, StorageUsage,
             InheritVersionPolicyFromTenant, EnableAutoExpirationVersionTrim, MajorVersionLimit,
-            ExpireVersionsAfterDays, ConditionalAccessPolicy, ShowPeoplePickerSuggestionsForGuestUsers)
+            ExpireVersionsAfterDays, ConditionalAccessPolicy,
+            @{ n = 'ShowPeoplePickerSuggestionsForGuestUsers'; e = { if ($PeoplePicker.ContainsKey("$($_.Url)")) { $PeoplePicker["$($_.Url)"] } else { [bool]$_.ShowPeoplePickerSuggestionsForGuestUsers } } })
 
         Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'SPOSites' -Data $Rows -AddCount -ClearOnEmpty
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($Rows.Count) SharePoint site settings" -sev Debug
