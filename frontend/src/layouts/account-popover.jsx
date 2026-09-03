@@ -1,7 +1,6 @@
 import { useCallback } from "react";
 import PropTypes from "prop-types";
 import { useRouter } from "next/navigation";
-import toast from "react-hot-toast";
 import ArrowPathIcon from "@heroicons/react/24/outline/ArrowPathIcon";
 import ArrowRightOnRectangleIcon from "@heroicons/react/24/outline/ArrowRightOnRectangleIcon";
 import ChevronDownIcon from "@heroicons/react/24/outline/ChevronDownIcon";
@@ -76,19 +75,21 @@ export const AccountPopover = (props) => {
   // through the standard confirm dialog, which also renders the API result.
   const refreshAccessDialog = useDialog();
 
-  const handleLogout = useCallback(async () => {
+  const handleLogout = useCallback(() => {
+    const logoutUrl =
+      "/.auth/logout?post_logout_redirect_uri=" + encodeURIComponent(paths.index);
     try {
       popover.handleClose();
       // delete query cache and persisted data
       queryClient.clear();
 
-      router.push("/.auth/logout?post_logout_redirect_uri=" + encodeURIComponent(paths.index));
+      router.push(logoutUrl);
     } catch (err) {
       console.error(err);
-      console.log(orgData);
-      toast.error("Something went wrong");
+      // Fall back to a hard navigation so a router failure still logs the user out.
+      window.location.href = logoutUrl;
     }
-  }, [router, popover]);
+  }, [router, popover, queryClient]);
 
   const defaultAvatar = (
     <Avatar

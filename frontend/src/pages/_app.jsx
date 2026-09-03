@@ -1,5 +1,4 @@
 import Head from 'next/head'
-import { Toaster } from 'react-hot-toast'
 import { Provider as ReduxProvider } from 'react-redux'
 import { CacheProvider } from '@emotion/react'
 import { ThemeProvider } from '@mui/material/styles'
@@ -289,7 +288,6 @@ const App = (props) => {
                               </TutorialProvider>
                             </PrivateRoute>
                           </ErrorBoundary>
-                          <Toaster position="top-center" />
                           {supportRecording && !supportBundleOpen && (
                             <Chip
                               icon={<FiberManualRecord />}
