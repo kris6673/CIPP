@@ -42,6 +42,7 @@ const Page = () => {
       data: { ID: "azureAdUserId" },
       confirmText: "Are you sure you want to block the sign-in for this user?",
       multiPost: false,
+      condition: (row) => row.accountEnabled !== false,
     },
     {
       label: "Delete User",
@@ -54,11 +55,25 @@ const Page = () => {
     },
   ];
 
+  const filters = [
+    {
+      filterName: "Sign-in allowed",
+      value: [{ id: "accountEnabled", value: "Yes" }],
+      type: "column",
+    },
+    {
+      filterName: "Sign-in blocked",
+      value: [{ id: "accountEnabled", value: "No" }],
+      type: "column",
+    },
+  ];
+
   const offCanvas = {
     extendedInfoFields: [
       "tenantDisplayName",
       "displayName",
       "userPrincipalName",
+      "accountEnabled",
       "userType",
       "createdDateTime",
       "lastSignInDateTime",
@@ -76,6 +91,7 @@ const Page = () => {
     "tenantDisplayName",
     "userPrincipalName",
     "displayName",
+    "accountEnabled",
     "lastSignInDateTime",
     "lastNonInteractiveSignInDateTime",
     "lastSuccessfulSignInDateTime",
@@ -97,6 +113,7 @@ const Page = () => {
           condition: (row) => Boolean(row?.azureAdUserId),
         }}
         simpleColumns={simpleColumns}
+        filters={filters}
         dataSourceControls={reportDB.controls}
       />
       {reportDB.syncDialog}
