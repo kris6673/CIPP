@@ -1,13 +1,11 @@
 import { useState } from 'react'
+import { CippIcons } from '../../../../utils/icon-registry'
 import { Layout as DashboardLayout } from '../../../../layouts/index'
 import { CippTablePage } from '../../../../components/CippComponents/CippTablePage.jsx'
-import { TrashIcon } from '@heroicons/react/24/outline'
-import { Edit, RocketLaunch } from '@mui/icons-material'
 import { CippAppTemplateDrawer } from '../../../../components/CippComponents/CippAppTemplateDrawer'
 import CippJsonView from '../../../../components/CippFormPages/CippJSONView'
 import { Box } from '@mui/material'
 import { ApiGetCall } from '../../../../api/ApiCall'
-import { GitHub } from '@mui/icons-material'
 
 const Page = () => {
   const pageTitle = 'Application Templates'
@@ -24,7 +22,7 @@ const Page = () => {
     {
       label: 'Edit Template',
       pinned: true,
-      icon: <Edit />,
+      icon: <CippIcons.Edit />,
       color: 'info',
       noConfirm: true,
       customFunction: (row) => {
@@ -36,7 +34,7 @@ const Page = () => {
       label: 'Save to GitHub',
       type: 'POST',
       url: '/api/ExecCommunityRepo',
-      icon: <GitHub />,
+      icon: <CippIcons.GitHub />,
       data: {
         Action: 'UploadTemplate',
         GUID: 'GUID',
@@ -80,7 +78,7 @@ const Page = () => {
       label: 'Deploy Template',
       type: 'POST',
       url: '/api/ExecDeployAppTemplate',
-      icon: <RocketLaunch />,
+      icon: <CippIcons.RocketLaunch />,
       color: 'info',
       fields: [
         {
@@ -143,7 +141,7 @@ const Page = () => {
       url: '/api/RemoveAppTemplate',
       data: { ID: 'GUID' },
       confirmText: 'Delete the template "[displayName]"?',
-      icon: <TrashIcon />,
+      icon: <CippIcons.Delete />,
       color: 'danger',
     },
   ]

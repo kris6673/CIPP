@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
+import { CippIcons } from '../../utils/icon-registry'
 import { Button, Stack, IconButton } from '@mui/material'
-import { RocketLaunch, Sync } from '@mui/icons-material'
 import { useForm, useWatch, useFormState } from 'react-hook-form'
 import { CippOffCanvas } from './CippOffCanvas'
 import { ApiGetCall, ApiPostCall } from '../../api/ApiCall'
@@ -127,7 +127,7 @@ export const CippPolicyDeployDrawer = ({
       <PermissionButton
         {...(PermissionButton !== Button ? { requiredPermissions } : {})}
         onClick={() => setDrawerVisible(true)}
-        startIcon={<RocketLaunch />}
+        startIcon={<CippIcons.RocketLaunch />}
       >
         {buttonText}
       </PermissionButton>
@@ -186,7 +186,7 @@ export const CippPolicyDeployDrawer = ({
             customAction={{
               position: 'outside',
               label: 'Refresh Templates',
-              icon: <Sync />,
+              icon: <CippIcons.Sync />,
               onClick: () => {
                 CATemplates.refetch()
               },

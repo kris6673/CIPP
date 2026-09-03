@@ -1,12 +1,7 @@
 import { useCallback } from "react";
+import { CippIcons } from "../utils/icon-registry";
 import PropTypes from "prop-types";
 import { useRouter } from "next/navigation";
-import ArrowPathIcon from "@heroicons/react/24/outline/ArrowPathIcon";
-import ArrowRightOnRectangleIcon from "@heroicons/react/24/outline/ArrowRightOnRectangleIcon";
-import ChevronDownIcon from "@heroicons/react/24/outline/ChevronDownIcon";
-import MagnifyingGlassIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
-import MoonIcon from "@heroicons/react/24/outline/MoonIcon";
-import SunIcon from "@heroicons/react/24/outline/SunIcon";
 import {
   Avatar,
   Box,
@@ -28,8 +23,6 @@ import { useDialog } from "../hooks/use-dialog";
 import { paths } from "../paths";
 import { ApiGetCall } from "../api/ApiCall";
 import { CippApiDialog } from "../components/CippComponents/CippApiDialog";
-import { CogIcon, DocumentTextIcon, LifebuoyIcon, TrashIcon } from "@heroicons/react/24/outline";
-import ArrowTopRightOnSquareIcon from "@heroicons/react/24/outline/ArrowTopRightOnSquareIcon";
 import { useReleaseNotes } from "../contexts/release-notes-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
@@ -139,7 +132,7 @@ export const AccountPopover = (props) => {
                     <CircularProgress size={20} color="textPrimary" />
                   ) : (
                     <SvgIcon color="action" fontSize="small">
-                      <ChevronDownIcon />
+                      <CippIcons.ChevronDownIcon />
                     </SvgIcon>
                   )}
                 </>
@@ -199,7 +192,7 @@ export const AccountPopover = (props) => {
                   >
                     <ListItemIcon>
                       <SvgIcon fontSize="small">
-                        <MagnifyingGlassIcon />
+                        <CippIcons.MagnifyingGlassIcon />
                       </SvgIcon>
                     </ListItemIcon>
                     <ListItemText primary="Universal Search" />
@@ -208,7 +201,7 @@ export const AccountPopover = (props) => {
                 <ListItemButton onClick={() => { popover.handleClose(); onThemeSwitch(); }}>
                   <ListItemIcon>
                     <SvgIcon fontSize="small">
-                      {paletteMode === "dark" ? <SunIcon /> : <MoonIcon />}
+                      {paletteMode === "dark" ? <CippIcons.SunIcon /> : <CippIcons.MoonIcon />}
                     </SvgIcon>
                   </ListItemIcon>
                   <ListItemText primary={paletteMode === "dark" ? "Light Mode" : "Dark Mode"} />
@@ -218,7 +211,7 @@ export const AccountPopover = (props) => {
             <ListItemButton onClick={() => { popover.handleClose(); router.push("/cipp/preferences"); }}>
               <ListItemIcon>
                 <SvgIcon fontSize="small">
-                  <CogIcon />
+                  <CippIcons.CogIcon />
                 </SvgIcon>
               </ListItemIcon>
               <ListItemText primary="Preferences" />
@@ -231,7 +224,7 @@ export const AccountPopover = (props) => {
             >
               <ListItemIcon>
                 <SvgIcon fontSize="small">
-                  <DocumentTextIcon />
+                  <CippIcons.DocumentTextIcon />
                 </SvgIcon>
               </ListItemIcon>
               <ListItemText primary="View release notes" />
@@ -251,12 +244,12 @@ export const AccountPopover = (props) => {
                   >
                     <ListItemIcon>
                       <SvgIcon fontSize="small">
-                        <LifebuoyIcon />
+                        <CippIcons.LifebuoyIcon />
                       </SvgIcon>
                     </ListItemIcon>
                     <ListItemText primary={link.name} />
                     <SvgIcon sx={{ fontSize: 16, color: "text.secondary" }}>
-                      <ArrowTopRightOnSquareIcon />
+                      <CippIcons.ArrowTopRightOnSquareIcon />
                     </SvgIcon>
                   </ListItemButton>
                 ))}
@@ -268,7 +261,7 @@ export const AccountPopover = (props) => {
                 >
                   <ListItemIcon>
                     <SvgIcon fontSize="small">
-                      <TrashIcon />
+                      <CippIcons.TrashIcon />
                     </SvgIcon>
                   </ListItemIcon>
                   <ListItemText primary="Clear Cache and Reload" />
@@ -284,7 +277,7 @@ export const AccountPopover = (props) => {
             >
               <ListItemIcon>
                 <SvgIcon fontSize="small">
-                  <ArrowPathIcon />
+                  <CippIcons.ArrowPathIcon />
                 </SvgIcon>
               </ListItemIcon>
               <ListItemText
@@ -295,7 +288,7 @@ export const AccountPopover = (props) => {
             <ListItemButton onClick={handleLogout}>
               <ListItemIcon>
                 <SvgIcon fontSize="small">
-                  <ArrowRightOnRectangleIcon />
+                  <CippIcons.ArrowRightOnRectangleIcon />
                 </SvgIcon>
               </ListItemIcon>
               <ListItemText primary="Log out" />

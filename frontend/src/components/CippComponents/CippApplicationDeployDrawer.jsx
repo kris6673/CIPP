@@ -1,8 +1,8 @@
 import React, { useEffect, useCallback, useState } from 'react'
+import { CippIcons } from '../../utils/icon-registry'
 import { Divider, Button, Alert, CircularProgress } from '@mui/material'
 import { Grid } from '@mui/system'
 import { useForm, useWatch } from 'react-hook-form'
-import { Add } from '@mui/icons-material'
 import { CippOffCanvas } from './CippOffCanvas'
 import CippFormComponent from './CippFormComponent'
 import { CippFormTenantSelector } from './CippFormTenantSelector'
@@ -121,7 +121,7 @@ export const CippApplicationDeployDrawer = ({
       <PermissionButton
         {...(PermissionButton !== Button ? { requiredPermissions } : {})}
         onClick={() => setDrawerVisible(true)}
-        startIcon={<Add />}
+        startIcon={<CippIcons.Add />}
       >
         {buttonText}
       </PermissionButton>

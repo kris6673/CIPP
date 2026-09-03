@@ -1,4 +1,5 @@
 import Head from 'next/head'
+import { CippIcons } from '../utils/icon-registry'
 import { Provider as ReduxProvider } from 'react-redux'
 import { CacheProvider } from '@emotion/react'
 import { ThemeProvider } from '@mui/material/styles'
@@ -45,17 +46,6 @@ import {
 import TimeAgo from 'javascript-time-ago'
 import en from 'javascript-time-ago/locale/en.json'
 import CippSpeedDial from '../components/CippComponents/CippSpeedDial'
-import {
-  Help as HelpIcon,
-  BugReport as BugReportIcon,
-  Feedback as FeedbackIcon,
-  AutoStories,
-  Gavel,
-  ClearAll as ClearAllIcon,
-  SupportAgent,
-  FiberManualRecord,
-} from '@mui/icons-material'
-import { School as TutorialIcon } from '@mui/icons-material'
 import { getHelpLinks, clearCippCache } from '../utils/help-links'
 import { Chip, SvgIcon } from '@mui/material'
 import React, { useEffect, useState, useRef } from 'react'
@@ -203,29 +193,29 @@ const App = (props) => {
   // Link/cache destinations are shared with AccountPopover's mobile help section — see
   // utils/help-links.js. Only the icons and SpeedDial-specific actions live here.
   const helpLinkIcons = {
-    'bug-report': <BugReportIcon />,
-    'feature-request': <FeedbackIcon />,
+    'bug-report': <CippIcons.BugReport />,
+    'feature-request': <CippIcons.Feedback />,
     discord: <img src="/discord-mark-blue.svg" alt="Discord" style={{ width: 24, height: 24 }} />,
-    documentation: <AutoStories />,
+    documentation: <CippIcons.AutoStories />,
   }
 
   const speedDialActions = [
     {
       id: 'clearCache',
-      icon: <ClearAllIcon />,
+      icon: <CippIcons.ClearAll />,
       name: 'Clear Cache and Reload',
       onClick: () => clearCippCache(queryClient),
     },
     {
       id: 'license',
-      icon: <Gavel />,
+      icon: <CippIcons.Gavel />,
       name: 'License',
       href: '/license',
       onClick: () => route.push('/license'),
     },
     {
       id: 'supportBundle',
-      icon: <SupportAgent />,
+      icon: <CippIcons.SupportAgent />,
       name: 'Generate Support File',
       onClick: () => setSupportBundleOpen(true),
     },
@@ -236,7 +226,7 @@ const App = (props) => {
     })),
     {
       id: 'tutorials',
-      icon: <TutorialIcon />,
+      icon: <CippIcons.School />,
       name: 'Tutorials',
       onClick: () => setTutorialDialogOpen(true),
     },
@@ -290,7 +280,7 @@ const App = (props) => {
                           </ErrorBoundary>
                           {supportRecording && !supportBundleOpen && (
                             <Chip
-                              icon={<FiberManualRecord />}
+                              icon={<CippIcons.FiberManualRecord />}
                               label="Recording — click to stop"
                               color="error"
                               onClick={() => setSupportBundleOpen(true)}
@@ -309,7 +299,7 @@ const App = (props) => {
                           )}
                           <CippSpeedDial
                             actions={speedDialActions}
-                            icon={<HelpIcon />}
+                            icon={<CippIcons.Help />}
                             position={{
                               bottom: 12,
                               right:
