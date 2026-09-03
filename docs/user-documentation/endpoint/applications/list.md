@@ -156,12 +156,12 @@ Every application type except the MSP apps offers the same assignment choices at
 
 | Option                          | Description                                                                                                                    |
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Do not assign                   | Creates the application in Intune without targeting anyone.                                                                    |
-| Assign to all users             | Targets all licensed users in each selected tenant.                                                                            |
-| Assign to all devices           | Targets all devices in each selected tenant.                                                                                   |
-| Assign to all users and devices | Targets both of the above.                                                                                                     |
+| Do Not Assign                   | Creates the application in Intune without targeting anyone.                                                                    |
+| Assign to All Users             | Targets all licensed users in each selected tenant.                                                                            |
+| Assign to All Devices           | Targets all devices in each selected tenant.                                                                                   |
+| Assign to All Users and Devices | Targets both of the above.                                                                                                     |
 | Assign to Custom Group          | Targets named groups. Enter the group display names separated by commas, where `*` may be used as a wildcard.                  |
-| Exclude Group Names             | Shown for every option except Do not assign. Excludes the named groups, again comma separated and accepting `*` as a wildcard. |
+| Exclude Group Names             | Shown for every option except Do Not Assign. Excludes the named groups, again comma separated and accepting `*` as a wildcard. |
 
 {% hint style="info" %}
 Group names here are matched by display name across every selected tenant, so a wildcard such as `SEC-Workstations*` lets one deployment target similarly named groups in each customer without listing them individually.
