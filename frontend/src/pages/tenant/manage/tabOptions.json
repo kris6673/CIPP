@@ -25,11 +25,6 @@
     "icon": "Policy"
   },
   {
-    "label": "User Defaults",
-    "path": "/tenant/manage/user-defaults",
-    "icon": "Person"
-  },
-  {
     "label": "History",
     "path": "/tenant/manage/history",
     "icon": "Timeline"
