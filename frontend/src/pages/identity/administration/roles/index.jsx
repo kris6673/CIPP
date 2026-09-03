@@ -71,7 +71,7 @@ const Page = () => {
         {
           type: 'textField',
           name: 'templateName',
-          label: 'Template name',
+          label: 'Template Name',
           required: true,
           validators: { required: 'A template name is required' },
         },

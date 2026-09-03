@@ -257,10 +257,10 @@ export const CippExchangeActions = () => {
       condition: (row) => row.ArchiveGuid !== "00000000-0000-0000-0000-000000000000",
     },
     {
-      label: "Set Global Address List visibility",
+      label: "Set Global Address List Visibility",
       type: "POST",
       url: "/api/ExecHideFromGAL",
-      icon: <Visibility />,
+      icon: <CippIcons.EyeIcon />,
       data: {
         ID: "UPN",
       },
@@ -268,7 +268,7 @@ export const CippExchangeActions = () => {
         {
           type: "radio",
           name: "HidefromGAL",
-          label: "Global Address List visibility",
+          label: "Global Address List Visibility",
           options: [
             { label: "Hidden", value: true },
             { label: "Shown", value: false },

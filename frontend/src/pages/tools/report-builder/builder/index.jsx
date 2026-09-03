@@ -226,9 +226,9 @@ const TABLE_ACTIONS = [
   null,
   { label: 'Insert row above', Icon: InsertRowTop, command: 'addRowBefore' },
   { label: 'Insert row below', Icon: InsertRowBottom, command: 'addRowAfter' },
-  { label: 'Delete row', Icon: DeleteRow, command: 'deleteRow' },
+  { label: 'Delete Row', Icon: DeleteRow, command: 'deleteRow' },
   null,
-  { label: 'Delete table', Icon: GridOff, command: 'deleteTable' },
+  { label: 'Delete table', Icon: CippIcons.GridOff, command: 'deleteTable' },
 ]
 
 const TableControls = ({ editor }) => {

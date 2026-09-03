@@ -703,7 +703,7 @@ export const nativeMenuItems = [
             permissions: ['Endpoint.Device.*'],
           },
           {
-            title: 'Work from anywhere',
+            title: 'Work from Anywhere',
             path: '/endpoint/reports/workfromanywhere',
             permissions: ['Endpoint.Device.*'],
           },
@@ -885,7 +885,7 @@ export const nativeMenuItems = [
         permissions: ['Exchange.TransportRule.*', 'Exchange.Connector.*'],
         items: [
           {
-            title: 'Transport rules',
+            title: 'Transport Rules',
             path: '/email/transport/list-rules',
             permissions: ['Exchange.TransportRule.*'],
           },
@@ -918,18 +918,18 @@ export const nativeMenuItems = [
             permissions: ['Exchange.SpamFilter.*'],
           },
           {
-            title: 'Spamfilter templates',
+            title: 'Spamfilter Templates',
             path: '/email/spamfilter/list-templates',
             permissions: ['Exchange.SpamFilter.*'],
             scope: 'global',
           },
           {
-            title: 'Connection filter',
+            title: 'Connection Filter',
             path: '/email/spamfilter/list-connectionfilter',
             permissions: ['Exchange.ConnectionFilter.*'],
           },
           {
-            title: 'Connection filter templates',
+            title: 'Connection Filter Templates',
             path: '/email/spamfilter/list-connectionfilter-templates',
             permissions: ['Exchange.ConnectionFilter.*'],
             scope: 'global',

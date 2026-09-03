@@ -75,7 +75,7 @@ const Page = () => {
       ],
     },
     {
-      label: "Enable policy",
+      label: "Enable Policy",
       type: "POST",
       url: "/api/EditCAPolicy",
       data: {
@@ -84,11 +84,11 @@ const Page = () => {
       },
       confirmText: `Are you sure you want to enable "[displayName]"?`,
       condition: (row) => row.state !== "enabled",
-      icon: <Check />,
+      icon: <CippIcons.Check />,
       color: "info",
     },
     {
-      label: "Disable policy",
+      label: "Disable Policy",
       type: "POST",
       url: "/api/EditCAPolicy",
       data: {
@@ -121,18 +121,18 @@ const Page = () => {
         GUID: "id",
       },
       confirmText: `Are you sure you want to add the service provider exception to "[displayName]"?`,
-      icon: <VerifiedUser />,
+      icon: <CippIcons.VerifiedUser />,
       color: "warning",
     },
     {
-      label: "Delete policy",
+      label: "Delete Policy",
       type: "POST",
       url: "/api/RemoveCAPolicy",
       data: {
         GUID: "id",
       },
       confirmText: `Are you sure you want to delete "[displayName]"?`,
-      icon: <Delete />,
+      icon: <CippIcons.Delete />,
       color: "danger",
     },
   ];

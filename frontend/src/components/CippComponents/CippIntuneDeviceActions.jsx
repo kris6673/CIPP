@@ -438,9 +438,9 @@ export const getIntuneDeviceActions = ({ tenantFilter } = {}) => [
       'Are you sure you want to Autopilot Reset [deviceName]? This wipes the device and keeps enrollment data, removes all user data on the device, and the device will re-provision through Windows Autopilot.',
   },
   {
-    label: 'Delete device',
+    label: 'Delete Device',
     type: 'POST',
-    icon: <Recycling />,
+    icon: <CippIcons.Recycling />,
     url: '/api/ExecDeviceAction',
     data: {
       GUID: 'id',

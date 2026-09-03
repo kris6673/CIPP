@@ -175,7 +175,7 @@ const Page = () => {
                         { value: "Windows", label: "Windows" },
                         { value: "iOS", label: "iOS" },
                         { value: "Android", label: "Android" },
-                        { value: "MacOS", label: "MacOS" },
+                        { value: "MacOS", label: "macOS" },
                         { value: "Linux", label: "Linux" },
                       ]}
                       formControl={formControl}

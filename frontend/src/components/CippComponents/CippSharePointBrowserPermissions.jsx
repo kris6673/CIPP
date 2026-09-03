@@ -1123,7 +1123,7 @@ export const CippSharePointBrowserPermissions = ({
                       count={activeGroup?.members?.length ?? 0}
                       actions={[
                         {
-                          label: 'Add user',
+                          label: 'Add User',
                           onClick: () => addUserDialog.handleOpen(),
                           disabled: !canNestIntoActiveGroup,
                           disabledTitle: !canWrite
@@ -1133,7 +1133,7 @@ export const CippSharePointBrowserPermissions = ({
                               : 'Unavailable',
                         },
                         {
-                          label: 'Add group',
+                          label: 'Add Group',
                           onClick: () => addGroupDialog.handleOpen(),
                           disabled: !canNestIntoActiveGroup,
                           disabledTitle: !canWrite
