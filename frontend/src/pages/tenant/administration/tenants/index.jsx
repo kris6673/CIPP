@@ -38,7 +38,7 @@ const Page = () => {
     },
     {
       label: "Delete Capabilities Cache",
-      type: "GET",
+      type: "POST",
       url: "/api/RemoveTenantCapabilitiesCache",
       data: { defaultDomainName: "defaultDomainName" },
       confirmText: "Are you sure you want to delete the capabilities cache for this tenant?",

@@ -33,7 +33,7 @@ export const CippGdapActions = () => [
   },
   {
     label: "Enable automatic extension",
-    type: "GET",
+    type: "POST",
     url: "/api/ExecAutoExtendGDAP",
     data: { ID: "id" },
     confirmText: "Are you sure you want to enable auto-extend for this relationship?",
@@ -102,7 +102,7 @@ export const CippGdapActions = () => [
   },
   {
     label: "Terminate Relationship",
-    type: "GET",
+    type: "POST",
     url: "/api/ExecDeleteGDAPRelationship",
     data: { GDAPID: "id" },
     confirmText: "Are you sure you want to terminate this relationship?",
