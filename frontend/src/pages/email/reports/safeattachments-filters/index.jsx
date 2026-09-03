@@ -38,7 +38,7 @@ const Page = () => {
     /*
     {
       label: "Delete Rule",
-      type: "GET",
+      type: "POST",
       url: "/api/RemoveSafeAttachmentsFilter",
       data: {
         RuleName: "RuleName",

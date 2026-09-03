@@ -113,7 +113,7 @@ const Page = () => {
       },
       {
         label: "Delete Rule",
-        type: "GET",
+        type: "POST",
         icon: <DeleteForever />,
         url: "/api/ExecDeleteSafeLinksPolicy",
         data: {

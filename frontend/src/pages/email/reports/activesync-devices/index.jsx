@@ -7,7 +7,7 @@ const Page = () => {
   const actions = [
     {
       label: 'Allow Device',
-      type: 'GET',
+      type: 'POST',
       icon: <CheckCircle />,
       url: '/api/ExecMailboxMobileDevices',
       data: {
@@ -24,7 +24,7 @@ const Page = () => {
     },
     {
       label: 'Block Device',
-      type: 'GET',
+      type: 'POST',
       icon: <Block />,
       url: '/api/ExecMailboxMobileDevices',
       data: {
@@ -41,7 +41,7 @@ const Page = () => {
     },
     {
       label: 'Delete Device',
-      type: 'GET',
+      type: 'POST',
       icon: <TrashIcon />,
       url: '/api/ExecMailboxMobileDevices',
       data: {

@@ -42,7 +42,7 @@ export const CippGdapActions = () => [
   },
   {
     label: "Remove Global Administrator from Relationship",
-    type: "GET",
+    type: "POST",
     url: "/api/ExecGDAPRemoveGArole",
     data: { GDAPID: "id" },
     confirmText: "Are you sure you want to remove Global Administrator from this relationship?",
