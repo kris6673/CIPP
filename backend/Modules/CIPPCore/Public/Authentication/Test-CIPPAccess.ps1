@@ -276,6 +276,9 @@ function Test-CIPPAccess {
             # Lets the frontend point at the management portal for anything the instance's own
             # identity cannot do, such as custom domains on the shared App Service plan.
             $MeResponse['hosted'] = $env:CIPP_HOSTED -eq 'true'
+            # CIPP-NG (container web app on an App Service plan) versus a legacy function app plus
+            # static web app - the backend page shows different resources for each.
+            $MeResponse['ng'] = $env:CIPPNG -eq 'true'
 
             $CanManageAppSettings = $Permissions -contains 'CIPP.AppSettings.ReadWrite'
             $HasAnyPermission = ($Permissions | Measure-Object).Count -gt 0

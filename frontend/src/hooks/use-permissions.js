@@ -19,6 +19,8 @@ export const usePermissions = () => {
   // CyberDrain-hosted instance: some infrastructure (custom domains on the shared plan) is
   // managed in the management portal rather than from CIPP itself.
   const isHosted = Boolean(currentRole.data?.hosted);
+  // CIPP-NG (container web app on an App Service plan) versus a legacy function app + static web app.
+  const isNg = Boolean(currentRole.data?.ng);
 
   /**
    * Check if user has specific permissions
@@ -75,6 +77,7 @@ export const usePermissions = () => {
     isLoading,
     isAuthenticated,
     isHosted,
+    isNg,
     checkPermissions,
     checkRoles,
     checkAccess,
