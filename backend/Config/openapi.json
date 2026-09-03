@@ -14524,7 +14524,7 @@
         "tags": [
           "CIPP > Settings"
         ],
-        "description": "Returns Azure portal deep links for the CIPP deployment's own infrastructure (resource group, key vault, function app, static web app) plus its subscription, SKU, hosting mode and timezone.",
+        "description": "Returns Azure portal deep links for the CIPP deployment's own infrastructure (resource group, key vault, function app, static web app) plus its subscription, SKU and timezone. Whether the instance is CyberDrain-hosted comes from /api/me.",
         "responses": {
           "200": {
             "description": "Success",
