@@ -142,11 +142,13 @@ function Invoke-ExecAppServiceDomains {
 
                 $Body = @{
                     Results = @{
-                        SiteName         = $AppService.SiteName
-                        ResourceGroup    = $AppService.ResourceGroup
-                        DefaultHostName  = $AppService.Site.properties.defaultHostName
-                        InboundIpAddress = $AppService.Site.properties.inboundIpAddress
-                        Domains          = @($Domains | Sort-Object -Property IsDefault, Hostname)
+                        SiteName              = $AppService.SiteName
+                        ResourceGroup         = $AppService.ResourceGroup
+                        DefaultHostName       = $AppService.Site.properties.defaultHostName
+                        InboundIpAddress      = $AppService.Site.properties.inboundIpAddress
+                        # The App Service's own Custom domains blade - the fallback the wizard offers when Azure rejects a binding.
+                        AzurePortalDomainsUrl = "https://portal.azure.com/#@/resource/subscriptions/$($AppService.SubscriptionId)/resourceGroups/$($AppService.ResourceGroup)/providers/Microsoft.Web/sites/$($AppService.SiteName)/customDomains"
+                        Domains               = @($Domains | Sort-Object -Property IsDefault, Hostname)
                     }
                 }
             }

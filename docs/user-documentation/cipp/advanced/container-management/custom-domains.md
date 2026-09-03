@@ -57,7 +57,7 @@ CIPP no longer uses domain-verification TXT records. If an `asuid.<domain>` TXT 
 {% step %}
 ### Create hostname binding
 
-The wizard creates the hostname binding on the App Service. Azure validates ownership through the alias record the DNS check found (CNAME or A) as part of this step.
+The wizard creates the hostname binding on the App Service. Azure validates ownership through the alias record the DNS check found (CNAME or A) as part of this step. If Azure keeps rejecting the binding, the wizard links to the App Service's **Custom domains** page in the Azure portal, where you can add the domain by hand and then reopen it in CIPP to provision the certificate.
 {% endstep %}
 
 {% step %}

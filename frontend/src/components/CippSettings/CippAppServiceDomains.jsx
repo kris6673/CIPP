@@ -370,6 +370,25 @@ const DomainWizard = ({ open, onClose, siteInfo, initialDomain }) => {
               </Alert>
             ) : null}
             <CippApiResults apiObject={bindingAction} />
+            {bindingAction.isError && siteInfo?.AzurePortalDomainsUrl ? (
+              <Alert
+                severity="info"
+                action={
+                  <Button
+                    color="inherit"
+                    size="small"
+                    href={siteInfo.AzurePortalDomainsUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open Azure portal
+                  </Button>
+                }
+              >
+                If Azure keeps rejecting the binding, add the domain on the App Service&apos;s
+                Custom domains page instead, then reopen it here to provision the certificate.
+              </Alert>
+            ) : null}
           </Stack>
         )}
 
@@ -626,9 +645,8 @@ export const CippAppServiceDomains = () => {
               </Button>
             }
           >
-            This instance is hosted by CyberDrain. Custom domains and their certificates are
-            managed in the management portal — the instance itself does not have permission to
-            change the shared App Service plan. The list below is read-only.
+            Custom domains for hosted instances are managed in the management portal. This list
+            is read-only.
           </Alert>
         ) : (
           <Alert severity="info">
