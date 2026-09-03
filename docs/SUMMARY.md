@@ -188,6 +188,7 @@
       * [Edit Template](user-documentation/tenant/gdap-management/role-templates/edit.md)
       * [Group Mappings](user-documentation/tenant/gdap-management/role-templates/mappings.md)
         * [Map an existing group (Advanced)](user-documentation/tenant/gdap-management/roles/add.md)
+    * [Role Mappings](user-documentation/tenant/gdap-management/roles/README.md)
     * [Invites](user-documentation/tenant/gdap-management/invites/README.md)
       * [New Invite](user-documentation/tenant/gdap-management/invites/add.md)
     * [Onboarding](user-documentation/tenant/gdap-management/onboarding/README.md)
