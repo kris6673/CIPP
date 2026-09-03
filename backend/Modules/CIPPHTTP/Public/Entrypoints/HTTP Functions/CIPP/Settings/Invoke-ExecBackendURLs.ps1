@@ -5,7 +5,7 @@ function Invoke-ExecBackendURLs {
     .ROLE
         CIPP.AppSettings.Read
     .DESCRIPTION
-        Returns Azure portal deep links for the CIPP deployment's own infrastructure (resource group, key vault, function app, static web app) plus its subscription, SKU, hosting mode and timezone.
+        Returns Azure portal deep links for the CIPP deployment's own infrastructure (resource group, key vault, function app, static web app) plus its subscription, SKU and timezone. Whether the instance is CyberDrain-hosted comes from /api/me.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -34,7 +34,6 @@ function Invoke-ExecBackendURLs {
         RGName             = $RGName
         FunctionName       = $env:WEBSITE_SITE_NAME
         SWAName            = $SWAName
-        Hosted             = $env:CIPP_HOSTED -eq 'true' ?? $false
         OS                 = $IsLinux ? 'Linux' : 'Windows'
         SKU                = $env:WEBSITE_SKU
     }

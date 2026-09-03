@@ -109,7 +109,6 @@ const Page = () => {
             <CippBackendCard
               backendComponents={backendComponents}
               item={item}
-              hosted={backendComponents?.data?.Results?.Hosted}
             />
           </Grid>
         ))}
