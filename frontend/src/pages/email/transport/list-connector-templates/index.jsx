@@ -1,7 +1,4 @@
 import { Layout as DashboardLayout } from "../../../../layouts/index";
-import { Button } from "@mui/material";
-import Link from "next/link";
-import { RocketLaunch } from "@mui/icons-material";
 import { CippTablePage } from "../../../../components/CippComponents/CippTablePage.jsx";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { GitHub } from "@mui/icons-material";
@@ -91,10 +88,6 @@ const Page = () => {
       actions={actions}
       offCanvas={offCanvas}
       simpleColumns={simpleColumns}
-      titleButton={{
-        label: "Add Template",
-        href: "/email/connectors/add-connector-templates",
-      }}
       cardButton={<CippAddConnectorDrawer requiredPermissions={cardButtonPermissions} />}
     />
   );
