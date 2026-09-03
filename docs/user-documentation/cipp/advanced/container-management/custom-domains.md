@@ -24,12 +24,12 @@ The App Service card shows the read-only details you need when creating DNS reco
 
 ## Table Details
 
-The Custom Domains table lists every hostname bound to the App Service. Selecting a row opens a details flyout showing the hostname, its SSL state, the binding type, and — where a certificate is present — its thumbprint and expiry date.
+The Custom Domains table lists every hostname bound to the App Service. Selecting a row opens a details flyout showing the hostname, its SSL state, the binding type and, where a certificate is present, its thumbprint and expiry date.
 
 | Column   | Description                                                                                                                                                                                             |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Hostname | The domain bound to the App Service.                                                                                                                                                                    |
-| Status   | The security state of the binding: Default (Azure-managed) for the built-in hostname, Secured (SNI SSL) or Secured (IP SSL) when a certificate is bound, Provisioning certificate (attempt N of 4) while CIPP is still issuing one in the background, Certificate not issued when those attempts ran out (the flyout shows the last error), or Not secured when no certificate has been requested. |
+| Status   | The security state of the binding: Default (Azure-managed) for the built-in hostname, Secured (SNI SSL) or Secured (IP SSL) when a certificate is bound, Provisioning certificate (attempt N of 4) while CIPP is still issuing one in the background, Certificate not issued (see details) once those attempts ran out (the flyout shows the last error), or Not secured when no certificate has been requested. |
 
 ## Table Actions
 
@@ -47,10 +47,10 @@ Enter the fully qualified domain CIPP should answer on. This can be a subdomain 
 
 * An **Alias** record: a CNAME pointing to the App Service default hostname for a subdomain, or an A record pointing to the inbound IP for an apex domain.
 
-Create the record, then select **Check DNS** to verify it. Once verified you can continue. A wildcard alias can't be resolved directly, so it passes this check and is validated by Azure when the binding is created. The record must point directly at the App Service — a proxied record is invisible to the check and to Azure's own validation.
+Create the record, then select **Check DNS** to verify it. Once verified you can continue. A wildcard alias can't be resolved directly, so it passes this check and is validated by Azure when the binding is created. The record must point directly at the App Service: a proxied record is invisible to the check and to Azure's own validation.
 
 {% hint style="warning" %}
-CIPP no longer uses domain-verification TXT records. If an `asuid.<domain>` TXT record exists from a previous setup, **remove it** — the wizard flags it when the DNS check finds one, and a leftover record blocks Azure's validation even when the alias record is correct.
+CIPP no longer uses domain-verification TXT records. If an `asuid.<domain>` TXT record exists from a previous setup, **remove it**: the wizard flags it when the DNS check finds one, and a leftover record blocks Azure's validation even when the alias record is correct.
 {% endhint %}
 {% endstep %}
 
