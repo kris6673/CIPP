@@ -33,6 +33,17 @@ param(
     # name no field in their own source, but Graph publishes the entity's shape.
     [string]$GraphMetadataPath = "$PSScriptRoot/../../backend/Config/graph-metadata",
     [string]$OutputPath = "$PSScriptRoot/../../backend/Config/openapi.json",
+    # Incremental build cache (opt-in). When set, the previous run's per-endpoint
+    # operations and index data are read from this file and only the endpoints whose
+    # source (or a helper/table/override/frontend input they depend on) changed are
+    # recomputed; the rest are reused verbatim. The assembled spec is byte-identical to
+    # a full rebuild - reused operations are the exact JSON the full build emitted -
+    # verified by -Check, which always does a full rebuild. The dev watcher passes this
+    # so a one-file edit regenerates in a few seconds instead of ~80s; CI and the image
+    # build leave it unset and always do a full, cache-free rebuild. The file is a pure
+    # optimization: if it is missing, stale, or from an older cache version, the run
+    # falls back to a full rebuild and rewrites it.
+    [string]$CachePath,
     # Second copy, served as a static asset at /openapi.json. The in-app Swagger UI reads
     # that instead of calling the API for it, and external consumers can pull the spec
     # without occupying a PowerShell worker. Skipped when the directory does not exist,
@@ -636,6 +647,15 @@ function Add-AccessToTree {
 # check runs once per call site and the trees get large.
 $Script:DiscoveredFieldCount = 0
 
+# Every helper FILE whose content could change the contract currently being built:
+# each helper the endpoint hands a request-derived argument to, transitively, whether
+# or not it turned out to read a field (a helper that reads nothing today would change
+# the contract if edited to read one tomorrow). The incremental cache stores this set
+# per endpoint and recomputes the endpoint when any file in it changes. Reset by
+# Get-EndpointContract before each endpoint; $null disables collection (the helper
+# self-analysis pass in Test-HelperReadsParameter does not want its lookups recorded).
+$Script:CurrentDepFiles = $null
+
 function Resolve-TreeNode {
     # Finds an existing node by dotted path, for attaching enum/required facts
     # discovered by a separate pass.
@@ -909,6 +929,10 @@ function Add-DownstreamAccess {
             $Helper = Get-HelperDefinition -Name $CommandName -Index $Index
             if ($null -eq $Helper) { continue }
 
+            # this helper receives a request-derived argument, so its source is part of
+            # this endpoint's contract even if it reads nothing off the value today
+            if ($null -ne $Script:CurrentDepFiles) { $null = $Script:CurrentDepFiles.Add($Index[$CommandName]) }
+
             $ParameterName = Get-BoundParameterName -Written $Element.ParameterName -CalleeAst $Helper.Definition
             if (-not $ParameterName) { continue }
 
@@ -1024,10 +1048,14 @@ function Get-EndpointContract {
     # most of the contract for the busiest endpoints lives in the helper the body is
     # handed to, not in the entrypoint
     $Followed = [System.Collections.Generic.List[string]]::new()
+    # collect the helper files this endpoint depends on, for the incremental cache
+    $Script:CurrentDepFiles = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     if ($null -ne $HelperIndex -and $FollowDepth -gt 0) {
         Add-DownstreamAccess -FunctionAst $Definition -Aliases $Aliases -Trees $Trees `
             -Index $HelperIndex -Depth $FollowDepth -Visited @{} -Followed $Followed
     }
+    $HelperDeps = @($Script:CurrentDepFiles)
+    $Script:CurrentDepFiles = $null
 
     # switch ($Request.Body.type) { 'a' {} 'b' {} } enumerates the accepted values
     # exactly; -Regex/-Wildcard switches match patterns, so they are not enums
@@ -1099,6 +1127,7 @@ function Get-EndpointContract {
         GraphRefs     = @(Get-GraphEntityReference -FunctionAst $Definition)
         GraphSelect   = @(Get-GraphSelectField -FunctionAst $Definition)
         OutputNames   = @(Get-OutputMemberName -FunctionAst $Definition)
+        HelperDeps   = @($HelperDeps)
         Path         = $Path
     }
 }
@@ -1492,6 +1521,10 @@ function Get-TableWriterIndex {
     param([string[]]$SearchPath)
 
     $Index = @{}
+    # The files that actually write a table. The incremental cache invalidates a
+    # table-reading endpoint when one of these changes, and rebuilds the whole index
+    # (falls back to a full build) when a change adds or removes a writer.
+    $Script:TableWriterFiles = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 
     # Sorted on a separator-normalized path: the type merge below is order-dependent
     # (the first writer that states a type wins), and NTFS enumerates sorted while
@@ -1529,6 +1562,7 @@ function Get-TableWriterIndex {
                 }
             }
             if (-not $Table -or -not $EntityVar) { continue }
+            $null = $Script:TableWriterFiles.Add($File.FullName)
             if (-not $Index.ContainsKey($Table)) { $Index[$Table] = [ordered]@{} }
 
             foreach ($Assign in $Assignments) {
@@ -2062,91 +2096,12 @@ function Merge-OpenApiOverride {
     return $Base
 }
 
-# -- Run -----------------------------------------------------------------------
+function Get-EndpointMethod {
+    # The single HTTP method a path is documented under. Craft dispatches by name and
+    # ignores the verb, but the spec still needs one method per path and it must match
+    # how the UI calls the endpoint. Pre-override; an override may replace it.
+    param($Contract)
 
-$RootPath = (Resolve-Path $EntrypointPath).Path
-
-# Entrypoints that hand the body to a helper keep most of their contract in that
-# helper (Invoke-EditUser reads 6 fields and passes the body to Set-CIPPUser, which
-# reads 30 more), so the shared modules are indexed and followed.
-$HelperIndex = $null
-if ($ModulesPath -and (Test-Path $ModulesPath)) {
-    $HelperRoots = @('CIPPCore', 'CIPPHTTP', 'CIPPStandards', 'CippExtensions') |
-        ForEach-Object { Join-Path $ModulesPath $_ 'Public' } |
-        Where-Object { Test-Path $_ }
-    if ($HelperRoots) { $HelperIndex = Get-HelperSourceIndex -SearchPath $HelperRoots }
-}
-# Storage tables are written all over the backend (CIPPDB's cache writers, CIPPCore's
-# settings and scheduler code), so the writer scan covers every module rather than the
-# handful searched for request helpers.
-$TableIndex = $null
-if ($ModulesPath -and (Test-Path $ModulesPath)) {
-    $TableIndex = Get-TableWriterIndex -SearchPath @($ModulesPath)
-    Write-Host "Recovered row shapes for $($TableIndex.Count) storage tables."
-}
-
-$GraphIndex = Get-GraphMetadataIndex -Path $GraphMetadataPath
-if ($GraphIndex) {
-    Write-Host "Loaded Graph metadata for: $(($GraphIndex.Keys | Sort-Object) -join ', ')."
-} else {
-    Write-Host "No Graph metadata at '$GraphMetadataPath'; Graph passthrough responses will be untyped."
-}
-
-$ColumnMap = Get-FrontendColumnMap -SrcDir $FrontendPath
-if ($ColumnMap.Count -eq 0) {
-    Write-Host "No frontend column declarations found at '$FrontendPath'; list responses will be untyped."
-}
-
-if ($null -eq $HelperIndex) {
-    # not fatal, but the resulting spec is thinner than the committed one, which would
-    # make -Check fail for reasons that have nothing to do with the endpoints
-    Write-Host "No shared modules found at '$ModulesPath'; documenting only what the entrypoints read directly."
-}
-$Files = @(Get-ChildItem -Path $RootPath -Filter 'Invoke-*.ps1' -Recurse -File | Sort-Object FullName)
-if ($Endpoint) {
-    $Files = @($Files | Where-Object { $_.BaseName -eq "Invoke-$Endpoint" })
-    if ($Files.Count -eq 0) { throw "No entrypoint file found for endpoint '$Endpoint'." }
-}
-
-$Contracts = [System.Collections.Generic.List[object]]::new()
-$ParseErrors = [System.Collections.Generic.List[string]]::new()
-$Skipped = [System.Collections.Generic.List[string]]::new()
-
-foreach ($File in $Files) {
-    $Contract = Get-EndpointContract -Path $File.FullName -RootPath $RootPath -HelperIndex $HelperIndex -ColumnMap $ColumnMap
-    if ($null -eq $Contract) { $Skipped.Add($File.Name); continue }
-    if ($Contract.PSObject.Properties.Name -contains 'ParseError') {
-        $ParseErrors.Add("$($File.Name): $($Contract.ParseError)")
-        continue
-    }
-    $Contracts.Add($Contract)
-}
-
-if ($ParseErrors.Count -gt 0) {
-    # a file that will not parse is a file whose endpoint silently vanishes from the
-    # spec, and from the MCP tool list with it
-    $ParseErrors | ForEach-Object { Write-Host "PARSE ERROR $_" }
-    throw "$($ParseErrors.Count) entrypoint file(s) failed to parse."
-}
-if ($Contracts.Count -eq 0) { throw "No entrypoints found under '$RootPath'." }
-
-$Overrides = @{}
-if (Test-Path $OverridePath) {
-    foreach ($File in (Get-ChildItem -Path $OverridePath -Filter '*.json' -File)) {
-        if ($File.BaseName.StartsWith('_')) { continue }
-        try {
-            $Overrides[$File.BaseName] = Get-Content -Path $File.FullName -Raw | ConvertFrom-Json -AsHashtable
-        } catch {
-            throw "Override '$($File.Name)' is not valid JSON: $($_.Exception.Message)"
-        }
-    }
-}
-
-$Paths = [ordered]@{}
-$TagSet = [System.Collections.Generic.HashSet[string]]::new()
-$Report = [System.Collections.Generic.List[object]]::new()
-
-foreach ($Contract in ($Contracts | Sort-Object Name -CaseSensitive)) {
     # Craft dispatches by name and does not filter on verb, but an endpoint that
     # reads the body is a POST and one that only reads the query string is a GET.
     # Exactly one operation per path: Get-CippMcpToolList keys tools by endpoint
@@ -2182,34 +2137,381 @@ foreach ($Contract in ($Contracts | Sort-Object Name -CaseSensitive)) {
     $IsMutation = $Contract.Name -match '^(Add|Set|Remove|Delete|Edit|New|Update|Disable|Enable|Reset|Revoke|Push|Clear|Start|Stop|Rename|Move|Copy)' -or
         $Contract.Role -match '\.ReadWrite$'
 
-    $Method = if ($IsMutation) { 'post' }
+    if ($IsMutation) { 'post' }
     elseif ($Contract.UsesBody -and $HasBodyShape -and $ReadsQuery -and $IsReadVerb -and $QueryCoversBody) { 'get' }
     elseif ($Contract.UsesBody -and $HasBodyShape) { 'post' }
     elseif ($ReadsQuery) { 'get' }
     elseif ($Contract.UsesBody) { 'post' }
     else { 'get' }
+}
 
+function Resolve-EndpointOperation {
+    # A contract -> the { method, operation } it emits, with any hand-authored override
+    # applied. The one place an operation is built, so the full build and the incremental
+    # rebuild produce byte-identical output for the same contract.
+    param($Contract, [hashtable]$Overrides)
+
+    $Method = Get-EndpointMethod -Contract $Contract
     $Operation = ConvertTo-OasOperation -Contract $Contract -Method $Method
-    if ($Overrides.ContainsKey($Contract.Name)) {
-        $Override = $Overrides[$Contract.Name]
-        if ($Override.ContainsKey('method')) { $Method = [string]$Override['method']; $Override.Remove('method') }
+    if ($Overrides -and $Overrides.ContainsKey($Contract.Name)) {
+        # clone so Remove('method') below never mutates the caller's override table
+        $Override = Merge-OpenApiOverride -Base ([ordered]@{}) -Override $Overrides[$Contract.Name]
+        if ($Override.Contains('method')) { $Method = [string]$Override['method']; $Override.Remove('method') }
         $Operation = Merge-OpenApiOverride -Base $Operation -Override $Override
     }
+    return [pscustomobject]@{ Method = $Method; Operation = $Operation }
+}
 
-    $Paths["/api/$($Contract.Name)"] = [ordered]@{ $Method = $Operation }
-    $null = $TagSet.Add($Contract.Tag)
+function ConvertTo-EndpointResult {
+    # A built contract -> the per-endpoint result object the assembly and the cache both
+    # consume. One shape whether the contract was built by the full pass or a single
+    # incremental recompute.
+    param($Contract, [hashtable]$Overrides)
 
+    $Resolved = Resolve-EndpointOperation -Contract $Contract -Overrides $Overrides
+    return [pscustomobject]@{
+        Name           = $Contract.Name
+        Method         = $Resolved.Method
+        Operation      = $Resolved.Operation
+        Tag            = $Contract.Tag
+        Deps           = @($Contract.HelperDeps)
+        Tables         = @($Contract.TableNames)
+        UsesGraph      = ($Contract.GraphRefs.Count -gt 0)
+        Path           = $Contract.Path
+        Role           = $Contract.Role
+        BodyFields     = $Contract.BodyTree.Children.Count
+        QueryFields    = $Contract.QueryTree.Children.Count
+        HasDescription = [bool]($Contract.Synopsis -or $Contract.Description)
+        Passthrough    = $Contract.BodyTree.IsDynamic
+        Overridden     = $Overrides.ContainsKey($Contract.Name)
+    }
+}
+
+# -- Incremental build cache ---------------------------------------------------
+# Bump when the cache's meaning changes so old caches are ignored, not misread.
+$Script:CacheVersion = 1
+
+function Get-FileSignature {
+    # A cheap change token: length + last-write time. Every editor bumps the mtime on
+    # save, so this detects edits without reading file contents - which is the whole
+    # point, since reading every module file is what makes the full build slow.
+    param($Item)
+    if ($null -eq $Item) { return '' }
+    return '{0}:{1}' -f $Item.Length, $Item.LastWriteTimeUtc.Ticks
+}
+
+function Get-PathSignature {
+    param([string]$Path)
+    $Item = Get-Item -LiteralPath $Path -ErrorAction SilentlyContinue
+    if ($null -eq $Item) { return '' }
+    return Get-FileSignature -Item $Item
+}
+
+function Get-AggregateSignature {
+    # One order-independent token for a set of files, for inputs the cache treats as
+    # all-or-nothing (graph metadata, overrides): any change there forces a full rebuild.
+    param([string[]]$Paths)
+    return (($Paths | Sort-Object | ForEach-Object { '{0}={1}' -f $_, (Get-PathSignature -Path $_) }) -join '|')
+}
+
+function Get-ModuleFileSignatureMap {
+    # path -> signature for every .ps1 under the module tree. Enumerating metadata is
+    # fast (no file reads); this is what lets an incremental run find the handful of
+    # changed files without parsing all of them.
+    param([string]$Root)
+    $Map = @{}
+    if ($Root -and (Test-Path $Root)) {
+        foreach ($File in (Get-ChildItem -Path $Root -Recurse -Filter '*.ps1' -File)) {
+            $Map[$File.FullName] = Get-FileSignature -Item $File
+        }
+    }
+    return $Map
+}
+
+# -- Run -----------------------------------------------------------------------
+
+$RootPath = (Resolve-Path $EntrypointPath).Path
+
+# Overrides are applied by Resolve-EndpointOperation, so both the full and the
+# incremental pass need them; loaded once up front.
+$Overrides = @{}
+if (Test-Path $OverridePath) {
+    foreach ($File in (Get-ChildItem -Path $OverridePath -Filter '*.json' -File)) {
+        if ($File.BaseName.StartsWith('_')) { continue }
+        try {
+            $Overrides[$File.BaseName] = Get-Content -Path $File.FullName -Raw | ConvertFrom-Json -AsHashtable
+        } catch {
+            throw "Override '$($File.Name)' is not valid JSON: $($_.Exception.Message)"
+        }
+    }
+}
+
+# Change tokens shared by both passes and stored in the cache. Graph metadata and the
+# override set are treated as all-or-nothing: a change to either forces a full rebuild
+# (both are near-static, so this costs nothing in practice).
+$ModuleFileSigs = Get-ModuleFileSignatureMap -Root $ModulesPath
+$GraphSig = if ($GraphMetadataPath -and (Test-Path $GraphMetadataPath)) {
+    Get-AggregateSignature -Paths @(Get-ChildItem -Path $GraphMetadataPath -Filter '*.xml' -File -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })
+} else { '' }
+$OverrideSig = if (Test-Path $OverridePath) {
+    Get-AggregateSignature -Paths @(Get-ChildItem -Path $OverridePath -Filter '*.json' -File | ForEach-Object { $_.FullName })
+} else { '' }
+
+$Files = @(Get-ChildItem -Path $RootPath -Filter 'Invoke-*.ps1' -Recurse -File | Sort-Object FullName)
+if ($Endpoint) {
+    $Files = @($Files | Where-Object { $_.BaseName -eq "Invoke-$Endpoint" })
+    if ($Files.Count -eq 0) { throw "No entrypoint file found for endpoint '$Endpoint'." }
+}
+
+$Paths = [ordered]@{}
+$TagSet = [System.Collections.Generic.HashSet[string]]::new()
+$Report = [System.Collections.Generic.List[object]]::new()
+$EndpointResults = [ordered]@{}
+$ParseErrors = [System.Collections.Generic.List[string]]::new()
+$Skipped = [System.Collections.Generic.List[string]]::new()
+$SkippedSigs = @{}
+# The current run's index state, captured for the cache write regardless of which pass ran.
+$TableIndex = $null
+$TableWriterFilesForCache = @()
+
+# The parsed Graph CSDL never changes within a dev session but costs ~6s to parse from
+# XML. It is cached beside the main cache as a Clixml sidecar - Clixml round-trips the
+# nested case-insensitive hashtables losslessly, so importing it (~0.6s) is both faster
+# and safer than reconstructing the structure from JSON. Keyed by the graph signature so
+# a metadata change simply misses and re-parses.
+$GraphCachePath = $null
+if ($CachePath -and $GraphSig) {
+    $SigHash = [Convert]::ToHexString([System.Security.Cryptography.SHA1]::HashData([System.Text.Encoding]::UTF8.GetBytes($GraphSig))).Substring(0, 12)
+    $GraphCachePath = "$CachePath.graph.$SigHash.clixml"
+}
+function Get-CachedGraphIndex {
+    # The parsed Graph index, imported from the Clixml sidecar when present (and matching
+    # the current graph signature, which the filename encodes), otherwise parsed and then
+    # written for next time.
+    param([string]$MetadataPath, [string]$ClixmlPath)
+    if ($ClixmlPath -and (Test-Path $ClixmlPath)) {
+        $Imported = $null
+        try { $Imported = Import-Clixml -Path $ClixmlPath } catch { $Imported = $null }
+        if ($Imported) { return $Imported }
+    }
+    $Index = Get-GraphMetadataIndex -Path $MetadataPath
+    if ($Index -and $ClixmlPath) {
+        # a failed export just means the next run re-parses; never fatal
+        try { $Index | Export-Clixml -Path $ClixmlPath -Depth 20 } catch { Write-Verbose "graph cache export failed: $_" }
+    }
+    return $Index
+}
+
+# Can the previous cache spare us re-analysing the endpoints that did not change?
+$Cache = $null
+$UseIncremental = $false
+if ($CachePath -and -not $Check -and -not $Endpoint -and (Test-Path $CachePath)) {
+    try { $Cache = Get-Content -Path $CachePath -Raw | ConvertFrom-Json -AsHashtable -Depth 100 } catch { $Cache = $null }
+    if ($Cache -and $Cache.version -eq $Script:CacheVersion -and $Cache.rootPath -eq $RootPath -and
+        $Cache.graphSig -eq $GraphSig -and $Cache.overrideSig -eq $OverrideSig -and
+        $Cache.endpoints -and $Cache.moduleFiles -and $null -ne $Cache.tableIndex) {
+        $UseIncremental = $true
+    }
+}
+
+if ($UseIncremental) {
+    # Module files added, edited or removed since the cache was written.
+    $Changed = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($P in $ModuleFileSigs.Keys) {
+        if (-not $Cache.moduleFiles.ContainsKey($P) -or $Cache.moduleFiles[$P] -ne $ModuleFileSigs[$P]) { $null = $Changed.Add($P) }
+    }
+    foreach ($P in $Cache.moduleFiles.Keys) {
+        if (-not $ModuleFileSigs.ContainsKey($P)) { $null = $Changed.Add($P) }
+    }
+
+    # A change that adds, removes or alters a table writer can shift the merged table
+    # index for endpoints whose own file never changed. Rather than patch the index, that
+    # case falls back to a full rebuild. Detected two ways: a changed file that WAS a
+    # writer (covers edits and removals), or a changed/new file that writes a table now.
+    $TableDirty = $false
+    foreach ($P in @($Cache.tableWriterFiles)) { if ($Changed.Contains($P)) { $TableDirty = $true; break } }
+    if (-not $TableDirty) {
+        foreach ($P in $Changed) {
+            if (-not (Test-Path -LiteralPath $P)) { continue }
+            $Text = [System.IO.File]::ReadAllText($P)
+            if ($Text -match 'Get-CIPPTable' -and $Text -match '(Add-CIPPAzDataTableEntity|Update-AzDataTableEntity)') { $TableDirty = $true; break }
+        }
+    }
+
+    if ($TableDirty) {
+        $UseIncremental = $false
+    } else {
+        Write-Host "Incremental: $($Changed.Count) changed module file(s) since last spec build."
+
+        # Field order is irrelevant downstream (ConvertTo-RecordSchema sorts names), so a
+        # plain hashtable rebuilt from the cache is a faithful table index.
+        $TableIndex = @{}
+        foreach ($T in $Cache.tableIndex.Keys) {
+            $Fields = @{}
+            foreach ($F in $Cache.tableIndex[$T].Keys) { $Fields[$F] = $Cache.tableIndex[$T][$F] }
+            $TableIndex[$T] = $Fields
+        }
+        $TableWriterFilesForCache = @($Cache.tableWriterFiles)
+
+        # Helpers are re-indexed and the frontend column map rebuilt (both cheap) so a
+        # recompute reflects current sources and a UI column change is caught even when the
+        # endpoint's own file did not change. Graph metadata is parsed only on demand.
+        $HelperIndex = $null
+        if ($ModulesPath -and (Test-Path $ModulesPath)) {
+            $HelperRoots = @('CIPPCore', 'CIPPHTTP', 'CIPPStandards', 'CippExtensions') |
+                ForEach-Object { Join-Path $ModulesPath $_ 'Public' } | Where-Object { Test-Path $_ }
+            if ($HelperRoots) { $HelperIndex = Get-HelperSourceIndex -SearchPath $HelperRoots }
+        }
+        $ColumnMap = Get-FrontendColumnMap -SrcDir $FrontendPath
+        $GraphIndex = $null
+
+        # Cache entries are looked up by source file, not by endpoint name: an entrypoint's
+        # file name does not always match its function name (Invoke-ListFoo.ps1 may define
+        # Invoke-ListFooDetails), and keying on the file makes the reuse decision immune to
+        # that. One entrypoint per file, so the mapping is 1:1.
+        $CacheByFile = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        foreach ($Ep in $Cache.endpoints.Values) { $CacheByFile[$Ep.file] = $Ep }
+
+        # ConvertFrom-Json -AsHashtable yields case-SENSITIVE ordered hashtables, but
+        # endpoint names compare case-insensitively (a frontend apiUrl may spell an
+        # endpoint in a different case than its function name, e.g. ListBpaTemplates vs
+        # ListBPATemplates). Copied into a plain hashtable so the column lookup below is
+        # case-insensitive and an untouched endpoint is not needlessly recomputed.
+        $CacheColumns = @{}
+        foreach ($K in $Cache.columnMap.Keys) { $CacheColumns[$K] = $Cache.columnMap[$K] }
+
+        $Recomputed = 0
+        foreach ($File in $Files) {
+            $Sig = Get-FileSignature -Item $File
+            $CachedEp = $null
+            $null = $CacheByFile.TryGetValue($File.FullName, [ref]$CachedEp)
+
+            $Reusable = $false
+            if ($CachedEp -and $CachedEp.sig -eq $Sig) {
+                $Reusable = $true
+                foreach ($Dep in @($CachedEp.deps)) { if ($Changed.Contains($Dep)) { $Reusable = $false; break } }
+                if ($Reusable) {
+                    # a UI column change invalidates even an untouched endpoint file
+                    $OldCols = @($CacheColumns[$CachedEp.name]) -join "`u{1}"
+                    $NewCols = @($ColumnMap[$CachedEp.name]) -join "`u{1}"
+                    if ($OldCols -ne $NewCols) { $Reusable = $false }
+                }
+            }
+
+            if ($Reusable) {
+                $EndpointResults[$CachedEp.name] = [pscustomobject]@{
+                    Name           = $CachedEp.name
+                    Method         = $CachedEp.method
+                    Operation      = ($CachedEp.operation | ConvertFrom-Json -Depth 100)
+                    Tag            = $CachedEp.tag
+                    Deps           = @($CachedEp.deps)
+                    Tables         = @($CachedEp.tables)
+                    UsesGraph      = [bool]$CachedEp.usesGraph
+                    Path           = $File.FullName
+                    Role           = $CachedEp.role
+                    BodyFields     = [int]$CachedEp.bodyFields
+                    QueryFields    = [int]$CachedEp.queryFields
+                    HasDescription = [bool]$CachedEp.hasDescription
+                    Passthrough    = [bool]$CachedEp.passthrough
+                    Overridden     = [bool]$CachedEp.overridden
+                }
+                continue
+            }
+
+            # An unchanged file the cache recorded as a non-entrypoint stays skipped
+            # without re-parsing it.
+            if (-not $CachedEp -and $Cache.skipped -and $Cache.skipped.ContainsKey($File.FullName) -and $Cache.skipped[$File.FullName] -eq $Sig) {
+                $Skipped.Add($File.Name); $SkippedSigs[$File.FullName] = $Sig; continue
+            }
+
+            $Contract = Get-EndpointContract -Path $File.FullName -RootPath $RootPath -HelperIndex $HelperIndex -ColumnMap $ColumnMap
+            if ($null -eq $Contract) { $Skipped.Add($File.Name); $SkippedSigs[$File.FullName] = $Sig; continue }
+            if ($Contract.PSObject.Properties.Name -contains 'ParseError') { $ParseErrors.Add("$($File.Name): $($Contract.ParseError)"); continue }
+            if ($Contract.GraphRefs.Count -gt 0 -and $null -eq $GraphIndex) { $GraphIndex = Get-CachedGraphIndex -MetadataPath $GraphMetadataPath -ClixmlPath $GraphCachePath }
+            $EndpointResults[$Contract.Name] = ConvertTo-EndpointResult -Contract $Contract -Overrides $Overrides
+            $Recomputed++
+        }
+        Write-Host "Incremental: recomputed $Recomputed endpoint(s), reused $($EndpointResults.Count - $Recomputed) from cache."
+    }
+}
+
+if (-not $UseIncremental) {
+    # Full build: index everything and analyse every entrypoint.
+
+    # Entrypoints that hand the body to a helper keep most of their contract in that
+    # helper (Invoke-EditUser reads 6 fields and passes the body to Set-CIPPUser, which
+    # reads 30 more), so the shared modules are indexed and followed.
+    $HelperIndex = $null
+    if ($ModulesPath -and (Test-Path $ModulesPath)) {
+        $HelperRoots = @('CIPPCore', 'CIPPHTTP', 'CIPPStandards', 'CippExtensions') |
+            ForEach-Object { Join-Path $ModulesPath $_ 'Public' } |
+            Where-Object { Test-Path $_ }
+        if ($HelperRoots) { $HelperIndex = Get-HelperSourceIndex -SearchPath $HelperRoots }
+    }
+    # Storage tables are written all over the backend (CIPPDB's cache writers, CIPPCore's
+    # settings and scheduler code), so the writer scan covers every module rather than the
+    # handful searched for request helpers.
+    if ($ModulesPath -and (Test-Path $ModulesPath)) {
+        $TableIndex = Get-TableWriterIndex -SearchPath @($ModulesPath)
+        $TableWriterFilesForCache = @($Script:TableWriterFiles)
+        Write-Host "Recovered row shapes for $($TableIndex.Count) storage tables."
+    }
+
+    $GraphIndex = Get-CachedGraphIndex -MetadataPath $GraphMetadataPath -ClixmlPath $GraphCachePath
+    if ($GraphIndex) {
+        Write-Host "Loaded Graph metadata for: $(($GraphIndex.Keys | Sort-Object) -join ', ')."
+    } else {
+        Write-Host "No Graph metadata at '$GraphMetadataPath'; Graph passthrough responses will be untyped."
+    }
+
+    $ColumnMap = Get-FrontendColumnMap -SrcDir $FrontendPath
+    if ($ColumnMap.Count -eq 0) {
+        Write-Host "No frontend column declarations found at '$FrontendPath'; list responses will be untyped."
+    }
+
+    if ($null -eq $HelperIndex) {
+        # not fatal, but the resulting spec is thinner than the committed one, which would
+        # make -Check fail for reasons that have nothing to do with the endpoints
+        Write-Host "No shared modules found at '$ModulesPath'; documenting only what the entrypoints read directly."
+    }
+
+    foreach ($File in $Files) {
+        $Contract = Get-EndpointContract -Path $File.FullName -RootPath $RootPath -HelperIndex $HelperIndex -ColumnMap $ColumnMap
+        if ($null -eq $Contract) { $Skipped.Add($File.Name); $SkippedSigs[$File.FullName] = (Get-FileSignature -Item $File); continue }
+        if ($Contract.PSObject.Properties.Name -contains 'ParseError') {
+            $ParseErrors.Add("$($File.Name): $($Contract.ParseError)")
+            continue
+        }
+        $EndpointResults[$Contract.Name] = ConvertTo-EndpointResult -Contract $Contract -Overrides $Overrides
+    }
+}
+
+if ($ParseErrors.Count -gt 0) {
+    # a file that will not parse is a file whose endpoint silently vanishes from the
+    # spec, and from the MCP tool list with it
+    $ParseErrors | ForEach-Object { Write-Host "PARSE ERROR $_" }
+    throw "$($ParseErrors.Count) entrypoint file(s) failed to parse."
+}
+if ($EndpointResults.Count -eq 0) { throw "No entrypoints found under '$RootPath'." }
+
+# Assemble the sorted path map, tag set and report from the per-endpoint results.
+# Sorted here rather than in the loop so an incremental run - which fills
+# $EndpointResults from a mix of cached and freshly-built entries in arbitrary order -
+# lays paths out in exactly the order a full build does.
+foreach ($Result in ($EndpointResults.Values | Sort-Object Name -CaseSensitive)) {
+    $Paths["/api/$($Result.Name)"] = [ordered]@{ $Result.Method = $Result.Operation }
+    $null = $TagSet.Add($Result.Tag)
     $Report.Add([ordered]@{
-            endpoint       = $Contract.Name
-            method         = $Method
-            role           = $Contract.Role
-            tag            = $Contract.Tag
-            bodyFields     = $Contract.BodyTree.Children.Count
-            queryFields    = $Contract.QueryTree.Children.Count
-            hasDescription = [bool]($Contract.Synopsis -or $Contract.Description)
-            passthrough    = $Contract.BodyTree.IsDynamic
-            overridden     = $Overrides.ContainsKey($Contract.Name)
-            source         = [IO.Path]::GetRelativePath($RootPath, $Contract.Path)
+            endpoint       = $Result.Name
+            method         = $Result.Method
+            role           = $Result.Role
+            tag            = $Result.Tag
+            bodyFields     = $Result.BodyFields
+            queryFields    = $Result.QueryFields
+            hasDescription = $Result.HasDescription
+            passthrough    = $Result.Passthrough
+            overridden     = $Result.Overridden
+            source         = [IO.Path]::GetRelativePath($RootPath, $Result.Path)
         })
 }
 
@@ -2356,3 +2658,51 @@ if ($ReportPath) {
 }
 
 Write-Host "Wrote $($Paths.Count) endpoints to $OutputPath ($($Skipped.Count) non-entrypoint files skipped)."
+
+# Refresh the incremental cache so the next run only recomputes what changes after this
+# one. Operations are stored as their JSON text and re-parsed on reuse: a PSCustomObject
+# round-trips property order exactly, so a cached operation serialises byte-identically to
+# the freshly built one - the guarantee -Check (which always does a full rebuild) enforces.
+# Never written for -Check or a single -Endpoint run, neither of which reflects the whole spec.
+if ($CachePath -and -not $Check -and -not $Endpoint) {
+    $CacheEndpoints = [ordered]@{}
+    foreach ($Result in $EndpointResults.Values) {
+        $CacheEndpoints[$Result.Name] = [ordered]@{
+            name           = $Result.Name
+            file           = $Result.Path
+            sig            = (Get-PathSignature -Path $Result.Path)
+            deps           = @($Result.Deps)
+            tables         = @($Result.Tables)
+            usesGraph      = [bool]$Result.UsesGraph
+            method         = $Result.Method
+            tag            = $Result.Tag
+            role           = $Result.Role
+            bodyFields     = $Result.BodyFields
+            queryFields    = $Result.QueryFields
+            hasDescription = [bool]$Result.HasDescription
+            passthrough    = [bool]$Result.Passthrough
+            overridden     = [bool]$Result.Overridden
+            operation      = ($Result.Operation | ConvertTo-Json -Depth 30 -Compress)
+        }
+    }
+    $CacheDoc = [ordered]@{
+        version          = $Script:CacheVersion
+        rootPath         = $RootPath
+        graphSig         = $GraphSig
+        overrideSig      = $OverrideSig
+        moduleFiles      = $ModuleFileSigs
+        tableWriterFiles = @($TableWriterFilesForCache)
+        tableIndex       = if ($TableIndex) { $TableIndex } else { @{} }
+        columnMap        = $ColumnMap
+        skipped          = $SkippedSigs
+        endpoints        = $CacheEndpoints
+    }
+    try {
+        $null = New-Item -ItemType Directory -Path (Split-Path -Parent $CachePath) -Force
+        Set-Content -Path "$CachePath.tmp" -Value ($CacheDoc | ConvertTo-Json -Depth 40 -Compress) -Encoding UTF8
+        Move-Item -Path "$CachePath.tmp" -Destination $CachePath -Force
+    } catch {
+        # a cache write failure must never fail the build - it is a pure optimisation
+        Write-Host "openapi build cache not written ($($_.Exception.Message)); next run will be a full rebuild."
+    }
+}
