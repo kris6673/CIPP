@@ -1077,7 +1077,8 @@ export const CippDataTable = (props) => {
         maxHeightOffset,
         settings,
         effectiveViewMode,
-        isNarrowViewport
+        isNarrowViewport,
+        exportEnabled
       ),
     [
       simple,
@@ -1088,6 +1089,7 @@ export const CippDataTable = (props) => {
       settings?.tablePageSize?.value,
       effectiveViewMode,
       isNarrowViewport,
+      exportEnabled,
     ]
   )
 
