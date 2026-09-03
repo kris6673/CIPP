@@ -351,11 +351,23 @@ export const TopNav = (props) => {
             </Tooltip>
           )}
           {!navCollapsed && (
-            <IconButton color="inherit" onClick={handleThemeSwitch}>
-              <SvgIcon color="action" fontSize="small">
-                {effectivePaletteMode === 'dark' ? <SunIcon /> : <MoonIcon />}
-              </SvgIcon>
-            </IconButton>
+            <Tooltip
+              title={
+                effectivePaletteMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
+              }
+            >
+              <IconButton
+                color="inherit"
+                onClick={handleThemeSwitch}
+                aria-label={
+                  effectivePaletteMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
+                }
+              >
+                <SvgIcon color="action" fontSize="small">
+                  {effectivePaletteMode === 'dark' ? <SunIcon /> : <MoonIcon />}
+                </SvgIcon>
+              </IconButton>
+            </Tooltip>
           )}
           {!navCollapsed && (
             <Tooltip title="Search pages (Ctrl/Cmd+K)">
@@ -374,11 +386,17 @@ export const TopNav = (props) => {
               control and gets the width. Universal search lives in the account menu. */}
           {showPopoverBookmarks && (
             <>
-              <IconButton color="inherit" onClick={handleBookmarkClick}>
-                <SvgIcon color="action" fontSize="small">
-                  <BookmarkIcon />
-                </SvgIcon>
-              </IconButton>
+              <Tooltip title="Bookmarks">
+                <IconButton
+                  color="inherit"
+                  onClick={handleBookmarkClick}
+                  aria-label="Bookmarks"
+                >
+                  <SvgIcon color="action" fontSize="small">
+                    <BookmarkIcon />
+                  </SvgIcon>
+                </IconButton>
+              </Tooltip>
               <Popover
                 id={popoverId}
                 open={popoverOpen}
@@ -413,6 +431,7 @@ export const TopNav = (props) => {
                         }),
                       }}
                       title={locked ? 'Unlock bookmarks' : 'Lock bookmarks'}
+                      aria-label={locked ? 'Unlock bookmarks' : 'Lock bookmarks'}
                     >
                       {locked ? <LockIcon fontSize="small" /> : <LockOpenIcon fontSize="small" />}
                     </IconButton>
@@ -438,6 +457,13 @@ export const TopNav = (props) => {
                           : sortOrder === 'asc'
                             ? 'A > Z'
                             : 'Z > A'
+                      }
+                      aria-label={
+                        sortOrder === 'custom'
+                          ? 'Bookmark sort: custom order'
+                          : sortOrder === 'asc'
+                            ? 'Bookmark sort: A to Z'
+                            : 'Bookmark sort: Z to A'
                       }
                     >
                       {sortOrder === 'custom' && <SwapVertIcon fontSize="small" />}
@@ -612,6 +638,8 @@ export const TopNav = (props) => {
                                 }}
                                 disabled={sortOrder === 'custom' && idx === 0}
                                 sx={{ opacity: sortOrder !== 'custom' || locked ? 0.4 : 1 }}
+                                aria-label="Move bookmark up"
+                                title="Move bookmark up"
                               >
                                 <KeyboardArrowUpIcon fontSize="small" />
                               </IconButton>
@@ -631,6 +659,8 @@ export const TopNav = (props) => {
                                   sortOrder === 'custom' && idx === displayBookmarks.length - 1
                                 }
                                 sx={{ opacity: sortOrder !== 'custom' || locked ? 0.4 : 1 }}
+                                aria-label="Move bookmark down"
+                                title="Move bookmark down"
                               >
                                 <KeyboardArrowDownIcon fontSize="small" />
                               </IconButton>
@@ -643,6 +673,8 @@ export const TopNav = (props) => {
                                 e.preventDefault()
                                 removeBookmark(bookmark.path)
                               }}
+                              aria-label="Remove bookmark"
+                              title="Remove bookmark"
                             >
                               <CloseIcon fontSize="small" />
                             </IconButton>

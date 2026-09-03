@@ -111,7 +111,13 @@ export const NotificationsPopover = () => {
           },
         }}
       >
-        <IconButton color="inherit" onClick={popover.handleOpen} ref={popover.anchorRef}>
+        <IconButton
+          color="inherit"
+          onClick={popover.handleOpen}
+          ref={popover.anchorRef}
+          aria-label="Notifications"
+          title="Notifications"
+        >
           <SvgIcon color="action" fontSize="small">
             <BellIcon />
           </SvgIcon>
@@ -188,6 +194,8 @@ export const NotificationsPopover = () => {
                   <IconButton
                     size="small"
                     onClick={() => dispatch(closeToast({ index: notification.id }))}
+                    aria-label="Dismiss notification"
+                    title="Dismiss notification"
                   >
                     <CloseIcon fontSize="small" />
                   </IconButton>

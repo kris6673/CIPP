@@ -1237,12 +1237,15 @@ export const CIPPTableToptoolbar = React.memo(
 
             {/* Compact Action Button — desktop compact mode only, the phone table uses the filter sheet */}
             {!mdDown && useCompactMode && !hasSelection && (
-              <IconButton
-                onClick={(event) => setActionMenuAnchor(event.currentTarget)}
-                sx={{ flexShrink: 0 }}
-              >
-                <MoreVertIcon />
-              </IconButton>
+              <Tooltip title="Actions">
+                <IconButton
+                  aria-label="Actions"
+                  onClick={(event) => setActionMenuAnchor(event.currentTarget)}
+                  sx={{ flexShrink: 0 }}
+                >
+                  <MoreVertIcon />
+                </IconButton>
+              </Tooltip>
             )}
 
             {/* phones keep the kebab open regardless of selection, the only route to the

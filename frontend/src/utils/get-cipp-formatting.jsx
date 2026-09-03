@@ -936,9 +936,9 @@ export const getCippFormatting = (
         'No'
       )
     ) : data.enabled ? (
-      <Check fontSize="10" />
+      <Check fontSize="10" titleAccess="Yes" />
     ) : (
-      <Close fontSize="10" />
+      <Close fontSize="10" titleAccess="No" />
     )
   }
 
@@ -1266,9 +1266,9 @@ export const getCippFormatting = (
               'No'
             )
           ) : parsedData[0] ? (
-            <Check fontSize="10" />
+            <Check fontSize="10" titleAccess="Yes" />
           ) : (
-            <Close fontSize="10" />
+            <Close fontSize="10" titleAccess="No" />
           )
         }
 
@@ -1354,7 +1354,11 @@ export const getCippFormatting = (
       )
     ) : (
       <Box component="span">
-        {data ? <Check fontSize="10" /> : <Close fontSize="10" />}
+        {data ? (
+          <Check fontSize="10" titleAccess="Yes" />
+        ) : (
+          <Close fontSize="10" titleAccess="No" />
+        )}
       </Box>
     )
   }

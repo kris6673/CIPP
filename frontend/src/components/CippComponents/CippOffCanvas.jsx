@@ -153,7 +153,7 @@ export const CippOffCanvas = (props) => {
               </>
             )}
             {!mdDown && (
-              <IconButton onClick={onClose}>
+              <IconButton onClick={onClose} aria-label="Close" title="Close">
                 <CloseIcon />
               </IconButton>
             )}
