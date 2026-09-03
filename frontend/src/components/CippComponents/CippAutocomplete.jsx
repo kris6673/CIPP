@@ -1,4 +1,3 @@
-import { ArrowDropDown, Visibility } from '@mui/icons-material'
 import {
   Autocomplete,
   CircularProgress,
@@ -9,16 +8,28 @@ import {
   Box,
   Typography,
 } from '@mui/material'
+import { CippIcons } from '../../utils/icon-registry'
 import Link from 'next/link'
 import { useEffect, useState, useMemo, useCallback, useRef, useImperativeHandle } from 'react'
 import { useSettings } from '../../hooks/use-settings'
 import { getCippError } from '../../utils/get-cipp-error'
 import { ApiGetCallWithPagination } from '../../api/ApiCall'
-import { Sync } from '@mui/icons-material'
 import { Stack } from '@mui/system'
 import React from 'react'
 import { CippOffCanvas } from './CippOffCanvas'
 import CippJsonView from '../CippFormPages/CippJSONView'
+
+// MUI v9 TextField no longer accepts top-level inputProps/InputProps — they end up on a DOM
+// node and React warns. Flatten any legacy nested keys into the correct slot objects.
+const flattenTextFieldSlot = (slot) => {
+  if (!slot || typeof slot !== 'object') return slot
+  const { inputProps, InputProps, ...rest } = slot
+  return {
+    ...rest,
+    ...(inputProps ?? {}),
+    ...(InputProps ?? {}),
+  }
+}
 
 const MemoTextField = React.memo(function MemoTextField({
   params,
@@ -34,34 +45,52 @@ const MemoTextField = React.memo(function MemoTextField({
   // Autocomplete hands the input wiring (combobox role, refs, keyboard handlers,
   // popup/clear adornments) to renderInput via params.slotProps — merge our styling
   // into those slots instead of replacing them, or the field stops being a combobox.
-  const { slotProps: acSlotProps = {}, ...otherParams } = params
+  const {
+    slotProps: acSlotProps = {},
+    inputProps: legacyInputProps,
+    InputProps: legacyInputPropsCapital,
+    id,
+    disabled,
+    fullWidth,
+    size,
+  } = params
+
+  const slotProps = {
+    htmlInput: flattenTextFieldSlot({
+      ...acSlotProps.htmlInput,
+      ...legacyInputProps,
+    }),
+    input: flattenTextFieldSlot({
+      ...acSlotProps.input,
+      ...legacyInputPropsCapital,
+      sx: {
+        transition: 'none',
+        ...(variant === 'outlined'
+          ? { '& .MuiOutlinedInput-notchedOutline': { transition: 'none' } }
+          : {}),
+        ...acSlotProps.input?.sx,
+      },
+    }),
+    inputLabel: {
+      ...acSlotProps.inputLabel,
+      shrink: true,
+      sx: { transition: 'none' },
+      required,
+    },
+  }
 
   return (
     <Tooltip title={label || ''} placement="top" arrow>
       <TextField
-        {...otherParams}
+        id={id}
+        disabled={disabled}
+        fullWidth={fullWidth}
+        size={size}
         label={label}
         placeholder={placeholder}
         variant={variant}
         required={htmlRequired}
-        slotProps={{
-          ...acSlotProps,
-          inputLabel: {
-            ...acSlotProps.inputLabel,
-            shrink: true,
-            sx: { transition: 'none' },
-            required,
-          },
-          input: {
-            ...acSlotProps.input,
-            sx: {
-              transition: 'none',
-              '& .MuiOutlinedInput-notchedOutline': {
-                transition: 'none',
-              },
-            },
-          },
-        }}
+        slotProps={slotProps}
       />
     </Tooltip>
   )
@@ -93,8 +122,10 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
     renderGroup,
     customAction,
     handleHomeEndKeys = false,
-    // TextField-bound, MUI Autocomplete would pass it through to its root div
+    // TextField-bound — Autocomplete forwards unknown props to its root element.
     variant,
+    inputProps: _legacyInputProps,
+    InputProps: _legacyInputPropsCapital,
     ...other
   } = props
 
@@ -205,7 +236,15 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
         data: {
           ...(tenantScoped ? { tenantFilter: currentTenant } : null),
           ...currentApi.data,
-          ...(manualSearch && searchTerm ? { [searchParam]: searchTerm } : null),
+          // api.searchFormatter shapes the typed text into what the endpoint expects (e.g. a Graph
+          // $search clause); the raw term still keys the cache.
+          ...(manualSearch && searchTerm
+            ? {
+                [searchParam]: currentApi.searchFormatter
+                  ? currentApi.searchFormatter(searchTerm)
+                  : searchTerm,
+              }
+            : null),
         },
         waiting: manualSearch ? enoughChars : true,
         queryKey: manualSearch ? `${baseQueryKey}-${searchParam}-${searchTerm}` : baseQueryKey,
@@ -299,8 +338,15 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
     }
   }, [actionGetRequest.data, actionGetRequest.isSuccess, actionGetRequest.isError, actionGetRequest.error, apiRef])
 
+  // api.mergeOptions keeps the static `options` prop alongside the API results, for fixed tokens
+  // (e.g. "All") that a server-side search would never return.
+  const mergeOptions = !!api?.mergeOptions
+  const staticOptionRefs = useMemo(
+    () => new Set(mergeOptions ? options : []),
+    [mergeOptions, options]
+  )
   const memoizedOptions = useMemo(() => {
-    let finalOptions = api ? usedOptions : options
+    let finalOptions = api ? (mergeOptions ? [...options, ...usedOptions] : usedOptions) : options
     if (removeOptions && removeOptions.length) {
       finalOptions = finalOptions.filter((o) => !removeOptions.includes(o.value))
     }
@@ -308,7 +354,7 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
       finalOptions.sort((a, b) => String(a.label ?? "").localeCompare(String(b.label ?? "")))
     }
     return finalOptions
-  }, [api, usedOptions, options, removeOptions, sortOptions])
+  }, [api, usedOptions, options, removeOptions, sortOptions, mergeOptions])
 
   // Dedicated effect for handling preselected value or auto-select first item - only runs once
   useEffect(() => {
@@ -469,7 +515,7 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
           actionGetRequest.isFetching || isFetching ? (
             <CircularProgress color="inherit" size={20} />
           ) : (
-            <ArrowDropDown />
+            <CippIcons.ArrowDropDown />
           )
         }
         isOptionEqualToValue={(option, val) => option.value === val.value}
@@ -482,11 +528,15 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
         disableClearable={disableClearable}
         multiple={multiple}
         fullWidth
-        placeholder={placeholder}
         filterOptions={(options, params) => {
           // Server-side search already returned only matches; client-side substring filtering would
           // wrongly hide ANR results (a display-name match whose address lacks the typed text).
-          const filtered = manualSearch ? [...options] : filter(options, params)
+          // Merged static options never went through the server, so they still get filtered here.
+          const filtered = manualSearch
+            ? options.filter(
+                (option) => !staticOptionRefs.has(option) || filter([option], params).length > 0
+              )
+            : filter(options, params)
           const isExisting =
             options?.length > 0 &&
             options.some(
@@ -631,7 +681,12 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
           // Handle custom action button inside the TextField.
           // v9 Autocomplete delivers the input slot via params.slotProps.input
           // (ref, popup/clear end-adornment) instead of params.InputProps.
-          const { slotProps: acSlotProps = {}, ...otherParams } = params
+          const {
+            slotProps: acSlotProps = {},
+            inputProps: legacyInputProps,
+            InputProps: legacyInputPropsCapital,
+            ...otherParams
+          } = params
           const InputProps = acSlotProps.input
           const baseInputProps =
             customAction && customAction.position === 'inside'
@@ -718,6 +773,8 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
               <MemoTextField
                 params={{
                   ...otherParams,
+                  ...(legacyInputProps ? { inputProps: legacyInputProps } : {}),
+                  ...(legacyInputPropsCapital ? { InputProps: legacyInputPropsCapital } : {}),
                   slotProps: { ...acSlotProps, input: modifiedInputProps },
                 }}
                 label={label}
@@ -734,7 +791,7 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
                       actionGetRequest.refetch()
                     }}
                   >
-                    <Sync />
+                    <CippIcons.Sync />
                   </IconButton>
                 </Tooltip>
               )}
@@ -801,7 +858,7 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
                     }}
                     title={api?.templateView.title || 'View details'}
                   >
-                    <Visibility />
+                    <CippIcons.Visibility />
                   </IconButton>
                 </Tooltip>
               )}
@@ -857,6 +914,16 @@ export const CippAutoComplete = React.forwardRef((props, ref) => {
           );
         }}
         {...other}
+        onBlur={(event) => {
+          other.onBlur?.(event)
+          // clearOnBlur discards text left behind without a pick; drop the results that went with
+          // it too, so the field reopens with a clean list instead of the last search.
+          if (manualSearch && other.clearOnBlur) {
+            setSearchInput('')
+            setSearchTerm('')
+            setUsedOptions([])
+          }
+        }}
         onInputChange={(event, newInputValue, reason) => {
           other.onInputChange?.(event, newInputValue, reason)
           if (!manualSearch) return

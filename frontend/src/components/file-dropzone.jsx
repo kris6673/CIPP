@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
+import { CippIcons } from '../utils/icon-registry';
 import { useDropzone } from 'react-dropzone';
-import ArrowUpOnSquareIcon from '@heroicons/react/24/outline/ArrowUpOnSquareIcon';
 import { Avatar, Box, SvgIcon, Typography } from '@mui/material';
 
 export const FileDropzone = (props) => {
@@ -42,16 +42,17 @@ export const FileDropzone = (props) => {
         ...sx
       }}
       {...getRootProps()}>
+      {/* No backgroundColor: the theme's Avatar override already picks a surface per mode,
+          and the hard-coded neutral.200 was an off-white disc on a dark card. */}
       <Avatar
         sx={{
-          backgroundColor: 'neutral.200',
           color: 'text.secondary',
           height: 42,
           width: 42
         }}
       >
         <SvgIcon fontSize="small">
-          <ArrowUpOnSquareIcon />
+          <CippIcons.ArrowUpOnSquareIcon />
         </SvgIcon>
       </Avatar>
       {caption && (

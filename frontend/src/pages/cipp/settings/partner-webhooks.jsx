@@ -1,4 +1,5 @@
 import { TabbedLayout } from "../../../layouts/TabbedLayout";
+import { CippIcons } from "../../../utils/icon-registry";
 import { Layout as DashboardLayout } from "../../../layouts/index";
 import tabOptions from "./tabOptions";
 import CippFormPage from "../../../components/CippFormPages/CippFormPage";
@@ -25,7 +26,6 @@ import { CippPropertyList } from "../../../components/CippComponents/CippPropert
 import { CippCodeBlock } from "../../../components/CippComponents/CippCodeBlock";
 import { CippTimeAgo } from "../../../components/CippComponents/CippTimeAgo";
 import { useState } from "react";
-import { Close } from "@mui/icons-material";
 
 const Page = () => {
   const pageTitle = "Automated Onboarding";
@@ -181,7 +181,22 @@ const Page = () => {
                 label: "Webhook URL",
                 value: (
                   <Stack spacing={1}>
-                    <CippCodeBlock code={subscription?.webhookUrl} />
+                    {/* The URL is one unbreakable token and the copy button floats over the
+                        block's top-right — wrap it and keep the text clear of the button. */}
+                    <Box
+                      sx={{
+                        minWidth: 0,
+                        // the highlighter theme sets pre padding inline, so reserving the
+                        // copy button's corner needs to win over it
+                        "& pre": {
+                          paddingRight: "56px !important",
+                          overflowWrap: "anywhere",
+                          whiteSpace: "pre-wrap",
+                        },
+                      }}
+                    >
+                      <CippCodeBlock code={subscription?.webhookUrl} />
+                    </Box>
                     {webhookUrlIsStale && (
                       <Alert severity="warning">
                         This subscription points at a different URL than the one this instance is
@@ -256,7 +271,7 @@ const Page = () => {
                     <Box>Test Results</Box>
                     <IconButton variant="outlined" onClick={() => setTestRunning(false)}>
                       <SvgIcon fontSize="small">
-                        <Close />
+                        <CippIcons.Close />
                       </SvgIcon>
                     </IconButton>
                   </Stack>

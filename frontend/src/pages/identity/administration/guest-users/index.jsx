@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { CippIcons } from '../../../../utils/icon-registry'
 import { Layout as DashboardLayout } from '../../../../layouts/index'
 import { CippTablePage } from '../../../../components/CippComponents/CippTablePage.jsx'
 import { ApiGetCallWithPagination } from '../../../../api/ApiCall'
@@ -14,24 +15,13 @@ import {
   Typography,
 } from '@mui/material'
 import { Box, Grid } from '@mui/system'
-import { EyeIcon, TrashIcon } from '@heroicons/react/24/outline'
-import {
-  Block,
-  CheckCircle,
-  GroupOutlined,
-  HourglassEmpty,
-  LockPerson,
-  PersonOff,
-  Send,
-  WarningAmber,
-} from '@mui/icons-material'
 
 const GUEST_STATUSES = [
-  { status: 'Active', color: 'success', icon: CheckCircle },
-  { status: 'Stale', color: 'error', icon: WarningAmber },
-  { status: 'Pending Acceptance', color: 'warning', icon: HourglassEmpty },
-  { status: 'Never Signed In', color: 'info', icon: PersonOff },
-  { status: 'Disabled', color: 'secondary', icon: Block },
+  { status: 'Active', color: 'success', icon: CippIcons.CheckCircle },
+  { status: 'Stale', color: 'error', icon: CippIcons.WarningAmber },
+  { status: 'Pending Acceptance', color: 'warning', icon: CippIcons.HourglassEmpty },
+  { status: 'Never Signed In', color: 'info', icon: CippIcons.PersonOff },
+  { status: 'Disabled', color: 'secondary', icon: CippIcons.Block },
 ]
 
 const SummaryCard = ({
@@ -93,6 +83,7 @@ const Page = () => {
     defaultCached: true,
     allowAllTenantSync: true,
     cacheColumns: ['CacheTimestamp'],
+    serverPagination: true,
   })
 
   const tenantQuery =
@@ -100,10 +91,10 @@ const Page = () => {
   const userHubLink = `/identity/administration/users/user?userId=[id]&tenantFilter=${tenantQuery}`
 
   // Same url/data/queryKey as the table below, so react-query shares one request
-  // between the summary cards and the table.
+  // between the summary cards and the table; data must match what CippTablePage builds.
   const guestData = ApiGetCallWithPagination({
     url: reportDB.resolvedApiUrl,
-    data: { tenantFilter: currentTenant },
+    data: { tenantFilter: currentTenant, ...reportDB.resolvedApiData },
     queryKey: reportDB.resolvedQueryKey,
     waiting: true,
   })
@@ -111,7 +102,8 @@ const Page = () => {
   const guests = useMemo(
     () =>
       guestData.data?.pages?.flatMap((page) =>
-        Array.isArray(page) ? page : []
+        // Cached reads page as { Results, Metadata }; live reads stay a bare array.
+        Array.isArray(page) ? page : Array.isArray(page?.Results) ? page.Results : []
       ) ?? [],
     [guestData.data]
   )
@@ -149,7 +141,7 @@ const Page = () => {
         <SummaryCard
           title="Total Guests"
           count={guests.length}
-          icon={GroupOutlined}
+          icon={CippIcons.GroupOutlined}
           color="primary"
           selected={statusFilter === null}
           isFetching={guestData.isFetching}
@@ -179,13 +171,13 @@ const Page = () => {
       link: userHubLink,
       pinned: true,
       multiPost: false,
-      icon: <EyeIcon />,
+      icon: <CippIcons.EyeIcon />,
       color: 'success',
     },
     {
       label: 'Re-invite Guest',
       type: 'POST',
-      icon: <Send />,
+      icon: <CippIcons.Send />,
       url: '/api/AddGuest',
       data: { displayName: 'displayName', mail: 'mail', sendInvite: '!true' },
       confirmText: 'Are you sure you want to re-send the invitation to [mail]?',
@@ -197,7 +189,7 @@ const Page = () => {
     {
       label: 'Set Sign In State',
       type: 'POST',
-      icon: <LockPerson />,
+      icon: <CippIcons.LockPerson />,
       url: '/api/ExecDisableUser',
       data: { ID: 'id' },
       fields: [
@@ -220,7 +212,7 @@ const Page = () => {
     {
       label: 'Delete Guest',
       type: 'POST',
-      icon: <TrashIcon />,
+      icon: <CippIcons.Delete />,
       url: '/api/RemoveUser',
       data: { ID: 'id', userPrincipalName: 'userPrincipalName' },
       confirmText: 'Are you sure you want to delete [userPrincipalName]?',
@@ -269,6 +261,8 @@ const Page = () => {
         tableFilter={tableFilter}
         title={pageTitle}
         apiUrl={reportDB.resolvedApiUrl}
+        apiData={reportDB.resolvedApiData}
+        apiDataKey={reportDB.apiDataKey}
         queryKey={reportDB.resolvedQueryKey}
         dataSourceControls={reportDB.controls}
         actions={actions}
@@ -279,6 +273,8 @@ const Page = () => {
         }}
         simpleColumns={simpleColumns}
         filters={filterList}
+        // Paged cache reads arrive in table walk order, not sorted like the unpaged report.
+        defaultSorting={[{ id: 'displayName', desc: false }]}
       />
       {reportDB.syncDialog}
     </>

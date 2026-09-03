@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useMemo, useRef, useState } from "react";
+import { CippIcons } from "../../../../utils/icon-registry"
 import Head from "next/head";
 import {
   Box,
@@ -23,24 +24,6 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import {
-  Memory,
-  Speed,
-  PlayArrow,
-  HourglassEmpty,
-  CheckCircle,
-  Warning,
-  Cancel,
-  Delete,
-  LowPriority,
-  Timeline,
-  RocketLaunch,
-  Pause,
-  FileDownload,
-  FileUpload,
-  Refresh,
-  Close,
-} from "@mui/icons-material";
 import { Grid } from "@mui/system";
 import { useTheme } from "@mui/material/styles";
 import { useQueryClient } from "@tanstack/react-query";
@@ -65,6 +48,7 @@ import { CippDataTable } from "../../../../components/CippTable/CippDataTable";
 import { ApiGetCall, ApiPostCall } from "../../../../api/ApiCall";
 import tabOptions from "./tabOptions";
 import { useTitleClaimedByTabPicker } from "../../../../layouts/tab-navigation-context";
+import { useIsNarrowForTables } from "../../../../hooks/use-breakpoint";
 
 const formatDuration = (ms) => {
   if (ms === 0 || ms == null) return "—";
@@ -89,13 +73,13 @@ const WorkerStatusChip = ({ isBusy, currentFunction }) => {
           label={currentFunction || "Busy"}
           color="warning"
           size="small"
-          icon={<PlayArrow />}
-          sx={{ maxWidth: 420 }}
+          icon={<CippIcons.PlayArrow />}
+          sx={{ maxWidth: { xs: "100%", md: 420 } }}
         />
       </Tooltip>
     );
   }
-  return <Chip label="Idle" color="success" size="small" icon={<CheckCircle />} />;
+  return <Chip label="Idle" color="success" size="small" icon={<CippIcons.CheckCircle />} />;
 };
 
 const UtilizationBar = ({ value }) => (
@@ -114,7 +98,75 @@ const UtilizationBar = ({ value }) => (
   </Box>
 );
 
+// Stat pairs shared by the worker table columns and the narrow-screen cards.
+const workerStats = (w) => [
+  { k: "Invocations", v: w.TotalInvocations?.toLocaleString() ?? 0 },
+  { k: "Avg", v: formatDuration(w.AvgDurationMs) },
+  { k: "Min", v: formatDuration(w.MinDurationMs) },
+  { k: "Max", v: formatDuration(w.MaxDurationMs) },
+  { k: "Last", v: formatDuration(w.LastDurationMs) },
+  { k: "Alloc", v: w.TotalAllocMB != null ? `${w.TotalAllocMB} MB` : "—" },
+  { k: "Faults", v: w.TotalFaults ?? 0, w: w.TotalFaults > 0 },
+];
+
+const StatPair = ({ label, value, warn }) => (
+  <Box sx={{ minWidth: 72 }}>
+    <Typography
+      variant="caption"
+      sx={{
+        color: "text.secondary",
+        display: "block",
+        lineHeight: 1.2
+      }}>
+      {label}
+    </Typography>
+    <Typography
+      variant="body2"
+      color={warn ? "error.main" : "text.primary"}
+      sx={{
+        fontWeight: 600,
+        lineHeight: 1.3,
+        wordBreak: "break-word"
+      }}>
+      {value}
+    </Typography>
+  </Box>
+);
+
+const WorkerCards = ({ workers }) => (
+  <Stack spacing={1} sx={{ px: 2, pb: 2 }}>
+    {workers.map((w) => (
+      <Box
+        key={w.WorkerId}
+        sx={{ border: (t) => `1px solid ${t.palette.divider}`, borderRadius: 1, p: 1.5 }}
+      >
+        <Stack
+          direction="row"
+          spacing={1}
+          useFlexGap
+          sx={{ alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", mb: 1 }}
+        >
+          <Typography variant="body2" sx={{
+            fontFamily: "monospace"
+          }}>
+            W{w.WorkerId}
+          </Typography>
+          <WorkerStatusChip isBusy={w.IsBusy} currentFunction={w.CurrentFunction} />
+        </Stack>
+        <UtilizationBar value={w.UtilizationPct ?? 0} />
+        <Stack direction="row" useFlexGap sx={{ flexWrap: "wrap", gap: 1.5, mt: 1 }}>
+          {workerStats(w).map((s) => (
+            <StatPair key={s.k} label={s.k} value={s.v} warn={s.w} />
+          ))}
+        </Stack>
+      </Box>
+    ))}
+  </Stack>
+);
+
 const WorkerTable = ({ workers, title }) => {
+  const isNarrow = useIsNarrowForTables();
+
   if (!workers || workers.length === 0) return null;
 
   return (
@@ -123,6 +175,9 @@ const WorkerTable = ({ workers, title }) => {
         title: { variant: "h6" }
       }} />
       <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
+        {isNarrow ? (
+          <WorkerCards workers={workers} />
+        ) : (
         <TableContainer>
           <Table size="small">
             <TableHead>
@@ -181,6 +236,7 @@ const WorkerTable = ({ workers, title }) => {
             </TableBody>
           </Table>
         </TableContainer>
+        )}
       </CardContent>
     </Card>
   );
@@ -241,7 +297,7 @@ const StartupTimingBar = ({ startup }) => {
     <Card>
       <CardHeader
         title="Startup Timing"
-        avatar={<RocketLaunch fontSize="small" color="primary" />}
+        avatar={<CippIcons.RocketLaunch fontSize="small" color="primary" />}
         subheader={`${startup.ReadinessMode} / ${startup.WarmupMode} — ${startup.CpuCount} CPUs, ${startup.HttpPoolSize}H + ${startup.BgPoolSize}BG — Total: ${formatDuration(totalMs)}`}
         sx={{ pb: 0 }}
         slotProps={{
@@ -334,6 +390,8 @@ const StartupTimingBar = ({ startup }) => {
 };
 
 const CompactStatsRow = ({ snapshot }) => {
+  const isNarrow = useIsNarrowForTables();
+
   if (!snapshot) return null;
 
   const http = snapshot.HttpPool || {};
@@ -414,6 +472,35 @@ const CompactStatsRow = ({ snapshot }) => {
     },
   ];
 
+  if (isNarrow) {
+    // Six aligned stat columns do not survive a phone — stack the sections and let the
+    // stats wrap instead of scrolling them off the right edge.
+    return (
+      <Card>
+        <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
+          <Stack spacing={1.5}>
+            {sections.map((sec) => (
+              <Box key={sec.label}>
+                <Chip
+                  label={sec.label}
+                  size="small"
+                  color={sec.color}
+                  variant="outlined"
+                  sx={{ fontWeight: 600, mb: 0.75 }}
+                />
+                <Stack direction="row" useFlexGap sx={{ flexWrap: "wrap", gap: 1.5 }}>
+                  {sec.stats.map((s) => (
+                    <StatPair key={s.k} label={s.k} value={s.v} warn={s.w} />
+                  ))}
+                </Stack>
+              </Box>
+            ))}
+          </Stack>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardContent sx={{ py: 1, px: 0, "&:last-child": { pb: 1 } }}>
@@ -460,6 +547,14 @@ const CompactStatsRow = ({ snapshot }) => {
     </Card>
   );
 };
+
+// CippInfoBar renders its value slot nowrap + ellipsis; a block child re-enables wrapping
+// so long memory/CPU strings stay whole instead of truncating mid-number.
+const WrappedStat = ({ children }) => (
+  <Box component="span" sx={{ display: "block", whiteSpace: "normal", wordBreak: "break-word" }}>
+    {children}
+  </Box>
+);
 
 const HistoryChart = ({ data, rangeMinutes, title, icon, children }) => {
   const theme = useTheme();
@@ -645,25 +740,25 @@ const Page = () => {
 
     return [
       {
-        icon: <Memory />,
+        icon: <CippIcons.Memory />,
         name: "HTTP Workers",
         data: `${http.BusyCount ?? 0} / ${http.PoolSize ?? 0} busy`,
         color: http.BusyCount >= http.PoolSize ? "error" : "primary",
       },
       {
-        icon: <Speed />,
+        icon: <CippIcons.Speed />,
         name: "BG Workers",
         data: `${bg.BusyCount ?? 0} / ${bg.PoolSize ?? 0} busy`,
         color: bg.BusyCount >= bg.PoolSize ? "error" : "primary",
       },
       {
-        icon: jobs.Running > 0 ? <PlayArrow /> : <HourglassEmpty />,
+        icon: jobs.Running > 0 ? <CippIcons.PlayArrow /> : <CippIcons.HourglassEmpty />,
         name: "Job Queue",
         data: `${jobs.Running ?? 0} running, ${jobs.Queued ?? 0} queued`,
         color: jobs.Queued > 10 ? "warning" : "primary",
       },
       {
-        icon: limiter.IsHttpThrottled ? <Warning /> : <CheckCircle />,
+        icon: limiter.IsHttpThrottled ? <CippIcons.Warning /> : <CippIcons.CheckCircle />,
         name: "BG Limiter",
         data: limiter.IsHttpThrottled
           ? "HTTP Throttled"
@@ -671,15 +766,19 @@ const Page = () => {
         color: limiter.IsHttpThrottled ? "error" : "primary",
       },
       {
-        icon: <Memory />,
+        icon: <CippIcons.Memory />,
         name: "Memory",
-        data: `${snapshot.Memory?.ContainerUsedMB ?? snapshot.Memory?.RssMB ?? 0}MB / ${snapshot.Memory?.ContainerLimitMB ?? 0}MB (${snapshot.Memory?.UsagePct ?? 0}%)`,
+        data: (
+          <WrappedStat>{`${snapshot.Memory?.ContainerUsedMB ?? snapshot.Memory?.RssMB ?? 0}MB / ${snapshot.Memory?.ContainerLimitMB ?? 0}MB (${snapshot.Memory?.UsagePct ?? 0}%)`}</WrappedStat>
+        ),
         color: (snapshot.Memory?.UsagePct ?? 0) > 85 ? "error" : (snapshot.Memory?.UsagePct ?? 0) > 70 ? "warning" : "primary",
       },
       {
-        icon: <Speed />,
+        icon: <CippIcons.Speed />,
         name: "CPU",
-        data: `${snapshot.Memory?.ContainerCpuPct ?? snapshot.Memory?.CpuPct ?? 0}% container / ${snapshot.Memory?.CpuPct ?? 0}% app`,
+        data: (
+          <WrappedStat>{`${snapshot.Memory?.ContainerCpuPct ?? snapshot.Memory?.CpuPct ?? 0}% container / ${snapshot.Memory?.CpuPct ?? 0}% app`}</WrappedStat>
+        ),
         color: (snapshot.Memory?.ContainerCpuPct ?? snapshot.Memory?.CpuPct ?? 0) > 80 ? "error" : (snapshot.Memory?.ContainerCpuPct ?? snapshot.Memory?.CpuPct ?? 0) > 50 ? "warning" : "primary",
       },
     ];
@@ -691,7 +790,7 @@ const Page = () => {
     () => [
       {
         label: "Cancel Job",
-        icon: <Cancel />,
+        icon: <CippIcons.Cancel />,
         color: "error.main",
         noConfirm: true,
         customFunction: (row) => {
@@ -704,7 +803,7 @@ const Page = () => {
       },
       {
         label: "Change Priority",
-        icon: <LowPriority />,
+        icon: <CippIcons.LowPriority />,
         fields: [
           {
             type: "textField",
@@ -725,7 +824,7 @@ const Page = () => {
       },
       {
         label: "Cancel Run",
-        icon: <Cancel />,
+        icon: <CippIcons.Cancel />,
         color: "error.main",
         noConfirm: true,
         customFunction: (row) => {
@@ -740,7 +839,7 @@ const Page = () => {
       },
       {
         label: "Delete",
-        icon: <Delete />,
+        icon: <CippIcons.Delete />,
         noConfirm: true,
         customFunction: (row) => {
           jobAction.mutate({
@@ -759,7 +858,7 @@ const Page = () => {
       <Head>
         <title>Worker Health | CIPP</title>
       </Head>
-      <Box sx={{ flexGrow: 1, pb: 4 }}>
+      <Box sx={{ flexGrow: 1, pb: { xs: 10, md: 4 } }}>
         <Container maxWidth="xl">
           <Stack spacing={2}>
             {/* ── Header toolbar ── */}
@@ -781,7 +880,7 @@ const Page = () => {
                     color="info"
                     size="small"
                     onDelete={handleClearImport}
-                    deleteIcon={<Close />}
+                    deleteIcon={<CippIcons.Close />}
                   />
                 )}
                 {!isImported && healthQuery.isFetching && <CircularProgress size={16} />}
@@ -801,21 +900,21 @@ const Page = () => {
                       disabled={isImported}
                     >
                       {effectivePaused ? (
-                        <PlayArrow fontSize="small" />
+                        <CippIcons.PlayArrow fontSize="small" />
                       ) : (
-                        <Pause fontSize="small" />
+                        <CippIcons.Pause fontSize="small" />
                       )}
                     </IconButton>
                   </span>
                 </Tooltip>
                 <Tooltip title="Export page data as JSON">
                   <IconButton size="small" onClick={handleExport}>
-                    <FileDownload fontSize="small" />
+                    <CippIcons.FileDownload fontSize="small" />
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="Import page data from JSON">
                   <IconButton size="small" onClick={() => fileInputRef.current?.click()}>
-                    <FileUpload fontSize="small" />
+                    <CippIcons.FileUpload fontSize="small" />
                   </IconButton>
                 </Tooltip>
                 <input
@@ -947,7 +1046,7 @@ const Page = () => {
             <Card>
               <CardHeader
                 title="Historical Trends"
-                avatar={<Timeline color="primary" />}
+                avatar={<CippIcons.Timeline color="primary" />}
                 action={
                   <Stack direction="row" spacing={1} sx={{
                     alignItems: "center"
@@ -955,7 +1054,7 @@ const Page = () => {
                     {!isImported && (
                       <Tooltip title="Refresh history data">
                         <IconButton size="small" onClick={handleRefreshHistory}>
-                          <Refresh fontSize="small" />
+                          <CippIcons.Refresh fontSize="small" />
                         </IconButton>
                       </Tooltip>
                     )}
@@ -986,7 +1085,7 @@ const Page = () => {
                   data={historyData}
                   rangeMinutes={historyRange}
                   title="Worker Utilization %"
-                  icon={<Speed color="primary" />}
+                  icon={<CippIcons.Speed color="primary" />}
                 >
                   {(data, t) => (
                     <LineChart data={data} margin={{ left: 0, right: 12, top: 10, bottom: 10 }}>
@@ -1012,7 +1111,7 @@ const Page = () => {
                   data={historyData}
                   rangeMinutes={historyRange}
                   title="Invocations / Interval"
-                  icon={<PlayArrow color="primary" />}
+                  icon={<CippIcons.PlayArrow color="primary" />}
                 >
                   {(data, t) => (
                     <BarChart data={data} margin={{ left: 0, right: 12, top: 10, bottom: 10 }}>
@@ -1041,7 +1140,7 @@ const Page = () => {
                   data={historyData}
                   rangeMinutes={historyRange}
                   title="Memory Usage (MB)"
-                  icon={<Memory color="primary" />}
+                  icon={<CippIcons.Memory color="primary" />}
                 >
                   {(data, t) => (
                     <AreaChart data={data} margin={{ left: 0, right: 12, top: 10, bottom: 10 }}>
@@ -1070,7 +1169,7 @@ const Page = () => {
                   data={historyData}
                   rangeMinutes={historyRange}
                   title="CPU Usage %"
-                  icon={<Speed color="primary" />}
+                  icon={<CippIcons.Speed color="primary" />}
                 >
                   {(data, t) => (
                     <LineChart data={data} margin={{ left: 0, right: 12, top: 10, bottom: 10 }}>
@@ -1100,7 +1199,7 @@ const Page = () => {
                   data={historyData}
                   rangeMinutes={historyRange}
                   title="Job Queue Depth"
-                  icon={<HourglassEmpty color="primary" />}
+                  icon={<CippIcons.HourglassEmpty color="primary" />}
                 >
                   {(data, t) => (
                     <AreaChart data={data} margin={{ left: 0, right: 12, top: 10, bottom: 10 }}>
@@ -1126,7 +1225,7 @@ const Page = () => {
                   data={historyData}
                   rangeMinutes={historyRange}
                   title="Faults & Avg Duration"
-                  icon={<Warning color="primary" />}
+                  icon={<CippIcons.Warning color="primary" />}
                 >
                   {(data, t) => (
                     <LineChart data={data} margin={{ left: 0, right: 12, top: 10, bottom: 10 }}>

@@ -1,41 +1,25 @@
 import { Layout as DashboardLayout } from "../../../../../layouts/index";
+import { CippIcons } from "../../../../../utils/icon-registry"
 import { useSettings } from "../../../../../hooks/use-settings";
 import { useRouter } from "next/router";
 import { ApiGetCall, ApiPostCall } from "../../../../../api/ApiCall";
 import CippFormSkeleton from "../../../../../components/CippFormPages/CippFormSkeleton";
-import CalendarIcon from "@heroicons/react/24/outline/CalendarIcon";
-import {
-  Group,
-  Mail,
-  Fingerprint,
-  Launch,
-  Person,
-  AdminPanelSettings,
-  Visibility,
-  Lock,
-  LockOpen,
-  CloudSync,
-  GroupSharp,
-  GroupAdd,
-} from "@mui/icons-material";
 import { HeaderedTabbedLayout } from "../../../../../layouts/HeaderedTabbedLayout";
 import { CippEntitySwitcher } from "../../../../../components/CippComponents/CippEntitySwitcher";
 import tabOptions from "./tabOptions";
 import { CippCopyToClipBoard } from "../../../../../components/CippComponents/CippCopyToClipboard";
 import { Box, Stack } from "@mui/system";
 import { Grid } from "@mui/system";
-import { SvgIcon, Typography, Card, CardHeader, Divider } from "@mui/material";
+import { SvgIcon, Typography, Card, CardHeader, Divider, Alert } from "@mui/material";
 import { CippBannerListCard } from "../../../../../components/CippCards/CippBannerListCard";
 import { CippTimeAgo } from "../../../../../components/CippComponents/CippTimeAgo";
 import { useEffect, useState, useRef } from "react";
-import { EyeIcon, PencilIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { CippDataTable } from "../../../../../components/CippTable/CippDataTable";
 import { PropertyList } from "../../../../../components/property-list";
 import { PropertyListItem } from "../../../../../components/property-list-item";
 import { getCippFormatting } from "../../../../../utils/get-cipp-formatting";
 import { CippHead } from "../../../../../components/CippComponents/CippHead";
 import { Button } from "@mui/material";
-import { Edit } from "@mui/icons-material";
 
 const Page = () => {
   const userSettingsDefaults = useSettings();
@@ -126,21 +110,26 @@ const Page = () => {
   const groupOwners = groupOwnersData?.body?.value || [];
   const groupMemberOf = groupMemberOfData?.body?.value || [];
 
-  // Set the title and subtitle for the layout
-  const title = groupRequest.isSuccess ? groupData?.displayName : "Loading...";
+  // Set the title and subtitle for the layout. Without a groupId nothing is ever fetched,
+  // so falling back to the loading label here would leave it stuck forever.
+  const title = !groupId
+    ? "No Group Selected"
+    : groupRequest.isSuccess
+      ? groupData?.displayName
+      : "Loading...";
 
   const subtitle = groupRequest.isSuccess
     ? [
         {
-          icon: <Mail />,
+          icon: <CippIcons.Mail />,
           text: <CippCopyToClipBoard type="chip" text={groupData?.mail || groupData?.mailNickname || "N/A"} />,
         },
         {
-          icon: <Fingerprint />,
+          icon: <CippIcons.Fingerprint />,
           text: <CippCopyToClipBoard type="chip" text={groupData?.id} />,
         },
         {
-          icon: <CalendarIcon />,
+          icon: <CippIcons.CalendarIcon />,
           text: (
             <>
               Created: <CippTimeAgo data={groupData?.createdDateTime} />
@@ -148,7 +137,7 @@ const Page = () => {
           ),
         },
         {
-          icon: <Launch style={{ color: "#667085" }} />,
+          icon: <CippIcons.Launch />,
           text: (
             <Button
               color="muted"
@@ -235,7 +224,7 @@ const Page = () => {
         label: "Edit Group",
         link: "/identity/administration/groups/edit?groupId=[id]&groupType=[groupType]",
         multiPost: false,
-        icon: <Edit />,
+        icon: <CippIcons.Edit />,
         color: "success",
         showInActionsMenu: true,
       },
@@ -243,7 +232,7 @@ const Page = () => {
         label: "Set Global Address List Visibility",
         type: "POST",
         url: "/api/ExecGroupsHideFromGAL",
-        icon: <Visibility />,
+        icon: <CippIcons.EyeIcon />,
         data: {
           ID: "mail",
           GroupType: "groupType",
@@ -268,7 +257,7 @@ const Page = () => {
         label: "Only allow messages from people inside the organisation",
         type: "POST",
         url: "/api/ExecGroupsDeliveryManagement",
-        icon: <Lock />,
+        icon: <CippIcons.Lock />,
         data: {
           ID: "mail",
           GroupType: "groupType",
@@ -281,7 +270,7 @@ const Page = () => {
       {
         label: "Allow messages from people inside and outside the organisation",
         type: "POST",
-        icon: <LockOpen />,
+        icon: <CippIcons.LockOpen />,
         url: "/api/ExecGroupsDeliveryManagement",
         data: {
           ID: "mail",
@@ -296,7 +285,7 @@ const Page = () => {
         label: "Set Source of Authority",
         type: "POST",
         url: "/api/ExecSetCloudManaged",
-        icon: <CloudSync />,
+        icon: <CippIcons.CloudSync />,
         data: {
           ID: "id",
           displayName: "displayName",
@@ -349,7 +338,7 @@ const Page = () => {
         label: "Create template based on group",
         type: "POST",
         url: "/api/AddGroupTemplate",
-        icon: <GroupSharp />,
+        icon: <CippIcons.GroupSharp />,
         data: {
           displayName: "displayName",
           description: "description",
@@ -365,7 +354,7 @@ const Page = () => {
         label: "Create Team from Group",
         type: "POST",
         url: "/api/AddGroupTeam",
-        icon: <GroupAdd />,
+        icon: <CippIcons.GroupAdd />,
         data: {
           GroupId: "id",
         },
@@ -499,7 +488,7 @@ const Page = () => {
         label: "Delete Group",
         type: "POST",
         url: "/api/ExecGroupsDelete",
-        icon: <TrashIcon />,
+        icon: <CippIcons.Delete />,
         data: {
           ID: "id",
           GroupType: "groupType",
@@ -520,7 +509,7 @@ const Page = () => {
           {
             id: 1,
             cardLabelBox: {
-              cardLabelBoxHeader: <Person />,
+              cardLabelBoxHeader: <CippIcons.Person />,
             },
             text: "Members",
             subtext: "List of members in this group",
@@ -531,7 +520,7 @@ const Page = () => {
               hideTitle: true,
               actions: [
                 {
-                  icon: <EyeIcon />,
+                  icon: <CippIcons.EyeIcon />,
                   label: "View User",
                   link: `/identity/administration/users/user?userId=[id]&tenantFilter=${userSettingsDefaults.currentTenant}`,
                   pinned: true,
@@ -575,7 +564,7 @@ const Page = () => {
           {
             id: 1,
             cardLabelBox: {
-              cardLabelBoxHeader: <AdminPanelSettings />,
+              cardLabelBoxHeader: <CippIcons.AdminPanelSettings />,
             },
             text: "Owners",
             subtext: "List of owners of this group",
@@ -586,7 +575,7 @@ const Page = () => {
               hideTitle: true,
               actions: [
                 {
-                  icon: <EyeIcon />,
+                  icon: <CippIcons.EyeIcon />,
                   label: "View User",
                   link: `/identity/administration/users/user?userId=[id]&tenantFilter=${userSettingsDefaults.currentTenant}`,
                   pinned: true,
@@ -630,7 +619,7 @@ const Page = () => {
           {
             id: 1,
             cardLabelBox: {
-              cardLabelBoxHeader: <Group />,
+              cardLabelBoxHeader: <CippIcons.Group />,
             },
             text: "Group Memberships",
             subtext: "List of groups this group is a member of",
@@ -643,14 +632,14 @@ const Page = () => {
               hideTitle: true,
               actions: [
                 {
-                  icon: <EyeIcon />,
+                  icon: <CippIcons.EyeIcon />,
                   label: "View Group",
                   link: `/identity/administration/groups/group?groupId=[id]&tenantFilter=${userSettingsDefaults.currentTenant}`,
                   pinned: true,
                   condition: (row) => row["@odata.type"] === "#microsoft.graph.group",
                 },
                 {
-                  icon: <PencilIcon />,
+                  icon: <CippIcons.Edit />,
                   label: "Edit Group",
                   link: "/identity/administration/groups/edit?groupId=[id]&groupType=[calculatedGroupType]",
                   pinned: true,
@@ -715,9 +704,15 @@ const Page = () => {
       actions={groupActions}
       actionsData={data}
       subtitle={subtitle}
-      isFetching={groupRequest.isLoading}
+      isFetching={!!groupId && groupRequest.isLoading}
     >
-      {groupRequest.isLoading && <CippFormSkeleton layout={[2, 1, 2, 2]} />}
+      {!groupId && (
+        <Alert severity="info" sx={{ m: 2 }}>
+          No group selected. Open this page from the Groups list, or pick one from the switcher
+          above.
+        </Alert>
+      )}
+      {groupId && groupRequest.isLoading && <CippFormSkeleton layout={[2, 1, 2, 2]} />}
       {groupRequest.isSuccess && (
         <Box
           sx={{
@@ -739,7 +734,7 @@ const Page = () => {
                         alignItems: "center"
                       }}>
                         <SvgIcon sx={{ fontSize: 64 }}>
-                          <Group />
+                          <CippIcons.Group />
                         </SvgIcon>
                         <Typography variant="h6">{data?.displayName || "N/A"}</Typography>
                         <Typography variant="body2" sx={{

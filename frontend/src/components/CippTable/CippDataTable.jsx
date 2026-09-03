@@ -4,6 +4,7 @@ import {
   getColumnId,
   getDefaultColumnFilterFn,
 } from 'material-react-table'
+import { CippIcons } from '../../utils/icon-registry'
 import {
   alpha,
   Card,
@@ -32,7 +33,6 @@ import {
   resolveSimpleColumnVariables,
 } from './util-columnsFromAPI'
 import { CIPPTableToptoolbar } from './CIPPTableToptoolbar'
-import { Info, More, MoreHoriz } from '@mui/icons-material'
 import { CippOffCanvas } from '../CippComponents/CippOffCanvas'
 import { useDialog } from '../../hooks/use-dialog'
 import { CippApiDialog } from '../CippComponents/CippApiDialog'
@@ -847,7 +847,11 @@ export const CippDataTable = (props) => {
 
       const combinedResults = allPages.flatMap((page) => {
         const nestedData = getNestedValue(page, api.dataKey)
-        return nestedData !== undefined ? nestedData : []
+        if (nestedData !== undefined) {
+          return nestedData
+        }
+        // dataKey miss on a bare-array page: the endpoint served the legacy shape.
+        return Array.isArray(page) ? page : []
       })
       const filtered = dataFilter
         ? combinedResults.filter(dataFilter)
@@ -1073,7 +1077,8 @@ export const CippDataTable = (props) => {
         maxHeightOffset,
         settings,
         effectiveViewMode,
-        isNarrowViewport
+        isNarrowViewport,
+        exportEnabled
       ),
     [
       simple,
@@ -1084,6 +1089,7 @@ export const CippDataTable = (props) => {
       settings?.tablePageSize?.value,
       effectiveViewMode,
       isNarrowViewport,
+      exportEnabled,
     ]
   )
 
@@ -1284,7 +1290,7 @@ export const CippDataTable = (props) => {
       queueMessage ? (
         <Box sx={{ py: { xs: 2, md: 4 } }}>
           <center>
-            <Info /> {queueMessage}
+            <CippIcons.Info /> {queueMessage}
           </center>
         </Box>
       ) : undefined,
@@ -1608,7 +1614,7 @@ export const CippDataTable = (props) => {
               }}
             >
               <SvgIcon fontSize="small" sx={{ minWidth: '30px' }}>
-                <MoreHoriz />
+                <CippIcons.MoreHoriz />
               </SvgIcon>
               More Info
             </MenuItem>
@@ -1629,7 +1635,7 @@ export const CippDataTable = (props) => {
           }}
         >
           <ListItemIcon>
-            <More fontSize="small" />
+            <CippIcons.More fontSize="small" />
           </ListItemIcon>
           More Info
         </MenuItem>,
@@ -1682,7 +1688,7 @@ export const CippDataTable = (props) => {
           }}
         >
           <ListItemIcon>
-            <MoreHoriz fontSize="small" />
+            <CippIcons.MoreHoriz fontSize="small" />
           </ListItemIcon>
           <ListItemText>More Info</ListItemText>
         </MenuItem>

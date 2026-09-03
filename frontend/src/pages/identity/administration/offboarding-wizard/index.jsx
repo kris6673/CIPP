@@ -1,4 +1,5 @@
 import { Layout as DashboardLayout } from "../../../../layouts/index";
+import { CippIcons } from "../../../../utils/icon-registry";
 import { CippWizardConfirmation } from "../../../../components/CippWizard/CippWizardConfirmation";
 import CippWizardPage from "../../../../components/CippWizard/CippWizardPage.jsx";
 import { CippTenantStep } from "../../../../components/CippWizard/CippTenantStep.jsx";
@@ -6,12 +7,12 @@ import { CippWizardAutoComplete } from "../../../../components/CippWizard/CippWi
 import { CippWizardOffboarding } from "../../../../components/CippWizard/CippWizardOffboarding";
 import { useSettings } from "../../../../hooks/use-settings";
 import CippTablePage from "../../../../components/CippComponents/CippTablePage";
-import { PersonOff } from "@mui/icons-material";
 import { Button } from "@mui/material";
 import { useState } from "react";
 import ScheduledTaskDetails from "../../../../components/CippComponents/ScheduledTaskDetails";
 import { CippScheduledTaskActions } from "../../../../components/CippComponents/CippScheduledTaskActions";
 import { CippSchedulerDrawer } from "../../../../components/CippComponents/CippSchedulerDrawer";
+import { OFFBOARDING_PROGRESS_ACTIONS } from "../../../../components/CippComponents/CippJobProgress";
 
 const Page = () => {
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -78,6 +79,14 @@ const Page = () => {
       maxWidth: "lg",
       componentProps: {
         columns: 3,
+        // A run-now job returns a DeploymentId; polling it shows each user's steps live in the wizard.
+        // Progress and re-runs go through offboarding endpoints, so the wizard's permission is enough.
+        jobProgress: {
+          idField: "DeploymentId",
+          title: "Offboarding Progress",
+          url: (id) => `/api/ListOffboardingProgress?DeploymentId=${id}`,
+          actions: OFFBOARDING_PROGRESS_ACTIONS,
+        },
       },
     },
   ];
@@ -117,7 +126,7 @@ const Page = () => {
     <>
       <CippTablePage
         cardButton={
-          <Button onClick={() => setWizardOpen(true)} startIcon={<PersonOff />}>
+          <Button onClick={() => setWizardOpen(true)} startIcon={<CippIcons.PersonOff />}>
             Start Offboarding
           </Button>
         }
@@ -166,7 +175,7 @@ const Page = () => {
         dialogMode={true}
         open={wizardOpen}
         onClose={() => setWizardOpen(false)}
-        dialogIcon={<PersonOff />}
+        dialogIcon={<CippIcons.PersonOff />}
         relatedQueryKeys={[`OffboardingJobs-${currentTenant}`]}
         initialState={{
           ...initialState.offboardingDefaults,

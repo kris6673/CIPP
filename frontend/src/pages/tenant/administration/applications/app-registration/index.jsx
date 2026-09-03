@@ -1,25 +1,16 @@
 import { Layout as DashboardLayout } from '../../../../../layouts/index'
+import { CippIcons } from '../../../../../utils/icon-registry'
 import { useSettings } from '../../../../../hooks/use-settings'
 import { useRouter } from 'next/router'
 import { ApiGetCall, ApiPostCall } from '../../../../../api/ApiCall'
 import CippFormSkeleton from '../../../../../components/CippFormPages/CippFormSkeleton'
-import CalendarIcon from '@heroicons/react/24/outline/CalendarIcon'
-import {
-  Fingerprint,
-  Launch,
-  Security,
-  Group,
-  CheckCircle,
-  Warning,
-  Badge,
-} from '@mui/icons-material'
 import { HeaderedTabbedLayout } from '../../../../../layouts/HeaderedTabbedLayout'
 import { CippAppRegistrationSwitcher } from '../../../../../components/CippComponents/CippAppRegistrationSwitcher'
 import tabOptions from './tabOptions'
 import { CippCopyToClipBoard } from '../../../../../components/CippComponents/CippCopyToClipboard'
 import { Box, Stack } from '@mui/system'
 import { Grid } from '@mui/system'
-import { Typography, Card, CardHeader, Divider, Button, SvgIcon } from '@mui/material'
+import { Typography, Card, CardHeader, Divider, Button, SvgIcon, Alert } from '@mui/material'
 import { CippBannerListCard } from '../../../../../components/CippCards/CippBannerListCard'
 import { CippTimeAgo } from '../../../../../components/CippComponents/CippTimeAgo'
 import { useEffect, useMemo, useState, useRef } from 'react'
@@ -27,7 +18,6 @@ import { PropertyList } from '../../../../../components/property-list'
 import { PropertyListItem } from '../../../../../components/property-list-item'
 import { CippHead } from '../../../../../components/CippComponents/CippHead'
 import CippPermissionPreview from '../../../../../components/CippComponents/CippPermissionPreview.jsx'
-import { EyeIcon } from '@heroicons/react/24/outline'
 import { usePermissions } from '../../../../../hooks/use-permissions.js'
 import { getAppRegistrationDetailHeaderActions } from '../../../../../components/CippComponents/AppRegistrationActions.jsx'
 import { getListGraphBulkRequestRows } from '../../../../../utils/getListGraphBulkRequestRows.js'
@@ -136,24 +126,28 @@ const Page = () => {
   const owners = ownersData?.body?.value ?? []
   const servicePrincipals = servicePrincipalsData?.body?.value ?? []
 
-  const title = !appRequest.isSuccess
-    ? 'Loading...'
-    : appData?.displayName || appData?.appId || applicationClientId || 'Application registration'
+  // Without an appId nothing is ever fetched, so falling back to the loading label here
+  // would leave it stuck forever.
+  const title = !applicationClientId
+    ? 'No Application Selected'
+    : !appRequest.isSuccess
+      ? 'Loading...'
+      : appData?.displayName || appData?.appId || applicationClientId || 'Application registration'
   const data = appData
 
   const subtitle =
     appRequest.isSuccess && appData
       ? [
           {
-            icon: <Badge />,
+            icon: <CippIcons.Badge />,
             text: <CippCopyToClipBoard type="chip" text={appData?.appId || 'N/A'} />,
           },
           {
-            icon: <Fingerprint />,
+            icon: <CippIcons.Fingerprint />,
             text: <CippCopyToClipBoard type="chip" text={appData?.id || 'N/A'} />,
           },
           {
-            icon: <CalendarIcon />,
+            icon: <CippIcons.CalendarIcon />,
             text: (
               <>
                 Created: <CippTimeAgo data={appData?.createdDateTime} />
@@ -161,7 +155,7 @@ const Page = () => {
             ),
           },
           {
-            icon: <Launch style={{ color: '#667085' }} />,
+            icon: <CippIcons.Launch />,
             text: (
               <Button
                 color="muted"
@@ -197,7 +191,7 @@ const Page = () => {
           {
             id: 1,
             cardLabelBox: {
-              cardLabelBoxHeader: <Group />,
+              cardLabelBoxHeader: <CippIcons.Group />,
             },
             text: 'Owners',
             subtext: 'List of application owners',
@@ -211,7 +205,7 @@ const Page = () => {
               simpleColumns: ['displayName', 'userPrincipalName', 'mail', '@odata.type'],
               actions: [
                 {
-                  icon: <EyeIcon />,
+                  icon: <CippIcons.EyeIcon />,
                   label: 'View User',
                   link: `/identity/administration/users/user?userId=[id]&tenantFilter=${userSettingsDefaults.currentTenant}`,
                   pinned: true,
@@ -251,7 +245,7 @@ const Page = () => {
     {
       id: 1,
       cardLabelBox: {
-        cardLabelBoxHeader: data?.passwordCredentials?.length > 0 ? <CheckCircle /> : <Warning />,
+        cardLabelBoxHeader: data?.passwordCredentials?.length > 0 ? <CippIcons.CheckCircle /> : <CippIcons.Warning />,
       },
       text: 'Password Credentials',
       subtext: `${data?.passwordCredentials?.length || 0} secret(s)`,
@@ -284,7 +278,7 @@ const Page = () => {
     {
       id: 2,
       cardLabelBox: {
-        cardLabelBoxHeader: data?.keyCredentials?.length > 0 ? <CheckCircle /> : <Warning />,
+        cardLabelBoxHeader: data?.keyCredentials?.length > 0 ? <CippIcons.CheckCircle /> : <CippIcons.Warning />,
       },
       text: 'Certificate Credentials',
       subtext: `${data?.keyCredentials?.length || 0} certificate(s)`,
@@ -320,7 +314,7 @@ const Page = () => {
           {
             id: 1,
             cardLabelBox: {
-              cardLabelBoxHeader: <CheckCircle />,
+              cardLabelBoxHeader: <CippIcons.CheckCircle />,
             },
             text: 'Enterprise App',
             subtext: 'Related service principal(s) for this app registration',
@@ -381,9 +375,15 @@ const Page = () => {
       subtitle={subtitle}
       actions={appData ? appActions : []}
       actionsData={actionsData}
-      isFetching={appRequest.isLoading}
+      isFetching={!!applicationClientId && appRequest.isLoading}
     >
-      {appRequest.isLoading && <CippFormSkeleton layout={[2, 1, 2, 2]} />}
+      {!applicationClientId && (
+        <Alert severity="info" sx={{ m: 2 }}>
+          No application selected. Open this page from the App Registrations list, or pick one
+          from the switcher above.
+        </Alert>
+      )}
+      {applicationClientId && appRequest.isLoading && <CippFormSkeleton layout={[2, 1, 2, 2]} />}
       {appRequest.isSuccess && !appData && (
         <Box sx={{ flexGrow: 1, py: 4 }}>
           <Typography sx={{
@@ -414,7 +414,7 @@ const Page = () => {
                         alignItems: "center"
                       }}>
                         <SvgIcon sx={{ fontSize: 64 }}>
-                          <Security />
+                          <CippIcons.Security />
                         </SvgIcon>
                         <Typography variant="h6">{data?.displayName || 'N/A'}</Typography>
                         <Typography variant="body2" sx={{

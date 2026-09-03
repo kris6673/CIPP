@@ -1,6 +1,6 @@
 import { Layout as DashboardLayout } from '../../../../layouts/index'
+import { CippIcons } from '../../../../utils/icon-registry'
 import { CippTablePage } from '../../../../components/CippComponents/CippTablePage.jsx'
-import { LockPerson } from '@mui/icons-material'
 import { useCippReportDB } from '../../../../components/CippComponents/CippReportDBControls'
 import { useRouter } from 'next/router'
 import { useMemo } from 'react'
@@ -16,6 +16,7 @@ const Page = () => {
     syncTitle: 'Sync MFA Report',
     allowToggle: false,
     defaultCached: true,
+    serverPagination: true,
   })
 
   const simpleColumns = [
@@ -85,7 +86,7 @@ const Page = () => {
     {
       label: 'Set Per-User MFA',
       type: 'POST',
-      icon: <LockPerson />,
+      icon: <CippIcons.LockPerson />,
       url: '/api/ExecPerUserMFA',
       data: { userId: 'ID', userPrincipalName: 'UPN' },
       fields: [
@@ -113,12 +114,15 @@ const Page = () => {
         title={pageTitle}
         apiUrl={reportDB.resolvedApiUrl}
         apiData={reportDB.resolvedApiData}
+        apiDataKey={reportDB.apiDataKey}
         queryKey={reportDB.resolvedQueryKey}
         simpleColumns={simpleColumns}
         filters={filters}
         actions={actions}
         dataSourceControls={reportDB.controls}
         initialFilters={urlFilters}
+        // Paged cache reads arrive in table walk order, not sorted like the unpaged report.
+        defaultSorting={[{ id: 'UPN', desc: false }]}
       />
       {reportDB.syncDialog}
     </>

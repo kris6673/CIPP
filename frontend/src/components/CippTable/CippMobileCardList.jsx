@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CippIcons } from "../../utils/icon-registry";
 import {
   Box,
   Button,
@@ -15,13 +16,12 @@ import {
   Typography,
 } from "@mui/material";
 import { flexRender } from "material-react-table";
-import { Info, MoreVert, MoreHoriz, SearchOff } from "@mui/icons-material";
 import { getCippTranslation } from "../../utils/get-cipp-translation";
 import { renderUrlValue } from "../../utils/render-url-value";
 import { getMobileCardSlots } from "./util-mobile-card-slots";
 import { CippBottomSheet } from "../CippComponents/CippBottomSheet";
 import { CippPageActionsFab } from "../CippComponents/CippPageActionsFab";
-import { useActionCornerClaim } from "../../layouts/tab-navigation-context";
+import { useActionCornerClaim, useTabNavigation } from "../../layouts/tab-navigation-context";
 import { useSheetHandoff } from "../../hooks/use-sheet-handoff";
 import { isRowTextInteraction } from "./util-row-text-interaction";
 
@@ -116,6 +116,11 @@ export const CippMobileCardList = (props) => {
   // behind the bulk bar. Navigation is unaffected — the tab picker is in the title row.
   useActionCornerClaim(fixedChrome && selectMode);
 
+  // A tabbed layout drops its own fixed FAB over the content whenever nothing claimed the
+  // corner, so an embedded (noCard) list sits under it too and still owes the reservation.
+  const tabNav = useTabNavigation();
+  const hasLayoutFab = Boolean(tabNav?.enabled) && (tabNav?.actions?.length ?? 0) > 0;
+
   // A desktop tablePageSize above the cap would render that many unvirtualized cards.
   useEffect(() => {
     if (table.getState().pagination.pageSize > MOBILE_PAGE_SIZE_CAP) {
@@ -194,18 +199,22 @@ export const CippMobileCardList = (props) => {
   return (
     <Box data-testid="cipp-mobile-card-list">
       {isStreaming && !showSkeletons && <LinearProgress sx={{ height: 3 }} />}
-      {/* pb clears the fixed FAB / bulk bar — chrome an embedded (noCard/dialog) list does
-          not have, so it pays a normal gap instead of 80px of blank card. */}
+      {/* pb clears the fixed FAB / bulk bar — chrome an embedded (noCard/dialog) list only
+          has when its layout supplies the FAB; otherwise it pays a normal gap. */}
       <Stack
         spacing={1}
-        sx={{ px: fixedChrome ? 1 : 0, pt: 0.75, pb: fixedChrome ? (selectMode ? 12 : 10) : 1 }}
+        sx={{
+          px: fixedChrome ? 1 : 0,
+          pt: 0.75,
+          pb: fixedChrome ? (selectMode ? 12 : 10) : hasLayoutFab ? 10 : 1,
+        }}
       >
         {showSkeletons ? (
           Array.from({ length: 5 }, (_, i) => <SkeletonCard key={i} />)
         ) : totalFiltered === 0 ? (
           <Box sx={{ py: 5, textAlign: "center" }}>
             <SvgIcon sx={{ fontSize: 36, color: "text.secondary" }}>
-              {queueMessage ? <Info /> : <SearchOff />}
+              {queueMessage ? <CippIcons.Info /> : <CippIcons.SearchOff />}
             </SvgIcon>
             <Typography variant="subtitle1" sx={{ mt: 1 }}>
               {queueMessage ?? "No results"}
@@ -269,7 +278,9 @@ export const CippMobileCardList = (props) => {
                       }}
                     />
                   )}
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                  {/* A chip sizes to its label, so a GUID or tenant name would push its
+                      pill past the card edge — cap it and let the label ellipsize. */}
+                  <Box sx={{ flex: 1, minWidth: 0, "& .MuiChip-root": { maxWidth: "100%" } }}>
                     <Typography
                       variant="subtitle1"
                       noWrap
@@ -363,6 +374,9 @@ export const CippMobileCardList = (props) => {
                               sx={{
                                 minWidth: 0,
                                 overflow: "hidden",
+                                // GUIDs, UPNs and URLs are one unbreakable word: without
+                                // this they run past the card edge and get clipped mid-token.
+                                overflowWrap: "anywhere",
                                 fontSize: 13,
                                 "& > *": { verticalAlign: "middle" },
                               }}
@@ -397,7 +411,7 @@ export const CippMobileCardList = (props) => {
                       }}
                       sx={{ position: "absolute", top: 4, right: 4, minWidth: 44, minHeight: 44 }}
                     >
-                      <MoreVert />
+                      <CippIcons.MoreVert />
                     </IconButton>
                   )}
                 </Card>
@@ -463,7 +477,7 @@ export const CippMobileCardList = (props) => {
           >
             <ListItemIcon sx={{ minWidth: 40 }}>
               <SvgIcon fontSize="small">
-                <MoreHoriz />
+                <CippIcons.MoreHoriz />
               </SvgIcon>
             </ListItemIcon>
             <ListItemText primary="More Info" />
