@@ -272,6 +272,10 @@ function Test-CIPPAccess {
             if ($env:cipp_hosted_failed_payments) {
                 $MeResponse['hostedFailedPayments'] = $true
             }
+            # CyberDrain-hosted instance (CIPP_HOSTED is set by the hosted deployment templates).
+            # Lets the frontend point at the management portal for anything the instance's own
+            # identity cannot do, such as custom domains on the shared App Service plan.
+            $MeResponse['hosted'] = $env:CIPP_HOSTED -eq 'true'
 
             $CanManageAppSettings = $Permissions -contains 'CIPP.AppSettings.ReadWrite'
             $HasAnyPermission = ($Permissions | Measure-Object).Count -gt 0

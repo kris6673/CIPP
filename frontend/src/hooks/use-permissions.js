@@ -16,6 +16,9 @@ export const usePermissions = () => {
   const userPermissions = currentRole.data?.permissions || [];
   const isLoading = currentRole.isLoading;
   const isAuthenticated = currentRole.isSuccess && userRoles.length > 0;
+  // CyberDrain-hosted instance: some infrastructure (custom domains on the shared plan) is
+  // managed in the management portal rather than from CIPP itself.
+  const isHosted = Boolean(currentRole.data?.hosted);
 
   /**
    * Check if user has specific permissions
@@ -71,6 +74,7 @@ export const usePermissions = () => {
     userRoles,
     isLoading,
     isAuthenticated,
+    isHosted,
     checkPermissions,
     checkRoles,
     checkAccess,

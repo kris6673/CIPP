@@ -34,6 +34,9 @@ import CippButtonCard from "../CippCards/CippButtonCard";
 import { CippApiResults } from "../CippComponents/CippApiResults";
 import { CippCopyToClipBoard } from "../CippComponents/CippCopyToClipboard";
 import { ApiGetCall, ApiPostCall } from "../../api/ApiCall";
+import { usePermissions } from "../../hooks/use-permissions";
+
+const MANAGEMENT_PORTAL_URL = "https://management.cipp.app/";
 
 const LIST_QUERY_KEY = "AppServiceDomains";
 
@@ -479,6 +482,9 @@ const DomainWizard = ({ open, onClose, siteInfo, initialDomain }) => {
 export const CippAppServiceDomains = () => {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [managingDomain, setManagingDomain] = useState(null);
+  // Hosted instances sit on a shared App Service plan the instance identity cannot change, so
+  // domains are managed in the management portal and this page is read-only.
+  const { isHosted } = usePermissions();
 
   const domainsQuery = ApiGetCall({
     url: "/api/ExecAppServiceDomains",
@@ -605,14 +611,35 @@ export const CippAppServiceDomains = () => {
   return (
     <Grid container spacing={3}>
       <Grid size={{ xs: 12 }}>
-        <Alert severity="info">
-          Map custom domains to the App Service that hosts this CIPP instance. Each domain needs a
-          DNS alias record, a hostname binding, and (optionally) a free managed TLS certificate —
-          the wizard walks through all three and can be reopened at any time to finish or fix a
-          domain. The default <code>*.azurewebsites.net</code> hostname always remains available.
-          Point the domain directly at the App Service — a proxy or CDN in front of CIPP blocks
-          certificate issuance and renewal.
-        </Alert>
+        {isHosted ? (
+          <Alert
+            severity="info"
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                href={MANAGEMENT_PORTAL_URL}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open management portal
+              </Button>
+            }
+          >
+            This instance is hosted by CyberDrain. Custom domains and their certificates are
+            managed in the management portal — the instance itself does not have permission to
+            change the shared App Service plan. The list below is read-only.
+          </Alert>
+        ) : (
+          <Alert severity="info">
+            Map custom domains to the App Service that hosts this CIPP instance. Each domain needs a
+            DNS alias record, a hostname binding, and (optionally) a free managed TLS certificate —
+            the wizard walks through all three and can be reopened at any time to finish or fix a
+            domain. The default <code>*.azurewebsites.net</code> hostname always remains available.
+            Point the domain directly at the App Service — a proxy or CDN in front of CIPP blocks
+            certificate issuance and renewal.
+          </Alert>
+        )}
       </Grid>
 
       <Grid size={{ xs: 12, md: 5 }}>
@@ -654,21 +681,23 @@ export const CippAppServiceDomains = () => {
           isFetching={domainsQuery.isFetching}
           refreshFunction={domainsQuery.refetch}
           simpleColumns={["Hostname", "Status"]}
-          actions={actions}
+          actions={isHosted ? [] : actions}
           offCanvas={offCanvas}
           cardButton={
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={
-                <SvgIcon>
-                  <PlusIcon />
-                </SvgIcon>
-              }
-              onClick={openAddWizard}
-            >
-              Add Custom Domain
-            </Button>
+            isHosted ? null : (
+              <Button
+                variant="contained"
+                size="small"
+                startIcon={
+                  <SvgIcon>
+                    <PlusIcon />
+                  </SvgIcon>
+                }
+                onClick={openAddWizard}
+              >
+                Add Custom Domain
+              </Button>
+            )
           }
         />
       </Grid>
