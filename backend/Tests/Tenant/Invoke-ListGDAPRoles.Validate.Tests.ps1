@@ -74,7 +74,7 @@ Describe 'Invoke-ListGDAPRoles' {
     }
 
     It 'annotates each mapping with its group status when asked' {
-        $Response = Invoke-ListGDAPRoles -Request (New-Request -Validate 'true') -TriggerMetadata $null
+        $Response = Invoke-ListGDAPRoles -Request (New-Request -Validate $true) -TriggerMetadata $null
 
         Should -Invoke Test-CIPPGDAPGroupMappings -Times 1
         $Valid = $Response.Body | Where-Object -Property GroupId -EQ 'group-user-admin'
@@ -88,7 +88,7 @@ Describe 'Invoke-ListGDAPRoles' {
     It 'degrades to Unknown when the group check fails' {
         Mock -CommandName Test-CIPPGDAPGroupMappings -MockWith { throw 'graph is down' }
 
-        $Response = Invoke-ListGDAPRoles -Request (New-Request -Validate 'true') -TriggerMetadata $null
+        $Response = Invoke-ListGDAPRoles -Request (New-Request -Validate $true) -TriggerMetadata $null
 
         $Response.StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
         $Response.Body.GroupStatus | Should -Be @('Unknown', 'Unknown')

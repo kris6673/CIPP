@@ -27,7 +27,7 @@ Function Invoke-ListGDAPRoles {
     }
 
     # Opt-in only: other consumers of this endpoint depend on the unannotated shape.
-    if ($Request.Query.validate -eq 'true' -and ($MappedGroups | Measure-Object).Count -gt 0) {
+    if ($Request.Query.validate -eq $true -and ($MappedGroups | Measure-Object).Count -gt 0) {
         try {
             # The helper fetches the partner tenant groups itself; keeping Graph out of this
             # entrypoint keeps the documented response shape to the mapping fields.

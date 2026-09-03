@@ -46715,7 +46715,7 @@
             "description": "Opt-in only: other consumers of this endpoint depend on the unannotated shape.",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "boolean"
             }
           }
         ],
