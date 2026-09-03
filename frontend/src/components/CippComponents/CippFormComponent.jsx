@@ -14,6 +14,8 @@ import {
   Tooltip,
   Alert,
 } from "@mui/material";
+import { CippIcons } from "../../utils/icon-registry";
+import { useTheme } from "@mui/material/styles";
 import { CippAutoComplete } from "./CippAutocomplete";
 import { CippTextFieldWithVariables } from "./CippTextFieldWithVariables";
 import { Controller, useFormState } from "react-hook-form";
@@ -23,7 +25,6 @@ import get from "lodash/get";
 import dynamic from "next/dynamic";
 import { CippDataTable } from "../CippTable/CippDataTable";
 import React from "react";
-import { CloudUpload } from "@mui/icons-material";
 import { Stack } from "@mui/system";
 import countryList from "../../data/countryList";
 import languageList from "../../data/languageList";
@@ -106,6 +107,7 @@ export const CippFormComponent = (props) => {
     ? { ...validatorsProp, validate: validatorsProp?.validate ?? validate }
     : validatorsProp;
   const { errors } = useFormState({ control: formControl.control });
+  const theme = useTheme();
   // Convert the name from bracket notation to dot notation
   const convertedName = convertBracketsToDots(name);
 
@@ -327,14 +329,24 @@ export const CippFormComponent = (props) => {
               }}
               render={({ field }) => (
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  {/* An unset colour has to render as some swatch; #000000 is a hole on a
+                      dark card, so dark mode falls back to the card colour instead. */}
                   <input
                     type="color"
-                    value={/^#[0-9A-F]{6}$/i.test(field.value || "") ? field.value : "#000000"}
+                    value={
+                      /^#[0-9A-F]{6}$/i.test(field.value || "")
+                        ? field.value
+                        : theme.palette.mode === "dark"
+                          ? theme.palette.background.paper
+                          : "#000000"
+                    }
                     onChange={(e) => field.onChange(e.target.value)}
                     style={{
                       width: "50px",
                       height: "40px",
-                      border: "1px solid #ddd",
+                      border: `1px solid ${
+                        theme.palette.mode === "dark" ? theme.palette.neutral[600] : "#ddd"
+                      }`,
                       borderRadius: "4px",
                       cursor: "pointer",
                       padding: 0,
@@ -848,7 +860,7 @@ export const CippFormComponent = (props) => {
                     }}
                     onClick={() => document.getElementById(`file-input-${convertedName}`).click()}
                   >
-                    <CloudUpload sx={{ fontSize: 40, color: "grey.500", mb: 1 }} />
+                    <CippIcons.CloudUpload sx={{ fontSize: 40, color: "grey.500", mb: 1 }} />
                     <Typography variant="body2" sx={{
                       color: "text.secondary"
                     }}>

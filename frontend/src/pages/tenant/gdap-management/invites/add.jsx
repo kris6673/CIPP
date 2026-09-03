@@ -1,4 +1,5 @@
 import { Layout as DashboardLayout } from "../../../../layouts/index";
+import { CippIcons } from "../../../../utils/icon-registry";
 import { useForm, useWatch } from "react-hook-form";
 import CippFormComponent from "../../../../components/CippComponents/CippFormComponent";
 import { Grid } from "@mui/system";
@@ -22,13 +23,14 @@ import {
   SvgIcon,
   Typography,
 } from "@mui/material";
-import { PlusIcon } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
 import { CippPropertyList } from "../../../../components/CippComponents/CippPropertyList";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import NextLink from "next/link";
+import { useRouter } from "next/router";
 
 const Page = () => {
+  const router = useRouter();
+  const { templateId } = router.query;
   const [inviteData, setInviteData] = useState([]);
   const [createDefaults, setCreateDefaults] = useState(false);
 
@@ -57,6 +59,20 @@ const Page = () => {
       setCreateDefaults(false);
     }
   }, [templateList.isSuccess]);
+
+  // Arriving from a role template's "Create Invite" action: preselect that template.
+  useEffect(() => {
+    if (!templateId || !templateList.isSuccess) return;
+    const template = (templateList?.data?.Results ?? []).find(
+      (t) => t.TemplateId === templateId
+    );
+    if (template) {
+      formControl.setValue("roleMappings", {
+        label: template.TemplateId,
+        value: template.RoleMappings,
+      });
+    }
+  }, [templateId, templateList.isSuccess, templateList.data]);
 
   const addInvites = ApiPostCall({
     urlFromData: true,
@@ -143,7 +159,7 @@ const Page = () => {
                       sx={{ ml: 2 }}
                       startIcon={
                         <SvgIcon fontSize="small">
-                          <PlusIcon />
+                          <CippIcons.PlusIcon />
                         </SvgIcon>
                       }
                     >
@@ -203,7 +219,7 @@ const Page = () => {
             {selectedTemplate?.value && (
               <Grid size={12}>
                 <Accordion variant="outlined">
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <AccordionSummary expandIcon={<CippIcons.ExpandMore />}>
                     Selected Role Mappings
                   </AccordionSummary>
                   <AccordionDetails>
@@ -249,7 +265,7 @@ const Page = () => {
             onClick={formControl.handleSubmit(handleSubmit)}
             startIcon={
               <SvgIcon fontSize="small">
-                <PlusIcon />
+                <CippIcons.PlusIcon />
               </SvgIcon>
             }
           >

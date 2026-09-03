@@ -1,17 +1,11 @@
 import { TabbedLayout } from '../../../layouts/TabbedLayout'
+import { CippIcons } from '../../../utils/icon-registry'
 import { Layout as DashboardLayout } from '../../../layouts/index'
 import tabOptions from './tabOptions'
 import { Container } from '@mui/system'
 import { Grid } from '@mui/system'
 import { CippInfoBar } from '../../../components/CippCards/CippInfoBar'
 import { ApiPostCall, ApiGetCallWithPagination } from '../../../api/ApiCall'
-import {
-  Add,
-  AdminPanelSettings,
-  HourglassBottom,
-  Layers,
-  SupervisorAccount,
-} from '@mui/icons-material'
 import CippPermissionCheck from '../../../components/CippSettings/CippPermissionCheck'
 import { Button } from '@mui/material'
 import { useEffect, useState } from 'react'
@@ -74,33 +68,19 @@ const Page = () => {
   }, [roleTemplates])
 
   useEffect(() => {
-    if (mappedRoles.isSuccess && roleTemplates.isSuccess && pendingInvites.isSuccess) {
-      const mappedRolesFirstPage = mappedRoles?.data?.pages?.[0]
-      if (
-        mappedRolesFirstPage &&
-        Array.isArray(mappedRolesFirstPage) &&
-        mappedRolesFirstPage.length > 0
-      ) {
-        setActiveStep(1)
-
-        const roleTemplatesFirstPage = roleTemplates?.data?.pages?.[0]?.Results
-        if (
-          roleTemplatesFirstPage &&
-          Array.isArray(roleTemplatesFirstPage) &&
-          roleTemplatesFirstPage.length > 0
-        ) {
-          setActiveStep(2)
-
-          const pendingInvitesFirstPage = pendingInvites?.data?.pages?.[0]
-          if (
-            pendingInvitesFirstPage &&
-            Array.isArray(pendingInvitesFirstPage) &&
-            pendingInvitesFirstPage.length > 0
-          ) {
-            setActiveStep(4)
-          }
-        }
+    if (roleTemplates.isSuccess && pendingInvites.isSuccess) {
+      const roleTemplatesFirstPage = roleTemplates?.data?.pages?.[0]?.Results
+      const hasTemplates =
+        Array.isArray(roleTemplatesFirstPage) && roleTemplatesFirstPage.length > 0
+      if (!hasTemplates) {
+        setActiveStep(0)
+        return
       }
+
+      const pendingInvitesFirstPage = pendingInvites?.data?.pages?.[0]
+      const hasInvites =
+        Array.isArray(pendingInvitesFirstPage) && pendingInvitesFirstPage.length > 0
+      setActiveStep(hasInvites ? 2 : 1)
     }
   }, [
     relationships.isSuccess,
@@ -130,7 +110,7 @@ const Page = () => {
             }
             data={[
               {
-                icon: <SupervisorAccount />,
+                icon: <CippIcons.SupervisorAccount />,
                 data:
                   relationships.data?.pages
                     ?.map((page) => page?.Results?.length || 0)
@@ -139,7 +119,7 @@ const Page = () => {
                 color: 'secondary',
               },
               {
-                icon: <AdminPanelSettings />,
+                icon: <CippIcons.AdminPanelSettings />,
                 data:
                   mappedRoles.data?.pages
                     ?.map((page) => page?.length || 0)
@@ -148,7 +128,7 @@ const Page = () => {
                 color: 'green',
               },
               {
-                icon: <Layers />,
+                icon: <CippIcons.Layers />,
                 data:
                   roleTemplates.data?.pages
                     ?.map((page) => page?.Results?.length || 0)
@@ -156,7 +136,7 @@ const Page = () => {
                 name: 'Role Templates',
               },
               {
-                icon: <HourglassBottom />,
+                icon: <CippIcons.HourglassBottom />,
                 data:
                   pendingInvites.data?.pages
                     ?.map((page) => page?.length || 0)
@@ -170,7 +150,7 @@ const Page = () => {
           <Button
             LinkComponent={Link}
             href="/onboardingv2?selectedOption=AddTenant"
-            startIcon={<Add />}
+            startIcon={<CippIcons.Add />}
             variant="contained"
           >
             Add a Tenant
@@ -188,20 +168,16 @@ const Page = () => {
                   orientation="vertical"
                   steps={[
                     {
-                      title: 'Map your Admin Roles',
+                      title: 'Create a role template',
                       description:
-                        'Use CIPP to map Admin Roles to Security Groups in your partner tenant.',
+                        'Pick the admin roles your technicians need. CIPP maps each one to a security group in your partner tenant.',
                     },
                     {
-                      title: 'Create Role Templates',
-                      description: 'Create Templates for your Role Mappings.',
-                    },
-                    {
-                      title: 'Create Invites',
+                      title: 'Create invites',
                       description: 'Create invites based on your Role Templates.',
                     },
                     {
-                      title: 'Setup Complete',
+                      title: 'Setup complete',
                       description: "You're ready to start adding your tenants using CIPP.",
                     },
                   ]}

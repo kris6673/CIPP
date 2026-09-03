@@ -11709,8 +11709,22 @@
                         "GroupId": {
                           "type": "string"
                         },
+                        "Results": {
+                          "type": "string"
+                        },
                         "roleDefinitionId": {
                           "type": "string"
+                        },
+                        "RoleMappings": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "roleDefinitionId": {
+                                "type": "string"
+                              }
+                            }
+                          }
                         },
                         "RoleName": {
                           "type": "string"
@@ -11991,7 +12005,11 @@
           }
         ],
         "x-cipp-role": "Tenant.Relationship.ReadWrite",
-        "x-cipp-any-tenant": true
+        "x-cipp-any-tenant": true,
+        "x-cipp-reads-via": [
+          "Add-CIPPGDAPRoleTemplate",
+          "New-CIPPGDAPRoleMapping"
+        ]
       }
     },
     "/api/ExecAddMultiTenantApp": {
@@ -13489,7 +13507,7 @@
         "tags": [
           "CIPP > Settings"
         ],
-        "description": "Drives the super-admin \"Custom Domains\" page. All actions operate on the App Service that\nhosts this CIPP instance (Microsoft.Web/sites/$env:WEBSITE_SITE_NAME) using the managed\nidentity via New-CIPPAzRestRequest — the same resource and auth path the Container\nManagement page uses.\n\nActions (passed as Query.Action or Body.Action):\n    List           - Site metadata (default hostname, inbound IP) plus every hostname\n                     binding and any App Service Managed Certificate that matches.\n    CheckDns       - Live DoH lookup of the alias record a custom domain needs. CIPP no\n                     longer uses domain-verification TXT records, so a leftover\n                     asuid.<host> record is detected and flagged for removal rather than\n                     requested. Powers wizard step 1 + resume.\n    AddBinding     - Create the hostname binding (wizard step 2). Azure re-validates ownership.\n    AddCertificate - Create an App Service Managed Certificate and enable the SNI SSL binding\n                     (wizard step 3). Safe to re-run — reuses an existing cert if present.\n    Remove         - Delete a custom hostname binding (and its managed cert, best effort).\n\nEvery action is independently re-runnable so the wizard can resume a half-finished domain or\nretry a failed step without redoing the ones that already succeeded.",
+        "description": "Drives the super-admin \"Custom Domains\" page. All actions operate on the App Service that\nhosts this CIPP instance (Microsoft.Web/sites/$env:WEBSITE_SITE_NAME) using the managed\nidentity via New-CIPPAzRestRequest — the same resource and auth path the Container\nManagement page uses.\n\nActions (passed as Query.Action or Body.Action):\n    List           - Site metadata (default hostname, inbound IP) plus every hostname\n                     binding, any App Service Managed Certificate that matches, and the\n                     state of a certificate job still running in the background.\n    CheckDns       - Live DoH lookup of the alias record a custom domain needs. CIPP no\n                     longer uses domain-verification TXT records, so a leftover\n                     asuid.<host> record is detected and flagged for removal rather than\n                     requested. Powers wizard step 1 + resume.\n    AddBinding     - Create the hostname binding (wizard step 2). Azure validates ownership\n                     through the alias record.\n    AddCertificate - Issue an App Service Managed Certificate and enable the SNI SSL binding\n                     (wizard step 3) via Invoke-CIPPCustomDomainCertificate. Issuance that\n                     outlives the request carries on as a hidden scheduled task that retries\n                     every 15 minutes, a few times, then stops.\n    Remove         - Delete a custom hostname binding (and its managed cert, best effort).\n\nEvery action is independently re-runnable so the wizard can resume a half-finished domain or\nretry a failed step without redoing the ones that already succeeded.",
         "requestBody": {
           "required": true,
           "content": {
@@ -13499,6 +13517,10 @@
                 "properties": {
                   "Action": {
                     "type": "string"
+                  },
+                  "DnsRecordType": {
+                    "type": "string",
+                    "description": "Which alias record Azure should validate against: the one CheckDns saw resolve (A or CNAME), else the recommended type for this hostname shape."
                   },
                   "Hostname": {
                     "type": "string"
@@ -14502,7 +14524,7 @@
         "tags": [
           "CIPP > Settings"
         ],
-        "description": "Returns Azure portal deep links for the CIPP deployment's own infrastructure (resource group, key vault, function app, static web app) plus its subscription, SKU, hosting mode and timezone.",
+        "description": "Returns Azure portal deep links for the CIPP deployment's own infrastructure (resource group, key vault, the function app or web app, its App Service plan, static web app) plus its subscription, SKU and timezone. Whether the instance is CyberDrain-hosted or CIPP-NG comes from /api/me.",
         "responses": {
           "200": {
             "description": "Success",
@@ -22066,7 +22088,13 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "CustomSuffix": {
+                    "type": "string"
+                  },
                   "GroupId": {
+                    "type": "string"
+                  },
+                  "NewRoles": {
                     "type": "string"
                   },
                   "OriginalTemplateId": {
@@ -22078,6 +22106,12 @@
                     "items": {
                       "type": "object",
                       "properties": {
+                        "GroupId": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
                         "roleDefinitionId": {
                           "type": "string"
                         }
@@ -22086,7 +22120,7 @@
                   },
                   "TemplateId": {
                     "type": "string",
-                    "description": "Use OriginalTemplateId if provided (for rename), otherwise use TemplateId"
+                    "description": "Template-first save: creates any group mappings the editor asked for, then writes the full mapping set to the template in one shot."
                   }
                 }
               }
@@ -22103,7 +22137,8 @@
               "enum": [
                 "Add",
                 "Delete",
-                "Edit"
+                "Edit",
+                "Save"
               ]
             }
           },
@@ -22129,12 +22164,18 @@
                       "type": "string",
                       "x-cipp-field-source": "storage"
                     },
+                    "GroupMappings": {
+                      "x-cipp-field-source": "frontend"
+                    },
                     "PartitionKey": {
                       "x-cipp-field-source": "storage"
                     },
                     "RoleMappings": {
                       "type": "string",
-                      "x-cipp-field-source": "storage,backend,frontend"
+                      "x-cipp-field-source": "storage,backend"
+                    },
+                    "Roles": {
+                      "x-cipp-field-source": "frontend"
                     },
                     "RowKey": {
                       "x-cipp-field-source": "storage"
@@ -24727,12 +24768,35 @@
           "Email-Exchange > Administration"
         ],
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "properties": {}
+                "properties": {
+                  "Delete": {
+                    "type": "string"
+                  },
+                  "deviceid": {
+                    "type": "string"
+                  },
+                  "guid": {
+                    "type": "string"
+                  },
+                  "Quarantine": {
+                    "type": "string"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  },
+                  "Userid": {
+                    "type": "string",
+                    "description": "Interact with query parameters or the body of the request. This is a state-changing action, so the frontend dispatches it as a POST; keep the query fallback for backwards compatibility."
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
               }
             }
           }
@@ -24776,6 +24840,7 @@
           {
             "name": "Userid",
             "in": "query",
+            "description": "Interact with query parameters or the body of the request. This is a state-changing action, so the frontend dispatches it as a POST; keep the query fallback for backwards compatibility.",
             "required": false,
             "schema": {
               "type": "string"
@@ -27771,6 +27836,7 @@
         "tags": [
           "Identity > Administration > Users"
         ],
+        "description": "Runs the offboarding wizard: one scheduled offboarding job per user, immediately or at the\nscheduled time, reporting live progress under one job id. Action=Rerun queues an existing\noffboarding task again; Action=RerunStep queues one step of it, reported to the same progress row.",
         "requestBody": {
           "required": true,
           "content": {
@@ -27778,6 +27844,9 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "Action": {
+                    "type": "string"
+                  },
                   "forward": {
                     "$ref": "#/components/schemas/LabelValue"
                   },
@@ -27817,6 +27886,18 @@
                     },
                     "description": "Scheduled: when enabled, date must be a valid Unix timestamp"
                   },
+                  "StepIndex": {
+                    "type": "integer",
+                    "description": "Zero-based index of the step, as listed in the progress row, to run again"
+                  },
+                  "StepTitle": {
+                    "type": "string",
+                    "description": "Title of that step, used to name the re-run task"
+                  },
+                  "TaskId": {
+                    "type": "string",
+                    "description": "RowKey of the offboarding task to run again"
+                  },
                   "tenantFilter": {
                     "allOf": [
                       {
@@ -27842,19 +27923,23 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "Action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Success",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
-                  "properties": {
-                    "Results": {
-                      "x-cipp-field-source": "backend"
-                    }
-                  }
+                  "$ref": "#/components/schemas/StandardResults"
                 }
               }
             }
@@ -39506,6 +39591,59 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ListAsyncDeployment": {
+      "get": {
+        "summary": "Get the live progress of a background job",
+        "operationId": "ListAsyncDeployment",
+        "tags": [
+          "CIPP > Scheduler"
+        ],
+        "description": "Returns the status rows of a background job that reports progress while it runs, such as a\nuser offboarding started from the wizard: one row per target (the user) with its overall\nstatus and the status and message of every step.",
+        "parameters": [
+          {
+            "name": "DeploymentId",
+            "in": "query",
+            "description": "The job id handed back when the work was queued (e.g. DeploymentId from ExecOffboardUser)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.Scheduler.Read",
+        "x-cipp-any-tenant": true
+      }
+    },
     "/api/ListAuditLogCoverage": {
       "get": {
         "summary": "ListAuditLogCoverage",
@@ -46597,7 +46735,18 @@
         "tags": [
           "Tenant > GDAP"
         ],
-        "description": "Lists the configured GDAP role-to-security-group mappings used for delegated admin access.",
+        "description": "Lists the configured GDAP role-to-security-group mappings used for delegated admin access.\nPass ?validate=true to annotate each mapping with the state of its partner tenant group.",
+        "parameters": [
+          {
+            "name": "validate",
+            "in": "query",
+            "description": "Opt-in only: other consumers of this endpoint depend on the unannotated shape.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Success",
@@ -46618,6 +46767,12 @@
                       },
                       "GroupName": {
                         "x-cipp-field-source": "storage,backend,frontend"
+                      },
+                      "GroupStatus": {
+                        "x-cipp-field-source": "backend,frontend"
+                      },
+                      "GroupStatusMessage": {
+                        "x-cipp-field-source": "backend"
                       },
                       "PartitionKey": {
                         "x-cipp-field-source": "storage"
@@ -46640,6 +46795,9 @@
                       "Timestamp": {
                         "type": "string",
                         "x-cipp-field-source": "storage"
+                      },
+                      "UsedInTemplates": {
+                        "x-cipp-field-source": "frontend"
                       }
                     }
                   }
@@ -48477,6 +48635,9 @@
                     "type": "object",
                     "description": "Derived from the columns the CIPP UI renders. The response may carry more; these are the ones known to exist.",
                     "properties": {
+                      "accountEnabled": {
+                        "x-cipp-field-source": "frontend"
+                      },
                       "daysSinceLastSignIn": {
                         "x-cipp-field-source": "frontend"
                       },
@@ -52272,6 +52433,70 @@
           }
         ],
         "x-cipp-role": "Identity.AuditLog.Read"
+      }
+    },
+    "/api/ListOffboardingProgress": {
+      "get": {
+        "summary": "Get the live progress of an offboarding job",
+        "operationId": "ListOffboardingProgress",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Returns the progress rows of an offboarding job started from the wizard: one row per user with\nits overall status and the status and message of every step. Same rows as ListAsyncDeployment,\nunder the wizard's own permission so an offboarding operator can follow and re-run their jobs.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "DeploymentId",
+            "in": "query",
+            "description": "The DeploymentId handed back by ExecOffboardUser, also stored on each offboarding task",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.ReadWrite",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/ListOffboardTenants": {
@@ -60544,7 +60769,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                    "description": "Derived from the fields written into the storage table it reads, and the fields the endpoint selects onto each record. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
                     "properties": {
                       "AdditionalEmailAddresses": {
                         "x-cipp-field-source": "backend"
@@ -60555,11 +60780,18 @@
                       "ComplianceTagHoldApplied": {
                         "x-cipp-field-source": "backend"
                       },
+                      "Data": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
                       "DeliverToMailboxAndForward": {
                         "x-cipp-field-source": "backend"
                       },
                       "displayName": {
                         "x-cipp-field-source": "backend"
+                      },
+                      "ETag": {
+                        "x-cipp-field-source": "storage"
                       },
                       "ExchangeGuid": {
                         "x-cipp-field-source": "backend"
@@ -60603,6 +60835,9 @@
                       "MessageCopyForSentAsEnabled": {
                         "x-cipp-field-source": "backend"
                       },
+                      "PartitionKey": {
+                        "x-cipp-field-source": "storage"
+                      },
                       "primarySmtpAddress": {
                         "x-cipp-field-source": "backend"
                       },
@@ -60614,6 +60849,16 @@
                       },
                       "RetentionHoldEnabled": {
                         "x-cipp-field-source": "backend"
+                      },
+                      "RowKey": {
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Timestamp": {
+                        "type": "string",
+                        "x-cipp-field-source": "storage"
+                      },
+                      "Type": {
+                        "x-cipp-field-source": "storage"
                       },
                       "UPN": {
                         "x-cipp-field-source": "backend"
@@ -66047,12 +66292,20 @@
           "Tenant > Administration > Tenant"
         ],
         "requestBody": {
-          "required": false,
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "properties": {}
+                "properties": {
+                  "defaultDomainName": {
+                    "type": "string",
+                    "description": "Get the tenant identifier from the request body (POST) or query (legacy GET)."
+                  }
+                },
+                "required": [
+                  "defaultDomainName"
+                ]
               }
             }
           }
@@ -66061,8 +66314,8 @@
           {
             "name": "defaultDomainName",
             "in": "query",
-            "description": "Get the tenant identifier from query parameters",
-            "required": true,
+            "description": "Get the tenant identifier from the request body (POST) or query (legacy GET).",
+            "required": false,
             "schema": {
               "type": "string"
             }

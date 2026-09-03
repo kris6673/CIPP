@@ -24,7 +24,7 @@ With v10.1, CIPP added the three previously suggested roles to the core recommen
 {% step %}
 #### Map the Additional Roles
 
-Go to `Tenant Administration` > `GDAP Management` > `Role Mappings` and click `Map GDAP Roles`. Select `Billing Administrator`, `Domain Name Administrator`, and `Global Reader` in the dropdown. Hit `Submit` and CIPP will create the `M365 GDAP` groups.
+Go to `Tenant Administration` > `GDAP Management` > `Role Templates` and edit the template you use for onboarding (or `CIPP Defaults`). Add `Billing Administrator`, `Domain Name Administrator`, and `Global Reader` under `Admin Roles`. Hit `Submit` and CIPP will create the `M365 GDAP` groups on save.
 {% endstep %}
 
 {% step %}

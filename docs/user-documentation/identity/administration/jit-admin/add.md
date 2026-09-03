@@ -4,20 +4,6 @@ This page grants time-limited administrative access. You choose who gets it, wha
 
 ## Tenant and template
 
-| Option              | Description                                                                                                                                                                                                                                                                                                                                                                                                        |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Tenant selection    | Use the dropdown to select the tenant for JIT Admin access                                                                                                                                                                                                                                                                                                                                                         |
-| Template selection  | If you have created templates, you are able to select one here to prepopulate many of the fields below.                                                                                                                                                                                                                                                                                                            |
-| User selection      | Select if you would like to create a new user or use an existing user. Your choice here will expand additional fields to enter or validate if you selected a JIT template.                                                                                                                                                                                                                                         |
-| Start Date          | Sets the start date for JIT Admin access                                                                                                                                                                                                                                                                                                                                                                           |
-| End Date            | Sets the end date and time for JIT Admin access                                                                                                                                                                                                                                                                                                                                                                    |
-| Admin Roles         | Toggle on this option and then select the Entra ID admin roles you want assigned to the user. Remember: Use the principle of least privilege to only assign the role with the minimum set of permissions needed to complete your tasks. <mark style="color:$warning;">The roles are returned from the Microsoft API. If you are looking for Global Administrator, you need to select Company Administrator.</mark> If your CIPP role has a [JIT Role Template](../jit-role-templates/README.md) assigned, only the roles permitted by that template are selectable here. |
-| Group Membership    | Toggle on this option and then select the groups you want this admin to have access to.                                                                                                                                                                                                                                                                                                                            |
-| Reason              | Enter the reason the JIT Admin is being requested. This will display on the table in [.](./ "mention")                                                                                                                                                                                                                                                                                                             |
-| Generate TAP        | Set this option to generate a Temporary Access Pass (TAP) to satisfy the need for strong authentication/MFA                                                                                                                                                                                                                                                                                                        |
-| Expiration Action   | Select what you want to happen to the user at expiration of the JIT admin access requested.                                                                                                                                                                                                                                                                                                                        |
-| Notification Action | Select the option or options for how you would like to be notified of JIT admin creation. Note that only options that are configured in CIPP settings will work.                                                                                                                                                                                                                                                   |
-
 | Field                                      | Description                                                                                                                                                |
 | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Select a tenant to create the JIT Admin in | The tenant the access is granted in. Required, and it has to be chosen before the template list and the tenant's Temporary Access Pass policy can be read. |
@@ -50,14 +36,19 @@ A default template is applied on its own once a tenant is selected. A template m
 
 **Admin Roles** and **Group Membership** are switches, and each reveals its own selector. At least one entry is required in whichever selector is turned on.
 
-| Field  | Description                                                                                                                      |
-| ------ | -------------------------------------------------------------------------------------------------------------------------------- |
-| Roles  | The Entra ID directory roles to assign for the duration of the access.                                                           |
-| Groups | The groups to add the account to for the duration of the access.                                                                 |
-| Reason | Why the access was granted. Required, and it is shown on the JIT Admin list, which is what makes the list reviewable afterwards. |
+| Field                    | Description                                                                                                                      |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Apply JIT Role Template  | Picks one or more [JIT Role Templates](../jit-role-templates/README.md "mention") and adds their roles into Roles below. Selections are additive to whatever Roles already holds, and everything stays editable afterwards. |
+| Roles                    | The Entra ID directory roles to assign for the duration of the access.                                                           |
+| Groups                   | The groups to add the account to for the duration of the access.                                                                 |
+| Reason                   | Why the access was granted. Required, and it is shown on the JIT Admin list, which is what makes the list reviewable afterwards. |
 
 {% hint style="warning" %}
 Apply least privilege here. Grant the narrowest role that covers the work rather than reaching for Global Administrator, and keep the window as short as the task allows.
+{% endhint %}
+
+{% hint style="info" %}
+If your CIPP role has a [JIT Role Template](../jit-role-templates/README.md "mention") assigned, Roles only offers the roles that template allows, and Apply JIT Role Template only offers roles you are permitted to grant. Requesting a role outside your allow-list is also rejected when you submit. A role with no template assigned is unaffected.
 {% endhint %}
 
 ## Temporary Access Pass

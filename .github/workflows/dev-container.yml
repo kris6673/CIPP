@@ -7,6 +7,8 @@ on:
       - 'frontend/**'
       - 'backend/**'
       - 'build/**'
+      - '!backend/Tests/**'
+      - '!frontend/tests/**'
   workflow_dispatch:
 
 env:
