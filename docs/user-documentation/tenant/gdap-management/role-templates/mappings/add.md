@@ -1,6 +1,6 @@
 # Map an existing group (Advanced)
 
-This page maps a GDAP role to a security group that already exists in your partner tenant, rather than creating one. Use it when your groups do not follow the `M365 GDAP RoleName` naming convention, for example when bringing an existing GDAP setup into CIPP. For everything else, build a [role template](../role-templates/ "mention") - it creates and maps the groups for you.
+This page maps a GDAP role to a security group that already exists in your partner tenant, rather than creating one. Use it when your groups do not follow the `M365 GDAP RoleName` naming convention, for example when bringing an existing GDAP setup into CIPP. For everything else, build a [role template](../ "mention") - it creates and maps the groups for you.
 
 Select a group and a role, then use the add button to build up the list of mappings. Each pairing appears in the Role Mappings table below, where it can be removed again before you submit.
 
@@ -17,4 +17,4 @@ This is an advanced page. Use extreme caution. The following limitations apply:
 * Certain roles may not be compatible with GDAP. See the [Microsoft documentation](https://learn.microsoft.com/en-us/partner-center/customers/gdap-least-privileged-roles-by-task) on GDAP role guidance.
 {% endhint %}
 
-{% include "../../../../../.gitbook/includes/feature-request.md" %}
+{% include "../../../../../../.gitbook/includes/feature-request.md" %}
