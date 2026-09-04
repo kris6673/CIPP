@@ -20,17 +20,13 @@ param(
     # Skip the openapi.json regeneration (the slowest step). The watcher passes this so a
     # CIPPHTTP edit's container restart is not blocked on the spec, then regenerates it in
     # the background itself. The initial build leaves it off so the spec is present at startup.
-    [switch]   $SkipOpenApi,
-    # Incremental build cache for openapi.json (see build-openapi.ps1 -CachePath). Lives in
-    # the gitignored .devmodules dir; defaults there when not supplied.
-    [string]   $CachePath
+    [switch]   $SkipOpenApi
 )
 
 $ErrorActionPreference = 'Stop'
 
 $sourceModulesPath = (Resolve-Path $SourceModules).Path
 $outputModulesPath = [System.IO.Path]::GetFullPath($OutputModules)
-if (-not $CachePath) { $CachePath = Join-Path $outputModulesPath '.openapi-cache.json' }
 # repo/build — parent of tools/, holds the vendored ModuleBuilder etc.
 $buildDir = (Get-Item $PSScriptRoot).Parent.FullName
 
@@ -141,8 +137,7 @@ if ($Modules -contains 'CIPPHTTP' -and -not $SkipOpenApi) {
             -ModulesPath $sourceModulesPath `
             -FrontendPath (Join-Path (Split-Path -Parent $backendPath) 'frontend' 'src') `
             -OverridePath (Join-Path $backendPath 'Config' 'openapi-overrides') `
-            -OutputPath (Join-Path $backendPath 'Config' 'openapi.json') `
-            -CachePath $CachePath
+            -OutputPath (Join-Path $backendPath 'Config' 'openapi.json')
     } catch {
         Write-Host "openapi.json generation FAILED ($_); a stale spec means the MCP tool list no longer matches the API" -ForegroundColor Red
     }
