@@ -106,8 +106,12 @@ $CastTypes = @{
     'single'         = @{ type = 'number' }
     'float'          = @{ type = 'number' }
     'string'         = @{ type = 'string' }
-    'datetime'       = @{ type = 'string'; format = 'date-time' }
-    'guid'           = @{ type = 'string'; format = 'uuid' }
+    # [ordered] so the two-key leaf serialises in a fixed order. A plain @{} enumerates
+    # in bucket order, which .NET derives from per-process randomised string hashes, so
+    # ConvertTo-JsonSchema would emit type/format in a coin-flip order that differs
+    # between the dev watcher and a full rebuild - spurious spec drift and a flaky -Check.
+    'datetime'       = [ordered]@{ type = 'string'; format = 'date-time' }
+    'guid'           = [ordered]@{ type = 'string'; format = 'uuid' }
     'timespan'       = @{ type = 'string' }
     'version'        = @{ type = 'string' }
     'semver'         = @{ type = 'string' }
