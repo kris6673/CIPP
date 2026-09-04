@@ -45,9 +45,11 @@ $sourceModulesPath = (Resolve-Path $SourceModules).Path
 # openapi.json regeneration is decoupled from the compile+restart. A CIPPHTTP edit
 # restarts the container immediately - the code goes live in seconds - and the spec, which
 # only the MCP layer reads and only lazily on its next request, is rebuilt in the
-# background here. build-openapi.ps1's incremental cache makes that rebuild a few seconds;
-# runs are coalesced so a burst of saves leaves at most one rebuild queued behind the
-# current one. Arguments mirror build-dev-modules.ps1's inline call.
+# background here. This is a full, cache-free rebuild (no -CachePath): ~80s, but it runs in
+# the background and runs are coalesced so a burst of saves leaves at most one rebuild
+# queued behind the current one. The incremental cache is deliberately skipped so the
+# watcher's output is byte-for-byte what a standalone build and CI produce - the cache path
+# is the only place the two could ever diverge. Arguments mirror build-dev-modules.ps1's call.
 $buildOpenApiScript = Join-Path $PSScriptRoot 'build-openapi.ps1'
 $backendPath = Split-Path -Parent $sourceModulesPath
 $openApiArgs = @{
@@ -56,7 +58,6 @@ $openApiArgs = @{
     FrontendPath   = Join-Path (Split-Path -Parent $backendPath) 'frontend' 'src'
     OverridePath   = Join-Path $backendPath 'Config' 'openapi-overrides'
     OutputPath     = Join-Path $backendPath 'Config' 'openapi.json'
-    CachePath      = Join-Path ([System.IO.Path]::GetFullPath($OutputModules)) '.openapi-cache.json'
 }
 $openApiJob = $null
 $openApiQueued = $false
@@ -98,7 +99,7 @@ try {
             $out = Receive-Job $openApiJob -ErrorAction SilentlyContinue
             Remove-Job $openApiJob -Force -ErrorAction SilentlyContinue
             $openApiJob = $null
-            $summary = @($out | Where-Object { $_ -match 'Wrote|Incremental: recomputed|FAILED' } | Select-Object -Last 1)
+            $summary = @($out | Where-Object { $_ -match 'Wrote|FAILED' } | Select-Object -Last 1)
             if ($summary) { Write-Host "  openapi.json: $summary" -ForegroundColor DarkGray }
             else { Write-Host '  openapi.json rebuilt.' -ForegroundColor DarkGray }
         }
