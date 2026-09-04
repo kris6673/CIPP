@@ -8,7 +8,7 @@ This is advanced SuperAdmin functionality. Deletes take effect immediately and c
 
 ## Selecting a Cache Type
 
-The panel on the left lists every cache type from the CIPPDB catalog. Selecting a type loads its rows for the tenant currently chosen in the CIPP header.
+The panel on the left lists every cache type from the CIPPDB catalogue. Selecting a type loads its rows for the tenant currently chosen in the CIPP header.
 
 | Control         | Description                                                                                                                   |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------- |

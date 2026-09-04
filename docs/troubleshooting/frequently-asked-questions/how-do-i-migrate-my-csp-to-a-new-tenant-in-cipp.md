@@ -24,7 +24,7 @@ Go to the [sam-setup-wizard.md](../../user-documentation/cipp/sam-setup-wizard.m
 {% step %}
 ### Recreate all GDAP Role Mappings and Templates
 
-1. Go to [mappings.md](../../user-documentation/tenant/gdap-management/role-templates/mappings.md "mention"), select all mapped roles, and select "Delete Mapping" from the Bulk Actions dropdown.
+1. Go to [mappings.md](../../user-documentation/tenant/gdap-management/role-templates/mappings/README.md "mention"), select all mapped roles, and select "Delete Mapping" from the Bulk Actions dropdown.
 2. Go to [role-templates](../../user-documentation/tenant/gdap-management/role-templates/ "mention"), select all templates, and select "Delete Template" from the Bulk Actions dropdown.
 3. Click "Create CIPP Defaults template" on the empty state. Review the created template to ensure it contains all 15 roles, each mapped to a new security group.
 4. Set up any additional role templates you would like to make available to tenant onboarding.

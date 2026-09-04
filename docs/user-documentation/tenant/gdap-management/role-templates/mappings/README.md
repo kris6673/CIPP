@@ -2,7 +2,7 @@
 
 This page lists the GDAP roles that have been mapped to security groups in your partner tenant. Each mapping tells CIPP which group to assign a role through when it sets up a relationship, so a technician gains delegated access by being a member of the mapped group.
 
-You do not normally need this page: building a [role template](README.md "mention") creates and maps the groups for you. Use it to review what exists, to see which templates depend on a mapping, and to check that every mapping still points at a real security group. Mapping a group by hand is an advanced option, reached from **Map an existing group (Advanced)** ([../roles/add.md](../roles/add.md "mention")), for groups that already exist and do not follow the `M365 GDAP RoleName` naming.
+You do not normally need this page: building a [role template](../ "mention") creates and maps the groups for you. Use it to review what exists, to see which templates depend on a mapping, and to check that every mapping still points at a real security group. Mapping a group by hand is an advanced option, reached from **Map an existing group (Advanced)** ([add.md](add.md "mention")), for groups that already exist and do not follow the `M365 GDAP RoleName` naming.
 
 Each mapping is checked against the partner tenant when the page loads:
 
@@ -23,8 +23,8 @@ A recreated group is a **new, empty security group**. Your technicians are not c
 After repairing:
 
 * Every role template is updated automatically with the corrected group ids.
-* Relationships that already had assignments against a missing group need the **Reset Role Mapping** action on the [relationship](../relationships/ "mention"), or a re-run of onboarding.
-* Re-run the GDAP check on the [overview](../ "mention") to confirm the result.
+* Relationships that already had assignments against a missing group need the **Reset Role Mapping** action on the [relationship](../../relationships/ "mention"), or a re-run of onboarding.
+* Re-run the GDAP check on the [overview](../../ "mention") to confirm the result.
 
 The button is disabled when every mapping is valid. If the check could not run, the dialog says so and repair still attempts the fix. Open a row for the full status message.
 
@@ -41,4 +41,4 @@ The button is disabled when every mapping is valid. If the check could not run, 
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Delete Mapping</td><td>Removes the mapping from CIPP. Any role template that uses it loses that role. The security group itself is not deleted and existing GDAP relationships are not changed.</td><td>true</td></tr></tbody></table>
 
-{% include "../../../../../.gitbook/includes/feature-request.md" %}
+{% include "../../../../../../.gitbook/includes/feature-request.md" %}
