@@ -319,6 +319,7 @@
   * [Deleted Sites](user-documentation/teams-share/deleted-sites.md)
   * [Sharing Report](user-documentation/teams-share/sharing-report.md)
   * [Permissions Report](user-documentation/teams-share/permissions-report.md)
+  * [Storage Report](user-documentation/teams-share/storage-report.md)
   * [External Users](user-documentation/teams-share/external-users.md)
   * [Teams](user-documentation/teams-share/teams/README.md)
     * [Teams](user-documentation/teams-share/teams/list-team/README.md)
@@ -470,6 +471,7 @@
     * [Exchange Cmdlets](user-documentation/cipp/advanced/exchange-cmdlets.md)
     * [Timers](user-documentation/cipp/advanced/timers.md)
     * [Table Maintenance](user-documentation/cipp/advanced/table-maintenance.md)
+    * [CIPPDB Cache](user-documentation/cipp/advanced/cippdb-cache.md)
     * [Diagnostics](user-documentation/cipp/advanced/diagnostics.md)
 
 ## Troubleshooting
