@@ -69,9 +69,13 @@ Buttons above the SharePoint Sites table apply common filters in one click:
 
 ## Finding Cleanup Opportunities
 
-**Scan cleanup** on the SharePoint Sites table checks a set of sites for storage that could be reclaimed: the largest sites, any near quota, and a share of the inactive ones, up to 25 sites in total. Each site is checked for a large amount of old file versions, a full recycle bin, or a document library that has grown out of proportion to the rest of the site. Progress is shown above the table while the scan runs.
+**Scan cleanup** on the SharePoint Sites table queues a scan of every SharePoint site in the tenant, aside from OneDrive personal sites and a handful of system sites such as the search centre, content type hub and app catalogue. Each site is checked for a large amount of old file versions, a full recycle bin, or a document library that has grown out of proportion to the rest of the site. Progress is shown next to **Cleanup scan** near the top of the page, and the table refreshes itself once the scan finishes.
 
-Once a scan has run, sites with an opportunity show a **Cleanup** value and an estimated reclaim amount in the table, and the summary and chip row above pick up a **Reclaimable (est.)** figure. Running **Scan cleanup** (now **Rescan cleanup**) again checks the same sites afresh.
+{% hint style="info" %}
+If no cleanup scan has been cached yet, a banner invites you to click **Scan cleanup**.
+{% endhint %}
+
+Once a scan has run, sites with an opportunity show a **Cleanup** value and an estimated reclaim amount in the table, and the summary and chip row above pick up a **Reclaimable (est.)** figure. Running **Scan cleanup** (now **Rescan cleanup**) again re-scans every site afresh.
 
 Selecting **Cleanup…** on a site, or on a flagged row from the chip row, opens the storage cleanup drawer for that site:
 
