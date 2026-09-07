@@ -57,7 +57,7 @@ Choose a **Block Type**, complete whatever fields appear for it, then select **A
 | Block Type      | Description                                                                                                                                                                  |
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Custom Block    | A free-form section you write yourself using a rich text editor, for structure, narrative or commentary.                                                                     |
-| Test Result     | A section tied to CIPP's test suite results. Choose a **Test Suite**, then one or more tests under **Select Tests**. Selecting several tests adds a separate block for each. |
+| Test Result     | A section tied to CIPP's test suite results. Choose a **Test Suite**, then one or more tests under **Select Tests**. Selecting several tests adds a separate block for each, and **Add All Tests** adds every test in the chosen suite in one go. |
 | Database Data   | A section populated from the cache database. Choose a **Data Source** and a **Format** of Table (Text), CSV or JSON.                                                         |
 | Chart           | A donut, bar or trend line chart built from data points you enter by hand.                                                                                                   |
 | Score Cards     | A row of headline figures, each a label and a value.                                                                                                                         |

@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "1908610760822795061"
+      "templateHash": "15924977236322815027"
     }
   },
   "parameters": {
@@ -138,6 +138,25 @@
           "http20Enabled": true,
           "use32BitWorkerProcess": false,
           "healthCheckPath": "/api/setup/health",
+          "autoHealEnabled": true,
+          "autoHealRules": {
+            "triggers": {
+              "statusCodes": [
+                {
+                  "status": 500,
+                  "subStatus": 0,
+                  "win32Status": 0,
+                  "count": 5,
+                  "timeInterval": "00:10:00",
+                  "path": "/api/setup/health"
+                }
+              ]
+            },
+            "actions": {
+              "actionType": "Recycle",
+              "minProcessExecutionTime": "00:10:00"
+            }
+          },
           "appSettings": [
             {
               "name": "AzureWebJobsStorage",

@@ -1,12 +1,17 @@
-# OPTIONAL UPGRADE to the existing CodeQL_Analyser.yml (already deployed in CIPP).
-# Changes vs. current: adds push trigger on main/dev, security-extended query suite,
-# and javascript-typescript language alias.
 name: "CodeQL"
 on:
   push:
     branches: [main, dev]
+    paths:
+      - 'frontend/**'
+      - '.github/codeql/**'
+      - '.github/workflows/CodeQL_Analyser.yml'
   pull_request:
-    branches: [master, main, dev, react]
+    branches: [main, dev]
+    paths:
+      - 'frontend/**'
+      - '.github/codeql/**'
+      - '.github/workflows/CodeQL_Analyser.yml'
   schedule:
     - cron: "26 17 * * 0"
 jobs:
@@ -26,11 +31,12 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v6
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4.37.7
+        uses: github/codeql-action/init@v4.37.9
         with:
           languages: ${{ matrix.language }}
           queries: security-extended
+          config-file: ./.github/codeql/codeql-config.yml
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v4.37.7
+        uses: github/codeql-action/autobuild@v4.37.9
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4.37.7
+        uses: github/codeql-action/analyze@v4.37.9
