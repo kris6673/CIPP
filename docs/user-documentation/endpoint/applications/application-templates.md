@@ -3,7 +3,7 @@
 Application Templates holds reusable bundles of application deployments. A template can contain one application or many, each with its configuration and assignment already set, so the same set of software can be pushed to any tenant without rebuilding it each time. Templates are stored in CIPP rather than in a tenant, so the list is the same whichever tenant is selected.
 
 {% hint style="info" %}
-Templates cover the six types offered in the drawer — MSP Vendor App, Store App, Chocolatey App, Microsoft Office, Microsoft Edge and Custom Application — each of which is rebuilt from its package or script at deployment, so a Win32 application uploaded to Intune as an `.intunewin` package cannot be templated: its installer content stays in Intune, and it has to be rebuilt here as a Custom Application whose install script fetches the installer.
+Templates cover the six types offered in the drawer: MSP Vendor App, Store App, Chocolatey App, Microsoft Office, Microsoft Edge and Custom Application. Each of these is rebuilt from its package or script at deployment, so a Win32 application uploaded to Intune as an `.intunewin` package cannot be templated. Its installer content stays inside Intune, and it has to be rebuilt here as a Custom Application whose install script fetches the installer.
 {% endhint %}
 
 ## Action Buttons

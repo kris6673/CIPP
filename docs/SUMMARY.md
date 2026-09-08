@@ -110,6 +110,7 @@
       * [View Individual User](user-documentation/identity/administration/users/user/README.md)
         * [Edit User](user-documentation/identity/administration/users/user/edit.md)
         * [Exchange Settings](user-documentation/identity/administration/users/user/exchange.md)
+        * [OneDrive Shortcuts](user-documentation/identity/administration/users/user/onedrive-shortcuts.md)
         * [Compromise Remediation](user-documentation/identity/administration/users/user/bec.md)
         * [Conditional Access](user-documentation/identity/administration/users/user/conditional-access.md)
       * [Edit Properties Wizard](user-documentation/identity/administration/users/patch-wizard.md)

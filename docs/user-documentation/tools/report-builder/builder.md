@@ -29,6 +29,7 @@ Opens the **Schedule Report Generation** dialog, which creates a scheduled task 
 | Task Name              | The name the task appears under in the scheduler.                                                                                                                                                                               |
 | Recurrence             | How often the report is generated. Choose Once, Every day, Every 7 days, Every 30 days, or Every 90 days. The interval runs from the moment the schedule is created, and Once generates the report immediately and never again. |
 | Post Execution Actions | How the finished report is delivered. More than one may be selected.                                                                                                                                                            |
+| Always use the latest saved version of this template | Ties the schedule to the saved template rather than to a copy of the blocks. Only offered once the report has been saved as a template. |
 
 The delivery options behave differently:
 
@@ -36,7 +37,9 @@ The delivery options behave differently:
 * **PSA** raises a ticket with the report body as its content. Raw data is not attached.
 * **Webhook** posts a JSON payload of the task metadata and results.
 
-The schedule captures the blocks and page setup as they stand when you create it. Editing the template afterwards does not update an existing schedule, so recreate the schedule if the report changes.
+What the schedule generates depends on **Always use the latest saved version of this template**. With it on, the schedule points at the saved template, so every run picks the template up as it stands at that moment and later edits are applied automatically. Anything you have changed in the builder but not yet saved to the template is not included, so save before you schedule.
+
+With it off, and on any report that has not been saved as a template yet, the schedule captures the blocks and page setup as they stand when you create it. Editing the template afterwards does not change that schedule, so recreate the schedule if the report changes.
 
 </details>
 

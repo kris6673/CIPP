@@ -6,13 +6,14 @@ The Storage Report shows where a single tenant's storage capacity is being used,
 
 The report reads from cached usage data rather than querying SharePoint and OneDrive live.
 
-| Control   | Description                                                                                                                                                                     |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Sync data | Queues a refresh of SharePoint site usage (including file-level archive metrics, where SharePoint admin access is available) and OneDrive usage for this tenant. Progress is shown next to the button, and the report refreshes itself once the sync finishes. |
-| Refresh   | Reloads the report from the cached data without running a new sync.                                                                                                                                                                                                    |
+| Control      | Description                                                                                                                                                                     |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sync usage   | Queues a refresh of SharePoint site usage (including file-level archive metrics, where SharePoint admin access is available) and OneDrive usage for this tenant. This is what feeds the charts, the tables, and the near-quota and inactive views. Progress is shown next to it as **Usage sync**, and the report refreshes itself once the sync finishes. |
+| Scan cleanup | Queues the cleanup scan described under [#finding-cleanup-opportunities](storage-report.md#finding-cleanup-opportunities "mention"). It fills the reclaim columns only, and does not refresh usage sizes. Unavailable until usage data has been synced, and reads **Rescan cleanup** once a scan has run. |
+| Refresh      | Reloads the report from the cached data without running a new sync.                                                                                                                                                                                                    |
 
 {% hint style="info" %}
-If no cached data has been synced yet, or one of SharePoint or OneDrive comes back empty, a banner invites you to click **Sync data**.
+If no cached data has been synced yet, or one of SharePoint or OneDrive comes back empty, a banner invites you to use **Sync usage**.
 {% endhint %}
 
 {% hint style="warning" %}
@@ -53,7 +54,7 @@ A row of chips beneath the summary repeats the near-quota, inactive, Teams-conne
 | Storage by Workload (GB)                   | The share of storage used by SharePoint, Teams and OneDrive.                                      |
 | Files by Workload                          | File counts across SharePoint, Teams and OneDrive.                                                |
 | SharePoint by Site Template (GB)           | The top 8 site templates by storage used, across every SharePoint site regardless of workload.    |
-| Largest SharePoint Sites (top 10)          | The 10 SharePoint sites using the most storage, excluding internal system sites such as the tenant admin site, search centres and the app catalogue. |
+| Largest SharePoint Sites (top 10)          | The 10 SharePoint sites using the most storage, excluding internal system sites such as the tenant admin site, search centres and the app catalogue. A **GB** / **%** toggle on the card switches the bars between gigabytes used and each site's share of the tenant's used storage. **%** is greyed out until a tenant storage figure is available. |
 
 ## Filters
 
@@ -69,25 +70,25 @@ Buttons above the SharePoint Sites table apply common filters in one click:
 
 ## Finding Cleanup Opportunities
 
-**Scan cleanup** on the SharePoint Sites table queues a scan of every SharePoint site in the tenant, aside from OneDrive personal sites and a handful of system sites such as the search centre, content type hub and app catalogue. Each site is checked for a large amount of old file versions, a full recycle bin, or a document library that has grown out of proportion to the rest of the site. Progress is shown next to **Cleanup scan** near the top of the page, and the table refreshes itself once the scan finishes.
+**Scan cleanup**, at the top of the page beside **Sync usage**, queues a scan of every SharePoint site in the tenant, aside from OneDrive personal sites and a handful of system sites such as the search centre, content type hub and app catalogue. Each site is checked for a large amount of old file versions, a full recycle bin, or a document library that has grown out of proportion to the rest of the site. The scan fills the reclaim columns only, so it is not a substitute for **Sync usage** and refreshes no storage sizes. Progress is shown next to **Cleanup scan**, the page switches to the SharePoint Sites tab, and the table refreshes itself once the scan finishes.
 
 {% hint style="info" %}
-If no cleanup scan has been cached yet, a banner invites you to click **Scan cleanup**.
+If no cleanup scan has been cached yet, a banner invites you to use **Scan cleanup**.
 {% endhint %}
 
-Once a scan has run, sites with an opportunity show a **Cleanup** value and an estimated reclaim amount in the table, and the summary and chip row above pick up a **Reclaimable (est.)** figure. Running **Scan cleanup** (now **Rescan cleanup**) again re-scans every site afresh.
+Once a scan has run, sites with an opportunity show a **Cleanup** value and an estimated reclaim amount in the table, and the summary and chip row above pick up a **Reclaimable (est.)** figure. The table stays sorted by storage used, so sort on **Reclaim (est.)** to bring the largest opportunities to the top. Running **Scan cleanup** (now **Rescan cleanup**) again re-scans every site afresh.
 
 Selecting **Cleanup…** on a site, or on a flagged row from the chip row, opens the storage cleanup drawer for that site:
 
 * A composition breakdown, estimating how the site's storage divides between current files, previous file versions, and the recycle bin.
-* A **Versions** tab listing the top libraries by estimated version storage, with a button to start a version cleanup job, and the status of any job already running or completed for the site.
+* A **Versions** tab listing the top libraries by estimated version storage, with a **Configure version cleanup…** button, and the status of any job already running or completed for the site.
 * A **Recycle** tab summarising the first-stage and second-stage recycle bin, with a button to empty it entirely.
 
 {% hint style="info" %}
 The composition and version figures are estimates, not exact counts, and carry no file names. Reclaimed storage from a version cleanup job may differ from the estimate until the job itself reports how much was released.
 {% endhint %}
 
-Starting a version cleanup job asks for a mode: **Sync Policy** applies the site's own version policy to versions that already exist, **Delete Older Than Days** removes versions older than a set number of days (SharePoint requires at least 30), and **Count Limits** keeps a maximum number of major versions. The **Versions** tab needs SharePoint site write access.
+Starting a version cleanup job asks for a mode. **Older than X days** removes versions older than a set number of days, on a slider running from 30 to 365 days. **More than X versions** keeps only the newest major versions, with a second slider for how many of those majors keep their minor versions. **Sync policy** trims existing version history to match the site's own version policy, and shows you that policy first so you can see what will be applied. A cleanup job only trims history, it never changes the policy itself: use **Edit Site**, or the SharePoint version control standard, for that. The **Versions** tab needs SharePoint site write access.
 
 {% hint style="danger" %}
 Emptying a recycle bin is permanent and cannot be undone. You choose whether to empty the first stage, the second stage, or both.
@@ -132,7 +133,7 @@ The **Libraries** column opens a dialog listing the site's top-level document li
 | Site Type          | The kind of library, for example Document Library or Site Pages.                                    |
 | File Count         | The number of files stored in the library.                                                          |
 | Storage Used In Bytes | How much storage the library is using.                                                           |
-| Versions (est.)    | An estimate of the storage taken up by old file versions in the library.                            |
+| Version size (est.) | An estimate of the storage taken up by old file versions in the library.                          |
 | % of Site          | The library's storage as a percentage of the site's total storage used.                             |
 | Web Url            | The address of the library.                                                                         |
 

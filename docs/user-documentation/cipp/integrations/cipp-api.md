@@ -86,7 +86,7 @@ Open the [cipp-api.md](cipp-api.md "mention") page and **Create New Client** (or
 
 | Field                  | Value                                                                                            |
 | ---------------------- | ------------------------------------------------------------------------------------------------ |
-| **Role**               | `Readonly` (recommended), or a custom read role. This becomes what the AI can do.               |
+| **Role**               | `Readonly` (recommended), or a custom read role. This becomes what the AI can do. The role must not carry its own IP restriction, for the same reason the client's IP range has to be `Any`. |
 | **IP range**           | `Any`. The connector calls in from your AI provider's servers, so you can't pin it to your office IPs. |
 | **Enable this client** | On                                                                                               |
 | **MCP Access Allowed** | **On**                                                                                           |
