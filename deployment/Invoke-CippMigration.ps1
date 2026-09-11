@@ -772,6 +772,56 @@ try {
     Write-Warning "  Could not enumerate file shares: $($_.Exception.Message)"
 }
 
+# ── Remove stale role assignments on the target site scope ───────────────────
+# The legacy template granted the function app Contributor on itself, and Azure removes
+# a deleted site's role assignments asynchronously - often minutes after the delete
+# returns. Deploying a same-named site while that row lingers fails the deploy
+# (RoleAssignmentUpdateNotPermitted) or loses the new grant to the late cleanup.
+# The site is about to be (re)created, so any assignment scoped exactly to it is
+# stale; inherited (resource group / subscription) rows are left alone.
+if (-not $SkipDeployment) {
+    $targetSiteScope = "/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Web/sites/$TargetWebAppName"
+    $targetSiteExists = [bool](Get-AzWebApp -ResourceGroupName $ResourceGroupName -Name $TargetWebAppName -ErrorAction SilentlyContinue)
+    if ($targetSiteExists) {
+        Write-Information "Web app '$TargetWebAppName' already exists - keeping its role assignments."
+    } else {
+        Write-Information "Checking for stale role assignments on '$TargetWebAppName'..."
+        $staleAssignments = @(Invoke-AzWithRetry -OperationName 'Listing role assignments' -ScriptBlock {
+                Get-AzRoleAssignment -Scope $targetSiteScope -ErrorAction Stop
+            } | Where-Object { $_.Scope -eq $targetSiteScope })
+        foreach ($assignment in $staleAssignments) {
+            Write-Information "  Removing stale '$($assignment.RoleDefinitionName)' assignment for $($assignment.ObjectType) $($assignment.ObjectId)"
+            if ($PSCmdlet.ShouldProcess($assignment.RoleAssignmentId, 'Remove stale role assignment')) {
+                try {
+                    Invoke-AzWithRetry -OperationName 'Removing stale role assignment' -ScriptBlock {
+                        Remove-AzRoleAssignment -InputObject $assignment -ErrorAction Stop
+                    }
+                } catch {
+                    # Azure's own cleanup may have beaten us to it.
+                    if ($_.Exception.Message -notmatch 'does not exist|NotFound') { throw }
+                }
+            }
+        }
+        if ($staleAssignments.Count -eq 0) {
+            Write-Information '  None found.'
+        } elseif (-not $WhatIfPreference) {
+            # Deletes are eventually consistent on the ARM side too - confirm they are gone
+            # before the deploy re-creates the scope.
+            $sweepAttempts = 0
+            do {
+                Start-Sleep -Seconds 5
+                $sweepAttempts++
+                $remainingAssignments = @(Get-AzRoleAssignment -Scope $targetSiteScope -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $targetSiteScope })
+            } while ($remainingAssignments.Count -gt 0 -and $sweepAttempts -lt 12)
+            if ($remainingAssignments.Count -gt 0) {
+                Write-Warning "Stale role assignment(s) on '$TargetWebAppName' are still listed after $($sweepAttempts * 5)s - the deploy may fail with RoleAssignmentUpdateNotPermitted; re-run if it does."
+            } else {
+                Write-Information '  Stale role assignments removed.'
+            }
+        }
+    }
+}
+
 # ── Deploy cipp ─────────────────────────────────────────────────────────────
 $Deployment = $null
 if ($SkipDeployment) {
@@ -814,6 +864,50 @@ if ($NewHostname) {
     Write-Information "cipp URL      : https://$NewHostname"
 }
 Write-Information "Key Vault        : $NewKvName"
+
+# ── Verify the web app identity's grants ─────────────────────────────────────
+# The template creates both grants, but the deploy can capture a principal that MSI
+# later replaces, and Azure's late cleanup of the deleted function app can remove a
+# fresh role assignment. Without Contributor the setup wizard cannot write app
+# settings; without the vault policy the backend cannot read its SAM credentials.
+# Re-check against the live identity and repair; a brand-new principal is rejected
+# for a minute or two while Entra replicates it, hence the retries.
+$liveWebApp = if (-not $WhatIfPreference) { Get-AzWebApp -ResourceGroupName $ResourceGroupName -Name $NewWebAppName -ErrorAction SilentlyContinue }
+$livePrincipalId = $liveWebApp.Identity.PrincipalId
+if ($livePrincipalId) {
+    Write-Information "Verifying grants for the web app identity ($livePrincipalId)..."
+    $siteScope = $liveWebApp.Id
+    $grants = @(
+        @{
+            Name  = "Contributor on '$NewWebAppName'"
+            Test  = { [bool](Get-AzRoleAssignment -Scope $siteScope -ObjectId $livePrincipalId -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $siteScope -and $_.RoleDefinitionName -eq 'Contributor' }) }
+            Grant = { $null = New-AzRoleAssignment -ObjectId $livePrincipalId -RoleDefinitionName Contributor -Scope $siteScope -ObjectType ServicePrincipal -ErrorAction Stop }
+            Fix   = "New-AzRoleAssignment -ObjectId $livePrincipalId -RoleDefinitionName Contributor -Scope $siteScope"
+        }
+        @{
+            Name  = "secrets access on Key Vault '$NewKvName'"
+            Test  = { [bool]((Get-AzKeyVault -VaultName $NewKvName -ResourceGroupName $ResourceGroupName).AccessPolicies | Where-Object { $_.ObjectId -eq $livePrincipalId -and ($_.PermissionsToSecrets -contains 'all' -or $_.PermissionsToSecrets -contains 'get') }) }
+            Grant = { Set-AzKeyVaultAccessPolicy -VaultName $NewKvName -ResourceGroupName $ResourceGroupName -ObjectId $livePrincipalId -PermissionsToSecrets all -ErrorAction Stop }
+            Fix   = "Set-AzKeyVaultAccessPolicy -VaultName $NewKvName -ObjectId $livePrincipalId -PermissionsToSecrets all"
+        }
+    )
+    foreach ($grant in $grants) {
+        $ok = & $grant.Test
+        foreach ($delay in @(10, 20, 30, 60, 60)) {
+            if ($ok) { break }
+            if (-not $PSCmdlet.ShouldProcess($NewWebAppName, "Grant $($grant.Name)")) { break }
+            Write-Information "  $($grant.Name) missing - granting..."
+            try { & $grant.Grant; $ok = $true } catch {
+                if ($_.Exception.Message -match 'already exists') { $ok = $true; break }
+                Write-Information "  Failed: $($_.Exception.Message -split "`n" | Select-Object -First 1) - retrying in ${delay}s"
+                Start-Sleep -Seconds $delay
+            }
+        }
+        if ($ok) { Write-Information "  $($grant.Name): OK" } else { Write-Warning "Missing $($grant.Name). CIPP will not work until it is granted: $($grant.Fix)" }
+    }
+} elseif (-not $WhatIfPreference) {
+    Write-Warning "Could not read the managed identity of '$NewWebAppName' - verify its Contributor assignment and Key Vault access policy manually."
+}
 
 # ── Remove custom domains from SWA before deletion ───────────────────────────
 if ($swaCustomDomains.Count -gt 0) {

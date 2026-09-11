@@ -21,20 +21,21 @@ When you run the setup, CIPP creates the following in your partner tenant. All o
 | App registration `CIPP-SSO`       | Single-tenant by default (`AzureADMyOrg`). ID token issuance enabled. Redirect URI `https://<your-cipp-hostname>/.auth/login/aad/callback` for every hostname bound to the instance. |
 | Service principal (enterprise app) | The enterprise app entry for `CIPP-SSO`, so the app can be assigned Conditional Access policies and appear in sign-in logs.                                                  |
 | Client secret                     | A single secret named `CIPP-SSO-Secret`, stored in your instance's Key Vault. Its lifetime honours a tenant `passwordLifetime` restriction if you enforce one.                |
-| Tenant-wide consent grant         | An `AllPrincipals` OAuth2 permission grant for the three delegated scopes below, so your users are not each prompted to consent at first sign-in. Best-effort — see [#troubleshooting](sso.md#troubleshooting "mention"). |
+| Tenant-wide consent grant         | An `AllPrincipals` OAuth2 permission grant for the four delegated scopes below, so your users are not each prompted to consent at first sign-in. Best-effort — see [#troubleshooting](sso.md#troubleshooting "mention"). |
 | App management policy exemption   | Only created if your tenant's default app management policy blocks adding client secrets. Named `CIPP Exemption Policy` and scoped to the CIPP-SAM app.                       |
 
 ## Permissions the CIPP-SSO App Requests
 
-The app requests exactly three delegated Microsoft Graph permissions and **no application (app-only) permissions at all**. Because they are delegated only, the app cannot do anything unless a user is actively signed in, and it can never act on its own.
+The app requests exactly four delegated Microsoft Graph permissions and **no application (app-only) permissions at all**. Because they are delegated only, the app cannot do anything unless a user is actively signed in, and it can never act on its own.
 
 | Permission | Type      | What it grants                                                       | Why CIPP needs it                                                                                                                           |
 | ---------- | --------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `openid`   | Delegated | Sign the user in and receive an ID token.                            | The base OpenID Connect scope. Without it there is no sign-in at all.                                                                        |
 | `profile`  | Delegated | Read the signed-in user's basic profile — display name, object ID, tenant ID. | Identifies which account signed in, and which tenant it came from.                                                                           |
 | `email`    | Delegated | Read the signed-in user's email address / UPN.                       | CIPP matches the UPN against the [cipp-users.md](cipp-users.md "mention") list to decide which CIPP roles and permissions the user gets. |
+| `offline_access` | Delegated | Issue a refresh token so the sign-in session can be renewed.   | Lets CIPP renew a signed-in session without sending the user back to Entra to sign in again. Microsoft states it grants no additional data access. |
 
-What these permissions do **not** grant: no access to mailboxes, files, Teams, directory objects, groups, devices, policies, or any other tenant data. Microsoft classifies all three as low impact, and they are consentable by an ordinary user by default. They are the same three scopes used by essentially every OpenID Connect sign-in integration.
+What these permissions do **not** grant: no access to mailboxes, files, Teams, directory objects, groups, devices, policies, or any other tenant data. Microsoft classifies all four as low impact, and they are consentable by an ordinary user by default. They are the same scopes used by essentially every OpenID Connect sign-in integration; `offline_access` only maintains the session and, in Microsoft's words, grants no additional permissions.
 
 {% hint style="info" %}
 User assignment is not required on the enterprise app. Any account in the tenant can complete the sign-in, and CIPP then denies access to anyone who is not on the CIPP Users list. If your security team prefers a hard gate at the Entra layer, you can set **Assignment required** on the `CIPP-SSO` enterprise app and assign only the intended users or a group — CIPP does not depend on that setting either way.
@@ -47,7 +48,7 @@ The setup runs as the **CIPP-SAM** app registration, using application permissio
 | Permission on CIPP-SAM                       | Type        | Why it is used during SSO setup                                                                                                                                   |
 | -------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Application.ReadWrite.All`                  | Application | Create the `CIPP-SSO` app registration and its service principal, set its redirect URIs and sign-in audience, and add its client secret.                            |
-| `Directory.ReadWrite.All`                    | Application | Write the tenant-wide admin consent grant for `openid`, `profile` and `email`, so your users do not each see a consent prompt at first sign-in.                     |
+| `Directory.ReadWrite.All`                    | Application | Write the tenant-wide admin consent grant for `openid`, `profile`, `email` and `offline_access`, so your users do not each see a consent prompt at first sign-in.                     |
 | `Policy.ReadWrite.ApplicationConfiguration`  | Application | Add an app management policy exemption for CIPP-SAM, but only when the tenant default policy blocks adding client secrets. Without it, secret creation fails.       |
 
 These three permissions are part of the standard CIPP-SAM permission set and were granted at install time — they are not specific to SSO. If your instance predates one of them, the consent is out of date and setup will fail on the corresponding step; re-consent CIPP-SAM from the [sam-app-permissions.md](sam-app-permissions.md "mention") page or by re-running the SAM setup wizard.
@@ -83,7 +84,7 @@ Leave **Multi-tenant mode** off unless the people who sign in to CIPP have accou
 {% step %}
 ### Create the app
 
-Select **Create SSO App**. CIPP creates the app registration, its service principal and its client secret, stores the credentials in Key Vault, and grants tenant-wide consent for the three sign-in scopes. This usually takes a few seconds; secret creation can retry for up to a minute while Entra replicates the new app.
+Select **Create SSO App**. CIPP creates the app registration, its service principal and its client secret, stores the credentials in Key Vault, and grants tenant-wide consent for the four sign-in scopes. This usually takes a few seconds; secret creation can retry for up to a minute while Entra replicates the new app.
 {% endstep %}
 
 {% step %}
@@ -154,7 +155,7 @@ To enable multi-tenant login:
 {% endhint %}
 
 {% hint style="info" %}
-Tenant-wide admin consent can only be written in your own partner tenant. In multi-tenant mode, users signing in from a different tenant will still see a consent prompt for `openid`, `profile` and `email` unless an administrator in that tenant grants consent for the CIPP-SSO app.
+Tenant-wide admin consent can only be written in your own partner tenant. In multi-tenant mode, users signing in from a different tenant will still see a consent prompt for `openid`, `profile`, `email` and `offline_access` unless an administrator in that tenant grants consent for the CIPP-SSO app.
 {% endhint %}
 
 ## Troubleshooting
@@ -198,7 +199,7 @@ Still under **Authentication**, tick **ID tokens (used for implicit and hybrid f
 {% step %}
 ### Add the API permissions
 
-Under **API permissions**, select **Add a permission** > **Microsoft Graph** > **Delegated permissions**, and add `openid`, `profile` and `email`. Do not add any application permissions.
+Under **API permissions**, select **Add a permission** > **Microsoft Graph** > **Delegated permissions**, and add `openid`, `profile`, `email` and `offline_access`. Do not add any application permissions.
 
 Optionally select **Grant admin consent** so your users are not prompted at first sign-in. This is required if your tenant disables user consent.
 {% endstep %}
