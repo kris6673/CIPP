@@ -462,6 +462,7 @@
       * [Custom Domains](user-documentation/cipp/advanced/container-management/custom-domains.md)
       * [Logs](user-documentation/cipp/advanced/container-management/logs.md)
       * [Worker Health](user-documentation/cipp/advanced/container-management/worker-health.md)
+      * [Diagnostics](user-documentation/cipp/advanced/container-management/diagnostics.md)
     * [Authentication](user-documentation/cipp/advanced/authentication/README.md)
       * [CIPP Roles](user-documentation/cipp/advanced/authentication/cipp-roles/README.md)
         * [Add Role](user-documentation/cipp/advanced/authentication/cipp-roles/add.md)
