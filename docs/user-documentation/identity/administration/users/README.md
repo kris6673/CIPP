@@ -14,12 +14,14 @@ The Users page lists the users in the selected tenant and is the starting point 
 
 Creates a single user in the selected tenant. **Create User** submits the form, and once a user has been created the button changes to **Create Another User** so the drawer can be reused.
 
+A user can only be created in one tenant at a time. With **All Tenants** selected, **Create User** is greyed out and a warning explains that a specific tenant must be chosen from the tenant selector first.
+
 **Starting point**
 
 | Field                             | Description                                                                                                                                                                                                       |
 | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Copy properties from another user | Pre-fills the form from an existing user's name, job, address and contact details. Licences and group memberships are not copied by this selector.                                                                |
-| User Template (optional)          | Applies a saved user template, filling in the properties, licences, groups and shared access it defines. Templates are managed on the [user-defaults.md](user-defaults.md "mention") page. |
+| User Template (optional)          | Applies a saved user template, filling in the properties, licences, groups and shared access it defines. Templates are managed on the [user-defaults.md](../user-defaults.md "mention") page. |
 
 **Identity**
 
@@ -104,6 +106,8 @@ Creates several users at once from a CSV file or from rows entered by hand.
 Set the **Usage Location** and any licences under **Assign License** first, as these apply to every user in the batch. **Download Example CSV** produces a file with the expected column headers: `givenName`, `surName`, `displayName`, `mailNickName`, `domain`, `JobTitle`, `streetAddress`, `PostalCode`, `City`, `State`, `Department`, `MobilePhone` and `businessPhones`, plus any extra attributes added in your preferences. Upload the completed file, or use **Add User Manually** to add rows individually.
 
 Every row appears in the **User Preview** table, where it can be checked and removed before submitting. **Create Users** submits the batch.
+
+As with a single user, the whole batch goes to one tenant. With **All Tenants** selected, **Create Users** is greyed out and a warning explains that a specific tenant must be chosen from the tenant selector first.
 
 </details>
 
