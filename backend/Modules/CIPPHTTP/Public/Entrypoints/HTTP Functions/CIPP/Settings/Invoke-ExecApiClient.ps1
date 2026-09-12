@@ -222,11 +222,15 @@ function Invoke-ExecApiClient {
 
                 if ($McpClientIds.Count -gt 0 -and $env:WEBSITE_HOSTNAME) {
                     # Advertise the OIDC scopes alongside the resource scope so discovery-based MCP
-                    # clients (Copilot Studio, ChatGPT) request a refresh token. offline_access is
-                    # what makes Entra issue one; without it the client re-consents every ~hour.
-                    # Claude appends offline_access itself, but stricter clients only request what the
+                    # clients (ChatGPT, VS Code) request a refresh token. offline_access is what
+                    # makes Entra issue one; without it the client re-consents every ~hour. Claude
+                    # appends offline_access itself, but stricter clients only request what the
                     # metadata advertises, so it has to be in the protected-resource document and the
                     # EasyAuth challenge scope too - not just the authorization-server document.
+                    # NOTE: Copilot Studio does NOT read any of this. Entra has no RFC 7591 DCR, so
+                    # Copilot Studio uses Manual OAuth with a maker-typed scope; its refresh token
+                    # depends on offline_access being consented on the MCP client app registration
+                    # (Set-CIPPMCPClientApp / Grant-CippAppGraphConsent), not on these documents.
                     $McpScope = "https://$($env:WEBSITE_HOSTNAME)/user_impersonation"
                     $McpScopesSupported = @('openid', 'profile', 'offline_access', $McpScope)
                     $McpDefaultScopeString = 'openid profile offline_access {0}' -f $McpScope

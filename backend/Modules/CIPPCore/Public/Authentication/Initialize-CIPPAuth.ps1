@@ -243,6 +243,25 @@ function Initialize-CIPPAuth {
                     } else {
                         Write-Information "[Auth-Init] EasyAuth already matches $($EnabledClients.Count) enabled API client(s) — no update needed"
                     }
+
+                    # Ensure offline_access is admin-consented on every MCP-enabled client so Entra
+                    # issues a refresh token — without it, MCP clients (Copilot Studio especially)
+                    # re-authenticate roughly every hour when the access token expires. Set at
+                    # client-creation time by Set-CIPPMCPClientApp, but re-checked here so a client
+                    # created before this existed, or whose service principal had not replicated at
+                    # creation, self-heals on the next warmup. Idempotent and cheap: the grant helper
+                    # no-ops once the scopes are present. Best-effort per client.
+                    foreach ($McpId in $McpClientIds) {
+                        if ([string]::IsNullOrEmpty($McpId)) { continue }
+                        try {
+                            $McpConsent = Grant-CippAppGraphConsent -AppId $McpId -Scopes @('openid', 'profile', 'offline_access')
+                            if ($McpConsent.Action -ne 'nochange') {
+                                Write-Information "[Auth-Init] MCP client $McpId offline_access consent: $($McpConsent.Action)"
+                            }
+                        } catch {
+                            Write-Information "[Auth-Init] MCP client $McpId offline_access consent reconcile failed (non-fatal): $_"
+                        }
+                    }
                 }
             } catch {
                 Write-Information "[Auth-Init] API client reconcile failed (non-fatal): $_"

@@ -198,7 +198,7 @@ In your agent: **Tools → Add a tool → Model Context Protocol**. Set:
 - `<cipp-backend-host>` is CIPP's backend host: the `…azurewebsites.net` **Application ID URI** shown under **Expose an API** on the MCP client's app registration. It's the host in the `scope=` of the sign-in challenge, **not** your vanity `cipp.app` domain.
 
 {% hint style="warning" %}
-**Keep `offline_access` in the Scopes field.** It's what makes Entra issue a refresh token; without it, Copilot Studio re-prompts users to sign in roughly every hour.
+**Keep `offline_access` in the Scopes field.** It's what makes Entra issue a refresh token; without it, Copilot Studio re-prompts users to sign in roughly every hour. CIPP admin-consents `offline_access` on the MCP client's app registration for you when you enable MCP on the client, so a refresh token is issued even in tenants that disable user consent to applications — you don't need to grant consent by hand.
 {% endhint %}
 
 {% endstep %}
