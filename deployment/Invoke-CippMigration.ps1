@@ -786,9 +786,19 @@ if (-not $SkipDeployment) {
         Write-Information "Web app '$TargetWebAppName' already exists - keeping its role assignments."
     } else {
         Write-Information "Checking for stale role assignments on '$TargetWebAppName'..."
-        $staleAssignments = @(Invoke-AzWithRetry -OperationName 'Listing role assignments' -ScriptBlock {
-                Get-AzRoleAssignment -Scope $targetSiteScope -ErrorAction Stop
-            } | Where-Object { $_.Scope -eq $targetSiteScope })
+        $staleAssignments = @()
+        try {
+            $staleAssignments = @(Invoke-AzWithRetry -OperationName 'Listing role assignments' -ScriptBlock {
+                    Get-AzRoleAssignment -Scope $targetSiteScope -ErrorAction Stop
+                } | Where-Object { $_.Scope -eq $targetSiteScope })
+        } catch {
+            # Some Az versions 404 the list when the resource behind the scope is gone —
+            # that just means nothing lingers. Anything else: warn and proceed; aborting
+            # here (old apps deleted, nothing deployed) is guaranteed downtime.
+            if ($_.Exception.Message -notmatch 'NotFound') {
+                Write-Warning "  Could not list role assignments on '$TargetWebAppName': $($_.Exception.Message) — continuing; the deploy may fail if a stale assignment lingers."
+            }
+        }
         foreach ($assignment in $staleAssignments) {
             Write-Information "  Removing stale '$($assignment.RoleDefinitionName)' assignment for $($assignment.ObjectType) $($assignment.ObjectId)"
             if ($PSCmdlet.ShouldProcess($assignment.RoleAssignmentId, 'Remove stale role assignment')) {
@@ -797,8 +807,11 @@ if (-not $SkipDeployment) {
                         Remove-AzRoleAssignment -InputObject $assignment -ErrorAction Stop
                     }
                 } catch {
-                    # Azure's own cleanup may have beaten us to it.
-                    if ($_.Exception.Message -notmatch 'does not exist|NotFound') { throw }
+                    # NotFound: Azure's own cleanup beat us to it. Anything else: warn —
+                    # aborting here is guaranteed downtime, a lingering row only might fail the deploy.
+                    if ($_.Exception.Message -notmatch 'does not exist|NotFound') {
+                        Write-Warning "  Could not remove stale assignment $($assignment.RoleAssignmentId): $($_.Exception.Message) — continuing."
+                    }
                 }
             }
         }
@@ -892,7 +905,9 @@ if ($livePrincipalId) {
         }
     )
     foreach ($grant in $grants) {
-        $ok = & $grant.Test
+        # A Test throw (e.g. Graph 404 on a not-yet-replicated principal) = not verified;
+        # fall through to the grant ladder rather than abort post-deploy.
+        try { $ok = & $grant.Test } catch { $ok = $false }
         foreach ($delay in @(10, 20, 30, 60, 60)) {
             if ($ok) { break }
             if (-not $PSCmdlet.ShouldProcess($NewWebAppName, "Grant $($grant.Name)")) { break }
@@ -915,10 +930,16 @@ if ($swaCustomDomains.Count -gt 0) {
     foreach ($domain in $swaCustomDomains) {
         Write-Information "  Removing custom domain: $($domain.DomainName)"
         if ($PSCmdlet.ShouldProcess($domain.DomainName, 'Remove SWA custom domain')) {
-            $null = Invoke-AzRestMethodWithRetry `
-                -OperationName "Removing custom domain '$($domain.DomainName)'" `
-                -Method DELETE `
-                -Uri "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Web/staticSites/$SwaName/customDomains/$($domain.DomainName)?api-version=2022-09-01"
+            # Post-deploy: the instance is up, so SWA cleanup failures warn instead of
+            # aborting (the summary's DNS instructions must still print).
+            try {
+                $null = Invoke-AzRestMethodWithRetry `
+                    -OperationName "Removing custom domain '$($domain.DomainName)'" `
+                    -Method DELETE `
+                    -Uri "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Web/staticSites/$SwaName/customDomains/$($domain.DomainName)?api-version=2022-09-01"
+            } catch {
+                Write-Warning "  Failed to remove custom domain '$($domain.DomainName)': $($_.Exception.Message)"
+            }
         }
     }
 
@@ -947,11 +968,15 @@ if ($swaCustomDomains.Count -gt 0) {
 if ($swa) {
     Write-Information "Deleting Static Web App '$SwaName'..."
     if ($PSCmdlet.ShouldProcess($SwaName, 'Delete Static Web App')) {
-        $null = Invoke-AzRestMethodWithRetry `
-            -OperationName "Deleting Static Web App '$SwaName'" `
-            -Method DELETE `
-            -Uri "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Web/staticSites/$SwaName`?api-version=2022-09-01"
-        Write-Information "  '$SwaName' deleted."
+        try {
+            $null = Invoke-AzRestMethodWithRetry `
+                -OperationName "Deleting Static Web App '$SwaName'" `
+                -Method DELETE `
+                -Uri "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Web/staticSites/$SwaName`?api-version=2022-09-01"
+            Write-Information "  '$SwaName' deleted."
+        } catch {
+            Write-Warning "Failed to delete Static Web App '$SwaName': $($_.Exception.Message) — delete it in the portal; it no longer serves CIPP."
+        }
     }
 }
 
