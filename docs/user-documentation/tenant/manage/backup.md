@@ -33,6 +33,7 @@ Backups run daily from the time the schedule is created. There is no recurrence 
 | Intune Protection Policies       | Backs up app protection policies.                                                                                           |
 | Anti-Spam Policies               | Backs up the tenant's anti-spam policies.                                                                                   |
 | Anti-Phishing Policies           | Backs up the tenant's anti-phishing policies.                                                                               |
+| Teams Phone Number Assignments   | Backs up which user or resource account each Teams phone number is assigned to, with its number type, assignment category and emergency location. |
 | Webhook Alerts Configuration     | Backs up the alert webhooks configured in CIPP for the tenant.                                                              |
 | Scripted Alerts Configuration    | Backs up the scripted alerts configured in CIPP for the tenant.                                                             |
 | Custom Variables                 | Backs up the tenant's custom variables. See [global-variables.md](../administration/tenants/global-variables.md "mention"). |
@@ -76,6 +77,10 @@ Restoring writes the selected components from a backup back into the tenant. The
 | Restore Settings           | The components to restore, matching the component list used when scheduling a backup. Switch off anything you do not want written back.               |
 | Overwrite existing entries | Replaces existing objects with the versions held in the backup. Leave this off to skip anything that already exists and restore only what is missing. |
 | Send Restore results to    | Where the outcome is reported once the restore has run: Webhook, E-mail, or PSA.                                                                      |
+
+{% hint style="info" %}
+Restoring Teams Phone Number Assignments re-assigns each backed-up number to the user or resource account that held it, which also re-enables Enterprise Voice on that account. The account must hold a Teams Phone license before the restore runs. Assignments are submitted to Microsoft asynchronously and can take a minute to appear under Business Voice. A number that is currently assigned to a different account is skipped unless Overwrite existing entries is on, in which case it is moved back.
+{% endhint %}
 
 {% hint style="warning" %}
 Overwriting replaces current settings with those in the backup rather than merging them. Where users are included in the restore, every property on the account is overwritten with the backed-up values. To protect a component, switch it off in Restore Settings or leave Overwrite existing entries off.
