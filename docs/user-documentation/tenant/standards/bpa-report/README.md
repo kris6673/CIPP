@@ -36,7 +36,7 @@ To replicate the functionality of the "Force Refresh All Data" button, you can u
 {% endhint %}
 
 {% hint style="warning" %}
-**Note:** Larger environments (e.g., 100+ tenants) may take \~15 minutes per run.
+**Note:** Larger environments, for example 100+ tenants, may take \~15 minutes per run.
 {% endhint %}
 
 ### **Report Types**
@@ -51,8 +51,8 @@ To replicate the functionality of the "Force Refresh All Data" button, you can u
 
 The BPA uses a traffic-light system for quick, visual feedback:
 
-* **🟥 Red:** Critical issues demanding immediate attention (e.g., unprotected global admin accounts).
-* **🟧 Orange:** Warnings or recommendations—optional but strongly advised (e.g., enabling MFA for non-admin users).
+* **🟥 Red:** Critical issues demanding immediate attention, for example unprotected global admin accounts.
+* **🟧 Orange:** Warnings or recommendations that are optional but strongly advised, for example enabling MFA for non-admin users.
 * **🟩 Green:** All good! Configuration aligns with best practices.
 
 ***

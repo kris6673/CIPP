@@ -146,7 +146,7 @@ If your AI still asks for a client ID, it doesn't support automatic registration
 {% endhint %}
 
 {% hint style="warning" %}
-If you tried this URL before and it failed, your AI may have cached that result and will keep failing even after everything is fixed. Claude does this. Reconnect using a slightly different URL, for example `https://<your-cipp-api-url>/api/ExecMCP?retry=1`, which the AI treats as a new server.
+**Asked to sign in again roughly every hour?** Earlier versions of CIPP did not offer your AI the `offline_access` permission, so it received no refresh token and could not stay signed in once its session expired. Current versions add the permission automatically when CIPP starts, with no change needed in Entra. Your AI keeps the sign-in it made before the update, so disconnect and reconnect the CIPP connector once to stay signed in.
 {% endhint %}
 
 {% hint style="info" %}

@@ -24,6 +24,17 @@ Creates a shared mailbox in the selected tenant.
 
 </details>
 
+## Filters
+
+| Filter                              | Shows                                                                                                                    |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| View User Mailboxes                 | Mailboxes belonging to a licensed user.                                                                                  |
+| View Shared Mailboxes               | Shared mailboxes.                                                                                                        |
+| View Room Mailboxes                 | Room resource mailboxes.                                                                                                 |
+| View Equipment Mailboxes            | Equipment resource mailboxes.                                                                                            |
+| View Archive-Enabled Mailboxes      | Mailboxes with an online archive.                                                                                        |
+| View Auto Expanding Archive Enabled | Mailboxes with auto-expanding archiving in effect, whether that comes from the organisation setting or from the mailbox. |
+
 ## Table Details
 
 | Column                     | Description                                                                                             |
@@ -46,17 +57,6 @@ The row flyout and the page filters expose further properties, most usefully **A
 {% hint style="warning" %}
 If every mailbox reports zero storage used, an alert appears above the table. This almost always means Microsoft 365 report anonymisation is switched on for the tenant, which replaces the user principal names in usage reports with pseudonyms and stops CIPP matching the usage data back to the mailboxes. Enabling the **Enable Usernames instead of pseudo anonymised names in reports** standard turns the setting off, after which the data needs syncing again to restore the figures.
 {% endhint %}
-
-## Filters
-
-| Filter                              | Shows                                                                                                                    |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| View User Mailboxes                 | Mailboxes belonging to a licensed user.                                                                                  |
-| View Shared Mailboxes               | Shared mailboxes.                                                                                                        |
-| View Room Mailboxes                 | Room resource mailboxes.                                                                                                 |
-| View Equipment Mailboxes            | Equipment resource mailboxes.                                                                                            |
-| View Archive-Enabled Mailboxes      | Mailboxes with an online archive.                                                                                        |
-| View Auto Expanding Archive Enabled | Mailboxes with auto-expanding archiving in effect, whether that comes from the organisation setting or from the mailbox. |
 
 ## Table Actions
 

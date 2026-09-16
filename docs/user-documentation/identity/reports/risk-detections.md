@@ -2,14 +2,6 @@
 
 This report lists the risk detections Microsoft Entra ID Protection has raised, with the most recent first. Each row is a single detection rather than a user, so one account under investigation may appear several times with different detection types and timings.
 
-## Table Details
-
-The properties returned are for the Graph resource type `riskDetection`. For more information on the properties please see the [Graph documentation](https://learn.microsoft.com/en-us/graph/api/resources/riskdetection?view=graph-rest-beta#properties).
-
-{% hint style="info" %}
-The **Location** column is a button rather than plain text. Selecting it opens a Location Details dialog plotting the detection on a map, with the city, state and country listed alongside, which is usually the quickest way to judge whether a detection is a genuine anomaly or the user travelling.
-{% endhint %}
-
 ## Filters
 
 | Filter                | Shows                                                                                                     |
@@ -18,6 +10,14 @@ The **Location** column is a button rather than plain text. Selecting it opens a
 | Confirmed Compromised | Detections an administrator has confirmed as a genuine compromise.                                        |
 | Confirmed Safe        | Detections an administrator has marked as legitimate activity.                                            |
 | Remediated            | Detections resolved by the user meeting a remediation requirement, such as a self-service password reset. |
+
+## Table Details
+
+The properties returned are for the Graph resource type `riskDetection`. For more information on the properties please see the [Graph documentation](https://learn.microsoft.com/en-us/graph/api/resources/riskdetection?view=graph-rest-beta#properties).
+
+{% hint style="info" %}
+The **Location** column is a button rather than plain text. Selecting it opens a Location Details dialog plotting the detection on a map, with the city, state and country listed alongside, which is usually the quickest way to judge whether a detection is a genuine anomaly or the user travelling.
+{% endhint %}
 
 ## Table Actions
 

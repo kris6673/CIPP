@@ -50,7 +50,7 @@ If the username and Primary Domain name together match an existing account's use
 | Remove all licenses                   | Strips every licence from the account, which is mainly useful when a template or a copied user has brought licences in that are not wanted.                                    |
 
 {% hint style="info" %}
-When the sherweb.md integration is enabled and a selected licence shows `(0 available)`, a **Purchase new licence?** switch appears along with a **Sherweb License** selector. Choosing this purchases a new licence under your terms with Sherweb and assigns it to the user once it becomes available.
+When the [sherweb.md](../../../cipp/integrations/sherweb.md "mention") integration is enabled and a selected licence shows `(0 available)`, a **Purchase new licence?** switch appears along with a **Sherweb License** selector. Choosing this purchases a new licence under your terms with Sherweb and assigns it to the user once it becomes available.
 {% endhint %}
 
 **Contact and organisation**

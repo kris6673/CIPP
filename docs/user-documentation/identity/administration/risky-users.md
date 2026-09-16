@@ -2,10 +2,6 @@
 
 This page lists the accounts Microsoft Entra ID Protection currently holds a risk assessment for, so a tenant's flagged users can be reviewed and cleared without opening the Entra portal. The table is sorted with the most recently updated risk first.
 
-## Table Details
-
-The properties returned are for the Graph resource type `riskyUser`. For more information on the properties please see the [Graph documentation](https://learn.microsoft.com/en-us/graph/api/resources/riskyuser?view=graph-rest-1.0#properties).
-
 ## Filters
 
 | Filter           | Shows                                                                                                                                            |
@@ -13,6 +9,10 @@ The properties returned are for the Graph resource type `riskyUser`. For more in
 | Users at Risk    | Accounts whose risk is still open and has not been acted on.                                                                                     |
 | Dismissed Users  | Accounts whose risk has been dismissed, either here or in the Entra portal.                                                                      |
 | Remediated Users | Accounts whose risk was resolved by the user meeting a remediation requirement, such as a self-service password reset or a risky sign-in policy. |
+
+## Table Details
+
+The properties returned are for the Graph resource type `riskyUser`. For more information on the properties please see the [Graph documentation](https://learn.microsoft.com/en-us/graph/api/resources/riskyuser?view=graph-rest-1.0#properties).
 
 ## Table Actions
 

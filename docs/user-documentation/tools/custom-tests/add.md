@@ -37,7 +37,7 @@ Paste the block below into an AI assistant along with a description of your use 
 ```
 Create a custom test for CIPP(https://docs.cipp.app/user-documentation/tools/custom-tests/add).
 
-Custom tests are read-only via Get-CIPPTestData with -Type. Tenant is auto-locked — do not pass -TenantFilter. Use %variable% syntax for replacement variables.
+Custom tests are read-only via Get-CIPPTestData with -Type. Tenant is auto-locked, so do not pass -TenantFilter. Use %variable% syntax for replacement variables.
 
 This script is CyberDrains example for Conditional access: 
 # Summarize Conditional Access policies by state
@@ -47,8 +47,8 @@ $grouped = $Policies | Group-Object -Property state
 $counts = $grouped | Select-Object @{Name='State'; Expression={ $_.Name }},
     @{Name='Count'; Expression={ $_.Count }}
 
-# Build markdown summary — %tenantname% is replaced at runtime
-$header = "### %tenantname% — CA Policies: $(@($Policies).Count) total
+# Build markdown summary (%tenantname% is replaced at runtime)
+$header = "### %tenantname% CA Policies ($(@($Policies).Count) total)
 
 | State | Count |
 |---|---|"
@@ -79,8 +79,8 @@ $md = $summaryTable + "
     CIPPResultMarkdown = $md
 }
 
-This is their script for Users with licenses:
-# List all users and their licenses with friendly SKU names
+This is their script for Users with licences:
+# List all users and their licences with friendly SKU names
 $Users = Get-CIPPTestData -Type 'Users'
 $Licenses = Get-CIPPTestData -Type 'LicenseOverview'
 
@@ -90,7 +90,7 @@ $Licenses | ForEach-Object {
     $SkuLookup[$_.skuId] = $_.License
 }
 
-# Build results - users with their resolved license names
+# Build results - users with their resolved licence names
 $results = $Users | Where-Object {
     $_.assignedLicenses.Count -gt 0
 } | Select-Object @{Name='UserPrincipalName'; Expression={ $_.userPrincipalName }},
@@ -114,7 +114,7 @@ $md = @($header) + @($rows) -join "\n"
 }
 
 
-I want you to build a script that cross references all CA policies, included groups, and show me which user is missing a license for P1 functionality(conditional acccess) or P2 functionality(Risk settings in CA).
+I want you to build a script that cross references all CA policies, included groups, and show me which user is missing a licence for P1 functionality(conditional acccess) or P2 functionality(Risk settings in CA).
 ```
 
 {% hint style="info" %}
@@ -132,7 +132,7 @@ Six starting points, from a straightforward filter to a multi-section markdown r
 Lists every licensed user and resolves their assigned SKU IDs to friendly names using the licence cache, returning a markdown table with an explicit `Passed` status. Demonstrates `CIPPStatus`, `CIPPResults` and `CIPPResultMarkdown` together.
 
 ```powershell
-# List all users and their licenses with friendly SKU names
+# List all users and their licences with friendly SKU names
 $Users = Get-CIPPTestData -Type 'Users'
 $Licenses = Get-CIPPTestData -Type 'LicenseOverview'
 
@@ -142,7 +142,7 @@ $Licenses | ForEach-Object {
     $SkuLookup[$_.skuId] = $_.License
 }
 
-# Build results - users with their resolved license names
+# Build results - users with their resolved licence names
 $results = $Users | Where-Object {
     $_.assignedLicenses.Count -gt 0
 } | Select-Object @{Name='UserPrincipalName'; Expression={ $_.userPrincipalName }},
@@ -179,17 +179,17 @@ $md = @($header) + @($rows) -join "
 Finds disabled accounts that still have a licence assigned, a common cost-waste indicator. Returns the matching rows as JSON, the default Result Display Type behaviour: no status wrapper needed, since a non-empty result already means a fail.
 
 ```powershell
-# Find disabled users that still have licenses (wasted cost)
+# Find disabled users that still have licences (wasted cost)
 $Users = Get-CIPPTestData -Type 'Users'
 
-# Return only disabled users with licenses: non-empty = fail
+# Return only disabled users with licences: non-empty = fail
 $Users | Where-Object {
     $_.accountEnabled -eq $false -and
     $_.assignedLicenses.Count -gt 0
 } | Select-Object @{Name='UserPrincipalName'; Expression={ $_.userPrincipalName }},
     @{Name='DisplayName'; Expression={ $_.displayName }},
     @{Name='LicenseCount'; Expression={ @($_.assignedLicenses).Count }},
-    @{Name='Message'; Expression={ 'Disabled account with active license(s)' }}
+    @{Name='Message'; Expression={ 'Disabled account with active licence(s)' }}
 ```
 
 </details>

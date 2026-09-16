@@ -277,7 +277,7 @@ The authentication methods in use across the tenant's users. Clicking a category
 The licences present on the tenant, with assigned and available counts.
 
 {% hint style="info" %}
-To exclude a licence from this and all other reports in CIPP, add the licence in licenses.md.
+To exclude a licence from this and all other reports in CIPP, add the licence on the [licenses.md](../cipp/settings/licenses.md "mention") page.
 {% endhint %}
 
 </details>

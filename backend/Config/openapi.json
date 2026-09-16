@@ -6292,6 +6292,10 @@
                   "GUID": {
                     "type": "string"
                   },
+                  "standards": {
+                    "type": "string",
+                    "description": "Drop standards toggled on but left with no instances (empty array) - e.g. a template standard whose last selection was removed in the editor, which leaves 'standards.<Name> = []' in the form. Persisting these produces phantom 'NOT FOUND' drift entries with no template to compare against."
+                  },
                   "templateName": {
                     "type": "string"
                   },
@@ -12261,9 +12265,6 @@
                     "ExcludeUser": {
                       "x-cipp-field-source": "storage"
                     },
-                    "GraphErrorCount": {
-                      "x-cipp-field-source": "storage"
-                    },
                     "hasAutoExtend": {
                       "x-cipp-field-source": "storage"
                     },
@@ -12715,7 +12716,7 @@
                   },
                   "MCPAllowed": {
                     "type": "string",
-                    "description": "When this client is MCP-enabled, configure its app registration as the MCP OAuth resource (host identifier URIs + v2 tokens) so the Claude connector flow can resolve it."
+                    "description": "When this client is MCP-enabled it becomes the instance's single MCP resource. Only one client may hold MCP Access at a time - the connector flow advertises exactly one app registration - so clear the flag on every other client first. This stops stale holders left behind by failed setup attempts from accumulating and one of them being advertised (see issue #619)."
                   },
                   "RemoveAppReg": {
                     "type": "boolean"
@@ -21051,9 +21052,6 @@
                     "ExcludeUser": {
                       "x-cipp-field-source": "storage,frontend"
                     },
-                    "GraphErrorCount": {
-                      "x-cipp-field-source": "storage"
-                    },
                     "hasAutoExtend": {
                       "x-cipp-field-source": "storage"
                     },
@@ -23904,7 +23902,7 @@
         "tags": [
           "Email-Exchange > Tools"
         ],
-        "description": "Enables or disables Microsoft Purview Message Encryption for a tenant by setting AzureRMSLicensingEnabled and the Outlook Encrypt button by setting SimplifiedClientAccessEnabled, or runs Test-IRMConfiguration to verify that encryption and decryption work end to end.",
+        "description": "Updates the Microsoft Purview Message Encryption configuration for a tenant (AzureRMSLicensingEnabled, SimplifiedClientAccessEnabled, EnablePdfEncryption, DecryptAttachmentForEncryptOnly, SimplifiedClientAccessDoNotForwardDisabled, SimplifiedClientAccessEncryptOnlyDisabled, TransportDecryptionSetting; only the settings present in the body are changed), or runs Test-IRMConfiguration to verify that encryption and decryption work end to end.",
         "requestBody": {
           "required": true,
           "content": {
@@ -23919,20 +23917,16 @@
                       "Test"
                     ]
                   },
-                  "AzureRMSLicensingEnabled": {
-                    "type": "string"
-                  },
                   "Recipient": {
                     "type": "string"
                   },
                   "Sender": {
                     "type": "string"
                   },
-                  "SimplifiedClientAccessEnabled": {
-                    "type": "string",
-                    "description": "Only touch the Encrypt button setting when the caller sent it, so an API client that posts just AzureRMSLicensingEnabled does not silently disable it."
-                  },
                   "tenantFilter": {
+                    "type": "string"
+                  },
+                  "TransportDecryptionSetting": {
                     "type": "string"
                   }
                 },
@@ -30468,9 +30462,6 @@
                       "x-cipp-field-source": "storage"
                     },
                     "ExcludeUser": {
-                      "x-cipp-field-source": "storage"
-                    },
-                    "GraphErrorCount": {
                       "x-cipp-field-source": "storage"
                     },
                     "hasAutoExtend": {
@@ -49142,24 +49133,6 @@
                       "Bucket": {
                         "x-cipp-field-source": "storage"
                       },
-                      "EgressBytes": {
-                        "x-cipp-field-source": "storage"
-                      },
-                      "EgressBytesToday": {
-                        "type": "integer",
-                        "x-cipp-field-source": "storage"
-                      },
-                      "EgressCapBytes": {
-                        "x-cipp-field-source": "storage"
-                      },
-                      "EgressRejectClients": {
-                        "type": "string",
-                        "x-cipp-field-source": "storage"
-                      },
-                      "EgressRejectCount": {
-                        "type": "integer",
-                        "x-cipp-field-source": "storage"
-                      },
                       "ErrCount": {
                         "type": "integer",
                         "x-cipp-field-source": "storage"
@@ -49931,6 +49904,12 @@
                       "AzureRMSLicensingEnabled": {
                         "x-cipp-field-source": "backend"
                       },
+                      "DecryptAttachmentForEncryptOnly": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "EnablePdfEncryption": {
+                        "x-cipp-field-source": "backend"
+                      },
                       "ExternalLicensingEnabled": {
                         "x-cipp-field-source": "backend"
                       },
@@ -49946,7 +49925,13 @@
                       "MessageEncryptionEnabled": {
                         "x-cipp-field-source": "backend"
                       },
+                      "SimplifiedClientAccessDoNotForwardDisabled": {
+                        "x-cipp-field-source": "backend"
+                      },
                       "SimplifiedClientAccessEnabled": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "SimplifiedClientAccessEncryptOnlyDisabled": {
                         "x-cipp-field-source": "backend"
                       },
                       "TransportDecryptionSetting": {

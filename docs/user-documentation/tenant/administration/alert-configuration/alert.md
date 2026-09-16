@@ -43,7 +43,7 @@ The criteria card changes depending on which alert type you selected.
 
 | Field                                         | Description                                                                                                                                                               |
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Select an alert preset, or customize your own | Loads a ready-made set of conditions for a common scenario. Once loaded, the conditions can still be edited, or you can skip the preset and build the alert from scratch. |
+| Select an alert preset, or customise your own | Loads a ready-made set of conditions for a common scenario. Once loaded, the conditions can still be edited, or you can skip the preset and build the alert from scratch. |
 | Select the log source                         | The audit log the alert watches, either Azure AD or Exchange. This determines which properties are offered in the condition builder. Required.                            |
 
 Use **Add a condition** to build the rule. Each condition is a property, an operator and an input value, and multiple conditions are combined, so the alert only triggers when all of them match. The delete icon at the end of a row removes that condition.

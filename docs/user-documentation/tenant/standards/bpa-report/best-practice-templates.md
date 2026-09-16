@@ -140,7 +140,7 @@ _Unused licences trigger an orange warning status. You can click the badge in th
   * **Purpose:** Verifies Exchange Online properties like `UnifiedAuditLogIngestionEnabled`.
   * **Benefit:** Ensures compliance with audit logging requirements.
 * **Custom CIPP Functions:**
-  * **Purpose:** Extracts metrics like licence usage and Secure Scores using tailored commands (e.g., `Get-CIPPLicenseOverview`).
+  * **Purpose:** Extracts metrics like licence usage and Secure Scores using tailored commands, for example `Get-CIPPLicenseOverview`.
   * **Benefit:** Provides actionable insights for tenant optimisation.
 
 {% include "../../../../../.gitbook/includes/feature-request.md" %}

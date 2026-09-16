@@ -22,7 +22,7 @@ Custom reports pull data from sources such as:
 Each custom report is a JSON template with three key components:
 
 * **Fields**: Specifies which data points to extract.
-* **Display Format**: Determines how the data appears (e.g., Booleans, tables, or JSON objects).
+* **Display Format**: Determines how the data appears, for example Booleans, tables, or JSON objects.
 * **Data Sources**: Defines the API endpoints or PowerShell commands to use.
 
 **4. Validating and Executing**
@@ -45,7 +45,7 @@ Every report begins with a title and presentation style. Enter the Report Name a
 
 Define the data points to fetch from an API, specifying the endpoint, parameters, and how the data should be presented
 
-For Exchange, define commands instead of API URLs, e.g. `Get-Mailbox`
+For Exchange, define commands instead of API URLs, for example `Get-Mailbox`
 
 {% hint style="info" %}
 Click the "+ Add Field" button to display additional fields for configuration.

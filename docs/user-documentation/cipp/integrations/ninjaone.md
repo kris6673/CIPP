@@ -7,7 +7,7 @@ The NinjaOne CIPP integration requires NinjaOne version 5.6 or above.
 {% endhint %}
 
 {% hint style="info" %}
-Tenant and device information uses custom fields, which you create yourself in NinjaOne. Detailed user and licence information uses NinjaOne Documentation, and the document templates are created for you. If you do not have NinjaOne Documentation, speak to your account manager — the rest of the integration still works without it.
+Tenant and device information uses custom fields, which you create yourself in NinjaOne. Detailed user and licence information uses NinjaOne Documentation, and the document templates are created for you. If you do not have NinjaOne Documentation, speak to your account manager: the rest of the integration still works without it.
 {% endhint %}
 
 ## Settings
@@ -34,7 +34,7 @@ Sign in to NinjaOne as a System Administrator and go to **Administration** > **A
 
 Choose an **Application Platform** of _API Services (machine-to-machine)_, give it a name such as _CIPP Integration_, and leave **Redirect URIs** blank. Select the **Monitoring** and **Management** scopes, and an allowed grant type of **Client Credentials**. Save.
 
-The client secret is shown once on save — record it before closing the application. The **Client ID** can be copied from the table afterwards.
+The client secret is shown once on save, so record it before closing the application. The **Client ID** can be copied from the table afterwards.
 {% endstep %}
 
 {% step %}
@@ -144,7 +144,7 @@ Synchronisation can also be triggered on demand. **Force Sync** on this page que
 
 Intune device compliance is handled separately. CIPP subscribes to Graph change notifications for device compliance, so the Intune Device Compliance Status field updates within minutes of a change in Microsoft 365 rather than waiting for the daily run. This requires the compliance field to be mapped.
 
-Where **Sync Users** or **Sync Licenses** is enabled, CIPP creates and maintains the document templates it needs in NinjaOne Documentation — `CIPP - Microsoft 365 Users` and `CIPP - Microsoft 365 Licenses` — and writes a document per user or licence beneath them. You do not need to create these templates yourself.
+Where **Sync Users** or **Sync Licenses** is enabled, CIPP creates and maintains the document templates it needs in NinjaOne Documentation, `CIPP - Microsoft 365 Users` and `CIPP - Microsoft 365 Licenses`, and writes a document per user or licence beneath them. You do not need to create these templates yourself.
 
 ## CVE Synchronisation
 
@@ -168,7 +168,7 @@ Turn on **Enable Automated CVE Sync**, set the **CVE Sync Scan Group Prefix**, a
 
 On the Vulnerabilities page, select the tenant, then export the list to CSV.
 
-In NinjaOne go to **Administration** > **Apps** > **Microsoft Defender**, open the **Scan Groups** tab and select **+ Create scan group**. Name it exactly as CIPP expects — the prefix followed by the tenant's default domain name — then upload the CSV and confirm the column mappings.
+In NinjaOne go to **Administration** > **Apps** > **Microsoft Defender**, open the **Scan Groups** tab and select **+ Create scan group**. Name it exactly as CIPP expects: the prefix followed by the tenant's default domain name, then upload the CSV and confirm the column mappings.
 {% endstep %}
 {% endstepper %}
 

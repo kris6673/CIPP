@@ -62,7 +62,7 @@ An Out of Office message alone is enough for these defaults to count as configur
 A **Send results to** section chooses where the outcome of an offboarding is reported, with options for Webhook, E-mail, and PSA.
 
 {% hint style="info" %}
-If a tenant has its own offboarding defaults saved, those replace your personal defaults entirely for that tenant — including when the tenant message field is empty.
+If a tenant has its own offboarding defaults saved, those replace your personal defaults entirely for that tenant, including when the tenant message field is empty.
 {% endhint %}
 
 ## Portal Links Configuration

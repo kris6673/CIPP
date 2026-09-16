@@ -40,7 +40,7 @@ Emptying the **Licenses** box on its own does nothing, because an edit with no l
 {% endhint %}
 
 {% hint style="info" %}
-When the [sherweb.md](../../../../cipp/integrations/sherweb.md "mention")d integration is enabled and a selected licence shows `(0 available)`, a **Purchase new licence?** switch and a **Sherweb License** selector appear. The purchase is placed immediately and the assignment is queued as a scheduled task, so the licence lands on the account shortly afterwards rather than as part of this submission.
+When the [sherweb.md](../../../../cipp/integrations/sherweb.md "mention") integration is enabled and a selected licence shows `(0 available)`, a **Purchase new licence?** switch and a **Sherweb License** selector appear. The purchase is placed immediately and the assignment is queued as a scheduled task, so the licence lands on the account shortly afterwards rather than as part of this submission.
 {% endhint %}
 
 ## Contact and organisation

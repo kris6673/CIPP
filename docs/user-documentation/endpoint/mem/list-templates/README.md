@@ -10,7 +10,7 @@ Lists the Intune policy templates saved in CIPP, which are the templates the **D
 
 Opens a drawer for adding templates to CIPP, with two sources to choose between.
 
-**Community Catalog** is the template catalog described in [community-repos](../../../tools/community-repos/ "mention"), narrowed to Intune templates. Templates can be previewed and imported the same way as on that page.
+**Community Catalog** is the template catalogue described in [community-repos](../../../tools/community-repos/ "mention"), narrowed to Intune templates. Templates can be previewed and imported the same way as on that page.
 
 **From a Tenant** captures an existing policy from one of your tenants as a template. Select a tenant, then search its policies by name or description and import the one you want.
 
