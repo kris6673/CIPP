@@ -16853,19 +16853,71 @@
             }
           }
         },
-        "parameters": [
-          {
-            "name": "ID",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
             }
           },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
           {
-            "$ref": "#/components/parameters/tenantFilter"
+            "bearerAuth": []
           }
         ],
+        "x-cipp-role": "Identity.User.ReadWrite"
+      }
+    },
+    "/api/ExecClrOnPremAttributes": {
+      "post": {
+        "summary": "ExecClrOnPremAttributes",
+        "operationId": "ExecClrOnPremAttributes",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Attributes": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    },
+                    "description": "On-premises attributes to clear (onPremisesImmutableId, onPremisesDistinguishedName, ...), as plain names or {label,value} objects. Omit to clear every clearable attribute."
+                  },
+                  "ID": {
+                    "type": "string",
+                    "description": "Object ID of the cloud-only user whose on-premises attributes should be cleared"
+                  },
+                  "tenantFilter": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Success",
@@ -18056,6 +18108,10 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "generatePwPushLink": {
+                    "type": "boolean",
+                    "description": "Opt-in: most TAPs are used directly by the admin, so the pass is returned in plain text unless the caller asks for a PwPush link. Same string-to-bool normalisation as above."
+                  },
                   "ID": {
                     "type": "string"
                   },
@@ -18082,6 +18138,15 @@
           }
         },
         "parameters": [
+          {
+            "name": "generatePwPushLink",
+            "in": "query",
+            "description": "Opt-in: most TAPs are used directly by the admin, so the pass is returned in plain text unless the caller asks for a PwPush link. Same string-to-bool normalisation as above.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
           {
             "name": "ID",
             "in": "query",
@@ -56781,6 +56846,14 @@
         "description": "Retrieves SharePoint Online storage quota usage for a tenant, showing used and total storage.",
         "parameters": [
           {
+            "name": "live",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
           }
         ],
@@ -56793,7 +56866,24 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                    "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "Dashboard": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "GeoLocations": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "GeoUsedStorageMB": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "Percentage": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "TenantStorageMB": {
+                        "x-cipp-field-source": "backend"
+                      }
+                    }
                   }
                 }
               }
@@ -56804,6 +56894,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -60750,6 +60843,7 @@
           {
             "name": "TriggerRefresh",
             "in": "query",
+            "description": "Re-reads the tenant given in tenantFilter, or queues a refresh of all tenants when omitted. Returns a Results message instead of the tenant list.",
             "required": false,
             "schema": {
               "type": "string"
@@ -60928,7 +61022,7 @@
           {
             "name": "status",
             "in": "query",
-            "description": "Narrow the scan to these statuses: Passed, Failed, Investigate, Skipped, Informational.",
+            "description": "Narrow the scan to these statuses: Passed, Failed, Investigate, Skipped, Informational and Unlicensed.",
             "required": false,
             "schema": {
               "type": "string"
