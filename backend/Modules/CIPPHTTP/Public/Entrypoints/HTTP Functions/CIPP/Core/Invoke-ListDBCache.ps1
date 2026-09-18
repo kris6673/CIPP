@@ -11,10 +11,11 @@ function Invoke-ListDBCache {
 
         Required query parameters:
           - tenantFilter: The tenant domain or 'AllTenants' to query all managed tenants.
-          - type: The cache collection to retrieve (e.g. Users, Groups, Mailboxes, Devices, etc.).
-                  Not required when countsOnly=true.
 
         Optional query parameters:
+          - type: The cache collection to retrieve (e.g. Users, Groups, Mailboxes, Devices, etc.).
+                  Omit it (or pass type=_availableTypes) to get the list of collections for the tenant
+                  instead of records; it is also not needed when countsOnly=true.
           - countsOnly: When 'true', returns one row per tenant per collection containing only the record
                         count and the time that collection was last cached. This reads the pre-computed
                         '<Type>-Count' rows, so it is a single table query regardless of tenant count and
@@ -172,22 +173,16 @@ function Invoke-ListDBCache {
                 })
         }
 
+        # type is optional: omitting it (or passing _availableTypes) returns the list of cache
+        # collections for the tenant, so a type-less call is a discovery call rather than an error.
+        # This also keeps the OpenAPI generator from marking type required off a missing-type guard;
+        # type is only meaningful for a data read, which countsOnly and this discovery path bypass.
         if (-not $Type -or $Type -eq '_availableTypes') {
             $TypeRows = @(Get-CIPPDbItem -CountsOnly -TenantFilter $Tenant)
             if ($null -ne $AllowedDomains) {
                 $TypeRows = @($TypeRows | Where-Object { $AllowedDomains.Contains([string]$_.PartitionKey) })
             }
             $Types = @($TypeRows.RowKey | ForEach-Object { $_ -replace '-Count$', '' } | Sort-Object -Unique)
-
-            if (-not $Type) {
-                return ([HttpResponseContext]@{
-                        StatusCode = [HttpStatusCode]::BadRequest
-                        Body       = @{
-                            Results        = 'Error: type query parameter is required'
-                            AvailableTypes = $Types
-                        }
-                    })
-            }
 
             return ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
