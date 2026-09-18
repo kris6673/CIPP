@@ -19,7 +19,7 @@ function Invoke-ListTests {
         $ReportId = $Request.Query.reportId ?? $Request.Body.reportId
         # When true, return only the aggregated TestCounts (per-type pass/fail/etc totals) and skip
         # the per-result markdown/metadata enrichment and the SecureScore/MFAState/License DB reads.
-        $SummaryOnly = ($Request.Query.summaryOnly ?? $Request.Body.summaryOnly) -eq $true
+        $SummaryOnly = ($Request.Query.summaryOnly -eq $true) -or ($Request.Body.summaryOnly -eq $true)
 
         if (-not $TenantFilter) {
             throw 'TenantFilter parameter is required'
