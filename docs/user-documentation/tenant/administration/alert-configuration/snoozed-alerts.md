@@ -7,7 +7,7 @@ Alert snoozes let you suppress a single noisy result from a scripted CIPP alert 
 Snoozes are set from the alert results, not from this page. There are two routes:
 
 * **From an alert email** - Each result in the notification carries its own set of snooze buttons for 7, 14, 30 or 90 days. Clicking one opens CIPP and applies the snooze straight away, with no reason recorded, then offers a link back to this page.
-* **From the dashboard** - The Alerts overview card has a snooze action per result, which opens a dialog offering 7, 14 or 30 days along with an optional free-text reason.
+* **From the dashboard** - The Alerts overview card has a snooze action per result, which opens a dialog offering 7, 14, 30 or 90 days along with an optional free-text reason.
 
 {% hint style="info" %}
 A snooze is matched on the content of the alert item, not just the user or object name. If the underlying detail changes, CIPP treats it as a new item and it will alert again even though a snooze exists for the earlier version.

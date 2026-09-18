@@ -641,23 +641,24 @@ function Invoke-HuduExtensionSync {
                     $CASRequest = ''
 
                     $CASRequest = $CASFull | Where-Object { $_.ExternalDirectoryObjectId -eq $User.id }
-                    $MailboxDetailedRequest = $MailboxDetailedFull | Where-Object { $_.Id -eq $User.id }
+                    $MailboxDetailedRequest = $MailboxDetailedFull | Where-Object { $_.ExternalDirectoryObjectId -eq $User.id }
                     $StatsRequest = $MailboxStatsFull | Where-Object { $_.'userPrincipalName' -eq $User.userPrincipalName }
 
-                    $PermsRequest = $Permissions | Where-Object { $_.Identity -eq $User.id }
+                    $MailboxIdentities = @($User.id, $User.userPrincipalName, $MailboxDetailedRequest.id, $MailboxDetailedRequest.UPN, $MailboxDetailedRequest.primarySmtpAddress) | Where-Object { $_ }
+                    $PermsRequest = $Permissions | Where-Object { $_.Identity -in $MailboxIdentities }
 
                     $ParsedPerms = foreach ($Perm in $PermsRequest) {
-                        if ($Perm.User -ne 'NT AUTHORITY\SELF') {
+                        if ($Perm.User -ne 'NT AUTHORITY\SELF' -and $Perm.Deny -ne $true) {
                             [pscustomobject]@{
                                 User         = $Perm.User
-                                AccessRights = $Perm.PermissionList.AccessRights -join ', '
+                                AccessRights = $Perm.AccessRights -join ', '
                             }
                         }
                     }
 
                     $UserMailSettings = [pscustomobject]@{
                         ForwardAndDeliver        = $MailboxDetailedRequest.DeliverToMailboxAndForward
-                        ForwardingAddress        = $MailboxDetailedRequest.ForwardingAddress + ' ' + $MailboxDetailedRequest.ForwardingSmtpAddress
+                        ForwardingAddress        = (@($MailboxDetailedRequest.InternalForwardingAddress, $MailboxDetailedRequest.ForwardingSmtpAddress) | Where-Object { $_ }) -join ' '
                         LitiationHold            = $MailboxDetailedRequest.LitigationHoldEnabled
                         HiddenFromAddressLists   = $MailboxDetailedRequest.HiddenFromAddressListsEnabled
                         EWSEnabled               = $CASRequest.EwsEnabled
@@ -889,11 +890,12 @@ function Invoke-HuduExtensionSync {
                     $UserBody = "<div>$AssignedPlansBlock<br />$UserLinksBlock<br /><div class=`"nasa__content`">$($UserOverviewBlock)$($UserMailDetailsBlock)$($OneDriveBlock)$($UserMailSettingsBlock)$($UserPoliciesBlock)</div><div class=`"nasa__content`">$($UserDevicesDetailsBlock)</div><div class=`"nasa__content`">$($UserGroupsBlock)</div></div>"
 
                     if (![string]::IsNullOrEmpty($PeopleLayoutId)) {
+                        # Hash is calculated before the timestamp is added, otherwise every asset would be rewritten on every sync
+                        $NewHash = Get-StringHash -String $UserBody
                         $UserAssetFields = @{
-                            microsoft_365 = $UserBody
+                            microsoft_365 = "$UserBody<div>Last Updated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')</div>"
                             email_address = $user.userPrincipalName
                         }
-                        $NewHash = Get-StringHash -String $UserBody
                         $HuduUserCount = ($HuduUser | Measure-Object).Count
 
                         if ($HuduUserCount -eq 1) {
@@ -1102,8 +1104,9 @@ function Invoke-HuduExtensionSync {
                     $DeviceIntuneDetailshtml = "<div><div>$DeviceLinksBlock<br /><div class=`"nasa__content`">$($DeviceOverviewBlock)$($DeviceHardwareBlock)$($DeviceEnrollmentBlock)$($DevicePolicyBlock)$($DeviceAppsBlock)$($DeviceGroupsBlock)</div></div>"
 
                     $DeviceAssetFields = @{
-                        microsoft_365 = $DeviceIntuneDetailshtml
+                        microsoft_365 = "$DeviceIntuneDetailshtml<div>Last Updated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')</div>"
                     }
+                    # Exclude the timestamp from the hash so unchanged assets are not rewritten on every sync.
                     $DeviceHashMaterial = $DeviceIntuneDetailshtml
                     $CredentialRetrievalFailed = $false
                     $CredentialFieldsChanged = $false
