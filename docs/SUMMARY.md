@@ -35,7 +35,7 @@
 * [Resources](setup/resources/README.md)
   * [How CIPP Evaluates Roles](setup/resources/how-cipp-evaluates-roles.md)
   * [Professional Onboarding Services](setup/resources/professional-onboarding-services.md)
-  * [Sponsor Quick Start](setup/resources/sponsor-quick-start.md)
+  * [Subscription Quick Start](setup/resources/sponsor-quick-start.md)
 
 ## Legacy Setup (Hidden from Nav)
 
@@ -71,7 +71,7 @@
 * [Copy of Resources](legacy-setup-hidden-from-nav/resources/README.md)
   * [How CIPP Evaluates Roles](legacy-setup-hidden-from-nav/resources/how-cipp-evaluates-roles.md)
   * [Professional Onboarding Services](legacy-setup-hidden-from-nav/resources/professional-onboarding-services.md)
-  * [Sponsor Quick Start](legacy-setup-hidden-from-nav/resources/sponsor-quick-start.md)
+  * [Subscription Quick Start](legacy-setup-hidden-from-nav/resources/sponsor-quick-start.md)
 
 ## Demos
 

@@ -21,7 +21,7 @@ The API key field appears above the toggle on screen, but the toggle governs it.
 
 Purchase or retrieve an [API key from HIBP](https://haveibeenpwned.com/API/Key).
 
-CyberDrain-hosted sponsors have access to a complimentary key through a partnership with HIBP and can skip this step, leaving the key blank.
+CyberDrain-hosted subscribers have access to a complimentary key through a partnership with HIBP and can skip this step, leaving the key blank.
 {% endstep %}
 
 {% step %}

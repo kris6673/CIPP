@@ -2,15 +2,15 @@
 description: Welcome to your hosted instance of CIPP!
 ---
 
-# Sponsor Quick Start
+# Subscription Quick Start
 
 {% hint style="success" %}
 If you need assistance with or aren't comfortable navigating these requirements alone, take a look at our [Professional Onboarding Services](../../setup/resources/professional-onboarding-services.md) page, which offers a paid option for those who need a bit more hands on guidance with GDAP & CIPP deployment.
 {% endhint %}
 
-If you've started the sponsorship process and are ready to enhance your management of Microsoft 365 tenants with efficiency, this guide is designed to get you started.
+If you've started the subscription process and are ready to enhance your management of Microsoft 365 tenants with efficiency, this guide is designed to get you started.
 
-## **Initial Sponsorship Actions**
+## **Initial Subscription Actions**
 
 1. **Subscription Activation**: Start by signing up for the €99/month subscription through our [secure checkout](https://cipp.ms/getcipp).
 2. **Welcome Email**: Upon subscription, you will receive an email with detailed instructions to kickstart your deployment. This email will guide you to the [CIPP management portal ](https://management.cipp.app)for deployment steps.

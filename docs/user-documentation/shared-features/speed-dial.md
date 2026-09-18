@@ -20,7 +20,7 @@ On a phone the lower right corner holds the actions for the page you are on, so 
 | Clear Cache and Reload  | Clears CIPP's cached data from your browser and reloads the page. This is especially helpful if you recently updated CIPP and are still seeing an older version. |
 
 {% hint style="info" %}
-Feature requests can only be raised by sponsors at the required sponsorship level. Requests from non-sponsors are closed automatically. The form itself sets out the current requirement.
+Feature requests can only be raised by users with an active subscription. Requests from non-subscribers are closed automatically. The form itself sets out the current requirement.
 {% endhint %}
 
 ## Tutorials
