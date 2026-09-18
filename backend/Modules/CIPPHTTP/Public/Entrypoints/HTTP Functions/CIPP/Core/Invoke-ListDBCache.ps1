@@ -21,6 +21,14 @@ function Invoke-ListDBCache {
                         never materializes the underlying records. Combine with tenantFilter=AllTenants to
                         get an estate-wide inventory and per-tenant cache freshness in one call. Pass a
                         type alongside it to restrict the result to a single collection.
+          - select: Comma-separated list of top-level fields to keep on each record (e.g.
+                    select=id,displayName,userPrincipalName). Everything else is dropped during parse,
+                    shrinking the response. A kept field keeps its ENTIRE subtree, so select=conditions
+                    keeps conditions.users.includeRoles too; projection never reaches inside a kept
+                    value. The owning Tenant is always stamped on each record regardless of select.
+          - top: Return at most this many records. For tenantFilter=AllTenants this is a GLOBAL cap
+                 across all tenants (there is no per-tenant grouping), so use it to sample rather than
+                 to page.
 
         Use type=_availableTypes to discover which cache collections exist for a given tenant. Omitting the
         type parameter also returns the available types.
@@ -54,6 +62,18 @@ function Invoke-ListDBCache {
     $TenantFilter = $Request.Query.tenantFilter
     $Type = $Request.Query.type
     $CountsOnly = $Request.Query.countsOnly -eq $true
+    # Comma-separated list of top-level fields to keep on each record; everything else is dropped
+    # during parse. A kept field keeps its ENTIRE subtree (e.g. select=conditions keeps
+    # conditions.users.includeRoles). The Tenant stamp is always preserved. Omit to return all fields.
+    $Select = $Request.Query.select
+    # Return at most this many records. For AllTenants this is a global cap across all tenants.
+    $Top = $Request.Query.top -as [int]
+
+    $SelectFields = if ($Select) {
+        [string[]]@($Select -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    } else {
+        $null
+    }
 
     if (-not $TenantFilter) {
         return ([HttpResponseContext]@{
@@ -154,7 +174,7 @@ function Invoke-ListDBCache {
             $Results = foreach ($Row in $Rows) {
                 if ([string]::IsNullOrWhiteSpace($Row.Data)) { continue }
                 try {
-                    $Parsed = [CIPP.CippJson]::ConvertFromJson($Row.Data, $null)
+                    $Parsed = [CIPP.CippJson]::ConvertFromJson($Row.Data, $SelectFields)
                 } catch {
                     Write-Information "Skipping unparseable CippReportingDB row for '$($Row.PartitionKey)'/'$Type': $($_.Exception.Message)"
                     continue
@@ -170,7 +190,13 @@ function Invoke-ListDBCache {
             }
             $Results = @($Results)
         } else {
-            $Results = @(New-CIPPDbRequest -TenantFilter $Tenant -Type $Type)
+            $DbParams = @{ TenantFilter = $Tenant; Type = $Type }
+            if ($SelectFields) { $DbParams.Fields = $SelectFields }
+            $Results = @(New-CIPPDbRequest @DbParams)
+        }
+
+        if ($Top -gt 0) {
+            $Results = @($Results | Select-Object -First $Top)
         }
 
         return ([HttpResponseContext]@{
