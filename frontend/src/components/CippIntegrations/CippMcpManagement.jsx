@@ -174,6 +174,7 @@ const CippMcpManagement = () => {
                   spacing={1}
                   alignItems="center"
                   flexWrap="wrap"
+                  useFlexGap
                 >
                   <Typography variant="body2" sx={{ minWidth: 200, fontWeight: 600 }}>
                     {c.AppName || c.AppId}
