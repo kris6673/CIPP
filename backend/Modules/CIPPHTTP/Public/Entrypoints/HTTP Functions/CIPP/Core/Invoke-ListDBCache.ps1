@@ -27,8 +27,14 @@ function Invoke-ListDBCache {
                     keeps conditions.users.includeRoles too; projection never reaches inside a kept
                     value. The owning Tenant is always stamped on each record regardless of select.
           - top: Return at most this many records. For tenantFilter=AllTenants this is a GLOBAL cap
-                 across all tenants (there is no per-tenant grouping), so use it to sample rather than
-                 to page.
+                 across all tenants when ungrouped, so use it to sample rather than to page. When
+                 groupBy=Tenant is also set, top instead caps the records within each tenant bucket.
+          - latestOnly: When 'true', keep only the newest record per tenant, ranked by dateField (or
+                        an auto-detected date field such as createdDateTime). Collapses per-day
+                        snapshot types like SecureScore to one current row per tenant.
+          - groupBy: Set to 'Tenant' to return one bucket per tenant as
+                     { Tenant, Count, Records } objects instead of a flat record list.
+          - dateField: The record field latestOnly ranks by. Omit to auto-detect.
 
         Use type=_availableTypes to discover which cache collections exist for a given tenant. Omitting the
         type parameter also returns the available types.
@@ -66,13 +72,39 @@ function Invoke-ListDBCache {
     # during parse. A kept field keeps its ENTIRE subtree (e.g. select=conditions keeps
     # conditions.users.includeRoles). The Tenant stamp is always preserved. Omit to return all fields.
     $Select = $Request.Query.select
-    # Return at most this many records. For AllTenants this is a global cap across all tenants.
+    # Return at most this many records. For AllTenants this is a global cap across all tenants,
+    # unless groupBy=Tenant is set, in which case it caps records within each tenant bucket.
     $Top = $Request.Query.top -as [int]
+    # When true, keep only the newest record per tenant (by dateField, or an auto-detected date field).
+    # Collapses e.g. SecureScore's per-day snapshots to one current row per tenant.
+    $LatestOnly = $Request.Query.latestOnly -eq $true
+    # Group the result into one bucket per tenant. Only 'Tenant' is supported.
+    $GroupBy = $Request.Query.groupBy
+    # The record date field latestOnly ranks by. Omit to auto-detect (createdDateTime, lastRefresh, etc).
+    $DateField = $Request.Query.dateField
 
     $SelectFields = if ($Select) {
         [string[]]@($Select -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
     } else {
         $null
+    }
+
+    # Ranks a parsed record by a date field for latestOnly. Uses the caller's dateField when given,
+    # otherwise the first present candidate; unparseable/absent dates sort oldest.
+    $DateCandidates = @('createdDateTime', 'createdDate', 'CreatedDateTime', 'lastRefresh', 'LastRefresh', 'activityDateTime', 'date', 'Date', 'Timestamp')
+    $GetRecordDate = {
+        param($Record)
+        $Value = $null
+        if ($DateField) {
+            $Value = $Record.$DateField
+        } else {
+            foreach ($Candidate in $DateCandidates) {
+                $Prop = $Record.PSObject.Properties[$Candidate]
+                if ($Prop -and $Prop.Value) { $Value = $Prop.Value; break }
+            }
+        }
+        if ($null -eq $Value) { return [datetime]::MinValue }
+        try { return [datetime]$Value } catch { return [datetime]::MinValue }
     }
 
     if (-not $TenantFilter) {
@@ -195,7 +227,25 @@ function Invoke-ListDBCache {
             $Results = @(New-CIPPDbRequest @DbParams)
         }
 
-        if ($Top -gt 0) {
+        if ($LatestOnly) {
+            # Keep only the newest record per tenant. Single-tenant results collapse to one row.
+            $Results = @($Results | Group-Object -Property Tenant | ForEach-Object {
+                    @($_.Group) | Sort-Object -Property @{ Expression = { & $GetRecordDate $_ } } -Descending | Select-Object -First 1
+                })
+        }
+
+        if ($GroupBy -eq 'Tenant') {
+            # One bucket per tenant; top (when set) caps the records inside each bucket.
+            $Results = @($Results | Group-Object -Property Tenant | ForEach-Object {
+                    $BucketRecords = @($_.Group)
+                    if ($Top -gt 0) { $BucketRecords = @($BucketRecords | Select-Object -First $Top) }
+                    [PSCustomObject]@{
+                        Tenant  = $_.Name
+                        Count   = @($_.Group).Count
+                        Records = $BucketRecords
+                    }
+                })
+        } elseif ($Top -gt 0) {
             $Results = @($Results | Select-Object -First $Top)
         }
 
