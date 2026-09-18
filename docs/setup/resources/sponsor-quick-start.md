@@ -12,7 +12,7 @@ If you've started the sponsorship process and are ready to enhance your manageme
 
 ## **Initial Sponsorship Actions**
 
-1. **Subscription Activation**: Start by signing up for the €99/month subscription through our [secure checkout](https://pay.cyberdrain.com/b/4gM7sLa003Sldjn6nu6wE01).
+1. **Subscription Activation**: Start by signing up for the €99/month subscription through our [secure checkout](https://cipp.ms/getcipp).
 2. **Welcome Email**: Upon subscription, you will receive an email with detailed instructions to kickstart your deployment. This email will guide you to the [CIPP management portal ](https://management.cipp.app)for deployment steps.
 
 ## Deployment & Service Account Creation
