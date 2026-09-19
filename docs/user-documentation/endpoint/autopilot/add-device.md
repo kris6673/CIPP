@@ -51,21 +51,21 @@ Devices already in the list can be removed with the Delete Row action.
 {% step %}
 ### Extra Options
 
-**Group Name** names the Partner Center device batch the devices are added to. Leaving it blank generates one automatically. Entering the name of a batch that already exists appends the devices to it rather than creating a new one.
+**Group Name** names the Partner Center device batch the devices are added to. Leaving it blank generates one automatically. Entering the name of a batch that already exists appends the devices to it rather than creating a new one. The match ignores case, and the existing batch's spelling is used.
 {% endstep %}
 
 {% step %}
 ### Confirmation
 
-Review the tenant, the device list and the batch name, then submit. CIPP waits briefly for Partner Center to finish processing and then reports the outcome for each device individually, including the error code and description where one failed.
+Review the tenant, the device list and the batch name, then submit. CIPP waits up to about 30 seconds for Partner Center to finish processing and then reports the outcome for each device individually, including the error code and description where one failed.
 {% endstep %}
 {% endstepper %}
 
 ## Known Issues / Limitations
 
 * Guessing the manufacturer and model from the device's packaging is unreliable. The hardware hash or the Windows product key ID are far more dependable, and some manufacturers print the product key ID on the box.
-* CIPP only waits a few seconds for the import job to report back. On a large batch it may give up before Partner Center finishes and returns a message saying the job may still be running. The registration usually completes regardless, so check the Autopilot Devices list about ten minutes later rather than resubmitting.
-* Group tags are only submitted when a new device batch is created. Adding devices to a batch name that already exists drops the group tag, and it will need setting afterwards with **Edit Group Tag** on the Autopilot Devices page.
+* CIPP only waits about 30 seconds for the import job to report back. On a large batch, or when appending to an existing batch, it may give up before Partner Center finishes and shows a warning naming the batch and the job's current status. The registration usually completes regardless, so check the Autopilot Devices list about ten minutes later rather than resubmitting.
+* The group tag column is forwarded with each device, but the Partner Center device API has no group tag field, so the tag may not appear on the registered device. Set it afterwards with **Edit Group Tag** on the Autopilot Devices page if it is missing.
 * Validation runs on manually entered rows only. A CSV is loaded without the duplicate, product key length or serial number companion checks being applied, so errors in a file surface as failures from Partner Center at the end rather than at import time.
 
 {% include "../../../../.gitbook/includes/feature-request.md" %}
