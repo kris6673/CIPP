@@ -61,12 +61,14 @@ The **Columns** button controls which columns are visible.
 
 | Menu entry                 | Description                                                                             |
 | -------------------------- | --------------------------------------------------------------------------------------- |
-| Reset to preferred columns | Restores the column selection to the page defaults.                                     |
+| Reset to preferred columns | Restores your saved selection, or the page defaults if you have not saved one.          |
 | Save as preferred columns  | Saves the current selection so it is applied automatically whenever you open this page. |
 | Delete preferred columns   | Removes your saved selection for this page.                                             |
 | Column list                | Tick or untick individual columns to show or hide them.                                 |
 
 Preferred columns are stored per page in your browser's local storage, so they follow the browser and profile you are working in rather than your CIPP account.
+
+A saved selection applies to the page itself, not to the tenant you were viewing when you saved it. Switching tenants or reloading the page keeps the same columns. If another tenant's data contains a column that did not exist when you saved, that column keeps its normal default for the page instead of being shown or hidden by the preference. **Reset to preferred columns** restores your saved choices and leaves any column outside that selection as it currently is.
 
 ### Export
 
