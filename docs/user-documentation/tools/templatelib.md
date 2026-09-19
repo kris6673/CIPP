@@ -4,6 +4,8 @@ A template library keeps CIPP's stored templates in step with an external source
 
 Tenant-based libraries sync every 4 hours. Community repository libraries sync every 7 days.
 
+This page needs the `CIPP.TemplateLibrary` permission together with the Scheduler permission that runs the sync.
+
 {% hint style="warning" %}
 Enabling this feature will overwrite templates with the same name.
 {% endhint %}

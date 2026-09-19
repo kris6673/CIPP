@@ -6,6 +6,8 @@ description: Connect to GitHub community repositories for easy template creation
 
 Template sources are GitHub repositories CIPP reads templates from, letting you import configurations shared by the MSP community rather than building each one yourself. This page shows every source registered with your instance, and is where you add, configure and remove them.
 
+Browsing template sources needs the `CIPP.TemplateLibrary` permission. Read covers browsing and importing from the catalog, and Read/Write covers publishing templates to a source. The same permission gates the Save to GitHub actions on the template pages.
+
 {% hint style="info" %}
 This page is powered by the GitHub integration. CIPP can populate much of this information even without your own Personal Access Token, but creating repositories and reading private ones requires one. See the [github.md](../../cipp/integrations/github.md "mention") integration page for more.
 {% endhint %}

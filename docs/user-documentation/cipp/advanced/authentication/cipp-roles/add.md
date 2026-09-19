@@ -42,6 +42,8 @@ Permissions are defined in one of two modes, chosen with the **Simple (patterns)
 
 **Advanced (per-category)** lists the categories individually, where you select whether the custom role will have `None`, `Read`, or `Read/Write` access to each. Use the Information icon next to each category to display the CIPP API endpoints included in each category.
 
+`CIPP.Core.Read` is the minimum needed to sign in and is added to every role automatically. It covers the dashboard and the lookups shared by every page, and nothing more: the Logbook, Report Builder, breach lookups, IP Database, Template Library and Catalog each have their own permission under `CIPP`, so a role that should only sign in and work in one area can leave those out.
+
 {% hint style="warning" %}
 Note that when creating a custom role to layer with the base role, any permission that you do not define will be evaluated as if you had selected `None`. If you want to preserve the functionality of the base role, be sure to select and option for every category.
 

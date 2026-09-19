@@ -4,6 +4,8 @@ IP addresses recorded here as trusted are excluded from audit log processing. Wh
 
 The page pairs a lookup tool for investigating an IP address with the list of addresses already recorded.
 
+Viewing this page needs the `CIPP.IPDatabase` permission. Marking an address as trusted still goes through the Application Settings permission.
+
 ## Geo IP Check
 
 Enter an address into the field and click **Check**. Both IPv4 and IPv6 are accepted, and the field validates the format before the lookup runs. Resolution uses the GeoIP database bundled with CIPP rather than an external service, so no query leaves your instance.
