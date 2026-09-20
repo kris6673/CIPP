@@ -14,7 +14,20 @@ function Invoke-CIPPCASituationBattery {
     [CmdletBinding()]
     param([Parameter(Mandatory = $true)]$TenantFilter)
 
-    $Situations = @(Get-CIPPSecuritySimulationSituation)
+    # Risk conditions need Entra ID P2. Without it those sign-ins are excluded outright - a
+    # tenant is never told it is missing a policy it cannot licence.
+    $Capabilities = $(try { Get-CIPPTenantCapabilities -TenantFilter $TenantFilter } catch { $null })
+    $HasP2 = $Capabilities.AAD_PREMIUM_P2 -eq $true
+    $RiskConditions = @('signInRiskLevel', 'userRiskLevel', 'insiderRiskLevel')
+    $Excluded = [System.Collections.Generic.List[object]]::new()
+    $Situations = @(foreach ($Situation in @(Get-CIPPSecuritySimulationSituation)) {
+            $NeedsP2 = @(($Situation.conditions ?? [PSCustomObject]@{}).PSObject.Properties.Name | Where-Object { $RiskConditions -contains $_ }).Count -gt 0
+            if ($NeedsP2 -and -not $HasP2) {
+                $Excluded.Add([PSCustomObject]@{ id = "$($Situation.id)"; title = "$($Situation.title)"; reason = 'Requires Entra ID P2' })
+                continue
+            }
+            $Situation
+        })
     $Users = @(Get-CIPPSimulationCache -TenantFilter $TenantFilter -Type 'Users')
     $Roles = @(Get-CIPPSimulationCache -TenantFilter $TenantFilter -Type 'Roles')
     $Policies = @(Get-CIPPSimulationCache -TenantFilter $TenantFilter -Type 'ConditionalAccessPolicies')
@@ -92,12 +105,14 @@ function Invoke-CIPPCASituationBattery {
     [PSCustomObject]@{
         identities = [PSCustomObject]$Identities
         situations = @($Rows)
+        excluded   = @($Excluded)
         summary    = [PSCustomObject]@{
             total        = $Rows.Count
             protected    = @($Rows | Where-Object { $_.pass -eq $true }).Count
             unprotected  = @($Rows | Where-Object { $_.pass -eq $false }).Count
             notEvaluated = @($Rows | Where-Object { $null -eq $_.pass }).Count
             reportOnly   = @($Rows | Where-Object { $_.pass -eq $false -and @($_.reportOnlyWouldStop).Count -gt 0 }).Count
+            unlicensed   = $Excluded.Count
         }
     }
 }

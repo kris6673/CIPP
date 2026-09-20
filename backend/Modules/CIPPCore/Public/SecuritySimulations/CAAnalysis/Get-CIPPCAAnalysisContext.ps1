@@ -107,7 +107,9 @@ function Get-CIPPCAAnalysisContext {
     foreach ($RoleId in @($Data['AdminRoles'].criticalRoleIds)) { $null = $Data['CriticalRoleIds'].Add("$RoleId") }
     $Data['DirSyncRoleId'] = "$($Data['AdminRoles'].directorySynchronizationAccountsRoleId)"
 
-    # --- licensing (cache only; falls back to policy-based inference when the license cache is empty)
+    # --- licensing: the tenant capabilities CIPP uses everywhere else (active service plans from
+    # subscribedSkus, cached) come first, so every simulation surface agrees on what is licensed;
+    # the LicenseOverview cache and policy-based inference are fallbacks for an empty capability cache.
     $PlanReference = $Data['Reference'].servicePlanIds
     $PlanIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     $LicenseRows = @(& $ReadCache 'LicenseOverview' @('skuId', 'ServicePlans'))
@@ -116,7 +118,18 @@ function Get-CIPPCAAnalysisContext {
             if ($Plan.servicePlanId) { $null = $PlanIds.Add("$($Plan.servicePlanId)") }
         }
     }
-    if ($LicenseRows.Count -gt 0) {
+    $Capabilities = $(try { Get-CIPPTenantCapabilities -TenantFilter $TenantFilter } catch { $null })
+    $CapabilityNames = @(($Capabilities ?? [PSCustomObject]@{}).PSObject.Properties | Where-Object { $_.Value -eq $true } | ForEach-Object { "$($_.Name)" })
+    if ($CapabilityNames.Count -gt 0) {
+        $Licenses = @{
+            Source               = 'TenantCapabilities'
+            HasEntraIdP1         = ($CapabilityNames -contains 'AAD_PREMIUM') -or ($CapabilityNames -contains 'AAD_PREMIUM_P2')
+            HasEntraIdP2         = $CapabilityNames -contains 'AAD_PREMIUM_P2'
+            HasIntunePlan1       = @($CapabilityNames | Where-Object { $_ -like 'INTUNE_A*' -or $_ -eq 'INTUNE_EDU' }).Count -gt 0
+            HasWorkloadIdPremium = @($CapabilityNames | Where-Object { $_ -like '*WORKLOAD*' }).Count -gt 0 -or
+            $PlanIds.Contains("$($PlanReference.workloadIdPremiumP1)") -or $PlanIds.Contains("$($PlanReference.workloadIdPremiumP2)")
+        }
+    } elseif ($LicenseRows.Count -gt 0) {
         $Licenses = @{
             Source               = 'LicenseOverview'
             HasEntraIdP1         = $PlanIds.Contains("$($PlanReference.entraIdP1)") -or $PlanIds.Contains("$($PlanReference.entraIdP2)")

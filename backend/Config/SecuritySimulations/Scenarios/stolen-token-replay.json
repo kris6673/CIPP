@@ -20,7 +20,7 @@
       "whatIf": { "clientAppType": "browser", "devicePlatform": "windows", "deviceInfo": { "isCompliant": false }, "signInRiskLevel": "medium", "country": "NL", "ipAddress": "185.220.101.47" },
       "gaps": [
         { "when": ["allowed", "weakGrant"], "text": "No compliant-device requirement, so a replayed token from any machine is accepted.", "role": "prevents", "fix": { "caTemplate": "Require a compliant or Microsoft Entra hybrid joined device" } },
-        { "when": ["allowed"], "text": "No sign-in risk policy, so the medium-risk replay is not challenged.", "role": "detects", "fix": { "caTemplate": "Require multifactor authentication for medium and high sign-in risk" } }
+        { "when": ["allowed"], "text": "No sign-in risk policy, so the medium-risk replay is not challenged.", "role": "detects", "requiredCapabilities": ["AAD_PREMIUM_P2"], "fix": { "caTemplate": "Require multifactor authentication for medium and high sign-in risk" } }
       ],
       "stopsChainWhen": "blocked",
       "whenFixed": "Blocked: the device is not compliant, so the replayed token is refused."

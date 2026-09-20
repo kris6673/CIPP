@@ -130,7 +130,7 @@ const Page = () => {
                   <Card style={{ width: '100%', height: '100%' }}>
                     <CardHeader
                       title="Coverage by persona"
-                      subheader={`${counts?.policyCount ?? 0} policies · ${counts?.enabledCount ?? 0} enforced · ${counts?.reportOnlyCount ?? 0} report-only · ${counts?.disabledCount ?? 0} disabled. Personas come from how each policy targets identities; hover a cell for the policies behind it.`}
+                      subheader={`${counts?.policyCount ?? 0} policies · ${counts?.enabledCount ?? 0} enforced · ${counts?.reportOnlyCount ?? 0} report-only · ${counts?.disabledCount ?? 0} disabled. Personas come from how each policy targets identities; hover a cell for the policies behind it.${counts?.licenses?.hasEntraIdP2 === false ? ' Risk-based controls are excluded: this tenant has no Entra ID P2 license.' : ''}`}
                       slotProps={{ subheader: { variant: 'caption' } }}
                     />
                     <Divider />

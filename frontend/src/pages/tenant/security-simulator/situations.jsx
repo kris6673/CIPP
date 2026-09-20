@@ -97,6 +97,13 @@ const Page = () => {
                   {summary.notEvaluated > 0 && ` · ${summary.notEvaluated} could not be evaluated`}
                 </Typography>
               )}
+              {asArray(data?.excluded).length > 0 && (
+                <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+                  {asArray(data.excluded).length} risk-based sign-in
+                  {asArray(data.excluded).length === 1 ? '' : 's'} excluded because this tenant has no
+                  Entra ID P2 license.
+                </Typography>
+              )}
             </Box>
           )}
           {tenantSelected && data?.licensed === false && (

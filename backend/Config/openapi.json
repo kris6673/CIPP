@@ -41820,6 +41820,9 @@
                     "type": "object",
                     "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
                     "properties": {
+                      "excluded": {
+                        "x-cipp-field-source": "backend"
+                      },
                       "identities": {
                         "x-cipp-field-source": "backend"
                       },

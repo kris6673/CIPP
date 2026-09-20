@@ -30,6 +30,7 @@ function Invoke-ListCASituations {
             licensed     = $Licensed -ne $false
             identities   = $Battery.identities
             situations   = @($Battery.situations)
+            excluded     = @($Battery.excluded)
             summary      = $Battery.summary
         }
         $StatusCode = [HttpStatusCode]::OK

@@ -83,15 +83,22 @@ function Invoke-CIPPSecuritySimulation {
                     $Verdict = Get-CIPPCAWhatIfVerdict -Policies $Evaluation.Policies -AttackerCanSatisfy $AttackerCanSatisfy
                     $Gaps = [System.Collections.Generic.List[object]]::new()
                     foreach ($Gap in @($Step.gaps | Where-Object { $_ })) {
+                        # A gap whose fix the tenant cannot licence (risk-based policies need P2)
+                        # is not a gap for this tenant - it never triggers and never becomes a fix.
+                        $GapRequired = @($Gap.requiredCapabilities | Where-Object { $_ })
+                        $GapLicensed = $GapRequired.Count -eq 0 -or @($GapRequired | Where-Object { $Capabilities.$_ -eq $true }).Count -gt 0
                         $When = @($Gap.when | Where-Object { $_ } | ForEach-Object { "$_".ToLower() })
-                        $Triggered = ($When -contains 'allowed' -and $Verdict.verdict -eq 'allowed') -or
-                        ($When -contains 'weakgrant' -and $Verdict.detail -eq 'grantSatisfied') -or
-                        ($When -contains 'reportonly' -and @($Verdict.reportOnlyWouldStop).Count -gt 0)
+                        $Triggered = $GapLicensed -and (
+                            ($When -contains 'allowed' -and $Verdict.verdict -eq 'allowed') -or
+                            ($When -contains 'weakgrant' -and $Verdict.detail -eq 'grantSatisfied') -or
+                            ($When -contains 'reportonly' -and @($Verdict.reportOnlyWouldStop).Count -gt 0)
+                        )
                         $Gaps.Add([PSCustomObject]@{
-                                text      = "$($Gap.text)"
-                                role      = $(if ("$($Gap.role)") { "$($Gap.role)" } else { 'prevents' })
-                                fix       = $Gap.fix
-                                triggered = [bool]$Triggered
+                                text       = "$($Gap.text)"
+                                role       = $(if ("$($Gap.role)") { "$($Gap.role)" } else { 'prevents' })
+                                fix        = $Gap.fix
+                                triggered  = [bool]$Triggered
+                                unlicensed = -not $GapLicensed
                             })
                     }
                     $WhatIf = [PSCustomObject]@{

@@ -15,6 +15,9 @@ function Test-CIPPCAGapIdentityProtection {
         $Context
     )
 
+    # Risk-based policies need Entra ID P2; without it there is nothing to find.
+    if ($Context.Licenses.HasEntraIdP2 -ne $true) { return @() }
+
     $Findings = [System.Collections.Generic.List[object]]::new()
     $Templates = $Context.Data.Reference.templates
 
