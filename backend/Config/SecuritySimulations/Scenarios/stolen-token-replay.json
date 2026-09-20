@@ -1,0 +1,49 @@
+{
+  "id": "stolen-token-replay",
+  "title": "Stolen session token replay",
+  "category": "Identity & Conditional Access",
+  "severity": "Critical",
+  "summary": "An attacker replays a session token stolen through a fake sign-in page and signs in as the user without re-entering a password or MFA.",
+  "requiredCapabilities": ["AAD_PREMIUM"],
+  "persona": "user",
+  "attackerCanSatisfy": ["mfa"],
+  "steps": [
+    {
+      "id": "assumption",
+      "title": "Starting assumption",
+      "text": "The attacker has captured a valid session token from the user through an adversary-in-the-middle page. The token still carries the multifactor claim the user completed."
+    },
+    {
+      "id": "signin",
+      "title": "Sign-in evaluated by Conditional Access",
+      "text": "The attacker replays the token from an unmanaged Windows browser on a hosting-provider address. Because the token already satisfies MFA, only device and risk controls can still stop the session.",
+      "whatIf": { "clientAppType": "browser", "devicePlatform": "windows", "deviceInfo": { "isCompliant": false }, "signInRiskLevel": "medium", "country": "NL", "ipAddress": "185.220.101.47" },
+      "gaps": [
+        { "when": ["allowed", "weakGrant"], "text": "No compliant-device requirement, so a replayed token from any machine is accepted.", "role": "prevents", "fix": { "caTemplate": "Require a compliant or Microsoft Entra hybrid joined device" } },
+        { "when": ["allowed"], "text": "No sign-in risk policy, so the medium-risk replay is not challenged.", "role": "detects", "fix": { "caTemplate": "Require multifactor authentication for medium and high sign-in risk" } }
+      ],
+      "stopsChainWhen": "blocked",
+      "whenFixed": "Blocked: the device is not compliant, so the replayed token is refused."
+    },
+    {
+      "id": "mailbox-search",
+      "title": "Mailbox searched for valuable mail",
+      "text": "The attacker opens the mailbox and searches for invoices, payroll and password-reset messages. Nothing is changed yet, so the activity looks like normal browsing.",
+      "whenFixed": "Mailbox auditing records the search, giving responders an early signal of takeover."
+    },
+    {
+      "id": "persistence",
+      "title": "Forwarding set up for ongoing access",
+      "text": "The attacker creates an inbox rule and turns on mailbox forwarding so copies of new mail reach an outside address. This keeps the attacker informed even after the token expires.",
+      "alerts": [
+        { "operation": "New-InboxRule", "logbook": "Audit.Exchange", "preset": "New-InboxRule" },
+        { "operation": "Set-Mailbox", "logbook": "Audit.Exchange", "preset": "Set-MailboxForwardingExternal" }
+      ],
+      "whenFixed": "External forwarding is blocked by policy and the rule creation raises an alert."
+    }
+  ],
+  "outcome": {
+    "prevented": "The replayed token is refused at sign-in because the device is not compliant, and the takeover never starts.",
+    "notPrevented": "The attacker reads and quietly forwards mail for as long as the stolen token and forwarding rule survive."
+  }
+}

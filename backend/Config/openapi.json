@@ -133,6 +133,9 @@
       "name": "Tenant > Reports"
     },
     {
+      "name": "Tenant > SecuritySimulations"
+    },
+    {
       "name": "Tenant > Standards"
     },
     {
@@ -700,6 +703,10 @@
                   },
                   "description": {
                     "type": "string"
+                  },
+                  "disableAlerts": {
+                    "type": "boolean",
+                    "description": "'Disable Alerts': deviations are still detected and shown, but no email, webhook or PSA notification fires for this baseline. Negative flag on purpose: rows saved before the column existed keep alerting, exactly right."
                   },
                   "disableScheduledRuns": {
                     "type": "boolean",
@@ -15976,7 +15983,7 @@
         "tags": [
           "Tenant > Conditional"
         ],
-        "description": "Runs a Conditional Access \"what if\" evaluation, reporting which policies would apply to a sign-in with the given user, application, device platform, location, client app type and risk levels. Evaluation only - no sign-in occurs and no policy is changed.",
+        "description": "Runs a Conditional Access \"what if\" evaluation, reporting which policies would apply to a sign-in with the given user, application, device platform, device compliance, location, client app type, authentication flow and risk levels. Evaluation only - no sign-in occurs and no policy is changed.",
         "requestBody": {
           "required": true,
           "content": {
@@ -15993,10 +16000,19 @@
                   "Country": {
                     "$ref": "#/components/schemas/LabelValue"
                   },
+                  "DeviceCompliant": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
                   "DevicePlatform": {
                     "$ref": "#/components/schemas/LabelValue"
                   },
                   "IncludeApplications": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    }
+                  },
+                  "InsiderRiskLevel": {
                     "$ref": "#/components/schemas/LabelValue"
                   },
                   "IpAddress": {
@@ -16048,7 +16064,10 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Tenant.ConditionalAccess.Read"
+        "x-cipp-role": "Tenant.ConditionalAccess.Read",
+        "x-cipp-reads-via": [
+          "New-CIPPCAWhatIfRequest"
+        ]
       }
     },
     "/api/ExecCAExclusion": {
@@ -32570,6 +32589,65 @@
         "x-cipp-role": "Scheduler.Billing.ReadWrite"
       }
     },
+    "/api/ExecSecuritySimulation": {
+      "post": {
+        "summary": "ExecSecuritySimulation",
+        "operationId": "ExecSecuritySimulation",
+        "tags": [
+          "Tenant > SecuritySimulations"
+        ],
+        "description": "Plays one security scenario against a tenant: grades the standards each step relies on,\nevaluates the scenario's sign-in live through the Conditional Access What If API, and checks\nwhether an audit-log alert would fire. Returns the attacker's experience in the current\nstate and with the mapped controls in place. Read-only: nothing changes in the tenant.\nBody: { tenantFilter, scenarioId }.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "scenarioId": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  },
+                  "tenantFilter": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.SecuritySimulations.Read"
+      }
+    },
     "/api/ExecSendOrgMessage": {
       "post": {
         "summary": "ExecSendOrgMessage",
@@ -41506,6 +41584,66 @@
         "x-cipp-role": "CIPP.BreachLookup.Read"
       }
     },
+    "/api/ListCAGapAnalysis": {
+      "get": {
+        "summary": "ListCAGapAnalysis",
+        "operationId": "ListCAGapAnalysis",
+        "tags": [
+          "Tenant > SecuritySimulations"
+        ],
+        "description": "Conditional Access gap analysis for one tenant from the cached policies: findings, the\npersona-by-control coverage matrix, CIS alignment, Zero Trust signals and the posture\nscore. Read-only and cache-only - the live sign-in situations are ListCASituations.\nPass ?tenantFilter=.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "analysis": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "analysisError": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "licensed": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "tenantFilter": {
+                        "x-cipp-field-source": "backend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.SecuritySimulations.Read"
+      }
+    },
     "/api/ListCalendarPermissions": {
       "get": {
         "summary": "ListCalendarPermissions",
@@ -41656,6 +41794,69 @@
           }
         ],
         "x-cipp-role": "Tenant.ConditionalAccess.Read"
+      }
+    },
+    "/api/ListCASituations": {
+      "get": {
+        "summary": "ListCASituations",
+        "operationId": "ListCASituations",
+        "tags": [
+          "Tenant > SecuritySimulations"
+        ],
+        "description": "Evaluates every predefined sign-in situation (admin, user and guest personas under\nunmanaged devices, foreign locations, legacy clients, device-code flow, risk levels and\nmore) live against the tenant's Conditional Access through the What If API, and names the\ncontrol missing wherever a sign-in gets through. Read-only: no sign-in occurs and nothing\nchanges in the tenant. Pass ?tenantFilter=.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "identities": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "licensed": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "situations": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "summary": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "tenantFilter": {
+                        "x-cipp-field-source": "backend"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.SecuritySimulations.Read"
       }
     },
     "/api/ListCAtemplates": {
@@ -55788,6 +55989,52 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ListSecuritySimulations": {
+      "get": {
+        "summary": "ListSecuritySimulations",
+        "operationId": "ListSecuritySimulations",
+        "tags": [
+          "Tenant > SecuritySimulations"
+        ],
+        "description": "Lists the security scenarios that can be simulated, with a per-tenant summary of how many\nof the standards each scenario relies on are already in place (from the tenant's baseline\nalignment - nothing is evaluated here). Pass ?tenantFilter= for the summary.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.SecuritySimulations.Read"
+      }
+    },
     "/api/ListSensitiveInfoType": {
       "get": {
         "summary": "ListSensitiveInfoType",
@@ -61569,57 +61816,6 @@
         ],
         "x-cipp-role": "Exchange.TransportRule.Read",
         "x-cipp-any-tenant": true
-      }
-    },
-    "/api/ListUserConditionalAccessPolicies": {
-      "get": {
-        "summary": "ListUserConditionalAccessPolicies",
-        "operationId": "ListUserConditionalAccessPolicies",
-        "tags": [
-          "Identity > Administration > Users"
-        ],
-        "description": "Lists Conditional Access policies that apply to a specific user in a tenant.",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/tenantFilter"
-          },
-          {
-            "name": "UserID",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - invalid or missing bearer token"
-          },
-          "403": {
-            "description": "Forbidden - caller lacks the required RBAC role"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "x-cipp-role": "Identity.User.Read"
       }
     },
     "/api/ListUserCounts": {

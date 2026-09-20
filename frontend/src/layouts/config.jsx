@@ -223,6 +223,12 @@ export const nativeMenuItems = [
         permissions: ['Tenant.Baselines.*'],
         scope: 'global',
       },
+      // Flag-gated: the SecuritySimulations feature flag lists this path in its Pages.
+      {
+        title: 'Security Simulations',
+        path: '/tenant/security-simulator',
+        permissions: ['Tenant.SecuritySimulations.*'],
+      },
       {
         title: 'Domains Analyser',
         path: '/tenant/standards/domains-analyser',

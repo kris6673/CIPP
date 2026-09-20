@@ -1,0 +1,36 @@
+function Invoke-ExecSecuritySimulation {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    .ROLE
+        Tenant.SecuritySimulations.Read
+    .DESCRIPTION
+        Plays one security scenario against a tenant: grades the standards each step relies on,
+        evaluates the scenario's sign-in live through the Conditional Access What If API, and checks
+        whether an audit-log alert would fire. Returns the attacker's experience in the current
+        state and with the mapped controls in place. Read-only: nothing changes in the tenant.
+        Body: { tenantFilter, scenarioId }.
+    #>
+    [CmdletBinding()]
+    param($Request, $TriggerMetadata)
+
+    $APIName = $Request.Params.CIPPEndpoint
+    try {
+        $TenantFilter = $Request.Body.tenantFilter.value ?? $Request.Body.tenantFilter
+        $ScenarioId = $Request.Body.scenarioId.value ?? $Request.Body.scenarioId
+        if (-not $TenantFilter -or $TenantFilter -in @('AllTenants', 'allTenants')) { throw 'Select a single tenant to run a simulation.' }
+        if (-not $ScenarioId) { throw 'Provide a scenarioId.' }
+        $Results = Invoke-CIPPSecuritySimulation -TenantFilter $TenantFilter -ScenarioId $ScenarioId
+        Write-LogMessage -headers $Request.Headers -API $APIName -tenant $TenantFilter -message "Ran security simulation '$ScenarioId'." -Sev 'Info'
+        $StatusCode = [HttpStatusCode]::OK
+    } catch {
+        Write-LogMessage -headers $Request.Headers -API $APIName -message "Failed to run security simulation: $($_.Exception.Message)" -Sev 'Error'
+        $Results = @{ Results = "Failed to run security simulation: $($_.Exception.Message)" }
+        $StatusCode = [HttpStatusCode]::InternalServerError
+    }
+
+    return ([HttpResponseContext]@{
+            StatusCode = $StatusCode
+            Body       = $Results
+        })
+}

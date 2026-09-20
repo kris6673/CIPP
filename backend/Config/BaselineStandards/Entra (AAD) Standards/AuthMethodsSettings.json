@@ -9,6 +9,9 @@
     "EIDSCA.AG03",
     "SMB1001 (2.8)"
   ],
+  "simulatorScenarios": [
+    { "scenario": "mfa-tampering", "step": "re-register", "role": "detects" }
+  ],
   "impact": "Low Impact",
   "helpText": "Configures the report suspicious activity settings and system credential preferences in the authentication methods policy.",
   "executiveText": "Configures security settings that allow users to report suspicious login attempts and manages how the system handles authentication credentials. This enhances overall security by enabling early detection of potential security threats and optimizing authentication processes.",

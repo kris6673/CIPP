@@ -1,0 +1,173 @@
+[
+  {
+    "id": "token-prot-apps",
+    "title": "Token Protection: Only supported for specific apps",
+    "appliesWhen": "Policy uses Token Protection session control",
+    "requirement": "Token Protection policies must only target Exchange Online, SharePoint Online, Teams Services, Azure Virtual Desktop, Windows 365, and Windows Cloud Login. Selecting the Office 365 application group may result in unintended failures.",
+    "severity": "high",
+    "docUrl": "https://learn.microsoft.com/entra/identity/conditional-access/concept-token-protection#deployment",
+    "remediation": "Configure the Token Protection policy to target only: Office 365 Exchange Online, Office 365 SharePoint Online, Microsoft Teams Services. If AVD/W365 is deployed, include those too. Do NOT use the Office 365 application group."
+  },
+  {
+    "id": "token-prot-platform",
+    "title": "Token Protection: Must target Windows platform only",
+    "appliesWhen": "Policy uses Token Protection session control",
+    "requirement": "Token Protection is only available for Windows devices. The policy must target the Windows device platform and must only use 'Mobile apps and desktop clients' (not browser).",
+    "severity": "high",
+    "docUrl": "https://learn.microsoft.com/entra/identity/conditional-access/concept-token-protection#deployment",
+    "remediation": "Set Device platforms -> Include -> Windows only. Set Client apps -> Mobile apps and desktop clients only. Leave Browser unchecked to avoid blocking MSAL.js apps like Teams Web."
+  },
+  {
+    "id": "token-prot-devices",
+    "title": "Token Protection: Unsupported device types must be excluded",
+    "appliesWhen": "Policy uses Token Protection session control",
+    "requirement": "Certain device registration types are unsupported for Token Protection and must be excluded via device filters: Surface Hub, Teams Rooms (MTR), Azure AD joined AVD hosts, Cloud PCs, Autopilot self-deploying, Azure VMs, and bulk-enrolled devices.",
+    "severity": "high",
+    "docUrl": "https://learn.microsoft.com/entra/identity/conditional-access/concept-token-protection#known-limitations",
+    "remediation": "Add device filter conditions to exclude unsupported types. For example: systemLabels -eq \"CloudPC\" and trustType -eq \"AzureAD\", systemLabels -eq \"AzureVirtualDesktop\" and trustType -eq \"AzureAD\", profileType -eq \"SecureVM\" and trustType -eq \"AzureAD\"."
+  },
+  {
+    "id": "break-glass-missing",
+    "title": "Break-glass accounts: No user exclusions on broad policy",
+    "appliesWhen": "Policy targets All Users with MFA, block, compliance, or hybrid join controls",
+    "requirement": "Microsoft recommends excluding emergency access (break-glass) accounts from all CA policies to prevent lockout due to policy misconfiguration. At least 2 break-glass accounts should be excluded.",
+    "severity": "critical",
+    "docUrl": "https://learn.microsoft.com/entra/identity/role-based-access-control/security-emergency-access",
+    "remediation": "Exclude at least 2 emergency access (break-glass) accounts from this policy. These accounts should have complex passwords, be cloud-only, and be monitored for use via alerts."
+  },
+  {
+    "id": "surface-hub-mfa",
+    "title": "Surface Hub: Cannot satisfy MFA or compliance requirements",
+    "appliesWhen": "Broad policy requires MFA, device compliance, hybrid join, approved app, or app protection",
+    "requirement": "Surface Hub device accounts are incompatible with MFA, authentication strength, device compliance, hybrid join, approved client app, app protection, and password change grant controls. Surface Hub accounts must be excluded from such policies.",
+    "severity": "medium",
+    "docUrl": "https://learn.microsoft.com/surface-hub/conditional-access-for-surface-hub",
+    "remediation": "Exclude Surface Hub device accounts (or a group containing them) from this policy. Ensure you select the user object, not the device object, when adding the exclusion."
+  },
+  {
+    "id": "teams-rooms-mfa",
+    "title": "Teams Rooms on Windows: MFA and auth strength not supported",
+    "appliesWhen": "Policy requires MFA or authentication strength for all users",
+    "requirement": "Teams Rooms on Windows does NOT support MFA or authentication strength grant controls. Teams Rooms resource accounts must be excluded from MFA-enforcing policies.",
+    "severity": "medium",
+    "docUrl": "https://learn.microsoft.com/microsoftteams/rooms/supported-ca-and-compliance-policies",
+    "remediation": "Exclude Teams Rooms resource accounts (or a shared device group) from MFA-enforcing policies. Use device compliance as an alternative control for Teams Rooms devices."
+  },
+  {
+    "id": "device-code-teams-android",
+    "title": "Device Code Block: Breaks Teams Android remote sign-in",
+    "appliesWhen": "Policy blocks device code authentication flow",
+    "requirement": "Blocking device code flow prevents using microsoft.com/devicelogin to remotely sign in Teams Android devices. Teams Android device accounts should be excluded, or use an alternative sign-in method.",
+    "severity": "medium",
+    "docUrl": "https://learn.microsoft.com/microsoftteams/rooms/supported-ca-and-compliance-policies",
+    "remediation": "Exclude Teams device resource accounts from the device code flow blocking policy, or create the block policy with a device filter that excludes Teams Android devices."
+  },
+  {
+    "id": "signin-freq-teams-rooms",
+    "title": "Sign-in Frequency: Causes Teams Rooms periodic sign-out",
+    "appliesWhen": "Policy uses sign-in frequency session control for all users",
+    "requirement": "Teams Rooms and Teams panels do NOT support sign-in frequency session controls. Enabling sign-in frequency causes devices to periodically sign out, disrupting meetings.",
+    "severity": "medium",
+    "docUrl": "https://learn.microsoft.com/microsoftteams/rooms/supported-ca-and-compliance-policies",
+    "remediation": "Exclude Teams Rooms and shared device resource accounts from sign-in frequency policies. If you need sign-in frequency for admin roles, scope it specifically to admin roles instead of all users."
+  },
+  {
+    "id": "defender-mobile-exclusion",
+    "title": "Defender Mobile: Must be excluded from restrictive CA policies",
+    "appliesWhen": "Broad block or restrictive CA policy targeting all apps",
+    "requirement": "The Microsoft Defender mobile app needs to constantly run in the background to report device security posture. Restrictive CA policies (block policies, frequent sign-in, location blocks) can prevent Defender from reporting, leading to devices appearing non-compliant.",
+    "severity": "medium",
+    "docUrl": "https://learn.microsoft.com/defender-endpoint/mobile-resources-defender-endpoint#microsoft-defender-mobile-app-exclusion-from-conditional-access-ca-policies",
+    "remediation": "Exclude MicrosoftDefenderATP XPlat (a0e84e36-b067-4d5c-ab4a-3db38e598ae2) and Microsoft Defender for Mobile TVM (e724aa31-0f56-4018-b8be-f8cb82ca1196) from this policy. Create service principals for these apps if they don't exist, then add them to the exclusion list."
+  },
+  {
+    "id": "azure-vm-signin-mfa",
+    "title": "Azure VM Sign-In: MFA via RDP requires special client support",
+    "appliesWhen": "Policy requires MFA or device compliance for all users and all cloud apps",
+    "requirement": "The Microsoft Azure Windows Virtual Machine Sign-In app (372140e0-b3b7-4226-8ef9-d57986796201) requires the RDP client to supply the MFA claim. Not all RDP clients or environments support interactive MFA. Windows Server devices cannot satisfy device compliance rules when used as RDP clients. If Windows Hello for Business is not deployed, Microsoft recommends excluding the Azure VM Sign-In app from MFA policies.",
+    "severity": "medium",
+    "docUrl": "https://learn.microsoft.com/entra/identity/devices/howto-vm-sign-in-azure-ad-windows#missing-application",
+    "remediation": "If Windows Hello for Business is not deployed, exclude the Microsoft Azure Windows Virtual Machine Sign-In app (372140e0-b3b7-4226-8ef9-d57986796201) from MFA and device compliance policies. Alternatively, ensure all RDP clients support Windows Hello for Business or FIDO2 security keys for MFA completion."
+  },
+  {
+    "id": "cae-disabled",
+    "title": "CAE Disabled: Reduces real-time policy enforcement",
+    "appliesWhen": "Policy explicitly disables Continuous Access Evaluation",
+    "requirement": "Continuous access evaluation (CAE) enables real-time revocation of access tokens. Disabling CAE means token revocation relies on token expiry (up to 1 hour), creating a window of vulnerability after a security event.",
+    "severity": "high",
+    "docUrl": "https://learn.microsoft.com/entra/identity/conditional-access/concept-continuous-access-evaluation",
+    "remediation": "Remove the CAE disable setting unless strict real-time evaluation is causing issues. CAE is auto-enabled and should remain active for security. Disabling only works when targeting All resources with no conditions."
+  },
+  {
+    "id": "signin-freq-individual-services",
+    "title": "Sign-in Frequency: Targeting individual M365 services breaks Teams",
+    "appliesWhen": "Sign-in frequency is applied to specific M365 services rather than all apps",
+    "requirement": "Configuring sign-in frequency on individual Microsoft 365 services (Exchange, SharePoint, Teams) can interrupt or stop the Teams device sign-in flow. Use all-apps targeting or admin portal targeting instead.",
+    "severity": "medium",
+    "docUrl": "https://learn.microsoft.com/microsoftteams/rooms/supported-ca-and-compliance-policies",
+    "remediation": "Change the sign-in frequency policy to target all cloud apps or use Microsoft Admin Portals as the target resource instead of individual M365 services."
+  },
+  {
+    "id": "resilience-disabled-impact",
+    "title": "Resilience Defaults Disabled: Users blocked during outages",
+    "appliesWhen": "Policy disables resilience defaults",
+    "requirement": "Disabling resilience defaults means users are denied access when existing sessions expire during an Entra ID outage. This should only be done for high-security scenarios.",
+    "severity": "medium",
+    "docUrl": "https://learn.microsoft.com/entra/identity/conditional-access/resilience-defaults",
+    "remediation": "Only disable resilience defaults if your organization requires strict real-time policy evaluation (e.g., regulated industries). For most organizations, keep resilience defaults enabled."
+  },
+  {
+    "id": "all-resources-exclusion-change",
+    "title": "All Resources: Ensure Windows Azure AD baseline scopes are covered",
+    "appliesWhen": "Policy targets \"All resources\" (All cloud apps) - with or without app exclusions",
+    "requirement": "When a Conditional Access policy targets 'All cloud apps' and has app exclusions, Microsoft's legacy behavior automatically exempted low-privilege scopes (User.Read, openid, profile, email, offline_access) from enforcement. This exemption was removed starting March 2026. Microsoft now maps these scopes to Windows Azure Active Directory (00000002-0000-0000-c000-000000000000) as the enforcement audience. To ensure coverage, a dedicated policy targeting this app should be in place.",
+    "severity": "high",
+    "docUrl": "https://learn.microsoft.com/en-us/entra/identity/conditional-access/concept-conditional-access-cloud-apps#conditional-access-behavior-when-an-all-resources-policy-has-an-app-exclusion",
+    "remediation": "Create a dedicated Conditional Access policy targeting Windows Azure Active Directory (app ID: 00000002-0000-0000-c000-000000000000) to protect low-privilege baseline scopes: Users: All users (exclude break-glass accounts); Target resources: Windows Azure Active Directory; Grant: Require MFA (or phishing-resistant authentication strength). This ensures that even if your 'All cloud apps' policies have app exclusions, the baseline scopes enforced via this app remain protected."
+  },
+  {
+    "id": "dirsync-account-mfa",
+    "title": "Directory Sync Account: Entra Connect v2.5.76.0+ supports app-based auth",
+    "appliesWhen": "MFA policy targeting All Users excludes a Directory Synchronization Accounts role or service account",
+    "requirement": "Prior to Entra Connect v2.5.76.0, organizations excluded Directory Synchronization Accounts from MFA policies because the sync engine used a service account that could not perform MFA. Starting with Entra Connect v2.5.76.0 (released 2025), application-based authentication is supported, eliminating the need for this exclusion. If your organization has upgraded to v2.5.76.0+, the Directory Sync account exclusion should be reviewed and potentially removed to close this gap.",
+    "severity": "medium",
+    "docUrl": "https://learn.microsoft.com/entra/identity/hybrid/connect/reference-connect-version-history",
+    "remediation": "Check your Entra Connect version. If running v2.5.76.0+, configure application-based authentication for the sync engine and remove the Directory Synchronization Accounts role exclusion from your MFA policies. If still on an older version, upgrade to v2.5.76.0+ and then migrate to app-based auth."
+  },
+  {
+    "id": "eam-external-user-impact",
+    "title": "External Authentication Method (EAM): May block guests and external vendors",
+    "appliesWhen": "MFA policy uses External Authentication Methods via custom auth factors or Authentication Strength policies containing external method combinations (e.g. Cisco DUO EAM) and targets All Users or admin roles",
+    "requirement": "When a Conditional Access policy requires an External Authentication Method (EAM) like Cisco DUO, RSA SecurID, or another third-party MFA provider, guest users, B2B collaborators, and external service providers will be unable to fulfill the EAM claim because they are not enrolled in the organization's third-party MFA solution. This effectively blocks external access even though standard Entra ID MFA would have been sufficient. Microsoft recommends using authentication strength policies with Entra ID native methods for broad user scopes, and scoping EAM requirements only to internal users who are enrolled in the third-party provider.",
+    "severity": "high",
+    "docUrl": "https://learn.microsoft.com/entra/identity/authentication/how-to-authentication-external-method-manage",
+    "remediation": "Option 1: Exclude guest and external user types from the EAM policy and create a separate CA policy for external users that requires standard Entra ID MFA. Option 2: Use an authentication strength policy that accepts both the EAM and Entra ID native MFA methods, allowing external users to satisfy the requirement with Microsoft MFA. Option 3: Scope the EAM requirement to a security group containing only internal users enrolled in the third-party MFA provider."
+  },
+  {
+    "id": "approved-client-app-retirement",
+    "title": "Approved Client App grant retiring - migrate to App Protection Policy",
+    "appliesWhen": "Policy uses the 'Require approved client app' grant control without the 'Require app protection policy' control",
+    "requirement": "Microsoft is retiring the 'Require approved client app' grant control in early March 2026. Policies must transition to 'Require application protection policy' or use both controls with an OR operator.",
+    "severity": "critical",
+    "docUrl": "https://learn.microsoft.com/entra/identity/conditional-access/migrate-approved-client-app",
+    "remediation": "Replace 'Require approved client app' with 'Require application protection policy' in the grant controls. If you need a transition period, use both controls with the OR operator so either grant satisfies the requirement. For new policies, only use 'Require application protection policy'."
+  },
+  {
+    "id": "user-risk-password-change-deprecated",
+    "title": "User Risk: 'Require password change' is deprecated - migrate to 'Require risk remediation'",
+    "appliesWhen": "User risk policy uses the legacy 'passwordChange' grant control",
+    "requirement": "Microsoft has deprecated the standalone 'Require password change' grant control for user risk policies. The replacement is 'Require risk remediation', which supports both password-based and passwordless (External Authentication Methods, FIDO2, WHfB) remediation flows. Passwordless users cannot complete a password-change-only flow and will be permanently blocked.",
+    "severity": "high",
+    "docUrl": "https://learn.microsoft.com/en-us/entra/id-protection/concept-identity-protection-policies",
+    "remediation": "Replace 'Require password change' with 'Require risk remediation' in the grant controls. 'Require risk remediation' automatically determines the correct remediation path based on the user's registered authentication methods - password change for password-based users, secure sign-in for passwordless users."
+  },
+  {
+    "id": "user-risk-remediation-no-eam-companion",
+    "title": "User Risk: 'Require risk remediation' uses auth strength - EAM users (e.g. Duo) need a companion policy",
+    "appliesWhen": "User risk policy uses 'Require risk remediation' with an authentication strength object",
+    "requirement": "When 'Require risk remediation' is combined with a custom authentication strength, users enrolled in External Authentication Methods (EAM) such as Duo, Okta Verify, or Ping cannot satisfy the auth strength requirement - EAM is not supported in authentication strength objects. A companion policy targeting the EAM group using the built-in 'Require MFA' control instead of an auth strength must exist to allow EAM users to complete risk remediation.",
+    "severity": "high",
+    "docUrl": "https://learn.microsoft.com/en-us/entra/id-protection/concept-identity-protection-policies",
+    "remediation": "Create a companion user risk policy scoped to your EAM user group: Users: Include - EAM users group only (exclude from the main policy); Conditions: User risk = High (same as primary policy); Grant: Require MFA (built-in, NOT an authentication strength object) + Require risk remediation. This allows EAM users (Duo, Okta, Ping) to satisfy the MFA challenge using their third-party method and complete risk remediation. The main policy retains the stronger auth strength for all other users."
+  }
+]

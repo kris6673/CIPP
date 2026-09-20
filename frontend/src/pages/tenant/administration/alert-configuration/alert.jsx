@@ -181,6 +181,16 @@ const AlertWizard = () => {
   const logbookWatcher = useWatch({ control: formControl.control, name: 'logbook' })
   const propertyWatcher = useWatch({ control: formControl.control, name: 'conditions' })
 
+  // A "Enable the alert" link from a security simulation lands here with ?preset=<value>:
+  // pick the audit alert type and pre-select that preset so its conditions load as defined.
+  useEffect(() => {
+    if (router.query.id || !router.query.preset) return
+    const template = auditLogTemplates.find((entry) => entry.value === router.query.preset)
+    if (!template) return
+    setAlertType('audit')
+    formControl.setValue('preset', { value: template.value, label: template.name })
+  }, [router.query.preset, router.query.id])
+
   // Clear input value only on actual operator transitions, skip while preset loading
   useEffect(() => {
     if (!propertyWatcher || isLoadingPreset || isLoadingExistingAlert) return

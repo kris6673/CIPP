@@ -1,0 +1,32 @@
+{
+  "id": "anonymous-link-sensitive-site",
+  "title": "Anyone link on a sensitive site",
+  "category": "SharePoint & Data",
+  "severity": "High",
+  "summary": "An attacker creates an Anyone link on a sensitive SharePoint site so files can be downloaded without signing in.",
+  "requiredCapabilities": ["SHAREPOINTENTERPRISE"],
+  "steps": [
+    {
+      "id": "assumption",
+      "title": "Starting assumption",
+      "text": "The attacker controls an account with access to a sensitive site and wants to move data out with as little friction as possible."
+    },
+    {
+      "id": "create-link",
+      "title": "Anyone link created",
+      "text": "The attacker creates an Anyone link that grants access to files without any sign-in. The link can be shared or sold freely.",
+      "alerts": [ { "operation": "AnonymousLinkCreated", "logbook": "Audit.SharePoint" } ],
+      "whenFixed": "Anonymous sharing is disabled, so no Anyone link can be created, and the attempt is recorded."
+    },
+    {
+      "id": "access",
+      "title": "Files downloaded through the link",
+      "text": "Anyone holding the link downloads the files without authenticating. There is no record of who took the data.",
+      "whenFixed": "A short expiry on Anyone links narrows the window in which the link works."
+    }
+  ],
+  "outcome": {
+    "prevented": "Anonymous sharing is refused, so a no-sign-in link is never created.",
+    "notPrevented": "Sensitive files are downloadable by anyone who receives the link."
+  }
+}

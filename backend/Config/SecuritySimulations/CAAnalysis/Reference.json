@@ -1,0 +1,93 @@
+{
+  "registerDeviceAction": "urn:user:registerdevice",
+  "registerSecurityInfoAction": "urn:user:registersecurityinfo",
+  "windowsAzureAdResource": "00000002-0000-0000-c000-000000000000",
+  "intuneEnrollmentApp": "d4ebce55-015a-49b5-a083-c84d1797ae8c",
+  "legacyMfaTrustedIpsLocation": "00000000-0000-0000-0000-000000000000",
+  "equivalentStrengthGroups": {
+    "compliantDevice": "device-trust",
+    "domainJoinedDevice": "device-trust",
+    "approvedApplication": "app-protection",
+    "compliantApplication": "app-protection"
+  },
+  "grantControlLabels": {
+    "mfa": "Require MFA",
+    "compliantDevice": "Require compliant device",
+    "domainJoinedDevice": "Require Microsoft Entra hybrid joined device",
+    "approvedApplication": "Require approved client app",
+    "compliantApplication": "Require app protection policy",
+    "passwordChange": "Require password change"
+  },
+  "guestTypeLabels": {
+    "internalGuest": "Internal guest users",
+    "b2bCollaborationGuest": "B2B collaboration guest users",
+    "b2bCollaborationMember": "B2B collaboration member users",
+    "b2bDirectConnectUser": "B2B direct connect users",
+    "otherExternalUser": "Other external users",
+    "serviceProvider": "Service provider users"
+  },
+  "guestTypeOrder": ["internalGuest", "b2bCollaborationGuest", "b2bCollaborationMember", "b2bDirectConnectUser", "otherExternalUser", "serviceProvider"],
+  "managedPolicyPatterns": [
+    { "keyword": "block legacy authentication", "category": "Legacy Auth Blocking" },
+    { "keyword": "block device code flow", "category": "Device Code Flow" },
+    { "keyword": "multifactor authentication for admins", "category": "Admin MFA" },
+    { "keyword": "multifactor authentication for all users", "category": "MFA for All" },
+    { "keyword": "multifactor authentication for per-user", "category": "Per-User MFA Migration" },
+    { "keyword": "reauthentication for risky sign-ins", "category": "Risky Sign-In MFA" },
+    { "keyword": "block access for high-risk users", "category": "High-Risk User Blocking" },
+    { "keyword": "block all high risk agents", "category": "Agent Risk Blocking" }
+  ],
+  "phishingResistant": {
+    "builtInStrengthId": "00000000-0000-0000-0000-000000000004",
+    "methodTokens": ["fido2", "windowshelloforbusiness", "x509certificatemultifactor", "x509certificatesinglefactor", "deviceboundpasskey", "hardwareoath"],
+    "nameRegex": "phishing.?resistant|fido2|windows hello|certificate.?based",
+    "policyNameRegex": "phishing.?resistant"
+  },
+  "servicePlanIds": {
+    "entraIdP1": "41781fb2-bc02-4b7c-bd55-b576c07bb09d",
+    "entraIdP2": "eec0eb4f-6444-4f95-aba0-50c24d67f998",
+    "intunePlan1": "c1ec4a95-1f05-45b3-a911-aa3fa01094f5",
+    "workloadIdPremiumP1": "84c289f0-efcb-486f-8581-07f44fc9efad",
+    "workloadIdPremiumP2": "7dc0e92d-bf15-401d-907e-0884efe7c760"
+  },
+  "documentedExclusionApps": {
+    "exchangeOnline": "00000002-0000-0ff1-ce00-000000000000",
+    "sharePointOnline": "00000003-0000-0ff1-ce00-000000000000",
+    "teamsService": "cc15fd57-2c6c-4117-a88c-83b1d56b4bbe",
+    "office365Group": "Office365",
+    "azureVirtualDesktop": "9cdead84-a844-4324-93f2-b2e6bb768d07",
+    "windows365": "0af06dc6-e4b5-4f28-818e-e78e62d137a5",
+    "defenderAtpXplat": "a0e84e36-b067-4d5c-ab4a-3db38e598ae2",
+    "defenderTvm": "e724aa31-0f56-4018-b8be-f8cb82ca1196",
+    "windowsCloudLogin": "372140e0-b3b7-4226-8ef9-d57986796201"
+  },
+  "tokenProtectionDeviceFilterPatterns": [
+    { "pattern": "cloudpc", "label": "Cloud PCs" },
+    { "pattern": "azurevirtualdesktop", "label": "Azure Virtual Desktop" },
+    { "pattern": "powerapautomate", "label": "Power Automate hosted machines" },
+    { "pattern": "autopilot", "label": "Autopilot self-deploying" },
+    { "pattern": "securevm", "label": "Azure VMs" }
+  ],
+  "templates": {
+    "mfaAllUsers": "GLOBAL - GRANT - MFA - AllUsers",
+    "mfaAllAdmins": "GLOBAL - GRANT - MFA - AllAdmins",
+    "mfaGuests": "GLOBAL - GRANT - MFA - External-Guest-Users",
+    "mfaB2BGuest": "GLOBAL - GRANT - MFA - B2B-Guest",
+    "mfaMixedGuests": "GLOBAL - GRANT - MFA - Mixed-Guests",
+    "phishingResistantAdmins": "GLOBAL - GRANT - PhishingResistantMFA - AllAdmins",
+    "registerSecurityInfo": "GLOBAL - GRANT - MFA - RegisterSecurityInfo",
+    "signInRisk": "P2 - GLOBAL - GRANT - SignInRisk-MediumHigh",
+    "userRisk": "P2 - GLOBAL - GRANT - UserRisk-MediumHigh",
+    "blockCountries": "GLOBAL - BLOCK - Countries-NotAllowed",
+    "blockLegacyAuth": "GLOBAL - BLOCK - LegacyAuthentication",
+    "blockUnsupportedPlatforms": "GLOBAL - BLOCK - UnsupportedDevicePlatforms",
+    "blockDeviceCode": "GLOBAL - BLOCK - DeviceCodeAuthFlow",
+    "blockHighRiskUsers": "P2 - GLOBAL - BLOCK - HighRiskUsers",
+    "blockHighRiskSignIns": "P2 - GLOBAL - BLOCK - HighRiskSignIns",
+    "windowsAzureAdBaselineScopes": "GLOBAL - GRANT - MFA - WindowsAzureAD-BaselineScopes",
+    "riskRemediationHigh": "P2 - GLOBAL - GRANT - High-Risk Users - Risk Remediation",
+    "riskRemediationEam": "P2 - GLOBAL - GRANT - EAM - High-Risk Users - Risk Remediation",
+    "appProtectionMobile": "INTUNE - GRANT - AppProtection-Mobile",
+    "requireCompliantDevice": "INTUNE - GRANT - RequireCompliantDevice"
+  }
+}

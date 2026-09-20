@@ -6,6 +6,9 @@
     "CIS M365 7.0.0 (7.2.9)",
     "CISA (MS.SPO.1.5v1)"
   ],
+  "simulatorScenarios": [
+    { "scenario": "guest-reshare-sprawl", "step": "sprawl", "role": "limits" }
+  ],
   "impact": "Medium Impact",
   "helpText": "Ensure guest access to a site or OneDrive will expire automatically",
   "executiveText": "Automatically expires external user access to SharePoint sites and OneDrive after a specified period, reducing security risks from forgotten or unnecessary guest accounts. This ensures external access is regularly reviewed and maintained only when actively needed.",

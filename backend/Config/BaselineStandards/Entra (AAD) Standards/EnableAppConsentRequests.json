@@ -6,6 +6,9 @@
     "CIS M365 7.0.0 (5.3.4)",
     "aad_admin_consent_workflow"
   ],
+  "simulatorScenarios": [
+    { "scenario": "malicious-oauth-consent", "step": "consent", "role": "prevents" }
+  ],
   "impact": "Low Impact",
   "helpText": "Enables the admin consent workflow so users can request admin approval for applications instead of being blocked outright. The selected reviewer role receives the requests, and specific users (matched by display name) can be added as reviewers alongside it.",
   "executiveText": "Lets employees request administrator review when an application needs permissions they cannot grant themselves, routing risky consent decisions to IT instead of blocking work or encouraging shadow consent.",

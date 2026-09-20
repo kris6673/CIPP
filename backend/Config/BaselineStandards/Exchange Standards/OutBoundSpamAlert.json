@@ -6,6 +6,10 @@
     "CIS M365 7.0.0 (2.1.6)",
     "mdo_spam_notifications_only_for_admins"
   ],
+  "simulatorScenarios": [
+    { "scenario": "mailbox-rule-exfiltration", "step": "mailbox-forward", "role": "detects" },
+    { "scenario": "transport-rule-exfiltration", "step": "exfil", "role": "detects" }
+  ],
   "impact": "Low Impact",
   "helpText": "Set the Outbound Spam Alert e-mail address",
   "executiveText": "Makes sure IT is notified by e-mail whenever an internal mailbox starts sending outbound spam, so a compromised account is caught early.",

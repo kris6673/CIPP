@@ -1,0 +1,45 @@
+{
+  "id": "guest-with-directory-role",
+  "title": "Guest account holding a directory role",
+  "category": "Identity & Conditional Access",
+  "severity": "High",
+  "summary": "A guest account that was granted a directory role is used to read the directory and hand privileged access to another account.",
+  "requiredCapabilities": ["AAD_PREMIUM"],
+  "persona": "guest",
+  "attackerCanSatisfy": ["mfa"],
+  "steps": [
+    {
+      "id": "assumption",
+      "title": "Starting assumption",
+      "text": "A guest account was given a directory role during a project and never removed. The attacker controls that guest account."
+    },
+    {
+      "id": "signin",
+      "title": "Sign-in evaluated by Conditional Access",
+      "text": "The guest signs in through a browser and its role rights come along. Only guest-focused controls treat this account differently from a normal member.",
+      "whatIf": { "clientAppType": "browser", "devicePlatform": "windows", "country": "NL", "ipAddress": "185.220.101.9" },
+      "gaps": [
+        { "when": ["allowed", "weakGrant"], "text": "Guest sign-ins are not restricted, so an external account can carry a privileged role.", "role": "limits", "fix": { "caTemplate": "Restrict guest access with Conditional Access" } }
+      ],
+      "stopsChainWhen": "blocked",
+      "whenFixed": "Blocked: guest access is restricted, so the external account cannot use its role."
+    },
+    {
+      "id": "enumerate",
+      "title": "Directory read",
+      "text": "The attacker lists users, groups and roles to map the organization. This makes it easy to choose high-value targets.",
+      "whenFixed": "Guest directory access is restricted, so the account cannot enumerate other users."
+    },
+    {
+      "id": "role-abuse",
+      "title": "Another account promoted",
+      "text": "The attacker adds a second account to a privileged role to keep control if the guest is removed. This creates a standing back door.",
+      "alerts": [ { "operation": "Add member to role.", "logbook": "Audit.AzureActiveDirectory", "preset": "Add member to role." } ],
+      "whenFixed": "The role change is written to the audit log and surfaces for review."
+    }
+  ],
+  "outcome": {
+    "prevented": "Guest restrictions and directory limits stop the external account from reading or escalating.",
+    "notPrevented": "The attacker maps the tenant and plants a second privileged account."
+  }
+}

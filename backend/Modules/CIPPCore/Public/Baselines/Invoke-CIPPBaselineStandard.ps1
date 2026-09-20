@@ -260,7 +260,9 @@ function Invoke-CIPPBaselineStandard {
         # Per-property verdicts default to 'accept' (tolerate); 'denyDelete' marks the path's
         # object for deletion. Both filter the diff; deny-delete parks the row at Delete
         # Pending instead of scoring it Accepted.
-        $AcceptedPaths = $(try { $Prior.AcceptedPaths | ConvertFrom-Json } catch { $null })
+        # First sight has no prior row: piping that $null into ConvertFrom-Json is a binding error
+        # the try cannot catch (non-terminating), so it lands in the log as a phantom failure.
+        $AcceptedPaths = $(try { if ($Prior.AcceptedPaths) { $Prior.AcceptedPaths | ConvertFrom-Json -ErrorAction Stop } } catch { $null })
         $AcceptedKeys = @($AcceptedPaths.PSObject.Properties.Name | Where-Object { $_ })
         $DenyDeleteKeys = @($AcceptedPaths.PSObject.Properties | Where-Object { $_.Name -and $_.Value.verdict -eq 'denyDelete' } | ForEach-Object { $_.Name })
         $ExpectedTemplate = & $Render $Definition.expected $Item.Variables
@@ -360,7 +362,7 @@ function Invoke-CIPPBaselineStandard {
             if ($GradeOnly) { return $null }
             $Manual = & $Render $Definition.manual $Item.Variables
             $Result.Manual = $Manual
-            $Completed = [bool]($(try { $Prior.CurrentValue | ConvertFrom-Json } catch { $null })?.completed)
+            $Completed = [bool]($(try { if ($Prior.CurrentValue) { $Prior.CurrentValue | ConvertFrom-Json -ErrorAction Stop } } catch { $null })?.completed)
             $LastDone = if ("$($Prior.LastRemediated)" -match '^\d+$') { [int64]$Prior.LastRemediated } else { 0 }
             $ReopenSeconds = switch ($Manual.reopen) {
                 'weekly' { 7 * 86400 }

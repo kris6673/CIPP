@@ -3,6 +3,9 @@
   "label": "Exclude File Extensions from Syncing",
   "cat": "SharePoint Standards",
   "tag": [],
+  "simulatorScenarios": [
+    { "scenario": "bulk-sync-unmanaged-device", "step": "sync", "role": "limits" }
+  ],
   "impact": "High Impact",
   "helpText": "Sets the file extensions the OneDrive sync client refuses to sync. The list replaces the tenant list, matching admin center behaviour.",
   "executiveText": "Keeps dangerous or unwanted file types (executables, scripts) out of OneDrive sync, reducing malware spread through synced libraries.",

@@ -1,0 +1,45 @@
+{
+  "id": "device-code-phishing",
+  "title": "Device-code phishing",
+  "category": "Identity & Conditional Access",
+  "severity": "High",
+  "summary": "An attacker tricks a user into approving a device-code sign-in and receives a fully authenticated token that already includes the MFA claim.",
+  "requiredCapabilities": ["AAD_PREMIUM"],
+  "persona": "user",
+  "attackerCanSatisfy": ["mfa"],
+  "steps": [
+    {
+      "id": "assumption",
+      "title": "Starting assumption",
+      "text": "The attacker starts a device-code sign-in and sends the code to the user with a convincing message. The user enters the code and approves it."
+    },
+    {
+      "id": "signin",
+      "title": "Sign-in evaluated by Conditional Access",
+      "text": "The device-code flow completes and hands the attacker a token that already satisfies MFA. Only a policy that blocks this flow can stop it.",
+      "whatIf": { "clientAppType": "browser", "devicePlatform": "windows", "authenticationFlow": { "transferMethod": "deviceCodeFlow" }, "country": "DE", "ipAddress": "185.220.100.8" },
+      "gaps": [
+        { "when": ["allowed", "weakGrant"], "text": "Device code flow is not blocked, so a phished code becomes a working token.", "role": "prevents", "fix": { "caTemplate": "Block device code flow sign-ins" } }
+      ],
+      "stopsChainWhen": "blocked",
+      "whenFixed": "Blocked: device code flow is refused, so the phished code cannot become a token."
+    },
+    {
+      "id": "token-use",
+      "title": "Token used to read mail and files",
+      "text": "The attacker uses the token to read the user's mailbox and documents. The traffic looks like a normal signed-in app.",
+      "whenFixed": "Mailbox auditing records the access even though the sign-in looked legitimate."
+    },
+    {
+      "id": "persistence",
+      "title": "Inbox rule created for ongoing reach",
+      "text": "The attacker adds an inbox rule to keep receiving the user's mail. This keeps a copy flowing after the token expires.",
+      "alerts": [ { "operation": "New-InboxRule", "logbook": "Audit.Exchange", "preset": "New-InboxRule" } ],
+      "whenFixed": "The rule creation raises an alert and external delivery is blocked."
+    }
+  ],
+  "outcome": {
+    "prevented": "The device-code sign-in is refused, so the phished code is useless.",
+    "notPrevented": "The attacker reads mail and files and sets up an inbox rule to keep access."
+  }
+}

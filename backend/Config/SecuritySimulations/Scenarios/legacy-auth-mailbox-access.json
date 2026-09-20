@@ -1,0 +1,44 @@
+{
+  "id": "legacy-auth-mailbox-access",
+  "title": "Legacy authentication mailbox access",
+  "category": "Identity & Conditional Access",
+  "severity": "High",
+  "summary": "An attacker uses an older mail protocol that cannot prompt for MFA to reach a mailbox with a stolen password.",
+  "requiredCapabilities": ["EXCHANGE_S_ENTERPRISE"],
+  "persona": "user",
+  "steps": [
+    {
+      "id": "assumption",
+      "title": "Starting assumption",
+      "text": "The attacker has the user's password and connects with a legacy protocol that only supports password sign-in. MFA cannot be requested on that path."
+    },
+    {
+      "id": "signin",
+      "title": "Sign-in evaluated by Conditional Access",
+      "text": "The attacker authenticates with a legacy client, which never triggers an MFA prompt. Only blocking legacy authentication closes this path.",
+      "whatIf": { "clientAppType": "other", "devicePlatform": "windows", "country": "NL", "ipAddress": "91.219.236.10" },
+      "gaps": [
+        { "when": ["allowed", "weakGrant"], "text": "Legacy authentication is still allowed, so a password alone reaches the mailbox.", "role": "prevents", "fix": { "caTemplate": "Block legacy authentication" } }
+      ],
+      "stopsChainWhen": "blocked",
+      "whenFixed": "Blocked: legacy authentication is refused, so the password-only client cannot connect."
+    },
+    {
+      "id": "mailbox-access",
+      "title": "Mailbox downloaded",
+      "text": "The attacker pulls mail through the legacy protocol, reading recent messages and attachments. The connection looks like an old mail client.",
+      "whenFixed": "Mailbox auditing records the legacy access for responders."
+    },
+    {
+      "id": "exfil",
+      "title": "External forwarding turned on",
+      "text": "The attacker configures mailbox forwarding to an outside address so new mail is copied automatically. Access continues even if the password changes.",
+      "alerts": [ { "operation": "Set-Mailbox", "logbook": "Audit.Exchange", "preset": "Set-MailboxForwardingExternal" } ],
+      "whenFixed": "External forwarding is blocked and the change raises an alert."
+    }
+  ],
+  "outcome": {
+    "prevented": "Legacy authentication is refused, so the stolen password cannot open the mailbox.",
+    "notPrevented": "The attacker reads the mailbox and forwards its mail out of the tenant."
+  }
+}

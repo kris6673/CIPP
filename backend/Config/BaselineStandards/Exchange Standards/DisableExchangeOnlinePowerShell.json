@@ -6,6 +6,10 @@
     "Security",
     "NIST CSF 2.0 (PR.AA-05)"
   ],
+  "simulatorScenarios": [
+    { "scenario": "transport-rule-exfiltration", "step": "transport-rule", "role": "limits" },
+    { "scenario": "mailbox-permission-grab", "step": "grant-permission", "role": "limits" }
+  ],
   "impact": "Medium Impact",
   "helpText": "Disables Exchange Online PowerShell access for non-admin users by setting the RemotePowerShellEnabled property to false for each user. Users holding a directory role, directly or through a group, are automatically excluded.",
   "executiveText": "Restricts PowerShell access to Exchange Online for regular employees while maintaining access for administrators, significantly reducing security risks from compromised accounts. This prevents attackers from using PowerShell to execute malicious commands or distribute ransomware while preserving necessary administrative capabilities.",

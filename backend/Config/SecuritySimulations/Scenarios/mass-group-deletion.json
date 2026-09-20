@@ -1,0 +1,45 @@
+{
+  "id": "mass-group-deletion",
+  "title": "Mass group deletion",
+  "category": "Audit & Detection",
+  "severity": "High",
+  "summary": "A compromised administrator deletes many groups, breaking access, mail flow and team membership across the tenant.",
+  "requiredCapabilities": ["AAD_PREMIUM"],
+  "persona": "admin",
+  "attackerCanSatisfy": ["mfa"],
+  "steps": [
+    {
+      "id": "assumption",
+      "title": "Starting assumption",
+      "text": "The attacker controls an account that can manage groups and wants to disrupt access broadly."
+    },
+    {
+      "id": "signin",
+      "title": "Sign-in evaluated by Conditional Access",
+      "text": "The account signs in from an unfamiliar address before the deletions begin. Strong sign-in controls are the last chance to stop it.",
+      "whatIf": { "clientAppType": "browser", "devicePlatform": "windows", "country": "NL", "ipAddress": "185.220.101.61" },
+      "gaps": [
+        { "when": ["allowed", "weakGrant"], "text": "MFA is not enforced, so a stolen password reaches group management.", "role": "prevents", "fix": { "caTemplate": "Require multifactor authentication for all users" } }
+      ],
+      "stopsChainWhen": "blocked",
+      "whenFixed": "Blocked: MFA is required, so the stolen password cannot reach group management."
+    },
+    {
+      "id": "delete-groups",
+      "title": "Groups deleted in bulk",
+      "text": "The attacker deletes many groups, removing the access, distribution lists and teams that depend on them. Users suddenly lose shared resources.",
+      "alerts": [ { "operation": "Delete group", "logbook": "Audit.AzureActiveDirectory" } ],
+      "whenFixed": "Each deletion is written to the audit log, so the burst is detected quickly."
+    },
+    {
+      "id": "impact",
+      "title": "Access lost across services",
+      "text": "Membership-based access to mail, files and teams disappears with the groups. Microsoft 365 groups can be restored for a limited time.",
+      "whenFixed": "Prompt detection shortens the outage and allows recovery within the retention window."
+    }
+  ],
+  "outcome": {
+    "prevented": "MFA stops the takeover, so no groups are deleted.",
+    "notPrevented": "Access breaks across the tenant until the groups are restored."
+  }
+}

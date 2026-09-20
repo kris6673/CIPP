@@ -1,0 +1,103 @@
+{
+  "order": ["global", "admins", "internals", "externals", "guestadmins", "developers", "corpserviceaccounts", "workloadidentities", "microsoft365serviceaccounts"],
+  "outputNames": {
+    "global": "Global",
+    "admins": "Admins",
+    "internals": "Internals",
+    "externals": "Externals",
+    "guestadmins": "GuestAdmins",
+    "developers": "Developers",
+    "corpserviceaccounts": "CorpServiceAccounts",
+    "workloadidentities": "WorkloadIdentities",
+    "microsoft365serviceaccounts": "M365ServiceAccounts"
+  },
+  "personas": {
+    "global": {
+      "label": "Global",
+      "shortLabel": "Global",
+      "description": "Tenant-wide baseline policies that apply to all users (block legacy auth, country blocks, terms of use).",
+      "expectedControls": ["block-legacy-auth", "block-countries"]
+    },
+    "admins": {
+      "label": "Admins (Privileged Roles)",
+      "shortLabel": "Admins",
+      "description": "Privileged directory role holders. Should require phishing-resistant MFA, compliant device, and tight session controls.",
+      "expectedControls": ["require-mfa", "phishing-resistant-mfa", "require-compliant-device", "sign-in-risk", "user-risk", "session-sif"]
+    },
+    "internals": {
+      "label": "Internals (Employees)",
+      "shortLabel": "Internals",
+      "description": "Standard internal members. MFA, compliant device, sign-in risk and user risk policies expected.",
+      "expectedControls": ["require-mfa", "require-compliant-device", "sign-in-risk", "user-risk"]
+    },
+    "externals": {
+      "label": "Externals (B2B Guests)",
+      "shortLabel": "Externals",
+      "description": "B2B collaboration guests and members from partner Entra tenants. MFA via auth strength (when home tenant trusts it) or basic MFA grant.",
+      "expectedControls": ["require-mfa"]
+    },
+    "guestadmins": {
+      "label": "Guest Admins (External Privileged)",
+      "shortLabel": "GuestAdmins",
+      "description": "External admins (GDAP/CSP, partner privileged users). Require strong auth and tight session controls.",
+      "expectedControls": ["require-mfa", "phishing-resistant-mfa", "session-sif"]
+    },
+    "developers": {
+      "label": "Developers",
+      "shortLabel": "Developers",
+      "description": "Higher-privilege internal developers. Often need access to dev/test tenants and tooling - requires its own MFA + compliant device set.",
+      "expectedControls": ["require-mfa", "require-compliant-device", "user-risk"]
+    },
+    "corpserviceaccounts": {
+      "label": "Corporate Service Accounts",
+      "shortLabel": "CorpSvc",
+      "description": "User-mode service accounts that run automation. Should be locked to specific networks/locations and excluded from interactive MFA.",
+      "expectedControls": ["block-non-corp-network"]
+    },
+    "workloadidentities": {
+      "label": "Workload Identities",
+      "shortLabel": "Workload",
+      "description": "Service principals and managed identities. Require Workload Identities Premium and CA policies targeting servicePrincipals.",
+      "expectedControls": ["block-non-corp-network", "sign-in-risk"]
+    },
+    "microsoft365serviceaccounts": {
+      "label": "Microsoft 365 Service Accounts",
+      "shortLabel": "M365Svc",
+      "description": "Sync accounts (Entra Connect, on-prem hybrid). Excluded from MFA but locked to known locations.",
+      "expectedControls": ["block-non-corp-network"]
+    }
+  },
+  "controlOrder": ["block-legacy-auth", "require-mfa", "require-compliant-device", "sign-in-risk", "user-risk", "session-sif", "block-countries", "phishing-resistant-mfa", "block-non-corp-network", "block-high-risk-apps"],
+  "controls": {
+    "block-legacy-auth": { "label": "Block legacy authentication", "description": "Policy with clientAppTypes 'exchangeActiveSync' / 'other' and a Block grant." },
+    "require-mfa": { "label": "Require multi-factor authentication", "description": "Grant controls require MFA (built-in MFA or auth strength)." },
+    "require-compliant-device": { "label": "Require compliant or hybrid-joined device", "description": "Grant controls require compliantDevice or domainJoinedDevice." },
+    "sign-in-risk": { "label": "Sign-in risk based access", "description": "Conditions include one or more signInRiskLevels." },
+    "user-risk": { "label": "User risk based access", "description": "Conditions include one or more userRiskLevels." },
+    "session-sif": { "label": "Sign-in frequency / session controls", "description": "Session controls enforce signInFrequency or persistentBrowser." },
+    "block-countries": { "label": "Country / location block", "description": "Location condition combined with a Block grant (allow-list or deny-list)." },
+    "phishing-resistant-mfa": { "label": "Phishing-resistant MFA", "description": "Authentication strength = phishing-resistant (FIDO2, Windows Hello, X.509)." },
+    "block-non-corp-network": { "label": "Restrict to corporate network / trusted locations", "description": "Location condition that excludes trusted locations combined with Block." },
+    "block-high-risk-apps": { "label": "Block high-risk applications", "description": "Block grant scoped to specific high-risk applications." }
+  },
+  "patterns": [
+    { "persona": "microsoft365serviceaccounts", "pattern": "(?<=^|[^A-Za-z0-9])(microsoft365serviceaccounts?|m365service|m365svc|directorysynchronization|aadc?onnect|entraconnect)(?=$|[^a-z0-9])" },
+    { "persona": "workloadidentities", "pattern": "(?<=^|[^A-Za-z0-9])(workload[\\s_-]?identit(?:y|ies)|workloadid|serviceprincipals?|managedidentit(?:y|ies)|agents?|aiagents?|copilotagents?)(?=$|[^a-z0-9])" },
+    { "persona": "corpserviceaccounts", "pattern": "(?<=^|[^A-Za-z0-9])(corp(?:orate)?[\\s_-]?serviceaccounts?|corpservice|corpsvc|svcaccounts?|service[\\s_-]?accounts?)(?=$|[^a-z0-9])" },
+    { "persona": "guestadmins", "pattern": "(?<=^|[^A-Za-z0-9])(guestadmins?|externaladmins?|gdap|cspadmins?|partneradmins?)(?=$|[^a-z0-9])" },
+    { "persona": "admins", "pattern": "(?<=^|[^A-Za-z0-9])(admins?|privilegedusers?|privrole|priv[\\s_-]?roles?)(?=$|[^a-z0-9])" },
+    { "persona": "developers", "pattern": "(?<=^|[^A-Za-z0-9])(developers?|devs?|engineers?)(?=$|[^a-z0-9])" },
+    { "persona": "externals", "pattern": "(?<=^|[^A-Za-z0-9])(externals?|guests?|guestusers?|b2b|external[\\s_-]?users?|externalcollabs?)(?=$|[^a-z0-9])" },
+    { "persona": "internals", "pattern": "(?<=^|[^A-Za-z0-9])(internals?|employees?|members?|staff|users?[\\s_-]?internal)(?=$|[^a-z0-9])" },
+    { "persona": "global", "pattern": "(?<=^|[^A-Za-z0-9])(global|alluser|tenantwide|baseline|allapps?|allcloudapps?)(?=$|[^a-z0-9])" }
+  ],
+  "caPrefixRegex": "^[\\s_-]*CA0*(\\d{1,4})\\b",
+  "caPrefixBlocks": [
+    { "persona": "global", "min": 0, "max": 99 },
+    { "persona": "admins", "min": 100, "max": 199 },
+    { "persona": "internals", "min": 200, "max": 299 },
+    { "persona": "corpserviceaccounts", "min": 300, "max": 399 },
+    { "persona": "externals", "min": 400, "max": 499 },
+    { "persona": "workloadidentities", "min": 500, "max": 599 }
+  ]
+}

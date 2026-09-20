@@ -3,6 +3,10 @@
   "label": "Require admin consent for applications (Prevent OAuth phishing)",
   "cat": "Entra (AAD) Standards",
   "tag": [],
+  "simulatorScenarios": [
+    { "scenario": "role-assignment-escalation", "step": "persistence", "role": "prevents" },
+    { "scenario": "malicious-oauth-consent", "step": "consent", "role": "prevents" }
+  ],
   "impact": "Medium Impact",
   "helpText": "Routes user application consent through the CIPP consent policy so only allow-listed applications can be consented to without admin review.",
   "executiveText": "Blocks the most common OAuth phishing path by requiring admin review before applications gain access to company data, while allow-listed business apps keep working frictionlessly.",

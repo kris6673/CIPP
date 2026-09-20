@@ -5,6 +5,9 @@
   "tag": [
     "SMB1001 (3.1)"
   ],
+  "simulatorScenarios": [
+    { "scenario": "mass-user-deletion", "step": "recover", "role": "recovers" }
+  ],
   "impact": "Low Impact",
   "helpText": "Sets the retention period for deleted users OneDrive to the specified period of time. The default is 30 days.",
   "executiveText": "Preserves departed employees' OneDrive files for a specified period, allowing time to recover important business documents before permanent deletion. This helps prevent data loss while managing storage costs and maintaining compliance with data retention policies.",

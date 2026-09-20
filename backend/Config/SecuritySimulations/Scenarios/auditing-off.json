@@ -1,0 +1,37 @@
+{
+  "id": "auditing-off",
+  "title": "Silent tenant: auditing turned off",
+  "category": "Audit & Detection",
+  "severity": "High",
+  "summary": "With the Unified Audit Log disabled, an attacker acts inside the tenant knowing that key actions leave no usable trail.",
+  "steps": [
+    {
+      "id": "assumption",
+      "title": "Starting assumption",
+      "text": "The attacker has taken over an account and finds that the Unified Audit Log is turned off. Actions will not be recorded for later investigation."
+    },
+    {
+      "id": "disable-check",
+      "title": "No audit trail confirmed",
+      "text": "The attacker confirms that sign-ins and admin actions are not being logged. This removes the main record responders would rely on.",
+      "whenFixed": "The Unified Audit Log is on, so every following action is recorded for investigation."
+    },
+    {
+      "id": "mailbox-access",
+      "title": "Mailbox read without a trace",
+      "text": "The attacker opens the mailbox and searches for valuable mail. With mailbox auditing off, the access leaves little evidence.",
+      "whenFixed": "Mailbox auditing records the access even when the attacker expects silence."
+    },
+    {
+      "id": "exfil",
+      "title": "Mail forwarded out",
+      "text": "The attacker adds a rule that forwards new mail to an external address, assuming the change will go unseen.",
+      "alerts": [ { "operation": "New-InboxRule", "logbook": "Audit.Exchange", "preset": "New-InboxRuleForward" } ],
+      "whenFixed": "External forwarding is blocked and, with the audit log on, the rule creation raises an alert."
+    }
+  ],
+  "outcome": {
+    "prevented": "With auditing on, every step is recorded and the forwarding rule is blocked and alerted.",
+    "notPrevented": "The attacker reads and forwards mail with almost no trace left behind."
+  }
+}

@@ -6,6 +6,10 @@
     "CISA (MS.SPO.3.1v1)",
     "CISA (MS.SPO.3.2v1)"
   ],
+  "simulatorScenarios": [
+    { "scenario": "anonymous-link-sensitive-site", "step": "create-link", "role": "limits" },
+    { "scenario": "anonymous-link-sensitive-site", "step": "access", "role": "limits" }
+  ],
   "impact": "Medium Impact",
   "helpText": "Requires every Anyone sharing link in SharePoint and OneDrive to expire after the configured number of days. Optionally restricts the permission Anyone links can grant on files and folders (View only, or View and edit). By default Anyone links never expire.",
   "executiveText": "Ensures that files and folders shared with anyone via a link stop being reachable after a set period, so a link forwarded or leaked months ago no longer grants access. Optionally limits such links to read-only, preventing anonymous recipients from changing shared content. Together these reduce the exposure created by convenience sharing without disabling it.",

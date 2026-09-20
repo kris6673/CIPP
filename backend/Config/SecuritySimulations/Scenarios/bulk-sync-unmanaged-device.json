@@ -1,0 +1,37 @@
+{
+  "id": "bulk-sync-unmanaged-device",
+  "title": "Bulk sync to an unmanaged device",
+  "category": "SharePoint & Data",
+  "severity": "High",
+  "summary": "A compromised user syncs entire document libraries to a personal, unmanaged computer, copying company data off managed systems.",
+  "requiredCapabilities": ["SHAREPOINTENTERPRISE"],
+  "persona": "user",
+  "steps": [
+    {
+      "id": "assumption",
+      "title": "Starting assumption",
+      "text": "The attacker controls a user's account and signs in from a personal, unmanaged computer to collect data."
+    },
+    {
+      "id": "signin",
+      "title": "Sign-in evaluated by Conditional Access",
+      "text": "The attacker connects the OneDrive client from an unmanaged Windows machine. Only an unmanaged-device control can limit what the sync client can pull.",
+      "whatIf": { "clientAppType": "mobileAppsAndDesktopClients", "devicePlatform": "windows", "deviceInfo": { "isCompliant": false } },
+      "gaps": [
+        { "when": ["allowed", "weakGrant"], "text": "Access from unmanaged devices is not restricted, so the sync client can copy whole libraries.", "role": "prevents", "fix": { "caTemplate": "Block downloads on unmanaged devices for SharePoint and OneDrive" } }
+      ],
+      "stopsChainWhen": "blocked",
+      "whenFixed": "Blocked: unmanaged devices are limited to web-only access, so the sync client cannot download."
+    },
+    {
+      "id": "sync",
+      "title": "Libraries copied to the local disk",
+      "text": "The attacker syncs entire libraries to the personal machine, pulling documents off managed systems. The data now sits outside the tenant's controls.",
+      "whenFixed": "The sync button is disabled and the copied data is limited by sync restrictions."
+    }
+  ],
+  "outcome": {
+    "prevented": "Unmanaged devices are held to web-only access, so libraries cannot be synced off.",
+    "notPrevented": "Whole libraries land on a personal machine beyond the reach of tenant controls."
+  }
+}
