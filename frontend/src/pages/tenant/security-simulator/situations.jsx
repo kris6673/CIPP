@@ -106,6 +106,18 @@ const Page = () => {
             </Alert>
           )}
           {tenantSelected && battery.isFetching && !data && <CippFormSkeleton layout={[1, 1, 1, 1, 1]} />}
+          {tenantSelected && !battery.isFetching && battery.isError && (
+            <Alert
+              severity="error"
+              action={
+                <Button color="inherit" size="small" onClick={() => battery.refetch()}>
+                  Retry
+                </Button>
+              }
+            >
+              The sign-in situations could not be evaluated through the API.
+            </Alert>
+          )}
           {tenantSelected && data && battery.isFetching && (
             <Typography variant="caption" sx={{ color: 'text.secondary' }}>
               Refreshing...

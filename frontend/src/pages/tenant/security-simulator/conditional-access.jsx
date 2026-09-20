@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Alert, Box, Card, CardContent, CardHeader, Container, Divider, Stack, Typography } from '@mui/material'
+import { Alert, Box, Button, Card, CardContent, CardHeader, Container, Divider, Stack, Typography } from '@mui/material'
 import { Grid } from '@mui/system'
 import { Layout as DashboardLayout } from '../../../layouts/index'
 import { TabbedLayout } from '../../../layouts/TabbedLayout'
@@ -68,6 +68,18 @@ const Page = () => {
             <Alert severity="warning">Policy analysis failed: {data.analysisError}</Alert>
           )}
           {tenantSelected && analysis.isFetching && !data && <CippFormSkeleton layout={[4, 1, 1, 1]} />}
+          {tenantSelected && !analysis.isFetching && analysis.isError && (
+            <Alert
+              severity="error"
+              action={
+                <Button color="inherit" size="small" onClick={() => analysis.refetch()}>
+                  Retry
+                </Button>
+              }
+            >
+              The Conditional Access analysis could not be loaded from the API.
+            </Alert>
+          )}
           {tenantSelected && data && data.licensed !== false && (
             <>
               <Grid container spacing={3} sx={{ alignItems: 'stretch' }}>
@@ -103,6 +115,14 @@ const Page = () => {
                       >
                         Conditional Access score
                       </Typography>
+                      {score && (
+                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>
+                          {score.enforcedControls} of {score.applicableControls} controls enforced
+                          {score.criticalFindings > 0 || score.highFindings > 0
+                            ? ` · ${score.criticalFindings} critical, ${score.highFindings} high findings`
+                            : ''}
+                        </Typography>
+                      )}
                     </CardContent>
                   </Card>
                 </Grid>

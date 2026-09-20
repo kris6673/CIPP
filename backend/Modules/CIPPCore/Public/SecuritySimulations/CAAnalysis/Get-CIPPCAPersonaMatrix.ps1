@@ -11,9 +11,12 @@ function Get-CIPPCAPersonaMatrix {
           Workload identities - policies that include service principals
         A cell is Enforced when an enabled policy in the persona's bucket implements the control,
         ReportOnly when only a report-only policy does, Missing otherwise, NotApplicable when the
-        persona does not need that control. Missing controls for Admins, Users and Guests become
-        "Persona coverage" findings with a suggested policy. Returns personas, controls, cells,
-        findings and overallScore (coverage percentage, report-only counting half).
+        persona does not need that control, and Unlicensed when the tenant cannot implement it:
+        risk-based controls need Entra ID P2, compliant-device controls need Intune,
+        workload-identity risk needs Workload Identities Premium - a tenant is never marked as
+        missing a control it cannot buy into. Missing controls for Admins, Users and Guests become "Persona coverage" findings
+        with a suggested policy. Returns personas, controls, cells, findings and overallScore
+        (coverage percentage, report-only counting half).
     .FUNCTIONALITY
         Internal
     #>
@@ -32,6 +35,12 @@ function Get-CIPPCAPersonaMatrix {
         [PSCustomObject]@{ id = 'workloadIdentities'; label = 'Workload identities'; expected = @('sign-in-risk', 'block-countries') }
     )
     $Round = { param($Value) [int][math]::Round([double]$Value, [System.MidpointRounding]::AwayFromZero) }
+
+    $Licenses = $Context.Licenses
+    $Unavailable = [System.Collections.Generic.List[string]]::new()
+    if ($Licenses.HasEntraIdP2 -ne $true) { $Unavailable.Add('sign-in-risk'); $Unavailable.Add('user-risk') }
+    if ($Licenses.HasIntunePlan1 -ne $true) { $Unavailable.Add('require-compliant-device') }
+    $WorkloadRiskAvailable = $Licenses.HasWorkloadIdPremium -eq $true
 
     $PolicyPersonas = {
         param($P)
@@ -108,6 +117,11 @@ function Get-CIPPCAPersonaMatrix {
             $ControlLabel = "$($ControlMeta.$Control.label)"
             if ($Persona.expected -notcontains $Control) {
                 $Cells.Add([PSCustomObject]@{ persona = $Persona.label; control = $ControlLabel; state = 'NotApplicable'; policies = [string[]]@() })
+                continue
+            }
+            $Unlicensed = ($Unavailable -contains $Control) -or ($Persona.id -eq 'workloadIdentities' -and $Control -eq 'sign-in-risk' -and -not $WorkloadRiskAvailable)
+            if ($Unlicensed) {
+                $Cells.Add([PSCustomObject]@{ persona = $Persona.label; control = $ControlLabel; state = 'Unlicensed'; policies = [string[]]@() })
                 continue
             }
             $TotalExpected++

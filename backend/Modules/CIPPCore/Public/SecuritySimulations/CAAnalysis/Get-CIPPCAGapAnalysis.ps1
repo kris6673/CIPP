@@ -10,7 +10,7 @@ function Get-CIPPCAGapAnalysis {
           findings      = @( id (F-0001...), title, severity (Critical|High|Medium|Low|Info), category, description,
                              affectedPolicies (display names), remediation, fix ($null or @{ caTemplate }), relatedIds ),
           personaMatrix = @{ personas; controls; cells = @( persona, control, state (Enforced|ReportOnly|Missing|NotApplicable), policies ) },
-          score         = @{ score (1-10), scoreMax = 10, findingCounts },
+          score         = @{ score (1-10), scoreMax = 10, enforcedControls, applicableControls, criticalFindings, highFindings },
           licenses, breakGlass.
         A check that throws is logged and skipped so one failure does not lose the report.
     .FUNCTIONALITY

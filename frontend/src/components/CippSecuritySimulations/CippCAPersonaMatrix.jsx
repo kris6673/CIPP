@@ -8,6 +8,7 @@ const STATE_LABELS = {
   Enforced: 'Enforced',
   ReportOnly: 'Report-only',
   Missing: 'No policy',
+  Unlicensed: 'Unlicensed',
   NotApplicable: 'Not applicable',
 }
 
@@ -34,6 +35,8 @@ export const CippCAPersonaMatrix = ({ matrix }) => {
     Enforced: theme.palette.success.main,
     ReportOnly: theme.palette.warning.main,
     Missing: theme.palette.mode === 'dark' ? theme.palette.error.dark : theme.palette.error.light,
+    // The tenant cannot buy into this control (Entra ID P2, Intune, Workload Identities Premium).
+    Unlicensed: theme.palette.info.main,
     NotApplicable: theme.palette.mode === 'dark' ? theme.palette.grey[800] : theme.palette.grey[300],
   }
 
@@ -106,7 +109,7 @@ export const CippCAPersonaMatrix = ({ matrix }) => {
                       borderRadius: '4px',
                       bgcolor: state === 'ReportOnly' ? 'transparent' : colors[state],
                       border: state === 'ReportOnly' ? `2px solid ${colors.ReportOnly}` : 'none',
-                      opacity: state === 'NotApplicable' ? 0.5 : 1,
+                      opacity: state === 'NotApplicable' ? 0.5 : state === 'Unlicensed' ? 0.55 : 1,
                     }}
                   />
                 )
@@ -125,7 +128,7 @@ export const CippCAPersonaMatrix = ({ matrix }) => {
                 borderRadius: '3px',
                 bgcolor: state === 'ReportOnly' ? 'transparent' : colors[state],
                 border: state === 'ReportOnly' ? `2px solid ${colors.ReportOnly}` : 'none',
-                opacity: state === 'NotApplicable' ? 0.5 : 1,
+                opacity: state === 'NotApplicable' ? 0.5 : state === 'Unlicensed' ? 0.55 : 1,
               }}
             />
             <Typography variant="caption" sx={{ color: 'text.secondary' }}>
