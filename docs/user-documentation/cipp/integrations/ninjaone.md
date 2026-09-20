@@ -58,13 +58,14 @@ The fields available for mapping are:
 | Microsoft 365 Device Links      | WYSIWYG | Device           | Links from a device in NinjaOne to the corresponding Microsoft and CIPP pages.                                                       |
 | Microsoft 365 Device Summary    | WYSIWYG | Device           | An overview of the device, including compliance status and group membership.                                                         |
 | Intune Device Compliance Status | TEXT    | Device           | The device's current compliance state, written as `Compliant` or `Non-Compliant` so it can be watched with a custom field condition. |
+| Intune Non-Compliant Settings   | TEXT_MULTILINE or TEXT | Device | One line per compliance policy setting the device currently fails, written as `Policy name: Setting name`. Cleared when the device is compliant, so a condition on the field not being empty flags only devices with a real failure. |
 
 {% hint style="warning" %}
 A custom field only appears in CIPP's mapping dropdowns when its API permission is set to Read/Write and its type and definition scope match the table above. If a field is missing from the list, that is almost always why.
 {% endhint %}
 
 {% hint style="info" %}
-Set the **Automations** permission to Read Only on the Intune Device Compliance Status field if you intend to drive a condition monitor from it. The other fields can be left with Automations set to None.
+Set the **Automations** permission to Read Only on the Intune Device Compliance Status and Intune Non-Compliant Settings fields if you intend to drive a condition monitor from them. The other fields can be left with Automations set to None.
 {% endhint %}
 
 ## Configuring the Integration in CIPP
@@ -142,7 +143,7 @@ A full synchronisation runs once every 24 hours for every mapped tenant. CIPP as
 
 Synchronisation can also be triggered on demand. **Force Sync** on this page queues every mapped tenant, and the **Sync Now** row action on the **Tenant Mapping** table queues a single tenant on its own. NinjaOne synchronises through its own orchestrator rather than the scheduled task queue, so mapped tenants do not appear on the [integration-sync.md](integration-sync.md "mention") page.
 
-Intune device compliance is handled separately. CIPP subscribes to Graph change notifications for device compliance, so the Intune Device Compliance Status field updates within minutes of a change in Microsoft 365 rather than waiting for the daily run. This requires the compliance field to be mapped.
+Intune device compliance is handled separately. CIPP subscribes to Graph change notifications for device compliance, so the Intune Device Compliance Status and Intune Non-Compliant Settings fields update within minutes of a change in Microsoft 365 rather than waiting for the daily run. This requires at least one of those two fields to be mapped.
 
 Where **Sync Users** or **Sync Licenses** is enabled, CIPP creates and maintains the document templates it needs in NinjaOne Documentation, `CIPP - Microsoft 365 Users` and `CIPP - Microsoft 365 Licenses`, and writes a document per user or licence beneath them. You do not need to create these templates yourself.
 
