@@ -64,6 +64,40 @@ function Invoke-CippSecuritySimulationTest {
         } elseif (-not (& $IsLicensed $Definition.requiredCapabilities)) {
             $State.status = 'License missing'
             $State.compliant = $null
+        } else {
+            try {
+                $Item = @{
+                    TenantFilter     = $Tenant
+                    TenantName       = $Tenant
+                    Standard         = $Name
+                    BaseName         = $Name
+                    Variables        = $null
+                    Tiers            = @()
+                    Stage            = 1
+                    StageName        = ''
+                    TemplateId       = ''
+                    SourceScope      = 'test'
+                    SourceTemplate   = 'Security Simulation'
+                    RemediateEnabled = $false
+                    AlertEnabled     = $false
+                }
+                $Graded = Invoke-CIPPBaselineStandard -Item $Item -Mode 'compare' -GradeOnly
+                if ($null -eq $Graded) {
+                    $State.status = 'Needs configuration'
+                    $State.detail = 'This standard needs its settings chosen in a baseline before it can be checked.'
+                } elseif ($Graded.Compliant -eq $true) {
+                    $State.status = 'Compliant'
+                    $State.compliant = $true
+                } else {
+                    $State.status = 'Not configured'
+                    $Properties = @($Graded.Diff | ForEach-Object { $_.Property } | Where-Object { $_ } | Select-Object -Unique)
+                    if ($Properties.Count -gt 0) { $State.detail = 'Differs on: {0}' -f ($Properties -join ', ') }
+                }
+            } catch {
+                $State.status = 'Could not evaluate'
+                $State.compliant = $null
+                $State.detail = $_.Exception.Message
+            }
         }
         $State
     }
