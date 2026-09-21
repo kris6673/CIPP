@@ -74,7 +74,6 @@ const CippAddEditUser = (props) => {
   const userTemplates = ApiGetCall({
     url: `/api/ListNewUserDefaults?TenantFilter=${tenantDomain}`,
     queryKey: `UserDefaults-${tenantDomain}`,
-    refetchOnMount: false,
     refetchOnReconnect: false,
     enabled: formType === 'add',
   })
