@@ -203,6 +203,7 @@
     * [Baseline Alignment](user-documentation/tenant/baselines/alignment.md)
     * [Manage Baselines](user-documentation/tenant/baselines/templates.md)
     * [Add or Edit Baseline](user-documentation/tenant/baselines/template.md)
+  * [Security Simulations](user-documentation/tenant/security-simulator/README.md)
   * [Standards & Drift](user-documentation/tenant/standards/README.md)
     * [Standards & Drift Alignment](user-documentation/tenant/standards/alignment/README.md)
       * [Templates](user-documentation/tenant/standards/alignment/templates/README.md)
