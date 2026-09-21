@@ -4,15 +4,13 @@ function Get-CIPPCAGapAnalysis {
         Runs the Conditional Access gap analysis for one tenant from CIPP's cache.
     .DESCRIPTION
         Builds the shared context (Get-CIPPCAAnalysisContext, cache only - no Graph calls), runs every
-        Test-CIPPCAGap* check, adds the persona-coverage findings, builds the persona x control matrix
-        and returns one object:
-          policyCount, enabledCount, reportOnlyCount, disabledCount,
-          findings      = @( id (F-0001...), title, severity (Critical|High|Medium|Low|Info), category, description,
-                             affectedPolicies (display names), remediation, fix ($null or @{ caTemplate }), relatedIds ),
-          personaMatrix = @{ personas; controls; cells = @( persona, control, state (Enforced|ReportOnly|Missing|NotApplicable), policies ) },
-          score         = @{ score (1-10), scoreMax = 10, enforcedControls, applicableControls, criticalFindings, highFindings },
-          licenses, breakGlass.
-        A check that throws is logged and skipped so one failure does not lose the report.
+        Test-CIPPCAGap* check, adds the persona-coverage findings, builds the persona x control matrix and
+        returns one object: policyCount, enabledCount, reportOnlyCount, disabledCount, findings      = @( id
+        (F-0001...), title, severity (Critical|High|Medium|Low|Info), category, description,
+        affectedPolicies (display names), remediation, fix ($null or @{ caTemplate }), relatedIds ),
+        personaMatrix = @{ personas; controls; cells = @( persona, control, state
+        (Enforced|ReportOnly|Missing|NotApplicable), policies ) }, score         = @{ score (1-10), scoreMax
+        = 10, enforcedControls, applicableControls, criticalFindings, highFindings }, licenses, breakGlass.
     .FUNCTIONALITY
         Internal
     #>

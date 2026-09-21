@@ -3,9 +3,7 @@ function Test-CIPPSimulationAlertRule {
     .SYNOPSIS
         Answers whether an audit-log alert rule would fire for an operation in this tenant.
     .DESCRIPTION
-        Rules come from Get-CIPPSimulationAlertRules (already scoped to the tenant). A rule
-        matches when one of its Operation conditions equals the operation or, for like/contains
-        conditions, wildcard-matches it. The logbook is only enforced when both sides declare one.
+        Rules come from Get-CIPPSimulationAlertRules (already scoped to the tenant).
     .FUNCTIONALITY
         Internal
     #>

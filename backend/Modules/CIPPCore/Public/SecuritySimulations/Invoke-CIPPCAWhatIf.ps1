@@ -3,11 +3,7 @@ function Invoke-CIPPCAWhatIf {
     .SYNOPSIS
         Runs one or many Conditional Access What If evaluations, app-only, without signing in.
     .DESCRIPTION
-        One body is a single POST to v1.0 identity/conditionalAccess/evaluate. Several bodies go
-        through Graph $batch (New-GraphBulkRequest, 20 per round trip), which is what makes a
-        situation battery of two dozen sign-ins a couple of seconds instead of a minute.
-        Returns one result per body, in order: { Index; Policies; Error }. A failed evaluation
-        never throws away the others.
+        One body is a single POST to v1.0 identity/conditionalAccess/evaluate.
     .FUNCTIONALITY
         Internal
     #>

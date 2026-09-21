@@ -36,7 +36,6 @@ import { getCippError } from '../../../utils/get-cipp-error'
 import { useSettings } from '../../../hooks/use-settings'
 import { CippIcons } from '../../../utils/icon-registry'
 
-// The API serializes single-element arrays as a bare object.
 const asArray = (value) => (Array.isArray(value) ? value : value ? [value] : [])
 
 const CATEGORY_ORDER = [
@@ -80,7 +79,6 @@ const fixActionLabel = (fix) => {
   return 'Open'
 }
 
-// One ✓ / ✕ / ? line inside a timeline step.
 const CheckLine = ({ state, text, note }) => {
   const mark = state === true ? '✓' : state === false ? '✕' : state === 'warn' ? '!' : '?'
   const color =
@@ -101,7 +99,7 @@ const CheckLine = ({ state, text, note }) => {
         {note && (
           <Typography component="span" variant="body2" sx={{ color: 'text.secondary' }}>
             {' '}
-            — {note}
+            - {note}
           </Typography>
         )}
       </Typography>
@@ -471,8 +469,6 @@ const ScenarioRun = ({ tenant, scenarioId, onBack }) => {
 }
 
 const ScenarioList = ({ tenant, catalog, onOpen }) => {
-  // A reply caught mid-restart of the API can be a bare string; only real scenario rows count,
-  // and such a reply is fetched again once instead of being served from the query cache.
   const scenarios = asArray(catalog.data).filter((s) => s && typeof s === 'object' && s.id)
   const retriedRef = useRef(false)
   useEffect(() => {
@@ -498,7 +494,7 @@ const ScenarioList = ({ tenant, catalog, onOpen }) => {
     <Stack spacing={3}>
       <Box>
         <Typography variant="body2" sx={{ color: 'text.secondary', maxWidth: 760 }}>
-          Pick an event that could happen to this tenant and see how it plays out — first against
+          Pick an event that could happen to this tenant and see how it plays out - first against
           the current configuration, then with the recommended standards in place. Every gap maps
           to the standard, policy or alert that closes it.
         </Typography>

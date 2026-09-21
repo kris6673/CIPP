@@ -22,8 +22,6 @@ const asArray = (value) => (Array.isArray(value) ? value : value ? [value] : [])
 
 const GROUP_ORDER = ['Admin accounts', 'Standard users', 'Guests']
 
-// Outcome colour: blocked / challenged = protected, allowed = exposed. A situation that only
-// asks for MFA and gets an MFA challenge is protected too - `pass` already encodes that.
 const outcomeColor = (situation) => {
   if (situation.pass === true) return 'success.main'
   if (situation.pass === false) return 'error.main'
@@ -46,8 +44,6 @@ const Page = () => {
   const data = battery.data
   const situations = asArray(data?.situations)
 
-  // A reply caught mid-restart of the API can be a bare string that the query cache then keeps
-  // serving; fetch it again once instead of rendering nothing.
   const retriedRef = useRef(false)
   useEffect(() => {
     if (battery.isFetching || data === undefined || (data && typeof data === 'object')) return

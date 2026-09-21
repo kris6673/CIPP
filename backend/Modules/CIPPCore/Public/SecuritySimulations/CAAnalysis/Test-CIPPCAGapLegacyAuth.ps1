@@ -3,11 +3,8 @@ function Test-CIPPCAGapLegacyAuth {
     .SYNOPSIS
         Checks that legacy authentication (Exchange ActiveSync / Other clients) is blocked.
     .DESCRIPTION
-        Tenant-wide: when no enabled policy blocks the legacy client types, a Critical finding is
-        raised with the block-legacy-authentication template as the fix. Only then does each
-        enabled policy that targets the legacy client types without blocking them get a Medium
-        finding - once a block policy exists those policies are moot, and a tenant that blocks
-        legacy auth must never read as if it did not. Disabled policies are ignored.
+        Tenant-wide: when no enabled policy blocks the legacy client types, a Critical finding is raised
+        with the block-legacy-authentication template as the fix.
     .FUNCTIONALITY
         Internal
     #>

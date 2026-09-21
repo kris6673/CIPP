@@ -1,9 +1,6 @@
 import { Box, Typography } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 
-// Persona-by-control coverage: rows = personas, columns = controls, cell colour = whether an
-// enforced policy applies that control to that persona. Same visual language as the audit-log
-// coverage heatmap so the two read alike.
 const STATE_LABELS = {
   Enforced: 'Enforced',
   ReportOnly: 'Report-only',
@@ -35,7 +32,6 @@ export const CippCAPersonaMatrix = ({ matrix }) => {
     Enforced: theme.palette.success.main,
     ReportOnly: theme.palette.warning.main,
     Missing: theme.palette.mode === 'dark' ? theme.palette.error.dark : theme.palette.error.light,
-    // The tenant cannot buy into this control (Entra ID P2, Intune, Workload Identities Premium).
     Unlicensed: theme.palette.info.main,
     NotApplicable: theme.palette.mode === 'dark' ? theme.palette.grey[800] : theme.palette.grey[300],
   }

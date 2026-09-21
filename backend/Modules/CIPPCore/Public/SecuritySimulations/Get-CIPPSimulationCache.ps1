@@ -3,10 +3,8 @@ function Get-CIPPSimulationCache {
     .SYNOPSIS
         Reads one CIPPDb cache type for a tenant, collecting it first when it is empty.
     .DESCRIPTION
-        The same collect-on-miss rule the Baselines engine applies: a tenant whose cache for a
-        type was never collected must not read as "nothing there". When the read comes back
-        empty and a Set-CIPPDBCache<Type> collector exists, the collector runs once and the
-        cache is read again. Rows are emitted one by one so callers wrap the call in @().
+        The same collect-on-miss rule the Baselines engine applies: a tenant whose cache for a type was
+        never collected must not read as "nothing there".
     .FUNCTIONALITY
         Internal
     #>

@@ -3,9 +3,8 @@ function Test-CIPPCAGapFociExclusion {
     .SYNOPSIS
         Flags policies that exclude an app from the FOCI (Family of Client IDs) token-sharing family.
     .DESCRIPTION
-        FOCI apps share refresh tokens, so excluding one Microsoft client (Teams, Office, Outlook Mobile, ...) from a
-        policy effectively excludes every other family member. Every excluded FOCI app produces one Critical finding,
-        regardless of the policy state, listing the first eight family members that inherit the exclusion.
+        FOCI apps share refresh tokens, so excluding one Microsoft client (Teams, Office, Outlook Mobile,
+        ...) from a policy effectively excludes every other family member.
     .FUNCTIONALITY
         Internal
     #>

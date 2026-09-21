@@ -3,10 +3,8 @@ function Test-CIPPCAGapBroadPolicyExclusions {
     .SYNOPSIS
         Reminds admins to audit exclusions on enabled All-users / All-apps policies.
     .DESCRIPTION
-        For every enabled policy that targets All users and All cloud apps, counts user/group/role exclusions other
-        than the detected break-glass account or group, plus app exclusions. App exclusions are a real bypass surface
-        (Medium); user/group/role exclusions beyond break-glass are an audit reminder (Low). A policy whose only
-        exclusion is the break-glass account produces nothing.
+        For every enabled policy that targets All users and All cloud apps, counts user/group/role
+        exclusions other than the detected break-glass account or group, plus app exclusions.
     .FUNCTIONALITY
         Internal
     #>

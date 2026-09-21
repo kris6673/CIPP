@@ -3,10 +3,9 @@ function Get-CIPPSecuritySimulationCatalog {
     .SYNOPSIS
         Lists the scenarios with a cheap per-tenant readiness summary.
     .DESCRIPTION
-        Nothing is evaluated here: the counts come from the tenant's existing BaselineAlignment
-        rows only (assigned standards compliant / drifted) plus a license check for the
-        scenario's required capabilities. Standards not in any baseline count as unknown until
-        the scenario is run.
+        Nothing is evaluated here: the counts come from the tenant's existing BaselineAlignment rows only
+        (assigned standards compliant / drifted) plus a license check for the scenario's required
+        capabilities.
     .FUNCTIONALITY
         Internal
     #>

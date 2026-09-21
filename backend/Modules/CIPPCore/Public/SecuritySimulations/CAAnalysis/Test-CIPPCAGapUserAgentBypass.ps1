@@ -1,13 +1,12 @@
 function Test-CIPPCAGapUserAgentBypass {
     <#
     .SYNOPSIS
-        Detects platform- and client-type-specific MFA policies that can be bypassed by spoofing the user agent.
+        Detects platform- and client-type-specific MFA policies that can be bypassed by spoofing the user
+        agent.
     .DESCRIPTION
-        Per policy (non-disabled): an MFA or device-compliance policy scoped to specific device platforms can be
-        bypassed by presenting an unrecognized platform; this is High unless an enabled tenant-wide policy blocks
-        unknown platforms (then Info, naming the companion policy). An MFA policy that filters client app types but
-        omits browser or mobileAppsAndDesktopClients is Medium. Tenant-wide: when any enabled MFA policy is platform
-        specific and nothing blocks unknown platforms, a High finding proposes the block-unsupported-platforms template.
+        Per policy (non-disabled): an MFA or device-compliance policy scoped to specific device platforms
+        can be bypassed by presenting an unrecognized platform; this is High unless an enabled tenant-wide
+        policy blocks unknown platforms (then Info, naming the companion policy).
     .FUNCTIONALITY
         Internal
     #>
@@ -40,7 +39,6 @@ function Test-CIPPCAGapUserAgentBypass {
         $RequiresMfa = ($Controls -contains 'mfa') -or ($null -ne $Policy.grantControls.authenticationStrength)
         $RequiresCompliance = ($Controls -contains 'compliantDevice') -or ($Controls -contains 'domainJoinedDevice')
 
-        # 1) platform-specific policies
         if ($null -ne $Platforms -and @($Platforms.includePlatforms).Count -gt 0 -and -not (@($Platforms.includePlatforms) -contains 'all')) {
             $Targeted = @($Platforms.includePlatforms) -join ', '
             if ($RequiresMfa -or $RequiresCompliance) {
@@ -74,7 +72,6 @@ function Test-CIPPCAGapUserAgentBypass {
             }
         }
 
-        # 2) client app type coverage gaps
         $HasClientFilter = ($ClientAppTypes.Count -gt 0) -and -not ($ClientAppTypes -contains 'all')
         if ($HasClientFilter) {
             $HasBrowser = $ClientAppTypes -contains 'browser'
@@ -98,7 +95,6 @@ function Test-CIPPCAGapUserAgentBypass {
         }
     }
 
-    # tenant-wide
     $BlocksUnknownPlatforms = @($Context.Enabled | Where-Object {
             $Platforms = $_.conditions.platforms
             ($null -ne $Platforms) -and (@($Platforms.includePlatforms) -contains 'all') -and (@($Platforms.excludePlatforms).Count -gt 0) -and (@($_.grantControls.builtInControls) -contains 'block')

@@ -3,10 +3,9 @@ function Test-CIPPCAGapMissingMfa {
     .SYNOPSIS
         Flags grant policies that do not require MFA or an authentication strength.
     .DESCRIPTION
-        Skips disabled policies, policies with no grant controls, block policies, workload/agent-identity policies
-        (includeUsers = None with no groups or roles) and policies whose controls are all strong device-trust or
-        app-protection controls (a legitimate standalone layer). Everything else that grants access without MFA gets a
-        Medium finding. Tenant-wide MFA coverage is handled by Test-CIPPCAGapMfaCoverage.
+        Skips disabled policies, policies with no grant controls, block policies, workload/agent-identity
+        policies (includeUsers = None with no groups or roles) and policies whose controls are all strong
+        device-trust or app-protection controls (a legitimate standalone layer).
     .FUNCTIONALITY
         Internal
     #>

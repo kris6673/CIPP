@@ -3,10 +3,10 @@ function Test-CIPPCAGapProtectedActions {
     .SYNOPSIS
         Reviews policies that protect Protected Actions (microsoft.directory.* user actions).
     .DESCRIPTION
-        For every policy (any state) whose user actions start with "microsoft.directory": basic "Require MFA" instead
-        of an authentication strength is High; targeting All users instead of admin roles is Medium; a non-phishing-
-        resistant authentication strength is Info; report-only state is Info; an enabled policy with no user
-        exclusions (no break-glass path) is Medium.
+        For every policy (any state) whose user actions start with "microsoft.directory": basic "Require
+        MFA" instead of an authentication strength is High; targeting All users instead of admin roles is
+        Medium; a non-phishing- resistant authentication strength is Info; report-only state is Info; an
+        enabled policy with no user exclusions (no break-glass path) is Medium.
     .FUNCTIONALITY
         Internal
     #>

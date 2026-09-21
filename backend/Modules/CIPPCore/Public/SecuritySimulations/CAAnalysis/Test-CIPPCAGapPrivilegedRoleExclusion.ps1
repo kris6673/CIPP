@@ -3,12 +3,8 @@ function Test-CIPPCAGapPrivilegedRoleExclusion {
     .SYNOPSIS
         Flags policies that exclude highly privileged directory roles.
     .DESCRIPTION
-        Per policy (any state): every excluded role that is in the high-privilege list produces one finding per policy.
-        Critical when Global Administrator, Privileged Role Administrator, Privileged Authentication Administrator or
-        Conditional Access Administrator is excluded (or when the policy protects security-info registration),
-        otherwise High; downgraded to Info when another non-disabled policy covers those roles with MFA or an
-        authentication strength. Tenant-wide: one Critical finding lists every enabled policy that excludes a critical
-        admin role.
+        Per policy (any state): every excluded role that is in the high-privilege list produces one finding
+        per policy.
     .FUNCTIONALITY
         Internal
     #>
@@ -110,7 +106,6 @@ function Test-CIPPCAGapPrivilegedRoleExclusion {
         $Findings.Add((New-CIPPCAGapFinding @Params))
     }
 
-    # tenant-wide: enabled policies excluding critical admin roles
     $PoliciesExcludingCritical = @($Context.Enabled | Where-Object {
             @($_.conditions.users.excludeRoles | Where-Object { $CriticalRoleIds.Contains("$_") }).Count -gt 0
         })

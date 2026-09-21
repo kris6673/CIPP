@@ -1,13 +1,11 @@
 function Test-CIPPCAGapResourceExclusionBypass {
     <#
     .SYNOPSIS
-        Tenant-wide check for "All resources" policies with app exclusions affected by Low-Privilege Scope Enforcement.
+        Tenant-wide check for "All resources" policies with app exclusions affected by Low-Privilege Scope
+        Enforcement.
     .DESCRIPTION
-        Until 2026, excluding any app from an All-resources policy silently exempted low-privilege scopes (User.Read,
-        openid, profile, email, offline_access, People.Read) from enforcement. Microsoft now routes those scopes to the
-        Windows Azure Active Directory (Azure AD Graph) enforcement audience. This emits one rollup finding across every
-        enabled All-resources policy with exclusions: Info when an enabled policy already targets Azure AD Graph
-        explicitly, otherwise Medium with the baseline-scopes template as the fix.
+        Until 2026, excluding any app from an All-resources policy silently exempted low-privilege scopes
+        (User.Read, openid, profile, email, offline_access, People.Read) from enforcement.
     .FUNCTIONALITY
         Internal
     #>

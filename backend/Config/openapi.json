@@ -32596,7 +32596,7 @@
         "tags": [
           "Tenant > SecuritySimulations"
         ],
-        "description": "Plays one security scenario against a tenant: grades the standards each step relies on,\nevaluates the scenario's sign-in live through the Conditional Access What If API, and checks\nwhether an audit-log alert would fire. Returns the attacker's experience in the current\nstate and with the mapped controls in place. Read-only: nothing changes in the tenant.\nBody: { tenantFilter, scenarioId }.",
+        "description": "Plays one security scenario against a tenant: grades the standards each step relies on, evaluates the scenario's sign-in live through the Conditional Access What If API, and checks whether an audit-log alert would fire.",
         "requestBody": {
           "required": true,
           "content": {
@@ -41591,7 +41591,7 @@
         "tags": [
           "Tenant > SecuritySimulations"
         ],
-        "description": "Conditional Access gap analysis for one tenant from the cached policies: findings, the\npersona-by-control coverage matrix, CIS alignment, Zero Trust signals and the posture\nscore. Read-only and cache-only - the live sign-in situations are ListCASituations.\nPass ?tenantFilter=.",
+        "description": "Conditional Access gap analysis for one tenant from the cached policies: findings, the persona-by-control coverage matrix, CIS alignment, Zero Trust signals and the posture score.",
         "parameters": [
           {
             "$ref": "#/components/parameters/tenantFilter"
@@ -41803,7 +41803,7 @@
         "tags": [
           "Tenant > SecuritySimulations"
         ],
-        "description": "Evaluates every predefined sign-in situation (admin, user and guest personas under\nunmanaged devices, foreign locations, legacy clients, device-code flow, risk levels and\nmore) live against the tenant's Conditional Access through the What If API, and names the\ncontrol missing wherever a sign-in gets through. Read-only: no sign-in occurs and nothing\nchanges in the tenant. Pass ?tenantFilter=.",
+        "description": "Evaluates every predefined sign-in situation (admin, user and guest personas under unmanaged devices, foreign locations, legacy clients, device-code flow, risk levels and more) live against the tenant's Conditional Access through the What If API, and names the control missing wherever a sign-in gets through.",
         "parameters": [
           {
             "$ref": "#/components/parameters/tenantFilter"
@@ -55999,7 +55999,7 @@
         "tags": [
           "Tenant > SecuritySimulations"
         ],
-        "description": "Lists the security scenarios that can be simulated, with a per-tenant summary of how many\nof the standards each scenario relies on are already in place (from the tenant's baseline\nalignment - nothing is evaluated here). Pass ?tenantFilter= for the summary.",
+        "description": "Lists the security scenarios that can be simulated, with a per-tenant summary of how many of the standards each scenario relies on are already in place (from the tenant's baseline alignment - nothing is evaluated here).",
         "parameters": [
           {
             "$ref": "#/components/parameters/tenantFilter"

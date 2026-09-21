@@ -3,10 +3,7 @@ function ConvertTo-CIPPCANormalizedPolicy {
     .SYNOPSIS
         Normalizes a cached conditionalAccessPolicy so every collection the gap analysis reads is present.
     .DESCRIPTION
-        The beta Graph shape leaves many collections null. This returns a copy of the policy where the user,
-        application, clientAppTypes and risk-level collections are always string arrays, grantControls always exists
-        (with an empty builtInControls list when the policy has no grant block) and platforms/locations keep their
-        null-ness but have array members whenever they are present. Checks can then use -contains and .Count safely.
+        The beta Graph shape leaves many collections null.
     .FUNCTIONALITY
         Internal
     #>

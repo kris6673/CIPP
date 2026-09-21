@@ -3,8 +3,8 @@ function Test-CIPPCAGapResilienceDefaults {
     .SYNOPSIS
         Flags enabled or report-only policies that disable resilience defaults.
     .DESCRIPTION
-        Disabling resilience defaults means users are denied access when their session expires during an Entra ID
-        outage. Every non-disabled policy with sessionControls.disableResilienceDefaults = true gets a Medium finding.
+        Disabling resilience defaults means users are denied access when their session expires during an
+        Entra ID outage.
     .FUNCTIONALITY
         Internal
     #>

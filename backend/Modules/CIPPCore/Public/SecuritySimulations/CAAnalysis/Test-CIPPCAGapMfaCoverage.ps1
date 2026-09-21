@@ -3,9 +3,8 @@ function Test-CIPPCAGapMfaCoverage {
     .SYNOPSIS
         Tenant-wide check that some enabled policy requires MFA for All users.
     .DESCRIPTION
-        A policy covers MFA for all users when it includes "All" users and requires MFA or an authentication strength.
-        When no enabled policy does so: Medium if a report-only policy already does (the rule exists but is not
-        enforced), otherwise Critical with the all-users MFA template as the fix.
+        A policy covers MFA for all users when it includes "All" users and requires MFA or an authentication
+        strength.
     .FUNCTIONALITY
         Internal
     #>

@@ -3,11 +3,10 @@ function Test-CIPPCAGapCaImmuneResources {
     .SYNOPSIS
         Tenant-wide awareness finding about Microsoft resources that Conditional Access never evaluates.
     .DESCRIPTION
-        When at least one enabled or report-only policy targets All cloud apps, emits a single Info finding listing
-        the resources that always show notApplied in sign-in logs (Intune Checkin, Windows Notification Service,
-        Mobile Application Management, Azure MFA Connector, OCaaS Client Interaction Service, Authenticator App).
-        This is by design and cannot be changed, but the resources can be used for password verification without
-        triggering Conditional Access.
+        When at least one enabled or report-only policy targets All cloud apps, emits a single Info finding
+        listing the resources that always show notApplied in sign-in logs (Intune Checkin, Windows
+        Notification Service, Mobile Application Management, Azure MFA Connector, OCaaS Client Interaction
+        Service, Authenticator App).
     .FUNCTIONALITY
         Internal
     #>

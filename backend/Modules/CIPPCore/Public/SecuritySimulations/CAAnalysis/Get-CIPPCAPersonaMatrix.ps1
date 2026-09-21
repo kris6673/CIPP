@@ -3,20 +3,17 @@ function Get-CIPPCAPersonaMatrix {
     .SYNOPSIS
         Builds the "who is protected by what" matrix: four personas by eight controls.
     .DESCRIPTION
-        Personas come from how policies TARGET identities, never from policy names, so the matrix
-        is truthful for tenants that follow no naming convention:
-          Admins              - policies that include privileged roles, or All users without excluding roles
-          Users               - policies that include All users (group-scoped policies never prove everyone is covered)
-          Guests              - policies that include guests/external users, or All users without excluding them
-          Workload identities - policies that include service principals
-        A cell is Enforced when an enabled policy in the persona's bucket implements the control,
-        ReportOnly when only a report-only policy does, Missing otherwise, NotApplicable when the
-        persona does not need that control, and Unlicensed when the tenant cannot implement it:
-        risk-based controls need Entra ID P2, compliant-device controls need Intune,
-        workload-identity risk needs Workload Identities Premium - a tenant is never marked as
-        missing a control it cannot buy into. Missing controls for Admins, Users and Guests become "Persona coverage" findings
-        with a suggested policy. Returns personas, controls, cells, findings and overallScore
-        (coverage percentage, report-only counting half).
+        Personas come from how policies TARGET identities, never from policy names, so the matrix is
+        truthful for tenants that follow no naming convention: Admins              - policies that include
+        privileged roles, or All users without excluding roles Users               - policies that include
+        All users (group-scoped policies never prove everyone is covered) Guests              - policies
+        that include guests/external users, or All users without excluding them Workload identities -
+        policies that include service principals A cell is Enforced when an enabled policy in the persona's
+        bucket implements the control, ReportOnly when only a report-only policy does, Missing otherwise,
+        NotApplicable when the persona does not need that control, and Unlicensed when the tenant cannot
+        implement it: risk-based controls need Entra ID P2, compliant-device controls need Intune,
+        workload-identity risk needs Workload Identities Premium - a tenant is never marked as missing a
+        control it cannot buy into.
     .FUNCTIONALITY
         Internal
     #>

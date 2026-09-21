@@ -1,11 +1,11 @@
 function Get-CIPPCABreakGlassCandidate {
     <#
     .SYNOPSIS
-        Identifies the most likely break-glass (emergency access) account or group from policy exclusion patterns.
+        Identifies the most likely break-glass (emergency access) account or group from policy exclusion
+        patterns.
     .DESCRIPTION
-        Walks every enabled or report-only policy that targets All users and counts how often each excluded user or
-        group appears. The user/group excluded most often is returned as the break-glass candidate (ties keep the
-        first one seen). "GuestsOrExternalUsers" is never a candidate. Returns $null when no exclusions exist.
+        Walks every enabled or report-only policy that targets All users and counts how often each excluded
+        user or group appears.
     .FUNCTIONALITY
         Internal
     #>

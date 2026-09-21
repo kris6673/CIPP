@@ -5,11 +5,9 @@ function Invoke-ExecSecuritySimulation {
     .ROLE
         Tenant.SecuritySimulations.Read
     .DESCRIPTION
-        Plays one security scenario against a tenant: grades the standards each step relies on,
-        evaluates the scenario's sign-in live through the Conditional Access What If API, and checks
-        whether an audit-log alert would fire. Returns the attacker's experience in the current
-        state and with the mapped controls in place. Read-only: nothing changes in the tenant.
-        Body: { tenantFilter, scenarioId }.
+        Plays one security scenario against a tenant: grades the standards each step relies on, evaluates
+        the scenario's sign-in live through the Conditional Access What If API, and checks whether an
+        audit-log alert would fire.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

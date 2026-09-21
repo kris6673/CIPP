@@ -3,11 +3,11 @@ function Test-CIPPCAGapLocationConditions {
     .SYNOPSIS
         Reviews the named locations each non-disabled policy references.
     .DESCRIPTION
-        Four checks per policy with a location condition: (1) a referenced named location explicitly marked not
-        trusted (Medium); (2) the policy uses "All trusted locations" while IP-range named locations in the tenant are
-        not trusted, so they silently fall outside the trusted set (High; country locations cannot be trusted and are
-        ignored); (3) a referenced location ID that no longer exists (Medium); (4) a referenced country location with
-        no countries configured, which never matches (High).
+        Four checks per policy with a location condition: (1) a referenced named location explicitly marked
+        not trusted (Medium); (2) the policy uses "All trusted locations" while IP-range named locations in
+        the tenant are not trusted, so they silently fall outside the trusted set (High; country locations
+        cannot be trusted and are ignored); (3) a referenced location ID that no longer exists (Medium); (4)
+        a referenced country location with no countries configured, which never matches (High).
     .FUNCTIONALITY
         Internal
     #>
@@ -33,7 +33,6 @@ function Test-CIPPCAGapLocationConditions {
         foreach ($Id in $Exclude) { $AllRefs.Add("$Id") }
         $Sentinels = @('AllTrusted', 'All')
 
-        # 1) untrusted named locations referenced directly
         foreach ($LocationId in $AllRefs) {
             if ($LocationId -in $Sentinels) { continue }
             $Location = $Context.NamedLocationById[$LocationId]
@@ -52,7 +51,6 @@ function Test-CIPPCAGapLocationConditions {
             }
         }
 
-        # 2) "All trusted locations" while some IP-range locations are untrusted
         if ($UsesAllTrusted) {
             $Untrusted = @($Context.NamedLocations | Where-Object { -not $_.isTrusted -and "$($_.'@odata.type')" -ne $CountryType })
             if ($Untrusted.Count -gt 0) {
@@ -71,7 +69,6 @@ function Test-CIPPCAGapLocationConditions {
             }
         }
 
-        # 3) orphaned references
         foreach ($LocationId in $AllRefs) {
             if ($LocationId -in $Sentinels) { continue }
             if ($Context.NamedLocationById.ContainsKey($LocationId)) { continue }
@@ -88,7 +85,6 @@ function Test-CIPPCAGapLocationConditions {
             $Findings.Add((New-CIPPCAGapFinding @Params))
         }
 
-        # 4) country locations with no countries
         foreach ($LocationId in $AllRefs) {
             if ($LocationId -in $Sentinels) { continue }
             $Location = $Context.NamedLocationById[$LocationId]

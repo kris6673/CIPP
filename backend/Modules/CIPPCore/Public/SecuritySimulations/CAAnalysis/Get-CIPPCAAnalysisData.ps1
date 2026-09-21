@@ -3,10 +3,8 @@ function Get-CIPPCAAnalysisData {
     .SYNOPSIS
         Loads one static reference dataset used by the Conditional Access gap analysis.
     .DESCRIPTION
-        Reads Config/SecuritySimulations/CAAnalysis/<Name>.json under the CIPP root and returns the parsed object.
-        Available datasets: FociFamilies, BypassApps, FirstPartyApps, AppDescriptions, AdminRoles, KnownExclusions,
-        Personas and Reference. Returns $null (and writes an information message) when the file is
-        missing or cannot be parsed so callers can degrade instead of throwing.
+        Reads Config/SecuritySimulations/CAAnalysis/<Name>.json under the CIPP root and returns the parsed
+        object.
     .FUNCTIONALITY
         Internal
     #>

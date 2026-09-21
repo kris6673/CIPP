@@ -4,11 +4,11 @@ function Test-CIPPCAPolicyPhishingResistant {
         Decides whether a Conditional Access policy enforces a phishing-resistant authentication strength.
     .DESCRIPTION
         A policy counts as phishing-resistant when its authentication strength is the built-in Microsoft
-        "Phishing-resistant MFA" strength, when the strength's display name mentions phishing-resistant / FIDO2 /
-        Windows Hello / certificate-based, or (the authoritative signal) when the strength resolves in the tenant's
-        cached authentication-strength catalog and any allowedCombinations entry contains a phishing-resistant method
-        token (fido2, windowsHelloForBusiness, x509 certificate, device-bound passkey, hardware OATH). Policies with
-        no strength fall back to the policy display name mentioning phishing-resistant.
+        "Phishing-resistant MFA" strength, when the strength's display name mentions phishing-resistant /
+        FIDO2 / Windows Hello / certificate-based, or (the authoritative signal) when the strength resolves
+        in the tenant's cached authentication-strength catalog and any allowedCombinations entry contains a
+        phishing-resistant method token (fido2, windowsHelloForBusiness, x509 certificate, device-bound
+        passkey, hardware OATH).
     .FUNCTIONALITY
         Internal
     #>

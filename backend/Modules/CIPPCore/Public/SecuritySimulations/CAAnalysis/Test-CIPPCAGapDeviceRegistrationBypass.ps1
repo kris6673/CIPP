@@ -1,13 +1,11 @@
 function Test-CIPPCAGapDeviceRegistrationBypass {
     <#
     .SYNOPSIS
-        Finds policies that try to protect device registration with controls the Device Registration Service ignores.
+        Finds policies that try to protect device registration with controls the Device Registration Service
+        ignores.
     .DESCRIPTION
-        The Device Registration Service only honors MFA / authentication strength grant controls (MSRC VULN-153600,
-        by design). A policy that reaches the service (explicitly via the register-device user action or the DRS
-        resource, or incidentally via All apps) and relies only on location conditions or a compliant/hybrid-joined
-        device requirement, with no MFA of its own and no separate enabled registration-MFA policy, leaves device
-        registration unprotected. Explicit targeting is High, incidental All-apps coverage is Medium.
+        The Device Registration Service only honors MFA / authentication strength grant controls (MSRC
+        VULN-153600, by design).
     .FUNCTIONALITY
         Internal
     #>

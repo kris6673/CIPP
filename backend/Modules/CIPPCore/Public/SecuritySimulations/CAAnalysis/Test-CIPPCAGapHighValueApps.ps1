@@ -3,10 +3,9 @@ function Test-CIPPCAGapHighValueApps {
     .SYNOPSIS
         Tenant-wide check that high-value Microsoft applications are covered by an MFA or block policy.
     .DESCRIPTION
-        For Azure Management, Azure Portal, Microsoft Graph, Exchange Online and SharePoint Online: covered when an
-        enabled policy includes the app (directly or via All apps) without excluding it and requires MFA, an
-        authentication strength, or blocks. Uncovered apps produce one finding: Critical when any critical-risk app is
-        uncovered, otherwise High.
+        For Azure Management, Azure Portal, Microsoft Graph, Exchange Online and SharePoint Online: covered
+        when an enabled policy includes the app (directly or via All apps) without excluding it and requires
+        MFA, an authentication strength, or blocks.
     .FUNCTIONALITY
         Internal
     #>

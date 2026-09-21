@@ -3,12 +3,8 @@ function Test-CIPPCAGapBreakGlass {
     .SYNOPSIS
         Checks that the detected break-glass account or group is excluded from every user-targeting policy.
     .DESCRIPTION
-        Uses the break-glass candidate on the context (the user or group excluded most often across enabled and
-        report-only All-users policies). Per policy that targets real users: Info when the candidate is excluded;
-        otherwise High for enabled block-everything policies, Medium for enabled MFA/compliance/block All-users
-        policies and report-only policies, Low for other enabled or disabled policies, Info for disabled
-        Microsoft-managed policies. Tenant-wide: one summary finding (High/Medium when some policies miss the
-        exclusion, Info when all have it) or a Critical finding when no break-glass candidate can be detected at all.
+        Uses the break-glass candidate on the context (the user or group excluded most often across enabled
+        and report-only All-users policies).
     .FUNCTIONALITY
         Internal
     #>
@@ -119,7 +115,6 @@ function Test-CIPPCAGapBreakGlass {
             $Findings.Add((New-CIPPCAGapFinding @Params))
         }
 
-        # tenant-wide summary
         $WithNames = [System.Collections.Generic.List[string]]::new()
         $WithoutNames = [System.Collections.Generic.List[string]]::new()
         $EnabledWithoutCount = 0

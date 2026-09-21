@@ -3,19 +3,7 @@ function Get-CIPPCAWhatIfVerdict {
     .SYNOPSIS
         Turns a What If evaluation into an attacker's experience: blocked or allowed.
     .DESCRIPTION
-        The API says which policies apply; it does not say whether the sign-in gets through. That
-        depends on what the attacker can satisfy: a replayed token already carries an MFA claim, a
-        phished password does not. AttackerCanSatisfy lists the grant controls the story assumes
-        the attacker meets (mfa, compliantDevice, domainJoinedDevice, approvedApplication,
-        compliantApplication, authenticationStrength).
-
-        Only ENABLED policies count. A block grant, or any required control the attacker cannot
-        satisfy, stops the sign-in. Report-only policies that would have stopped it are reported
-        separately - the classic "we have a policy for that, it just never got enforced".
-
-        Expected is what the situation demands: 'blocked' (default), 'mfa' (blocked or at least an
-        MFA/authentication-strength challenge), or 'phishingResistant' (blocked or an
-        authentication strength).
+        The API says which policies apply; it does not say whether the sign-in gets through.
     .FUNCTIONALITY
         Internal
     #>

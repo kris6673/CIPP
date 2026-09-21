@@ -3,11 +3,9 @@ function Get-CIPPCAPostureScore {
     .SYNOPSIS
         Computes the Conditional Access score on a 1-10 scale.
     .DESCRIPTION
-        The score is the share of applicable persona-matrix controls that an enforced policy
-        covers (report-only counting half), on a 10-point scale, nudged down by the serious
-        policy findings: half a point per Critical and a quarter per High, capped at two points
-        in total. Persona-coverage findings are excluded from that nudge - they ARE the coverage
-        share and would count twice. The floor is 1 so a tenant never scores 0.
+        The score is the share of applicable persona-matrix controls that an enforced policy covers
+        (report-only counting half), on a 10-point scale, nudged down by the serious policy findings: half a
+        point per Critical and a quarter per High, capped at two points in total.
     .FUNCTIONALITY
         Internal
     #>

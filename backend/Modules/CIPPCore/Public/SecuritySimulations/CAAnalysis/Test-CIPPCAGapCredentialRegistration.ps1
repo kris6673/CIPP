@@ -1,13 +1,11 @@
 function Test-CIPPCAGapCredentialRegistration {
     <#
     .SYNOPSIS
-        Reviews policies that target "Register security info" for constraints that block new-device credential setup.
+        Reviews policies that target "Register security info" for constraints that block new-device
+        credential setup.
     .DESCRIPTION
-        Since July 2026 (MC1326253) policies scoped to the register-security-info user action are evaluated during
-        Windows Hello for Business and macOS Platform SSO registration. A non-disabled policy on that user action that
-        requires device compliance, approved/protected apps (without an MFA alternative through OR), trusted locations
-        or a device filter may block first-time setup: High when compliance is mandatory or locations are restricted,
-        otherwise Medium. A policy with only MFA / authentication strength gets an Info finding confirming it is safe.
+        Since July 2026 (MC1326253) policies scoped to the register-security-info user action are evaluated
+        during Windows Hello for Business and macOS Platform SSO registration.
     .FUNCTIONALITY
         Internal
     #>

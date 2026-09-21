@@ -3,11 +3,9 @@ function Get-CIPPSimulationAlertRules {
     .SYNOPSIS
         Returns the audit-log alert rules that cover a tenant, with their operations extracted.
     .DESCRIPTION
-        Reads the WebhookRules table the alert wizard writes (Invoke-AddAlert) and keeps the
-        enabled rules whose tenant scope includes this tenant (tenant groups expanded, exclusions
-        honored - the same resolution the alert engine applies). Every condition on the audit
-        Operation property is flattened into Operations so Test-CIPPSimulationAlertRule can answer
-        "would anyone be told about <operation>?" with one comparison.
+        Reads the WebhookRules table the alert wizard writes (Invoke-AddAlert) and keeps the enabled rules
+        whose tenant scope includes this tenant (tenant groups expanded, exclusions honored - the same
+        resolution the alert engine applies).
     .FUNCTIONALITY
         Internal
     #>

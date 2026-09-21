@@ -3,10 +3,8 @@ function Get-CIPPSecuritySimulationSituation {
     .SYNOPSIS
         Returns the predefined Conditional Access sign-in situations.
     .DESCRIPTION
-        Config/SecuritySimulations/CASituations.json holds one entry per predefined sign-in
-        (persona, sign-in conditions, expected outcome, the control that is missing when the
-        outcome is not met). Every entry is evaluated live through the What If API by
-        Invoke-CIPPCASituationBattery.
+        Config/SecuritySimulations/CASituations.json holds one entry per predefined sign-in (persona,
+        sign-in conditions, expected outcome, the control that is missing when the outcome is not met).
     .FUNCTIONALITY
         Internal
     #>

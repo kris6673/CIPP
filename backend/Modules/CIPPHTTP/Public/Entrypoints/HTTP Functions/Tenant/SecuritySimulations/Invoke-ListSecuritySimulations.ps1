@@ -5,9 +5,9 @@ function Invoke-ListSecuritySimulations {
     .ROLE
         Tenant.SecuritySimulations.Read
     .DESCRIPTION
-        Lists the security scenarios that can be simulated, with a per-tenant summary of how many
-        of the standards each scenario relies on are already in place (from the tenant's baseline
-        alignment - nothing is evaluated here). Pass ?tenantFilter= for the summary.
+        Lists the security scenarios that can be simulated, with a per-tenant summary of how many of the
+        standards each scenario relies on are already in place (from the tenant's baseline alignment -
+        nothing is evaluated here).
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

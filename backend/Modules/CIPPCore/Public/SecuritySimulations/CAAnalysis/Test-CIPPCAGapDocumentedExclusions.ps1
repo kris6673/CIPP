@@ -3,15 +3,10 @@ function Test-CIPPCAGapDocumentedExclusions {
     .SYNOPSIS
         Evaluates every policy against the Microsoft Learn catalog of documented exclusions and limitations.
     .DESCRIPTION
-        Ports the documented-exclusion checks (token protection scoping, break-glass exclusions, Surface Hub / Teams
-        Rooms compatibility, device code flow, sign-in frequency, Defender mobile, Azure VM sign-in, CAE, resilience
-        defaults, All-resources baseline scopes, Directory Sync account, External Authentication Methods, approved
-        client app retirement and the user-risk remediation controls). Static text lives in KnownExclusions.json; the
-        detection logic is here, keyed by exclusion id. By default only Critical and High results are returned as
-        findings (category "MS Learn: Documented Exclusion"), and the All-resources baseline-scope entry is never
-        promoted because Test-CIPPCAGapResourceExclusionBypass already reports it tenant-wide. -IncludeAdvisory also
-        returns the Medium/Info results. The tenant's External Authentication Method state is not cached by CIPP, so
-        the EAM companion-policy check reports as unverified rather than being suppressed.
+        Ports the documented-exclusion checks (token protection scoping, break-glass exclusions, Surface Hub
+        / Teams Rooms compatibility, device code flow, sign-in frequency, Defender mobile, Azure VM sign-in,
+        CAE, resilience defaults, All-resources baseline scopes, Directory Sync account, External
+        Authentication Methods, approved client app retirement and the user-risk remediation controls).
     .FUNCTIONALITY
         Internal
     #>
@@ -86,7 +81,6 @@ function Test-CIPPCAGapDocumentedExclusions {
         $SignInFrequency = $Session.signInFrequency
         $TokenProtection = & $HasTokenProtection $Policy
 
-        # token-prot-apps
         if ($Active -and $TokenProtection) {
             if ($IncludeApps -contains 'all') {
                 & $AddResult 'token-prot-apps' $Policy 'This token-protection policy applies to every application, although only a few Microsoft services support the feature. People using unsupported tools such as Power Query, developer extensions and older Office installations will be blocked.' @('PowerShell modules accessing SharePoint', 'PowerQuery extension for Excel', 'VS Code extensions accessing Exchange/SharePoint', 'Office perpetual clients')
@@ -100,7 +94,6 @@ function Test-CIPPCAGapDocumentedExclusions {
             }
         }
 
-        # token-prot-platform
         if ($Active -and $TokenProtection) {
             $Issues = [System.Collections.Generic.List[string]]::new()
             $Platforms = $Policy.conditions.platforms
@@ -116,7 +109,6 @@ function Test-CIPPCAGapDocumentedExclusions {
             }
         }
 
-        # token-prot-devices
         if ($Active -and $TokenProtection) {
             $DeviceFilter = $Policy.conditions.devices.deviceFilter
             if ($null -eq $DeviceFilter) {
@@ -131,12 +123,10 @@ function Test-CIPPCAGapDocumentedExclusions {
             }
         }
 
-        # break-glass-missing
         if ($Active -and $AllUsers -and ((& $HasMfaGrant $Policy) -or (& $HasBlockGrant $Policy) -or (& $HasComplianceGrant $Policy)) -and (& $HasNoUserExclusions $Policy)) {
             & $AddResult 'break-glass-missing' $Policy "$($Policy.displayName) applies to every user and exempts nobody. A mistake in the policy or a service outage would lock out everyone, administrators included, with no account left to recover access." @('All administrators', 'Emergency access accounts')
         }
 
-        # surface-hub-mfa
         if ($Active -and $AllUsers -and $AllApps -and $Grant.present) {
             $UnsupportedControls = @($Controls | Where-Object { $_ -in @('mfa', 'compliantDevice', 'domainJoinedDevice', 'approvedApplication', 'compliantApplication', 'passwordChange') })
             $HasStrength = $null -ne $Grant.authenticationStrength
@@ -148,22 +138,18 @@ function Test-CIPPCAGapDocumentedExclusions {
             }
         }
 
-        # teams-rooms-mfa
         if ($Active -and $AllUsers -and $Grant.present -and (($Controls -contains 'mfa') -or ($null -ne $Grant.authenticationStrength)) -and $AllApps) {
             & $AddResult 'teams-rooms-mfa' $Policy 'This policy requires multifactor authentication from every user for every application. Teams Rooms devices on Windows cannot perform it, and Android room devices cannot meet an authentication strength, so meeting-room accounts will be unable to sign in.' @('Teams Rooms on Windows', 'Teams Rooms on Android (auth strength only)', 'Teams Panels')
         }
 
-        # device-code-teams-android
         if ($Active -and (& $HasBlockGrant $Policy) -and -not [string]::IsNullOrWhiteSpace("$($Policy.conditions.authenticationFlows.transferMethods)")) {
             & $AddResult 'device-code-teams-android' $Policy 'This policy blocks the device-code sign-in flow for everyone. Teams phones, panels and Android room devices rely on that flow for their initial setup and can no longer be signed in remotely.' @('Teams Rooms on Android', 'Teams phones', 'Teams panels', 'Remote device sign-in scenarios')
         }
 
-        # signin-freq-teams-rooms
         if ($Active -and $AllUsers -and $SignInFrequency.isEnabled -eq $true -and $AllApps) {
             & $AddResult 'signin-freq-teams-rooms' $Policy "This policy makes every user sign in again every $($SignInFrequency.value) $($SignInFrequency.type). Teams Rooms, phones and panels cannot handle that and will periodically sign out, disrupting scheduled meetings." @('Teams Rooms on Windows', 'Teams Rooms on Android', 'Teams phones', 'Teams panels')
         }
 
-        # defender-mobile-exclusion
         if ($Active -and $AllUsers -and $AllApps) {
             $Locations = $Policy.conditions.locations
             $IsRestrictive = (& $HasBlockGrant $Policy) -or (($null -ne $Locations) -and (@($Locations.includeLocations).Count -gt 0) -and (& $HasBlockGrant $Policy))
@@ -172,17 +158,14 @@ function Test-CIPPCAGapDocumentedExclusions {
             }
         }
 
-        # azure-vm-signin-mfa
         if ($Active -and $AllUsers -and $AllApps -and ((& $HasMfaGrant $Policy) -or (& $HasComplianceGrant $Policy)) -and -not ($ExcludeApps -contains $WindowsCloudLogin)) {
             & $AddResult 'azure-vm-signin-mfa' $Policy 'This policy requires multifactor authentication or a managed device from every user for every application, without exempting sign-ins to Azure virtual machines. Remote desktop connections to those machines can only meet the requirement from a device that supports Windows Hello for Business, and Windows Server devices can never count as compliant, so administrators may be unable to connect.' @("Microsoft Azure Windows Virtual Machine Sign-In ($WindowsCloudLogin)", 'RDP connections to Azure VMs', 'RDP connections to Arc-enabled Windows Servers', 'Windows Server RDP client devices (device compliance unsupported)')
         }
 
-        # cae-disabled
         if ($Active -and "$($Session.continuousAccessEvaluation.mode)" -eq 'disabled') {
             & $AddResult 'cae-disabled' $Policy 'This policy switches off continuous access evaluation. After a security event such as an account being disabled or a password change, existing sessions stay valid for up to an hour instead of being cut off immediately.' @('Real-time user session revocation', 'Location-based policy enforcement', 'Risk-based session termination')
         }
 
-        # signin-freq-individual-services
         if ($Active -and $SignInFrequency.isEnabled -eq $true -and -not ($IncludeApps -contains 'all')) {
             $TargetsIndividualM365 = @($IncludeApps | Where-Object { $_ -in @($ExchangeOnline, $SharePointOnline, $TeamsService) }).Count -gt 0
             if ($TargetsIndividualM365) {
@@ -190,23 +173,19 @@ function Test-CIPPCAGapDocumentedExclusions {
             }
         }
 
-        # resilience-disabled-impact
         if ($Active -and $Session.disableResilienceDefaults -eq $true) {
             $Scope = if ($AllUsers) { 'all users' } else { 'the users it targets' }
             & $AddResult 'resilience-disabled-impact' $Policy "This policy turns off resilience defaults for $Scope. During a Microsoft sign-in service outage, anyone whose session expires loses access until the service recovers, which can stop work for hours." @('All users covered by this policy during Entra ID outages', 'Business continuity during identity service disruptions')
         }
 
-        # all-resources-exclusion-change
         if ($Active -and $AllApps -and $ExcludeApps.Count -gt 0) {
             & $AddResult 'all-resources-exclusion-change' $Policy 'This policy covers every application but exempts some. Microsoft now enforces basic profile and directory permissions through the directory service itself, so without a policy that covers that service, applications that only ask for basic details may be challenged unexpectedly or may still slip past enforcement depending on rollout.' @('Windows Azure Active Directory (00000002-0000-0000-c000-000000000000)', 'Apps requesting User.Read, openid, profile, email, offline_access scopes', 'Native clients and SPAs with basic Azure AD Graph access')
         }
 
-        # dirsync-account-mfa
         if ($Active -and $AllUsers -and (& $HasMfaGrant $Policy) -and $DirSyncRoleId -and (@($Policy.conditions.users.excludeRoles) -contains $DirSyncRoleId)) {
             & $AddResult 'dirsync-account-mfa' $Policy 'This multifactor policy exempts the directory synchronization role. Recent versions of Entra Connect let the synchronization service authenticate as an application rather than a user account, which removes the need for this exemption and the gap it leaves.' @('Directory Synchronization Accounts role', 'Entra Connect sync service account', 'Hybrid identity sync pipeline')
         }
 
-        # eam-external-user-impact
         if ($Active -and ($AllUsers -or (& $HasAdminRoles $Policy))) {
             $HasCustomFactors = @($Grant.customAuthenticationFactors).Count -gt 0
             $HasEamViaStrength = $false
@@ -238,11 +217,9 @@ function Test-CIPPCAGapDocumentedExclusions {
             }
         }
 
-        # approved-client-app-retirement (no state gate in the source)
         if ($Controls -contains 'approvedApplication') {
             $HasAppProtection = $Controls -contains 'compliantApplication'
             if ($HasAppProtection -and $Grant.operator -eq 'OR') {
-                # compliant migration path
             } elseif ($HasAppProtection -and $Grant.operator -eq 'AND') {
                 & $AddResult 'approved-client-app-retirement' $Policy "$($Policy.displayName) requires both an approved client app and an app protection policy together. Microsoft is retiring the approved-client-app requirement, after which the app protection policy alone must be enough for this policy to keep working." @('Mobile device users on iOS and Android', 'Users accessing M365 apps from mobile devices')
             } else {
@@ -250,14 +227,12 @@ function Test-CIPPCAGapDocumentedExclusions {
             }
         }
 
-        # user-risk-password-change-deprecated
         if ($Active -and @($Policy.conditions.userRiskLevels).Count -gt 0 -and $Grant.present -and ($Controls -contains 'passwordChange')) {
             $UsesRiskRemediation = $Controls -contains 'riskRemediation'
             $Tail = if ($UsesRiskRemediation) { 'The policy already includes the newer risk-remediation requirement, so the password-change requirement can simply be removed.' } else { 'The newer risk-remediation requirement supports every sign-in method.' }
             & $AddResult 'user-risk-password-change-deprecated' $Policy "$($Policy.displayName) responds to a risky user by demanding a password change, a requirement Microsoft has retired. People who sign in without a password cannot complete it and stay blocked once flagged. $Tail" @('Passwordless users (FIDO2, Windows Hello for Business)', 'External Authentication Method users (Duo, Okta, etc.)', 'High-risk users who cannot complete a password change flow')
         }
 
-        # user-risk-remediation-no-eam-companion (EAM tenant state is not cached by CIPP: reported as unverified)
         if ($Active -and @($Policy.conditions.userRiskLevels).Count -gt 0 -and $Grant.present -and ($Controls -contains 'riskRemediation') -and ($null -ne $Grant.authenticationStrength)) {
             $ScopeNote = 'Whether this tenant uses an external authentication provider could not be verified, so this finding is shown as a precaution and may not apply.'
             & $AddResult 'user-risk-remediation-no-eam-companion' $Policy "$($Policy.displayName) asks risky users to remediate through an authentication strength. Authentication strengths cannot accept external providers such as Duo, Okta or Ping, so people who rely on one stay blocked once flagged unless a companion policy lets them remediate with plain multifactor authentication. $ScopeNote" @('Users enrolled in External Authentication Methods (Duo, Okta Verify, Ping, etc.)', 'Any tenant using a third-party MFA provider as EAM', 'High-risk EAM users who cannot complete authentication strength challenges')

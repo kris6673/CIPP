@@ -3,10 +3,7 @@ function Get-CIPPSecuritySimulationDefinition {
     .SYNOPSIS
         Returns the Security Simulation scenario catalog.
     .DESCRIPTION
-        One scenario file per event at Config/SecuritySimulations/Scenarios/<id>.json. A scenario is
-        narrative only - which standards matter for each step is declared on the Baseline standard
-        definitions themselves (their simulatorScenarios tags), see
-        Get-CIPPSecuritySimulationStandardMap. Adding a scenario is adding a file.
+        One scenario file per event at Config/SecuritySimulations/Scenarios/<id>.json.
     .FUNCTIONALITY
         Internal
     #>

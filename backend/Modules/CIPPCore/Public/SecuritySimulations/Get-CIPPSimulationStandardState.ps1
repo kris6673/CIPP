@@ -3,15 +3,8 @@ function Get-CIPPSimulationStandardState {
     .SYNOPSIS
         Reports whether one Baseline standard is in place on a tenant, for a simulation step.
     .DESCRIPTION
-        No new evaluation logic: if the tenant has a BaselineAlignment row for the standard, that
-        row is the answer (it is what the alignment page shows). Otherwise the Baselines engine
-        grades the standard on the spot with -GradeOnly, which reads and compares from cache and
-        persists nothing - the standard's recommended defaults stand in for the missing baseline
-        configuration. The license gate runs here first so an unlicensed standard never reaches
-        the engine (its license-skip path writes an alignment row, which an unassigned standard
-        must not get).
-
-        compliant is $true / $false / $null (unknown); status is the plain-language state.
+        No new evaluation logic: if the tenant has a BaselineAlignment row for the standard, that row is the
+        answer (it is what the alignment page shows).
     .FUNCTIONALITY
         Internal
     #>
@@ -20,11 +13,8 @@ function Get-CIPPSimulationStandardState {
         [Parameter(Mandatory = $true)]$TenantFilter,
         [Parameter(Mandatory = $true)]$Definition,
         [string]$Role = 'prevents',
-        # Preloaded BaselineAlignment rows for the tenant (PartitionKey = tenant).
         $AlignmentRows,
-        # Preloaded Get-CIPPTenantCapabilities result.
         $Capabilities,
-        # Catalog mode: never grade, only report what the alignment rows already know.
         [switch]$RowsOnly
     )
 
@@ -42,7 +32,6 @@ function Get-CIPPSimulationStandardState {
         lastRun    = $null
     }
 
-    # Instance rows are 'Name#n'; any instance of the standard counts as assigned.
     $Row = @($AlignmentRows | Where-Object { ("$($_.StandardName)" -split '#')[0] -eq $Name }) |
         Sort-Object -Property { [int64]($_.LastRun ?? 0) } -Descending | Select-Object -First 1
     if ($Row) {
@@ -67,13 +56,11 @@ function Get-CIPPSimulationStandardState {
         return $State
     }
 
-    # Any-of license gate, the same rule the engine applies.
     $Required = @($Definition.requiredCapabilities | Where-Object { $_ })
     if ($Required.Count -gt 0) {
         if ($null -eq $Capabilities) {
             $Capabilities = $(try { Get-CIPPTenantCapabilities -TenantFilter $TenantFilter } catch { $null })
         }
-        # Nested groups flatten through the pipeline; any licensed capability is enough here.
         $Licensed = @($Required | ForEach-Object { $_ } | Where-Object { $Capabilities.$_ -eq $true }).Count -gt 0
         if (-not $Licensed) {
             $State.status = 'License missing'
@@ -101,7 +88,6 @@ function Get-CIPPSimulationStandardState {
         $Graded = Invoke-CIPPBaselineStandard -Item $Item -Mode 'compare' -GradeOnly
         $State.source = 'evaluated'
         if ($null -eq $Graded) {
-            # The engine declines to grade: needs a configured value, is a manual task, or is disabled.
             $State.status = 'Needs configuration'
             $State.detail = 'This standard has to be configured in a baseline before it can be checked.'
         } elseif ($Graded.Compliant -eq $true) {

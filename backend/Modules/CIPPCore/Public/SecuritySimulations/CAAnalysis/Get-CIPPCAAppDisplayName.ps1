@@ -3,9 +3,9 @@ function Get-CIPPCAAppDisplayName {
     .SYNOPSIS
         Resolves an application ID referenced by a Conditional Access policy to a readable name.
     .DESCRIPTION
-        Looks the ID up, in order, in the curated app descriptions, the tenant's cached service principals, the
-        known bypass-app list, the FOCI family list, the well-known app list, the Microsoft first-party name table
-        and the built-in application-group aliases (Office365, MicrosoftAdminPortals). Falls back to the raw ID.
+        Looks the ID up, in order, in the curated app descriptions, the tenant's cached service principals,
+        the known bypass-app list, the FOCI family list, the well-known app list, the Microsoft first-party
+        name table and the built-in application-group aliases (Office365, MicrosoftAdminPortals).
     .FUNCTIONALITY
         Internal
     #>

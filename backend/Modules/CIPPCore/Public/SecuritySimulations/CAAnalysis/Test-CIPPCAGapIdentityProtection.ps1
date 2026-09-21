@@ -3,9 +3,8 @@ function Test-CIPPCAGapIdentityProtection {
     .SYNOPSIS
         Tenant-wide check for risk-based Conditional Access (user risk and sign-in risk conditions).
     .DESCRIPTION
-        Raises one High finding when no enabled policy uses user risk levels as a condition and another High finding
-        when no enabled policy uses sign-in risk levels. Both propose the corresponding Identity Protection templates.
-        Licensing is not consulted here (the CIS evaluation handles the Entra ID P2 gate).
+        Raises one High finding when no enabled policy uses user risk levels as a condition and another High
+        finding when no enabled policy uses sign-in risk levels.
     .FUNCTIONALITY
         Internal
     #>
@@ -15,7 +14,6 @@ function Test-CIPPCAGapIdentityProtection {
         $Context
     )
 
-    # Risk-based policies need Entra ID P2; without it there is nothing to find.
     if ($Context.Licenses.HasEntraIdP2 -ne $true) { return @() }
 
     $Findings = [System.Collections.Generic.List[object]]::new()

@@ -3,9 +3,8 @@ function Test-CIPPCAGapUncoveredAppExclusions {
     .SYNOPSIS
         Tenant-wide check for apps excluded from "All resources" policies that no other policy covers.
     .DESCRIPTION
-        Collects every app excluded from an enabled All-resources policy and checks whether any other enabled policy
-        targets it directly or via All resources without excluding it. Apps with no coverage at all receive zero
-        Conditional Access enforcement; one High finding lists them with the policies they are excluded from.
+        Collects every app excluded from an enabled All-resources policy and checks whether any other
+        enabled policy targets it directly or via All resources without excluding it.
     .FUNCTIONALITY
         Internal
     #>

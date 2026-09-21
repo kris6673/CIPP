@@ -1,13 +1,13 @@
 function Test-CIPPCAGapGuestExclusion {
     <#
     .SYNOPSIS
-        Flags All-users policies that exclude guest or external users, and tenants with no guest coverage at all.
+        Flags All-users policies that exclude guest or external users, and tenants with no guest coverage at
+        all.
     .DESCRIPTION
-        Per policy (any state): a policy targeting All users that excludes GuestsOrExternalUsers, either the simple
-        sentinel or the structured excludeGuestsOrExternalUsers object, produces a finding whose severity depends on
-        what the policy enforces (security-info registration, block, MFA on all apps, or other) and on whether another
-        non-disabled policy covers guests. Tenant-wide: when enabled policies exclude guests and there is neither a
-        guest-specific MFA policy nor an All-users MFA policy, a High finding proposes the guest MFA template.
+        Per policy (any state): a policy targeting All users that excludes GuestsOrExternalUsers, either the
+        simple sentinel or the structured excludeGuestsOrExternalUsers object, produces a finding whose
+        severity depends on what the policy enforces (security-info registration, block, MFA on all apps, or
+        other) and on whether another non-disabled policy covers guests.
     .FUNCTIONALITY
         Internal
     #>
@@ -137,7 +137,6 @@ function Test-CIPPCAGapGuestExclusion {
         $Findings.Add((New-CIPPCAGapFinding @Params))
     }
 
-    # tenant-wide guest coverage
     $GuestExcludingPolicies = @($Context.Enabled | Where-Object {
             $U = $_.conditions.users
             if (-not (@($U.includeUsers) -contains 'All')) { return $false }

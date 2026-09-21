@@ -3,16 +3,14 @@ function Get-CIPPCAAnalysisContext {
     .SYNOPSIS
         Builds the shared context every Conditional Access gap check reads from.
     .DESCRIPTION
-        Reads the tenant's cached ConditionalAccessPolicies, NamedLocations, AuthenticationStrengths, ServicePrincipals,
-        Roles and LicenseOverview rows once (cache only, no Graph calls), normalizes every policy, loads the static
-        reference datasets and returns one hashtable:
-          TenantFilter, Policies (normalized), Enabled, ReportOnly, Disabled, NamedLocations, NamedLocationById,
-          AuthStrengths (id -> strength), ServicePrincipals (lower-case appId -> service principal),
-          Roles (lower-case roleTemplateId -> display name), Licenses (HasEntraIdP1/P2, HasIntunePlan1,
-          HasWorkloadIdPremium, Source), BreakGlass (candidate from Get-CIPPCABreakGlassCandidate with a display name
-          resolved from the Users/Groups cache when available) and Data (reference datasets plus lower-cased lookup tables).
-        When the LicenseOverview cache is empty, licensing is inferred from the policies themselves (risk conditions
-        imply Entra ID P2, compliant-device grants imply Intune) exactly as the source analyzer does.
+        Reads the tenant's cached ConditionalAccessPolicies, NamedLocations, AuthenticationStrengths,
+        ServicePrincipals, Roles and LicenseOverview rows once (cache only, no Graph calls), normalizes
+        every policy, loads the static reference datasets and returns one hashtable: TenantFilter, Policies
+        (normalized), Enabled, ReportOnly, Disabled, NamedLocations, NamedLocationById, AuthStrengths (id ->
+        strength), ServicePrincipals (lower-case appId -> service principal), Roles (lower-case
+        roleTemplateId -> display name), Licenses (HasEntraIdP1/P2, HasIntunePlan1, HasWorkloadIdPremium,
+        Source), BreakGlass (candidate from Get-CIPPCABreakGlassCandidate with a display name resolved from
+        the Users/Groups cache when available) and Data (reference datasets plus lower-cased lookup tables).
     .FUNCTIONALITY
         Internal
     #>
@@ -22,7 +20,6 @@ function Get-CIPPCAAnalysisContext {
         [string]$TenantFilter
     )
 
-    # Emits the cached rows one by one (no comma-wrapping) so every caller can collect them with @(& $ReadCache ...).
     $ReadCache = {
         param($Type, $Fields)
         try {
@@ -36,10 +33,6 @@ function Get-CIPPCAAnalysisContext {
         }
     }
 
-    # --- policies
-    # Collect on miss, exactly like the Baselines engine: a tenant whose Conditional Access cache
-    # was never collected must not read as "no policies". The collector also fills NamedLocations
-    # and AuthenticationStrengths, so it runs before those reads.
     $RawPolicies = @(Get-CIPPSimulationCache -TenantFilter $TenantFilter -Type 'ConditionalAccessPolicies')
     $Policies = [System.Collections.Generic.List[object]]::new()
     foreach ($Raw in $RawPolicies) {
@@ -51,7 +44,6 @@ function Get-CIPPCAAnalysisContext {
     $ReportOnly = @($Policies | Where-Object { $_.state -eq 'enabledForReportingButNotEnforced' })
     $Disabled = @($Policies | Where-Object { $_.state -eq 'disabled' })
 
-    # --- named locations, authentication strengths, service principals, roles
     $NamedLocations = @(& $ReadCache 'NamedLocations' | Where-Object { $_.id })
     $NamedLocationById = @{}
     foreach ($Location in $NamedLocations) { $NamedLocationById["$($Location.id)"] = $Location }
@@ -72,7 +64,6 @@ function Get-CIPPCAAnalysisContext {
         if ($RoleKey -and $Role.displayName) { $Roles[$RoleKey.ToLowerInvariant()] = "$($Role.displayName)" }
     }
 
-    # --- static reference data and lookup tables
     $Data = @{}
     foreach ($Name in @('Reference', 'Personas', 'KnownExclusions', 'AdminRoles', 'FociFamilies', 'BypassApps', 'FirstPartyApps', 'AppDescriptions')) {
         $Data[$Name] = Get-CIPPCAAnalysisData -Name $Name
@@ -107,9 +98,6 @@ function Get-CIPPCAAnalysisContext {
     foreach ($RoleId in @($Data['AdminRoles'].criticalRoleIds)) { $null = $Data['CriticalRoleIds'].Add("$RoleId") }
     $Data['DirSyncRoleId'] = "$($Data['AdminRoles'].directorySynchronizationAccountsRoleId)"
 
-    # --- licensing: the tenant capabilities CIPP uses everywhere else (active service plans from
-    # subscribedSkus, cached) come first, so every simulation surface agrees on what is licensed;
-    # the LicenseOverview cache and policy-based inference are fallbacks for an empty capability cache.
     $PlanReference = $Data['Reference'].servicePlanIds
     $PlanIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     $LicenseRows = @(& $ReadCache 'LicenseOverview' @('skuId', 'ServicePlans'))
@@ -151,7 +139,6 @@ function Get-CIPPCAAnalysisContext {
         }
     }
 
-    # --- break-glass candidate (display name is best-effort from the Users/Groups cache)
     $BreakGlass = Get-CIPPCABreakGlassCandidate -Policies $Policies
     if ($BreakGlass) {
         $DirectoryType = if ($BreakGlass.type -eq 'user') { 'Users' } else { 'Groups' }

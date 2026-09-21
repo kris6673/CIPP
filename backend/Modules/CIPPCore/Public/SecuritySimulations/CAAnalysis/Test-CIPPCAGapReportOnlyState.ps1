@@ -3,9 +3,7 @@ function Test-CIPPCAGapReportOnlyState {
     .SYNOPSIS
         Lists every policy that is in report-only mode.
     .DESCRIPTION
-        A report-only policy logs what would happen but enforces nothing. Each one produces an Info finding so the
-        posture report shows which rules exist on paper only. Other checks downgrade or adjust their severity for
-        report-only policies themselves; this check is the plain inventory.
+        A report-only policy logs what would happen but enforces nothing.
     .FUNCTIONALITY
         Internal
     #>

@@ -37,8 +37,6 @@ const Page = () => {
   const counts = data?.analysis
   const score = data?.analysis?.score
 
-  // A reply caught mid-restart of the API can be a bare string that the query cache then keeps
-  // serving; fetch it again once instead of rendering nothing.
   const retriedRef = useRef(false)
   useEffect(() => {
     if (analysis.isFetching || data === undefined || (data && typeof data === 'object')) return

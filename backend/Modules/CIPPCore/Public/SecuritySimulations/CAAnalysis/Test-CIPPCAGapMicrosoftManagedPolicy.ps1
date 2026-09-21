@@ -3,9 +3,8 @@ function Test-CIPPCAGapMicrosoftManagedPolicy {
     .SYNOPSIS
         Surfaces Microsoft-managed Conditional Access policies detected by their display names.
     .DESCRIPTION
-        Per policy: a disabled policy whose name matches a Microsoft-managed policy pattern gets an Info finding
-        pointing at the MC1246002 Baseline Security Mode phantom-draft issue. Tenant-wide: one Info finding lists every
-        managed policy detected, with how many are report-only or disabled, so overlap with custom policies is reviewed.
+        Per policy: a disabled policy whose name matches a Microsoft-managed policy pattern gets an Info
+        finding pointing at the MC1246002 Baseline Security Mode phantom-draft issue.
     .FUNCTIONALITY
         Internal
     #>

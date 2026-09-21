@@ -3,12 +3,9 @@ function Resolve-CIPPSimulationIdentity {
     .SYNOPSIS
         Picks a real account in the tenant to stand in for a simulation persona.
     .DESCRIPTION
-        The What If API evaluates a real identity, so every persona resolves to one from the
-        CIPP cache: 'admin' is a member of a privileged directory role (Global Administrator
-        first), 'user' an enabled, licensed member that holds no privileged role, 'guest' an
-        enabled guest. Accounts excluded from any Conditional Access policy are skipped for the
-        admin persona - that is where break-glass accounts live, and a break-glass account would
-        make every situation look unprotected. Returns $null when the persona has no candidate.
+        The What If API evaluates a real identity, so every persona resolves to one from the CIPP cache:
+        'admin' is a member of a privileged directory role (Global Administrator first), 'user' an enabled,
+        licensed member that holds no privileged role, 'guest' an enabled guest.
     .FUNCTIONALITY
         Internal
     #>
@@ -16,7 +13,6 @@ function Resolve-CIPPSimulationIdentity {
     param(
         [Parameter(Mandatory = $true)]$TenantFilter,
         [Parameter(Mandatory = $true)][ValidateSet('admin', 'user', 'guest')]$Persona,
-        # Optional preloaded caches so a battery resolves three personas from one read each.
         $Users,
         $Roles,
         $Policies
@@ -26,15 +22,14 @@ function Resolve-CIPPSimulationIdentity {
     if ($null -eq $Roles) { $Roles = @(Get-CIPPSimulationCache -TenantFilter $TenantFilter -Type 'Roles') }
     if ($null -eq $Policies) { $Policies = @(Get-CIPPSimulationCache -TenantFilter $TenantFilter -Type 'ConditionalAccessPolicies') }
 
-    # Global Administrator first, then the roles an attacker would want next.
     $PrivilegedRoleTemplates = @(
-        '62e90394-69f5-4237-9190-012177145e10' # Global Administrator
-        'e8611ab8-c189-46e8-94e1-60213ab1f814' # Privileged Role Administrator
-        '194ae4cb-b126-40b2-bd5b-6091b380977d' # Security Administrator
-        'b1be1c3e-b65d-4f19-8427-f6fa0d97feb9' # Conditional Access Administrator
-        '29232cdf-9323-42fd-ade2-1d097af3e4de' # Exchange Administrator
-        'f28a1f50-f6e7-4571-818b-6a12f2af6b6c' # SharePoint Administrator
-        'fe930be7-5e62-47db-91af-98c3a49a38b1' # User Administrator
+        '62e90394-69f5-4237-9190-012177145e10'
+        'e8611ab8-c189-46e8-94e1-60213ab1f814'
+        '194ae4cb-b126-40b2-bd5b-6091b380977d'
+        'b1be1c3e-b65d-4f19-8427-f6fa0d97feb9'
+        '29232cdf-9323-42fd-ade2-1d097af3e4de'
+        'f28a1f50-f6e7-4571-818b-6a12f2af6b6c'
+        'fe930be7-5e62-47db-91af-98c3a49a38b1'
     )
 
     $ExcludedUserIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)

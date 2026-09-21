@@ -3,11 +3,7 @@ function Test-CIPPCAGapSwissCheeseGrant {
     .SYNOPSIS
         Reviews policies whose grant controls are combined with the OR operator.
     .DESCRIPTION
-        With OR, only the weakest listed control has to be satisfied. An OR between controls of equivalent strength
-        (compliant device OR hybrid-joined device; approved app OR app protection; or the MDM-or-MAM mix of both
-        groups) is Microsoft's accepted pattern and produces an Info finding. Any OR that spans controls of different
-        strength (for example MFA OR compliant device) produces a High finding. Disabled and report-only policies are
-        evaluated too so admins can see the impact before turning a policy on.
+        With OR, only the weakest listed control has to be satisfied.
     .FUNCTIONALITY
         Internal
     #>

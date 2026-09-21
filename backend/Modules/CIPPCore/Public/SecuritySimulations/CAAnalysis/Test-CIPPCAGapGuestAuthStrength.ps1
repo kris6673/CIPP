@@ -1,12 +1,12 @@
 function Test-CIPPCAGapGuestAuthStrength {
     <#
     .SYNOPSIS
-        Advises on Cross-Tenant Access Settings when guests are required to satisfy MFA or an authentication strength.
+        Advises on Cross-Tenant Access Settings when guests are required to satisfy MFA or an authentication
+        strength.
     .DESCRIPTION
-        Requiring MFA for guests is best practice, not a weakness, so this is an Info-level operational advisory: guest
-        users authenticate in their home tenant and are blocked unless inbound MFA trust is configured. Fires for every
-        non-disabled policy that targets guests/external users and requires MFA or an authentication strength; names
-        the strength type (phishing-resistant detection reads the tenant's cached authentication-strength catalog).
+        Requiring MFA for guests is best practice, not a weakness, so this is an Info-level operational
+        advisory: guest users authenticate in their home tenant and are blocked unless inbound MFA trust is
+        configured.
     .FUNCTIONALITY
         Internal
     #>

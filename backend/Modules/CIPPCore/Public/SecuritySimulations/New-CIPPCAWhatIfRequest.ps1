@@ -4,12 +4,6 @@ function New-CIPPCAWhatIfRequest {
         Builds the request body for the Conditional Access What If evaluation API.
     .DESCRIPTION
         The identity is a user (UserId) or a single-tenant service principal (ServicePrincipalId).
-        Conditions mirrors the API's signInConditions: devicePlatform, clientAppType,
-        signInRiskLevel, userRiskLevel, insiderRiskLevel, country, ipAddress, authenticationFlow
-        (a transferMethod string or { transferMethod }) and deviceInfo ({ isCompliant, ... }).
-        Keys are passed through as-is, so a new condition the API learns needs no code change here.
-        Blank values are dropped. Without IncludeApplications the evaluation targets Exchange
-        Online - the workload nearly every attack story reaches for first.
     .FUNCTIONALITY
         Internal
     #>
@@ -42,15 +36,12 @@ function New-CIPPCAWhatIfRequest {
     foreach ($Property in @(($Conditions ?? [PSCustomObject]@{}).PSObject.Properties)) {
         $Value = $Property.Value
         if ($null -eq $Value -or "$Value" -eq '') { continue }
-        # Pickers post option wrappers ({label, value}); plain values pass through.
         if ($Value -is [System.Management.Automation.PSCustomObject] -and $Value.PSObject.Properties['value'] -and $Value.PSObject.Properties['label']) {
             $Value = $Value.value
         }
         if ($Property.Name -eq 'authenticationFlow' -and $Value -is [string]) {
             $Value = @{ transferMethod = $Value }
         }
-        # Graph rejects the whole evaluation ("Invalid action parameters") over one unknown
-        # deviceInfo property, so only the documented ones go through.
         if ($Property.Name -eq 'deviceInfo') {
             $Allowed = @('deviceId', 'displayName', 'enrollmentProfileName', 'extensionAttributes', 'isCompliant', 'manufacturer', 'mfaRegistered', 'model', 'operatingSystem', 'operatingSystemVersion', 'ownership', 'physicalIds', 'profileType', 'systemLabels', 'trustType')
             $Device = @{}

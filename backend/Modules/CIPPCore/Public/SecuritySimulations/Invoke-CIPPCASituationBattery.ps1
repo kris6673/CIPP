@@ -3,19 +3,13 @@ function Invoke-CIPPCASituationBattery {
     .SYNOPSIS
         Evaluates every predefined sign-in situation against a tenant's live Conditional Access.
     .DESCRIPTION
-        Each situation names a persona and sign-in conditions. The persona resolves to a real
-        account from the cache once per battery, every situation becomes one What If request, and
-        all of them go out as Graph $batch calls. The outcome is judged against the situation's
-        expectation ('blocked', 'mfa', 'phishingResistant'), and a situation that falls short names
-        the control that is missing.
+        Each situation names a persona and sign-in conditions.
     .FUNCTIONALITY
         Internal
     #>
     [CmdletBinding()]
     param([Parameter(Mandatory = $true)]$TenantFilter)
 
-    # Risk conditions need Entra ID P2. Without it those sign-ins are excluded outright - a
-    # tenant is never told it is missing a policy it cannot licence.
     $Capabilities = $(try { Get-CIPPTenantCapabilities -TenantFilter $TenantFilter } catch { $null })
     $HasP2 = $Capabilities.AAD_PREMIUM_P2 -eq $true
     $RiskConditions = @('signInRiskLevel', 'userRiskLevel', 'insiderRiskLevel')
@@ -85,8 +79,6 @@ function Invoke-CIPPCASituationBattery {
             $Rows.Add($Row)
             continue
         }
-        # A situation that only asks "is MFA demanded here?" is a plain sign-in attempt: nothing is
-        # pre-satisfied, otherwise every MFA challenge would read as "allowed".
         $CanSatisfy = if ($Expected -in @('mfa', 'phishingResistant')) { @() } else { @($Situation.attackerCanSatisfy | Where-Object { $_ }) }
         $Verdict = Get-CIPPCAWhatIfVerdict -Policies $Evaluation.Policies -AttackerCanSatisfy $CanSatisfy -Expected $Expected
         $Row.outcome = if ($Verdict.detail -eq 'blockedByPolicy') { 'Blocked' }

@@ -5,11 +5,10 @@ function Invoke-ListCASituations {
     .ROLE
         Tenant.SecuritySimulations.Read
     .DESCRIPTION
-        Evaluates every predefined sign-in situation (admin, user and guest personas under
-        unmanaged devices, foreign locations, legacy clients, device-code flow, risk levels and
-        more) live against the tenant's Conditional Access through the What If API, and names the
-        control missing wherever a sign-in gets through. Read-only: no sign-in occurs and nothing
-        changes in the tenant. Pass ?tenantFilter=.
+        Evaluates every predefined sign-in situation (admin, user and guest personas under unmanaged
+        devices, foreign locations, legacy clients, device-code flow, risk levels and more) live against the
+        tenant's Conditional Access through the What If API, and names the control missing wherever a
+        sign-in gets through.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

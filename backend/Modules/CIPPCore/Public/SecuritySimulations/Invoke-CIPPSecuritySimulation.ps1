@@ -3,15 +3,9 @@ function Invoke-CIPPSecuritySimulation {
     .SYNOPSIS
         Plays one security scenario against one tenant and reports how it would go.
     .DESCRIPTION
-        For every step of the scenario: the standards tagged to that step are graded (alignment
-        row if assigned, engine -GradeOnly otherwise), a whatIf step is evaluated live through the
-        What If API for the scenario's persona, and alert steps check whether an audit-log alert
-        rule would fire. Nothing is written to the tenant or to CIPP.
-
-        Two stories come back from one run: the CURRENT state (what the attacker experiences
-        today) and the state WITH the mapped controls in place. The second is declarative - the
-        What If API can only evaluate the policies that exist, so a step's recommended outcome is
-        its whenFixed text, reached only if no earlier step already stops the chain.
+        For every step of the scenario: the standards tagged to that step are graded (alignment row if
+        assigned, engine -GradeOnly otherwise), a whatIf step is evaluated live through the What If API for
+        the scenario's persona, and alert steps check whether an audit-log alert rule would fire.
     .FUNCTIONALITY
         Internal
     #>
@@ -83,8 +77,6 @@ function Invoke-CIPPSecuritySimulation {
                     $Verdict = Get-CIPPCAWhatIfVerdict -Policies $Evaluation.Policies -AttackerCanSatisfy $AttackerCanSatisfy
                     $Gaps = [System.Collections.Generic.List[object]]::new()
                     foreach ($Gap in @($Step.gaps | Where-Object { $_ })) {
-                        # A gap whose fix the tenant cannot licence (risk-based policies need P2)
-                        # is not a gap for this tenant - it never triggers and never becomes a fix.
                         $GapRequired = @($Gap.requiredCapabilities | Where-Object { $_ })
                         $GapLicensed = $GapRequired.Count -eq 0 -or @($GapRequired | Where-Object { $Capabilities.$_ -eq $true }).Count -gt 0
                         $When = @($Gap.when | Where-Object { $_ } | ForEach-Object { "$_".ToLower() })
@@ -117,7 +109,6 @@ function Invoke-CIPPSecuritySimulation {
             }
         }
 
-        # Step verdict. A whatIf verdict is the step's; otherwise the checks decide.
         $Checks = [System.Collections.Generic.List[bool]]::new()
         foreach ($Standard in $Standards) { if ($null -ne $Standard.compliant) { $Checks.Add([bool]$Standard.compliant) } }
         foreach ($Alert in $Alerts) { $Checks.Add([bool]$Alert.configured) }

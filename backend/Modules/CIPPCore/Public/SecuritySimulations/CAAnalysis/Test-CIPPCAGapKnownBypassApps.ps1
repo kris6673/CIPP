@@ -1,13 +1,11 @@
 function Test-CIPPCAGapKnownBypassApps {
     <#
     .SYNOPSIS
-        Reviews every non-FOCI app excluded from a policy and cross-references it with the known bypass-app catalog.
+        Reviews every non-FOCI app excluded from a policy and cross-references it with the known bypass-app
+        catalog.
     .DESCRIPTION
         One consolidated "App Exclusion" finding per policy that excludes apps (FOCI apps are covered by
-        Test-CIPPCAGapFociExclusion). Each excluded app is resolved against the curated app descriptions, the tenant's
-        cached service principals, the known Conditional Access bypass apps (Azure CLI, Azure PowerShell, Device
-        Management Client, ...) and the built-in application-group aliases. The finding is High when any exclusion is a
-        known bypass app or carries a critical/high exclusion risk, otherwise Medium. All policy states are evaluated.
+        Test-CIPPCAGapFociExclusion).
     .FUNCTIONALITY
         Internal
     #>
