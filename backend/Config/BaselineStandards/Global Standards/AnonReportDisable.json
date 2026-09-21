@@ -3,9 +3,6 @@
   "label": "Enable Usernames instead of pseudo anonymised names in reports",
   "cat": "Global Standards",
   "tag": [],
-  "simulatorScenarios": [
-    { "scenario": "AuditingOff", "step": "DisableCheck", "role": "detects" }
-  ],
   "impact": "Low Impact",
   "helpText": "Shows usernames instead of pseudo anonymised names in reports. This standard is required for reporting to work correctly.",
   "executiveText": "Configures Microsoft 365 reports to display actual usernames instead of anonymized identifiers, enabling IT administrators to effectively troubleshoot issues and generate meaningful usage reports. This improves operational efficiency and system management capabilities.",

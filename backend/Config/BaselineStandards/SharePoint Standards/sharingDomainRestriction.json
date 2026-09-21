@@ -5,9 +5,6 @@
   "tag": [
     "spo_external_sharing_managed"
   ],
-  "simulatorScenarios": [
-    { "scenario": "GuestReshareSprawl", "step": "Reshare", "role": "limits" }
-  ],
   "impact": "High Impact",
   "helpText": "Restricts SharePoint external sharing to an allow-list or block-list of domains, or removes the restriction.",
   "executiveText": "Controls which external organizations files can be shared with, containing data exposure to sanctioned partners.",

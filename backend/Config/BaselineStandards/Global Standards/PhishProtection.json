@@ -3,9 +3,6 @@
   "label": "Enable Phishing Protection system via branding CSS",
   "cat": "Global Standards",
   "tag": [],
-  "simulatorScenarios": [
-    { "scenario": "StolenTokenReplay", "step": "SignIn", "role": "detects" }
-  ],
   "impact": "Low Impact",
   "helpText": "Adds branding to the logon page that only appears if the url is not login.microsoftonline.com. This potentially prevents AITM attacks via EvilNginx, and automatically generates alerts if a clone of your login page is found.",
   "executiveText": "Adds a hidden canary to the company sign-in page that exposes cloned phishing pages and alerts when one is found, protecting staff credentials from adversary-in-the-middle attacks.",

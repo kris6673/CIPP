@@ -8,9 +8,6 @@
     "CISA (MS.AAD.14.1v1)",
     "CISA (MS.SPO.1.1v1)"
   ],
-  "simulatorScenarios": [
-    { "scenario": "AnonymousLinkSensitiveSite", "step": "CreateLink", "role": "prevents" }
-  ],
   "impact": "High Impact",
   "helpText": "Sets the default sharing level for OneDrive and SharePoint. This is a tenant wide setting and overrules any settings set on the site level",
   "executiveText": "Defines the organization's default policy for sharing files and folders in SharePoint and OneDrive, balancing collaboration needs with security requirements. This fundamental setting determines whether employees can share with external users, anonymous links, or only internal colleagues.",

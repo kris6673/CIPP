@@ -8,9 +8,6 @@
     "EIDSCA.AP07",
     "SMB1001 (2.8)"
   ],
-  "simulatorScenarios": [
-    { "scenario": "GuestWithDirectoryRole", "step": "SignIn", "role": "prevents" }
-  ],
   "impact": "Medium Impact",
   "helpText": "This setting controls who can invite guests to your directory to collaborate on resources secured by your company, such as SharePoint sites or Azure resources.",
   "executiveText": "Controls who within the organization can invite external partners and vendors to access company resources, ensuring proper oversight of external access while enabling necessary business collaboration. This helps maintain security while supporting partnership and vendor relationships.",

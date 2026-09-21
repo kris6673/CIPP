@@ -9,16 +9,6 @@
     "CISA (MS.EXO.4.1v1)",
     "NIST CSF 2.0 (PR.DS-02)"
   ],
-  "simulatorScenarios": [
-    { "scenario": "StolenTokenReplay", "step": "Persistence", "role": "prevents" },
-    { "scenario": "SignInOutsideAllowedCountries", "step": "Forwarding", "role": "prevents" },
-    { "scenario": "DeviceCodePhishing", "step": "Persistence", "role": "prevents" },
-    { "scenario": "PasswordSprayNoMfa", "step": "Persistence", "role": "prevents" },
-    { "scenario": "LegacyAuthMailboxAccess", "step": "Exfiltration", "role": "prevents" },
-    { "scenario": "AuditingOff", "step": "Exfiltration", "role": "prevents" },
-    { "scenario": "MailboxRuleExfiltration", "step": "InboxRule", "role": "prevents" },
-    { "scenario": "MailboxRuleExfiltration", "step": "MailboxForward", "role": "prevents" }
-  ],
   "impact": "High Impact",
   "helpText": "Disables the ability for users to automatically forward e-mails to external recipients.",
   "executiveText": "Prevents employees from automatically forwarding company emails to external addresses, protecting against data leaks and unauthorized information sharing. This security measure helps maintain control over sensitive business communications while preventing both accidental and intentional data exfiltration.",

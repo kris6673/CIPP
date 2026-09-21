@@ -11,18 +11,6 @@
     "Essential 8 (1683)",
     "NIST CSF 2.0 (DE.CM-09)"
   ],
-  "simulatorScenarios": [
-    { "scenario": "StolenTokenReplay", "step": "MailboxSearch", "role": "detects" },
-    { "scenario": "StolenTokenReplay", "step": "Persistence", "role": "detects" },
-    { "scenario": "SignInOutsideAllowedCountries", "step": "MailboxAccess", "role": "detects" },
-    { "scenario": "DeviceCodePhishing", "step": "TokenUse", "role": "detects" },
-    { "scenario": "PasswordSprayNoMfa", "step": "AccountTakeover", "role": "detects" },
-    { "scenario": "LegacyAuthMailboxAccess", "step": "MailboxAccess", "role": "detects" },
-    { "scenario": "MaliciousOAuthConsent", "step": "MailAccess", "role": "detects" },
-    { "scenario": "AuditingOff", "step": "MailboxAccess", "role": "detects" },
-    { "scenario": "MailboxRuleExfiltration", "step": "InboxRule", "role": "detects" },
-    { "scenario": "MailboxPermissionGrab", "step": "MailboxAccess", "role": "detects" }
-  ],
   "impact": "Low Impact",
   "helpText": "Enables Mailbox auditing for all mailboxes and on tenant level. Disables audit bypass on all mailboxes. Unified Audit Log needs to be enabled for this standard to function.",
   "executiveText": "Enables comprehensive logging of all email access and modifications across all employee mailboxes, providing detailed audit trails for security investigations and compliance requirements. This helps detect unauthorized access, data breaches, and supports regulatory compliance efforts.",

@@ -15,14 +15,6 @@
     "MFARegistrationV2",
     "AdminMFAV2"
   ],
-  "simulatorScenarios": [
-    { "scenario": "PasswordSprayNoMfa", "step": "SignIn", "role": "prevents" },
-    { "scenario": "RoleAssignmentEscalation", "step": "SignIn", "role": "prevents" },
-    { "scenario": "MassUserDeletion", "step": "SignIn", "role": "prevents" },
-    { "scenario": "MassGroupDeletion", "step": "SignIn", "role": "prevents" },
-    { "scenario": "MfaTampering", "step": "DisableMfa", "role": "recovers" },
-    { "scenario": "MassFileDeletion", "step": "SignIn", "role": "prevents" }
-  ],
   "impact": "High Impact",
   "helpText": "Enables per user MFA for all users. The directory synchronisation service account is excluded - it cannot complete MFA and enforcing it breaks sync.",
   "executiveText": "Requires all employees to use multi-factor authentication for enhanced account security, significantly reducing the risk of unauthorized access from compromised passwords. This fundamental security measure protects against the majority of account-based attacks and is essential for maintaining strong cybersecurity posture.",

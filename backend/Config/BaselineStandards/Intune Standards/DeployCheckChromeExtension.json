@@ -3,9 +3,6 @@
   "label": "Deploy Check by CyberDrain Browser Extension",
   "cat": "Intune Standards",
   "tag": [],
-  "simulatorScenarios": [
-    { "scenario": "StolenTokenReplay", "step": "Assumption", "role": "prevents" }
-  ],
   "impact": "Low Impact",
   "helpText": "Deploys the Check by CyberDrain browser extension via a Win32 script app in Intune for both Chrome and Edge with configurable settings.",
   "executiveText": "Automatically protects staff browsers against phishing with the Check extension, consistently configured and force-installed fleet-wide.",

@@ -3,9 +3,6 @@
   "label": "Configure Smart Lockout",
   "cat": "Entra (AAD) Standards",
   "tag": [],
-  "simulatorScenarios": [
-    { "scenario": "PasswordSprayNoMfa", "step": "SignIn", "role": "limits" }
-  ],
   "impact": "Medium Impact",
   "helpText": "Sets the smart lockout threshold and duration, and optionally on-premises password protection mode.",
   "executiveText": "Tunes how quickly repeated failed sign-ins lock an account and for how long, balancing brute-force protection against helpdesk load from accidental lockouts.",

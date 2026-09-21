@@ -6,9 +6,6 @@
     "CIS M365 7.0.0 (6.5.4)",
     "NIST CSF 2.0 (PR.IR-01)"
   ],
-  "simulatorScenarios": [
-    { "scenario": "LegacyAuthMailboxAccess", "step": "SignIn", "role": "prevents" }
-  ],
   "impact": "Medium Impact",
   "helpText": "Disables SMTP AUTH organization-wide, impacting POP and IMAP clients that rely on SMTP for sending emails. Default for new tenants. For more information, see the [Microsoft documentation](https://learn.microsoft.com/en-us/exchange/clients-and-mobile-in-exchange-online/authenticated-client-smtp-submission)",
   "executiveText": "Disables outdated email authentication methods that are vulnerable to security attacks, forcing applications and devices to use modern, more secure authentication protocols. This reduces the risk of email-based security breaches and credential theft.",

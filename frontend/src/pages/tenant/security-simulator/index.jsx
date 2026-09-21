@@ -39,7 +39,21 @@ import { useSettings } from '../../../hooks/use-settings'
 import { useDialog } from '../../../hooks/use-dialog'
 import { CippIcons } from '../../../utils/icon-registry'
 
+// Scenarios are tests in the Security Simulations suite. The list comes from ListAvailableTests, the
+// results from ListTests, and a run is the test engine's own per-test refresh.
+const REPORT_ID = 'securitysimulations'
+const TEST_PREFIX = 'SecuritySimulation_'
+const NAME_PREFIX = 'Security Simulation - '
 const asArray = (value) => (Array.isArray(value) ? value : value ? [value] : [])
+const testsQueryKey = (tenant) => `${tenant}-ListTests-${REPORT_ID}`
+const parseData = (row) => {
+  if (!row?.ResultDataJson) return null
+  try {
+    return JSON.parse(row.ResultDataJson)
+  } catch {
+    return null
+  }
+}
 
 const CATEGORY_ORDER = [
   'Identity & Conditional Access',
@@ -47,12 +61,22 @@ const CATEGORY_ORDER = [
   'Exchange & Email',
   'SharePoint & Data',
 ]
+const NOT_CHECKED = 'Not checked yet'
 
-// One colour per outcome, used for the dot in the list and the status text in the run view.
+const outcomeOf = (row, data) => {
+  if (!row) return 'NotRun'
+  if (row.Status === 'Passed') return 'Prevented'
+  if (row.Status === 'Failed')
+    return data?.summary?.detected ? 'Detected' : 'NotPrevented'
+  if (row.Status === 'Skipped') return 'Unlicensed'
+  return 'Unknown'
+}
 const outcomeStyle = {
   Prevented: { text: 'Prevented', color: 'success.main' },
   Detected: { text: 'Alerted, not prevented', color: 'warning.main' },
   NotPrevented: { text: 'Not prevented', color: 'error.main' },
+  Unlicensed: { text: 'Not licensed', color: 'text.disabled' },
+  Unknown: { text: 'Could not be evaluated', color: 'warning.main' },
   NotRun: { text: 'Not checked yet', color: 'text.disabled' },
 }
 const verdictColor = {
@@ -121,12 +145,11 @@ const stepStatus = (step, fixed) => {
 
 const standardNote = (standard) => {
   if (standard.compliant === true) return null
-  if (standard.compliant === false)
-    return standard.status === 'Drift' ? 'drifted' : 'not in place'
+  if (standard.status === 'Not in a baseline') return 'not in a baseline'
+  if (standard.status === 'Drift') return 'drifted'
   return standard.status?.toLowerCase() ?? 'not checked'
 }
 
-// Policy-by-policy result of the live What If evaluation, folded away until asked for.
 const PolicyResults = ({ policies }) => {
   const [open, setOpen] = useState(false)
   if (policies.length === 0) return null
@@ -166,8 +189,6 @@ const PolicyResults = ({ policies }) => {
   )
 }
 
-// One action per gap: standards go straight into a baseline, alerts straight into the alert
-// rules, both through the same dialogs and endpoints the Baselines and Alerts pages use.
 const FixAction = ({ fix, onAddStandard, onEnableAlert }) => {
   const router = useRouter()
   const button = (label, onClick) => (
@@ -193,28 +214,22 @@ const FixAction = ({ fix, onAddStandard, onEnableAlert }) => {
   return null
 }
 
-const ScenarioRun = ({ tenant, scenarioId, onBack }) => {
+const ScenarioRun = ({ tenant, scenario, loadingList, onBack }) => {
   const [mode, setMode] = useState('current')
   const [standardToAdd, setStandardToAdd] = useState(null)
   const [alertToEnable, setAlertToEnable] = useState(null)
   const addStandardDialog = useDialog()
   const alertDialog = useDialog()
-  const runQueryKey = `SecuritySimulationRun-${tenant}-${scenarioId}`
+  const testId = `${TEST_PREFIX}${scenario.id}`
 
-  const stored = ApiGetCall({
-    url: '/api/ListSecuritySimulations',
-    data: { tenantFilter: tenant, scenarioId },
-    queryKey: runQueryKey,
-    waiting: Boolean(tenant && scenarioId),
-  })
   const run = ApiPostCall({
-    url: '/api/ExecSecuritySimulation',
-    relatedQueryKeys: [`ListSecuritySimulations-${tenant}`, runQueryKey],
+    url: '/api/ExecTestRefresh',
+    relatedQueryKeys: [testsQueryKey(tenant)],
   })
   const startRun = () =>
     run.mutate({
-      url: '/api/ExecSecuritySimulation',
-      data: { tenantFilter: tenant, scenarioId },
+      url: '/api/ExecTestRefresh',
+      data: { tenantFilter: tenant, testName: testId },
     })
 
   const autoRanRef = useRef(null)
@@ -222,26 +237,20 @@ const ScenarioRun = ({ tenant, scenarioId, onBack }) => {
     setMode('current')
     run.reset()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenant, scenarioId])
+  }, [tenant, scenario.id])
   useEffect(() => {
-    if (stored.isFetching || !stored.isSuccess) return
-    if (stored.data?.cached === false && autoRanRef.current !== runQueryKey) {
-      autoRanRef.current = runQueryKey
-      startRun()
-    }
+    if (loadingList || scenario.row || autoRanRef.current === testId) return
+    autoRanRef.current = testId
+    startRun()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stored.data, stored.isFetching, stored.isSuccess, runQueryKey])
+  }, [loadingList, scenario.row, testId])
 
-  const fresh = run.data?.data
-  const result =
-    fresh?.scenario?.id === scenarioId
-      ? fresh
-      : stored.data?.cached
-        ? stored.data.result
-        : undefined
-  const loading = run.isPending || (stored.isFetching && !result)
-  const steps = asArray(result?.steps)
-  const summary = result?.summary
+  const freshRow = run.data?.data?.Metadata
+  const row = freshRow?.RowKey === testId ? freshRow : scenario.row
+  const data = parseData(row)
+  const loading = run.isPending || (loadingList && !row)
+  const steps = asArray(data?.steps)
+  const summary = data?.summary
   const fixes = asArray(summary?.fixes)
   const fixed = mode === 'fixed'
   const prevented = fixed ? summary?.preventedWhenFixed : summary?.prevented
@@ -267,10 +276,10 @@ const ScenarioRun = ({ tenant, scenarioId, onBack }) => {
     : !fixed && evaluationFailed
       ? 'warning.main'
       : 'error.main'
-  const subline = result?.scenario?.outcome
+  const subline = data?.scenario?.outcome
     ? prevented
-      ? result.scenario.outcome.prevented
-      : result.scenario.outcome.notPrevented
+      ? data.scenario.outcome.prevented
+      : data.scenario.outcome.notPrevented
     : ''
 
   const openAddStandard = (fix) => {
@@ -305,25 +314,25 @@ const ScenarioRun = ({ tenant, scenarioId, onBack }) => {
       >
         <Box sx={{ flex: 1, minWidth: 280 }}>
           <Typography variant="h4">
-            {result?.scenario?.title ?? 'Checking scenario'}
+            {data?.scenario?.title ?? scenario.title}
           </Typography>
-          {result?.scenario?.summary && (
+          {data?.scenario?.summary && (
             <Typography
               variant="body1"
               sx={{ color: 'text.secondary', mt: 1, maxWidth: 760 }}
             >
-              {result.scenario.summary}
+              {data.scenario.summary}
             </Typography>
           )}
-          {result?.lastRun && (
+          {data?.lastRun && (
             <Typography
               variant="caption"
               sx={{ color: 'text.secondary', display: 'block', mt: 1 }}
             >
-              {result.identity
-                ? `Evaluated as ${result.identity.userPrincipalName} · `
+              {data.identity
+                ? `Evaluated as ${data.identity.userPrincipalName} · `
                 : ''}
-              checked <CippTimeAgo data={result.lastRun} />
+              checked <CippTimeAgo data={data.lastRun} />
               {fixed
                 ? ' · assumes every control on the right is in place; sign-in outcomes are the expected results, not a live evaluation'
                 : ''}
@@ -331,7 +340,7 @@ const ScenarioRun = ({ tenant, scenarioId, onBack }) => {
           )}
         </Box>
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-          {result && (
+          {data && (
             <ToggleButtonGroup
               value={mode}
               exclusive
@@ -372,11 +381,13 @@ const ScenarioRun = ({ tenant, scenarioId, onBack }) => {
       </Box>
 
       {run.isError && <Alert severity="error">{getCippError(run.error)}</Alert>}
-      {stored.isError && !result && (
-        <Alert severity="error">{getCippError(stored.error)}</Alert>
+      {loading && !data && <CippFormSkeleton layout={[1, 3, 1, 1, 1]} />}
+      {row && !data && !loading && (
+        <Alert severity="warning">
+          This scenario has a result without step detail. Run it again.
+        </Alert>
       )}
-      {loading && !result && <CippFormSkeleton layout={[1, 3, 1, 1, 1]} />}
-      {result && result.licensed === false && (
+      {data && data.licensed === false && (
         <Alert severity="warning">
           This tenant is not licensed for the capabilities this scenario needs,
           so the live sign-in evaluation was skipped. The standards were still
@@ -384,7 +395,7 @@ const ScenarioRun = ({ tenant, scenarioId, onBack }) => {
         </Alert>
       )}
 
-      {result && (
+      {data && (
         <>
           <Box>
             <Typography
@@ -425,6 +436,11 @@ const ScenarioRun = ({ tenant, scenarioId, onBack }) => {
                     (gap) => gap.triggered
                   )
                   const reportOnly = asArray(whatIf?.reportOnlyWouldStop)
+                  const hasChecks =
+                    triggeredGaps.length > 0 ||
+                    reportOnly.length > 0 ||
+                    asArray(step.standards).length > 0 ||
+                    asArray(step.alerts).length > 0
                   return (
                     <TimelineItem
                       key={step.id}
@@ -497,48 +513,43 @@ const ScenarioRun = ({ tenant, scenarioId, onBack }) => {
                             {whatIf.error}
                           </Typography>
                         )}
-
-                        {!fixed &&
-                          (triggeredGaps.length > 0 ||
-                            reportOnly.length > 0 ||
-                            asArray(step.standards).length > 0 ||
-                            asArray(step.alerts).length > 0) && (
-                            <Stack spacing={0.5} sx={{ mt: 1.5 }}>
-                              {triggeredGaps.map((gap) => (
-                                <CheckLine
-                                  key={gap.text}
-                                  ok={false}
-                                  text={gap.text}
-                                />
-                              ))}
-                              {reportOnly.length > 0 && (
-                                <CheckLine
-                                  warn
-                                  text={`A report-only policy would have stopped this sign-in: ${reportOnly.join(', ')}`}
-                                />
-                              )}
-                              {asArray(step.standards).map((standard) => (
-                                <CheckLine
-                                  key={standard.name}
-                                  ok={standard.compliant === true}
-                                  warn={standard.compliant === null}
-                                  text={standard.label}
-                                  note={standardNote(standard)}
-                                />
-                              ))}
-                              {asArray(step.alerts).map((alert) => (
-                                <CheckLine
-                                  key={alert.operation}
-                                  ok={alert.configured}
-                                  text={
-                                    alert.configured
-                                      ? `An alert watches "${alert.operation}"`
-                                      : `Nothing alerts on "${alert.operation}"`
-                                  }
-                                />
-                              ))}
-                            </Stack>
-                          )}
+                        {!fixed && hasChecks && (
+                          <Stack spacing={0.5} sx={{ mt: 1.5 }}>
+                            {triggeredGaps.map((gap) => (
+                              <CheckLine
+                                key={gap.text}
+                                ok={false}
+                                text={gap.text}
+                              />
+                            ))}
+                            {reportOnly.length > 0 && (
+                              <CheckLine
+                                warn
+                                text={`A report-only policy would have stopped this sign-in: ${reportOnly.join(', ')}`}
+                              />
+                            )}
+                            {asArray(step.standards).map((standard) => (
+                              <CheckLine
+                                key={standard.name}
+                                ok={standard.compliant === true}
+                                warn={standard.compliant === null}
+                                text={standard.label}
+                                note={standardNote(standard)}
+                              />
+                            ))}
+                            {asArray(step.alerts).map((alert) => (
+                              <CheckLine
+                                key={alert.operation}
+                                ok={alert.configured}
+                                text={
+                                  alert.configured
+                                    ? `An alert watches "${alert.operation}"`
+                                    : `Nothing alerts on "${alert.operation}"`
+                                }
+                              />
+                            ))}
+                          </Stack>
+                        )}
                         {fixed && asArray(step.fixes).length > 0 && (
                           <Stack spacing={0.5} sx={{ mt: 1.5 }}>
                             {asArray(step.fixes).map((fix) => (
@@ -625,7 +636,7 @@ const ScenarioRun = ({ tenant, scenarioId, onBack }) => {
         <CippBaselineAddStandardDialog
           createDialog={addStandardDialog}
           standardName={standardToAdd}
-          relatedQueryKeys={[runQueryKey]}
+          relatedQueryKeys={[testsQueryKey(tenant)]}
         />
       )}
       {alertToEnable && (
@@ -635,41 +646,47 @@ const ScenarioRun = ({ tenant, scenarioId, onBack }) => {
           preset={alertToEnable.name}
           operation={alertToEnable.operation}
           logbook={alertToEnable.logbook}
-          relatedQueryKeys={[runQueryKey]}
+          relatedQueryKeys={[testsQueryKey(tenant)]}
         />
       )}
     </Stack>
   )
 }
 
-const ScenarioList = ({ tenant, catalog, onOpen }) => {
-  const scenarios = asArray(catalog.data).filter(
-    (s) => s && typeof s === 'object' && s.id
-  )
-  const retriedRef = useRef(false)
-  useEffect(() => {
-    if (
-      catalog.isFetching ||
-      catalog.data === undefined ||
-      Array.isArray(catalog.data)
-    )
-      return
-    if (retriedRef.current) return
-    retriedRef.current = true
-    catalog.refetch()
-  }, [catalog.data, catalog.isFetching, catalog])
-
+const ScenarioList = ({
+  tenant,
+  scenarios,
+  loading,
+  error,
+  onRetry,
+  onOpen,
+}) => {
+  const [checkedCount, setCheckedCount] = useState(0)
   const runAll = ApiPostCall({
-    url: '/api/ExecSecuritySimulation',
-    relatedQueryKeys: [`ListSecuritySimulations-${tenant}`],
+    url: '/api/ExecTestRefresh',
+    relatedQueryKeys: [testsQueryKey(tenant)],
+    onResult: () => setCheckedCount((count) => count + 1),
   })
+  const startAll = () => {
+    setCheckedCount(0)
+    runAll.mutate({
+      url: '/api/ExecTestRefresh',
+      bulkRequest: true,
+      data: scenarios.map((scenario) => ({
+        tenantFilter: tenant,
+        testName: `${TEST_PREFIX}${scenario.id}`,
+      })),
+    })
+  }
+
   const categories = [
     ...CATEGORY_ORDER.filter((category) =>
       scenarios.some((s) => s.category === category)
     ),
     ...[...new Set(scenarios.map((s) => s.category))].filter(
-      (c) => !CATEGORY_ORDER.includes(c)
+      (c) => !CATEGORY_ORDER.includes(c) && c !== NOT_CHECKED
     ),
+    ...(scenarios.some((s) => s.category === NOT_CHECKED) ? [NOT_CHECKED] : []),
   ]
   const checked = scenarios.filter((s) => s.lastRun)
   const lastRun = checked.reduce(
@@ -699,7 +716,9 @@ const ScenarioList = ({ tenant, catalog, onOpen }) => {
             sx={{ color: 'text.secondary', maxWidth: 720 }}
           >
             Each scenario is an event that could happen to this tenant. Open one
-            to see how it plays out today and what closes each gap.
+            to see how it plays out today and what closes each gap. The
+            scenarios run with the nightly tests and can be checked again here
+            at any time.
           </Typography>
           {scenarios.length > 0 && (
             <Typography
@@ -729,37 +748,30 @@ const ScenarioList = ({ tenant, catalog, onOpen }) => {
               <CircularProgress size={14} color="inherit" />
             ) : undefined
           }
-          onClick={() =>
-            runAll.mutate({
-              url: '/api/ExecSecuritySimulation',
-              data: { tenantFilter: tenant, scenarioId: 'All' },
-            })
-          }
+          onClick={startAll}
         >
-          {runAll.isPending ? 'Checking every scenario' : 'Run all checks'}
+          {runAll.isPending
+            ? `Checking ${Math.min(checkedCount + 1, scenarios.length)} of ${scenarios.length}`
+            : 'Run all checks'}
         </Button>
       </Box>
       {runAll.isError && (
         <Alert severity="error">{getCippError(runAll.error)}</Alert>
       )}
-      {catalog.isFetching && scenarios.length === 0 && (
+      {loading && scenarios.length === 0 && (
         <CippFormSkeleton layout={[1, 1, 1, 1]} />
       )}
-      {!catalog.isFetching && scenarios.length === 0 && (
+      {!loading && scenarios.length === 0 && (
         <Alert
-          severity={catalog.isError ? 'error' : 'info'}
+          severity={error ? 'error' : 'info'}
           action={
-            <Button
-              color="inherit"
-              size="small"
-              onClick={() => catalog.refetch()}
-            >
+            <Button color="inherit" size="small" onClick={onRetry}>
               Retry
             </Button>
           }
         >
-          {catalog.isError
-            ? 'The scenario catalog could not be loaded from the API.'
+          {error
+            ? 'The scenarios could not be loaded from the API.'
             : 'No scenarios are available.'}
         </Alert>
       )}
@@ -785,11 +797,11 @@ const ScenarioList = ({ tenant, catalog, onOpen }) => {
                 const style =
                   outcomeStyle[scenario.outcome] ?? outcomeStyle.NotRun
                 const detail =
-                  scenario.licensed === false
-                    ? 'Not licensed'
-                    : scenario.outcome === 'NotRun'
-                      ? style.text
-                      : `${style.text}${scenario.fixCount > 0 ? ` · ${scenario.fixCount} gap${scenario.fixCount === 1 ? '' : 's'}` : ''}`
+                  scenario.outcome === 'NotPrevented' ||
+                  scenario.outcome === 'Detected' ||
+                  scenario.outcome === 'Prevented'
+                    ? `${style.text}${scenario.fixCount > 0 ? ` · ${scenario.fixCount} gap${scenario.fixCount === 1 ? '' : 's'}` : ''}`
+                    : style.text
                 return (
                   <Box
                     key={scenario.id}
@@ -824,13 +836,7 @@ const ScenarioList = ({ tenant, catalog, onOpen }) => {
                     </Typography>
                     <Typography
                       variant="body2"
-                      sx={{
-                        color:
-                          scenario.licensed === false
-                            ? 'text.disabled'
-                            : style.color,
-                        whiteSpace: 'nowrap',
-                      }}
+                      sx={{ color: style.color, whiteSpace: 'nowrap' }}
                     >
                       {detail}
                     </Typography>
@@ -852,12 +858,60 @@ const Page = () => {
   const scenarioId = router.query.scenario
   const tenantSelected = Boolean(tenant) && tenant !== 'AllTenants'
 
-  const catalog = ApiGetCall({
-    url: '/api/ListSecuritySimulations',
-    data: { tenantFilter: tenant },
-    queryKey: `ListSecuritySimulations-${tenant}`,
+  const tests = ApiGetCall({
+    url: '/api/ListTests',
+    data: { tenantFilter: tenant, reportId: REPORT_ID },
+    queryKey: testsQueryKey(tenant),
     waiting: tenantSelected,
   })
+  const available = ApiGetCall({
+    url: '/api/ListAvailableTests',
+    queryKey: 'ListAvailableTests',
+    waiting: tenantSelected,
+  })
+
+  const rows = asArray(tests.data?.TestResults).filter((row) =>
+    `${row?.RowKey ?? ''}`.startsWith(TEST_PREFIX)
+  )
+  const known = asArray(available.data?.IdentityTests).filter((test) =>
+    `${test?.id ?? ''}`.startsWith(TEST_PREFIX)
+  )
+  const ids = [
+    ...new Set([
+      ...known.map((test) => test.id),
+      ...rows.map((row) => row.RowKey),
+    ]),
+  ]
+  const scenarios = ids.map((testId) => {
+    const row = rows.find((entry) => entry.RowKey === testId)
+    const data = parseData(row)
+    const listed = known.find((test) => test.id === testId)
+    const title =
+      data?.scenario?.title ??
+      row?.Name ??
+      `${listed?.name ?? testId}`.replace(NAME_PREFIX, '')
+    return {
+      id: testId.slice(TEST_PREFIX.length),
+      title,
+      row,
+      category: row
+        ? row.Category || data?.scenario?.category || NOT_CHECKED
+        : NOT_CHECKED,
+      outcome: outcomeOf(row, data),
+      fixCount: data?.summary?.fixCount ?? 0,
+      lastRun: data?.lastRun ?? null,
+    }
+  })
+  const loading =
+    (tests.isFetching && rows.length === 0) ||
+    (available.isFetching && known.length === 0)
+  const selected = scenarioId
+    ? (scenarios.find((scenario) => scenario.id === scenarioId) ?? {
+        id: scenarioId,
+        title: scenarioId,
+        row: null,
+      })
+    : null
 
   return (
     <>
@@ -870,17 +924,24 @@ const Page = () => {
               today.
             </Alert>
           )}
-          {tenantSelected && scenarioId && (
+          {tenantSelected && selected && (
             <ScenarioRun
               tenant={tenant}
-              scenarioId={scenarioId}
+              scenario={selected}
+              loadingList={tests.isFetching && !tests.data}
               onBack={() => router.push('/tenant/security-simulator')}
             />
           )}
-          {tenantSelected && !scenarioId && (
+          {tenantSelected && !selected && (
             <ScenarioList
               tenant={tenant}
-              catalog={catalog}
+              scenarios={scenarios}
+              loading={loading}
+              error={tests.isError || available.isError}
+              onRetry={() => {
+                tests.refetch()
+                available.refetch()
+              }}
               onOpen={(id) =>
                 router.push(
                   `/tenant/security-simulator?scenario=${encodeURIComponent(id)}`
