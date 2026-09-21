@@ -6,7 +6,7 @@
     "SMB1001 (3.1)"
   ],
   "simulatorScenarios": [
-    { "scenario": "mass-user-deletion", "step": "recover", "role": "recovers" }
+    { "scenario": "MassUserDeletion", "step": "Recover", "role": "recovers" }
   ],
   "impact": "Low Impact",
   "helpText": "Sets the retention period for deleted users OneDrive to the specified period of time. The default is 30 days.",

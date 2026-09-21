@@ -4,7 +4,7 @@
   "cat": "SharePoint Standards",
   "tag": [],
   "simulatorScenarios": [
-    { "scenario": "mass-file-deletion", "step": "recover", "role": "recovers" }
+    { "scenario": "MassFileDeletion", "step": "Recover", "role": "recovers" }
   ],
   "impact": "Medium Impact",
   "helpText": "Sets the tenant file version policy: intelligent auto-trim, or explicit version limits and expiry. Optionally pushes the policy to all existing sites.",

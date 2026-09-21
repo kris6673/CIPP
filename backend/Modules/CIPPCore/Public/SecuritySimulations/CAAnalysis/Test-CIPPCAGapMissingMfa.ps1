@@ -5,7 +5,7 @@ function Test-CIPPCAGapMissingMfa {
     .DESCRIPTION
         Skips disabled policies, policies with no grant controls, block policies, workload/agent-identity
         policies (includeUsers = None with no groups or roles) and policies whose controls are all strong
-        device-trust or app-protection controls (a legitimate standalone layer).
+        DeviceTrust or AppProtection controls (a legitimate standalone layer).
     .FUNCTIONALITY
         Internal
     #>

@@ -4,7 +4,7 @@
   "cat": "Entra (AAD) Standards",
   "tag": [],
   "simulatorScenarios": [
-    { "scenario": "password-spray-no-mfa", "step": "signin", "role": "limits" }
+    { "scenario": "PasswordSprayNoMfa", "step": "SignIn", "role": "limits" }
   ],
   "impact": "Medium Impact",
   "helpText": "Sets the smart lockout threshold and duration, and optionally on-premises password protection mode.",

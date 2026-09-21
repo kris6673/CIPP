@@ -1,6 +1,6 @@
 [
   {
-    "id": "admin-unmanaged-device",
+    "id": "AdminUnmanagedDevice",
     "group": "Admin accounts",
     "persona": "admin",
     "title": "Global Admin · unmanaged device · known location",
@@ -10,7 +10,7 @@
     "missingControl": { "text": "No compliant-device requirement for administrators", "fix": { "caTemplate": "Require a compliant device for administrators" } }
   },
   {
-    "id": "admin-foreign-country",
+    "id": "AdminForeignCountry",
     "group": "Admin accounts",
     "persona": "admin",
     "title": "Global Admin · sign-in from a foreign country",
@@ -20,7 +20,7 @@
     "missingControl": { "text": "No location policy for administrators", "fix": { "caTemplate": "Block sign-ins from countries outside the allowed list" } }
   },
   {
-    "id": "admin-hosting-ip",
+    "id": "AdminHostingIp",
     "group": "Admin accounts",
     "persona": "admin",
     "title": "Global Admin · sign-in from a hosting-provider address",
@@ -30,7 +30,7 @@
     "missingControl": { "text": "Admin sign-ins from hosting-provider addresses are not blocked", "fix": { "caTemplate": "Block sign-ins from hosting-provider IP ranges" } }
   },
   {
-    "id": "admin-device-code",
+    "id": "AdminDeviceCode",
     "group": "Admin accounts",
     "persona": "admin",
     "title": "Global Admin · device-code flow",
@@ -40,7 +40,7 @@
     "missingControl": { "text": "Device code flow is not blocked for administrators", "fix": { "caTemplate": "Block device code flow sign-ins" } }
   },
   {
-    "id": "admin-legacy-auth",
+    "id": "AdminLegacyAuth",
     "group": "Admin accounts",
     "persona": "admin",
     "title": "Global Admin · legacy authentication client",
@@ -50,7 +50,7 @@
     "missingControl": { "text": "Legacy authentication is not blocked", "fix": { "caTemplate": "Block legacy authentication" } }
   },
   {
-    "id": "admin-high-signin-risk",
+    "id": "AdminHighSignInRisk",
     "group": "Admin accounts",
     "persona": "admin",
     "title": "Global Admin · high sign-in risk",
@@ -60,7 +60,7 @@
     "missingControl": { "text": "No sign-in risk policy for administrators", "fix": { "caTemplate": "Require multifactor authentication for medium and high sign-in risk" } }
   },
   {
-    "id": "admin-macos-unmanaged",
+    "id": "AdminMacOsUnmanaged",
     "group": "Admin accounts",
     "persona": "admin",
     "title": "Global Admin · unmanaged macOS device",
@@ -70,7 +70,7 @@
     "missingControl": { "text": "No compliant-device requirement for administrators", "fix": { "caTemplate": "Require a compliant device for administrators" } }
   },
   {
-    "id": "admin-desktop-client-unmanaged",
+    "id": "AdminDesktopClientUnmanaged",
     "group": "Admin accounts",
     "persona": "admin",
     "title": "Global Admin · desktop client · unmanaged device",
@@ -80,7 +80,7 @@
     "missingControl": { "text": "No compliant-device requirement for administrators", "fix": { "caTemplate": "Require a compliant device for administrators" } }
   },
   {
-    "id": "user-unmanaged-device",
+    "id": "UserUnmanagedDevice",
     "group": "Standard users",
     "persona": "user",
     "title": "Standard user · unmanaged device · browser",
@@ -90,7 +90,7 @@
     "missingControl": { "text": "No compliant-device requirement for standard users", "fix": { "caTemplate": "Require a compliant or Microsoft Entra hybrid joined device" } }
   },
   {
-    "id": "user-foreign-country",
+    "id": "UserForeignCountry",
     "group": "Standard users",
     "persona": "user",
     "title": "Standard user · sign-in from a foreign country",
@@ -100,7 +100,7 @@
     "missingControl": { "text": "No location policy for standard users", "fix": { "caTemplate": "Block sign-ins from countries outside the allowed list" } }
   },
   {
-    "id": "user-device-code",
+    "id": "UserDeviceCode",
     "group": "Standard users",
     "persona": "user",
     "title": "Standard user · device-code flow",
@@ -110,7 +110,7 @@
     "missingControl": { "text": "Device code flow is not blocked", "fix": { "caTemplate": "Block device code flow sign-ins" } }
   },
   {
-    "id": "user-legacy-eas",
+    "id": "UserLegacyActiveSync",
     "group": "Standard users",
     "persona": "user",
     "title": "Standard user · legacy Exchange ActiveSync",
@@ -120,7 +120,7 @@
     "missingControl": { "text": "Legacy authentication is not blocked", "fix": { "caTemplate": "Block legacy authentication" } }
   },
   {
-    "id": "user-legacy-other",
+    "id": "UserLegacyOther",
     "group": "Standard users",
     "persona": "user",
     "title": "Standard user · other legacy client",
@@ -130,7 +130,7 @@
     "missingControl": { "text": "Legacy authentication is not blocked", "fix": { "caTemplate": "Block legacy authentication" } }
   },
   {
-    "id": "user-high-signin-risk",
+    "id": "UserHighSignInRisk",
     "group": "Standard users",
     "persona": "user",
     "title": "Standard user · high sign-in risk",
@@ -140,7 +140,7 @@
     "missingControl": { "text": "No sign-in risk policy", "fix": { "caTemplate": "Require multifactor authentication for medium and high sign-in risk" } }
   },
   {
-    "id": "user-high-user-risk",
+    "id": "UserHighUserRisk",
     "group": "Standard users",
     "persona": "user",
     "title": "Standard user · high user risk",
@@ -150,7 +150,7 @@
     "missingControl": { "text": "No user risk policy", "fix": { "caTemplate": "Require a secure password change for high user risk" } }
   },
   {
-    "id": "user-elevated-insider-risk",
+    "id": "UserElevatedInsiderRisk",
     "group": "Standard users",
     "persona": "user",
     "title": "Standard user · elevated insider risk",
@@ -160,7 +160,7 @@
     "missingControl": { "text": "No insider-risk policy", "fix": { "caTemplate": "Limit access for elevated insider risk" } }
   },
   {
-    "id": "user-android-unmanaged",
+    "id": "UserAndroidUnmanaged",
     "group": "Standard users",
     "persona": "user",
     "title": "Standard user · unmanaged Android device",
@@ -170,7 +170,7 @@
     "missingControl": { "text": "No app protection or compliant-device requirement on mobile", "fix": { "caTemplate": "Require an approved client app or app protection policy on mobile" } }
   },
   {
-    "id": "user-ios-unmanaged",
+    "id": "UserIosUnmanaged",
     "group": "Standard users",
     "persona": "user",
     "title": "Standard user · unmanaged iOS device",
@@ -180,7 +180,7 @@
     "missingControl": { "text": "No app protection or compliant-device requirement on mobile", "fix": { "caTemplate": "Require an approved client app or app protection policy on mobile" } }
   },
   {
-    "id": "user-desktop-client-unmanaged",
+    "id": "UserDesktopClientUnmanaged",
     "group": "Standard users",
     "persona": "user",
     "title": "Standard user · desktop client · unmanaged device",
@@ -190,7 +190,7 @@
     "missingControl": { "text": "No compliant-device requirement for standard users", "fix": { "caTemplate": "Require a compliant or Microsoft Entra hybrid joined device" } }
   },
   {
-    "id": "guest-browser-access",
+    "id": "GuestBrowserAccess",
     "group": "Guests",
     "persona": "guest",
     "title": "Guest · browser access · known location",
@@ -200,7 +200,7 @@
     "missingControl": { "text": "Guest access does not require MFA", "fix": { "caTemplate": "Require multifactor authentication for guest access" } }
   },
   {
-    "id": "guest-foreign-country",
+    "id": "GuestForeignCountry",
     "group": "Guests",
     "persona": "guest",
     "title": "Guest · sign-in from a foreign country",
@@ -210,7 +210,7 @@
     "missingControl": { "text": "No location policy for guests", "fix": { "caTemplate": "Block sign-ins from countries outside the allowed list" } }
   },
   {
-    "id": "guest-legacy-auth",
+    "id": "GuestLegacyAuth",
     "group": "Guests",
     "persona": "guest",
     "title": "Guest · legacy authentication client",
@@ -220,7 +220,7 @@
     "missingControl": { "text": "Legacy authentication is not blocked", "fix": { "caTemplate": "Block legacy authentication" } }
   },
   {
-    "id": "guest-unmanaged-device",
+    "id": "GuestUnmanagedDevice",
     "group": "Guests",
     "persona": "guest",
     "title": "Guest · unmanaged device · browser",
@@ -230,7 +230,7 @@
     "missingControl": { "text": "Guest access does not require MFA or a compliant device", "fix": { "caTemplate": "Require multifactor authentication for guest access" } }
   },
   {
-    "id": "guest-device-code",
+    "id": "GuestDeviceCode",
     "group": "Guests",
     "persona": "guest",
     "title": "Guest · device-code flow",
@@ -240,7 +240,7 @@
     "missingControl": { "text": "Device code flow is not blocked", "fix": { "caTemplate": "Block device code flow sign-ins" } }
   },
   {
-    "id": "guest-high-signin-risk",
+    "id": "GuestHighSignInRisk",
     "group": "Guests",
     "persona": "guest",
     "title": "Guest · high sign-in risk",
@@ -250,7 +250,7 @@
     "missingControl": { "text": "No sign-in risk policy for guests", "fix": { "caTemplate": "Require multifactor authentication for medium and high sign-in risk" } }
   },
   {
-    "id": "guest-auth-transfer",
+    "id": "GuestAuthTransfer",
     "group": "Guests",
     "persona": "guest",
     "title": "Guest · authentication transfer",

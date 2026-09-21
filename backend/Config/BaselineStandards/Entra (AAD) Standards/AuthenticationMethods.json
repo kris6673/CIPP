@@ -4,7 +4,7 @@
   "cat": "Entra (AAD) Standards",
   "tag": [],
   "simulatorScenarios": [
-    { "scenario": "mfa-tampering", "step": "re-register", "role": "prevents" }
+    { "scenario": "MfaTampering", "step": "ReRegister", "role": "prevents" }
   ],
   "impact": "High Impact",
   "helpText": "Manages the enabled state, group targeting and per-method settings of every authentication method the baseline configures. Methods left unconfigured are never touched.",

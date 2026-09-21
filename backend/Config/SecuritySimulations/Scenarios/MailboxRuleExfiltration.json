@@ -1,5 +1,5 @@
 {
-  "id": "mailbox-rule-exfiltration",
+  "id": "MailboxRuleExfiltration",
   "title": "Mailbox rule exfiltration",
   "category": "Exchange & Email",
   "severity": "High",
@@ -7,19 +7,19 @@
   "requiredCapabilities": ["EXCHANGE_S_ENTERPRISE"],
   "steps": [
     {
-      "id": "assumption",
+      "id": "Assumption",
       "title": "Starting assumption",
       "text": "The attacker already has access to a user's mailbox and wants a quiet, ongoing copy of incoming mail."
     },
     {
-      "id": "inbox-rule",
+      "id": "InboxRule",
       "title": "Forwarding inbox rule created",
       "text": "The attacker creates an inbox rule that forwards new mail to an outside address and hides it in a rarely-seen folder. Mail now leaves the mailbox on arrival.",
       "alerts": [ { "operation": "New-InboxRule", "logbook": "Audit.Exchange", "preset": "New-InboxRuleForward" } ],
       "whenFixed": "External forwarding is blocked and the rule creation raises an alert."
     },
     {
-      "id": "mailbox-forward",
+      "id": "MailboxForward",
       "title": "Mailbox forwarding enabled",
       "text": "The attacker also turns on mailbox-level forwarding as a backup path. Even if the rule is removed, copies keep flowing out.",
       "alerts": [ { "operation": "Set-Mailbox", "logbook": "Audit.Exchange", "preset": "Set-MailboxForwardingExternal" } ],

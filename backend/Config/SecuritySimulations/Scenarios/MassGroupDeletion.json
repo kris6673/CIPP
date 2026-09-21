@@ -1,5 +1,5 @@
 {
-  "id": "mass-group-deletion",
+  "id": "MassGroupDeletion",
   "title": "Mass group deletion",
   "category": "Audit & Detection",
   "severity": "High",
@@ -9,12 +9,12 @@
   "attackerCanSatisfy": ["mfa"],
   "steps": [
     {
-      "id": "assumption",
+      "id": "Assumption",
       "title": "Starting assumption",
       "text": "The attacker controls an account that can manage groups and wants to disrupt access broadly."
     },
     {
-      "id": "signin",
+      "id": "SignIn",
       "title": "Sign-in evaluated by Conditional Access",
       "text": "The account signs in from an unfamiliar address before the deletions begin. Strong sign-in controls are the last chance to stop it.",
       "whatIf": { "clientAppType": "browser", "devicePlatform": "windows", "country": "NL", "ipAddress": "185.220.101.61" },
@@ -25,14 +25,14 @@
       "whenFixed": "Blocked: MFA is required, so the stolen password cannot reach group management."
     },
     {
-      "id": "delete-groups",
+      "id": "DeleteGroups",
       "title": "Groups deleted in bulk",
       "text": "The attacker deletes many groups, removing the access, distribution lists and teams that depend on them. Users suddenly lose shared resources.",
       "alerts": [ { "operation": "Delete group", "logbook": "Audit.AzureActiveDirectory" } ],
       "whenFixed": "Each deletion is written to the audit log, so the burst is detected quickly."
     },
     {
-      "id": "impact",
+      "id": "Impact",
       "title": "Access lost across services",
       "text": "Membership-based access to mail, files and teams disappears with the groups. Microsoft 365 groups can be restored for a limited time.",
       "whenFixed": "Prompt detection shortens the outage and allows recovery within the retention window."

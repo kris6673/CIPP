@@ -6,7 +6,7 @@
     "SMB1001 (2.8)"
   ],
   "simulatorScenarios": [
-    { "scenario": "guest-with-directory-role", "step": "signin", "role": "limits" }
+    { "scenario": "GuestWithDirectoryRole", "step": "SignIn", "role": "limits" }
   ],
   "impact": "High Impact",
   "helpText": "Blocks login for guest users whose most recent sign-in attempt, interactive or non-interactive, is older than the number of days. Optionally soft-deletes already-disabled guests after a configurable grace period past that threshold (0 = never delete). Guests that have never signed in are only included when 'Disable accounts that have not yet signed in' is enabled. Accounts an administrator re-enabled in the last 7 days are left alone. Deleted guests remain recoverable from Deleted Items for about 30 days.",

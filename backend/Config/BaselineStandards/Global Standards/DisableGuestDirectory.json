@@ -12,7 +12,7 @@
     "SMB1001 (2.8)"
   ],
   "simulatorScenarios": [
-    { "scenario": "guest-with-directory-role", "step": "enumerate", "role": "prevents" }
+    { "scenario": "GuestWithDirectoryRole", "step": "Enumerate", "role": "prevents" }
   ],
   "impact": "Low Impact",
   "helpText": "Disables Guest access to enumerate directory objects. This prevents guest users from seeing other users or guests in the directory.",

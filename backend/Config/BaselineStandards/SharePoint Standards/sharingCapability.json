@@ -9,7 +9,7 @@
     "CISA (MS.SPO.1.1v1)"
   ],
   "simulatorScenarios": [
-    { "scenario": "anonymous-link-sensitive-site", "step": "create-link", "role": "prevents" }
+    { "scenario": "AnonymousLinkSensitiveSite", "step": "CreateLink", "role": "prevents" }
   ],
   "impact": "High Impact",
   "helpText": "Sets the default sharing level for OneDrive and SharePoint. This is a tenant wide setting and overrules any settings set on the site level",

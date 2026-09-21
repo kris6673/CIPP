@@ -4,8 +4,8 @@
   "cat": "Entra (AAD) Standards",
   "tag": [],
   "simulatorScenarios": [
-    { "scenario": "role-assignment-escalation", "step": "persistence", "role": "limits" },
-    { "scenario": "malicious-oauth-consent", "step": "consent", "role": "limits" }
+    { "scenario": "RoleAssignmentEscalation", "step": "Persistence", "role": "limits" },
+    { "scenario": "MaliciousOAuthConsent", "step": "Consent", "role": "limits" }
   ],
   "impact": "Medium Impact",
   "helpText": "Restricts how credentials can be added to applications and service principals: block password secrets, block custom passwords, and cap credential lifetimes.",

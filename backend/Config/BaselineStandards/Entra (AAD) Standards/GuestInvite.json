@@ -9,7 +9,7 @@
     "SMB1001 (2.8)"
   ],
   "simulatorScenarios": [
-    { "scenario": "guest-with-directory-role", "step": "signin", "role": "prevents" }
+    { "scenario": "GuestWithDirectoryRole", "step": "SignIn", "role": "prevents" }
   ],
   "impact": "Medium Impact",
   "helpText": "This setting controls who can invite guests to your directory to collaborate on resources secured by your company, such as SharePoint sites or Azure resources.",

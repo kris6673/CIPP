@@ -10,13 +10,13 @@
     "BlockLegacyAuthentication"
   ],
   "simulatorScenarios": [
-    { "scenario": "admin-noncompliant-device", "step": "signin", "role": "prevents" },
-    { "scenario": "password-spray-no-mfa", "step": "signin", "role": "prevents" },
-    { "scenario": "legacy-auth-mailbox-access", "step": "signin", "role": "prevents" },
-    { "scenario": "role-assignment-escalation", "step": "signin", "role": "prevents" },
-    { "scenario": "mass-user-deletion", "step": "signin", "role": "prevents" },
-    { "scenario": "mass-group-deletion", "step": "signin", "role": "prevents" },
-    { "scenario": "mass-file-deletion", "step": "signin", "role": "prevents" }
+    { "scenario": "AdminNonCompliantDevice", "step": "SignIn", "role": "prevents" },
+    { "scenario": "PasswordSprayNoMfa", "step": "SignIn", "role": "prevents" },
+    { "scenario": "LegacyAuthMailboxAccess", "step": "SignIn", "role": "prevents" },
+    { "scenario": "RoleAssignmentEscalation", "step": "SignIn", "role": "prevents" },
+    { "scenario": "MassUserDeletion", "step": "SignIn", "role": "prevents" },
+    { "scenario": "MassGroupDeletion", "step": "SignIn", "role": "prevents" },
+    { "scenario": "MassFileDeletion", "step": "SignIn", "role": "prevents" }
   ],
   "impact": "High Impact",
   "helpText": "Enables security defaults for the tenant, for newer tenants this is enabled by default. Do not enable this feature if you use Conditional Access. Microsoft refuses to enable security defaults while any Conditional Access policy exists ('Conditional access policies are enabled. Please disable and try again.'), so remediation always fails on tenants that have CA policies.",

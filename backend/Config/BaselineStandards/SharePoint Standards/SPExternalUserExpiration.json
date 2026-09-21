@@ -7,7 +7,7 @@
     "CISA (MS.SPO.1.5v1)"
   ],
   "simulatorScenarios": [
-    { "scenario": "guest-reshare-sprawl", "step": "sprawl", "role": "limits" }
+    { "scenario": "GuestReshareSprawl", "step": "Sprawl", "role": "limits" }
   ],
   "impact": "Medium Impact",
   "helpText": "Ensure guest access to a site or OneDrive will expire automatically",

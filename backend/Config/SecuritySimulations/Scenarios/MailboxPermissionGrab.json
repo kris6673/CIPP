@@ -1,5 +1,5 @@
 {
-  "id": "mailbox-permission-grab",
+  "id": "MailboxPermissionGrab",
   "title": "Mailbox permission grab",
   "category": "Exchange & Email",
   "severity": "High",
@@ -7,19 +7,19 @@
   "requiredCapabilities": ["EXCHANGE_S_ENTERPRISE"],
   "steps": [
     {
-      "id": "assumption",
+      "id": "Assumption",
       "title": "Starting assumption",
       "text": "The attacker controls an account that can manage mailbox permissions and targets executive mailboxes."
     },
     {
-      "id": "grant-permission",
+      "id": "GrantPermission",
       "title": "Full access granted to a mailbox",
       "text": "The attacker gives its own account full access to a target mailbox. No password reset is needed and the owner is not notified.",
       "alerts": [ { "operation": "Add-MailboxPermission", "logbook": "Audit.Exchange" } ],
       "whenFixed": "The permission change is written to the audit log and surfaces for review."
     },
     {
-      "id": "mailbox-access",
+      "id": "MailboxAccess",
       "title": "Mailbox opened as a delegate",
       "text": "The attacker opens the target mailbox using the new access and reads sensitive mail. The activity looks like normal delegate access.",
       "whenFixed": "Mailbox auditing records the delegate access so it can be spotted."

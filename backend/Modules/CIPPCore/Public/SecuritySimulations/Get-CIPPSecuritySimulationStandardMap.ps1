@@ -4,8 +4,8 @@ function Get-CIPPSecuritySimulationStandardMap {
         Inverts the simulatorScenarios tags on the Baseline standard definitions into
         scenario -> step -> standards.
     .DESCRIPTION
-        A definition declares where it matters: "simulatorScenarios": [ { "scenario": "stolen-token-replay",
-        "step": "persistence", "role": "prevents" } ] The scenario files stay narrative-only; this map is
+        A definition declares where it matters: "simulatorScenarios": [ { "scenario": "StolenTokenReplay",
+        "step": "Persistence", "role": "prevents" } ] The scenario files stay narrative-only; this map is
         the single place the two meet.
     .FUNCTIONALITY
         Internal

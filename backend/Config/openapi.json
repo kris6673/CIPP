@@ -32596,7 +32596,7 @@
         "tags": [
           "Tenant > SecuritySimulations"
         ],
-        "description": "Plays one security scenario against a tenant: grades the standards each step relies on, evaluates the scenario's sign-in live through the Conditional Access What If API, and checks whether an audit-log alert would fire.",
+        "description": "Plays one security scenario against a tenant: grades the standards each step relies on, evaluates\nthe scenario's sign-in live through the Conditional Access What If API, and checks whether an\naudit-log alert would fire.",
         "requestBody": {
           "required": true,
           "content": {
@@ -41591,7 +41591,7 @@
         "tags": [
           "Tenant > SecuritySimulations"
         ],
-        "description": "Conditional Access gap analysis for one tenant from the cached policies: findings, the persona-by-control coverage matrix, CIS alignment, Zero Trust signals and the posture score.",
+        "description": "Conditional Access gap analysis for one tenant from the cached policies: findings, the\npersona-by-control coverage matrix and the 1 to 10 posture score.",
         "parameters": [
           {
             "$ref": "#/components/parameters/tenantFilter"
@@ -41803,7 +41803,7 @@
         "tags": [
           "Tenant > SecuritySimulations"
         ],
-        "description": "Evaluates every predefined sign-in situation (admin, user and guest personas under unmanaged devices, foreign locations, legacy clients, device-code flow, risk levels and more) live against the tenant's Conditional Access through the What If API, and names the control missing wherever a sign-in gets through.",
+        "description": "Evaluates every predefined sign-in situation (admin, user and guest personas under unmanaged\ndevices, foreign locations, legacy clients, device-code flow, risk levels and more) live against the\ntenant's Conditional Access through the What If API, and names the control missing wherever a\nsign-in gets through.",
         "parameters": [
           {
             "$ref": "#/components/parameters/tenantFilter"
@@ -55999,7 +55999,7 @@
         "tags": [
           "Tenant > SecuritySimulations"
         ],
-        "description": "Lists the security scenarios that can be simulated, with a per-tenant summary of how many of the standards each scenario relies on are already in place (from the tenant's baseline alignment - nothing is evaluated here).",
+        "description": "Lists the security scenarios that can be simulated, with a per-tenant summary of how many of the\nstandards each scenario relies on are already in place (from the tenant's baseline alignment -\nnothing is evaluated here).",
         "parameters": [
           {
             "$ref": "#/components/parameters/tenantFilter"

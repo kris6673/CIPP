@@ -8,7 +8,7 @@
     "CISA (MS.SPO.1.4v1)"
   ],
   "simulatorScenarios": [
-    { "scenario": "anonymous-link-sensitive-site", "step": "create-link", "role": "limits" }
+    { "scenario": "AnonymousLinkSensitiveSite", "step": "CreateLink", "role": "limits" }
   ],
   "impact": "Low Impact",
   "helpText": "Configure the SharePoint default sharing link type and permission. This setting controls both the type of sharing link created by default and the permission level assigned to those links.",

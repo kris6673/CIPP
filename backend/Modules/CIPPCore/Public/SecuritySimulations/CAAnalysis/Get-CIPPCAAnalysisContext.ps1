@@ -11,6 +11,8 @@ function Get-CIPPCAAnalysisContext {
         roleTemplateId -> display name), Licenses (HasEntraIdP1/P2, HasIntunePlan1, HasWorkloadIdPremium,
         Source), BreakGlass (candidate from Get-CIPPCABreakGlassCandidate with a display name resolved from
         the Users/Groups cache when available) and Data (reference datasets plus lower-cased lookup tables).
+        Privileged role ids come from Get-CIPPPrivilegedRoleTemplateIds and first-party application names
+        from Get-CIPPMicrosoftFirstPartyApp, so the analysis shares those lists with the rest of CIPP.
     .FUNCTIONALITY
         Internal
     #>
@@ -65,11 +67,11 @@ function Get-CIPPCAAnalysisContext {
     }
 
     $Data = @{}
-    foreach ($Name in @('Reference', 'Personas', 'KnownExclusions', 'AdminRoles', 'FociFamilies', 'BypassApps', 'FirstPartyApps', 'AppDescriptions')) {
+    foreach ($Name in @('Reference', 'CoverageControls', 'MicrosoftGuidance', 'FociFamilies', 'BypassApps', 'AppDescriptions')) {
         $Data[$Name] = Get-CIPPCAAnalysisData -Name $Name
     }
-    $Data['KnownExclusions'] = @($Data['KnownExclusions'])
-
+    $Data['MicrosoftGuidance'] = @($Data['MicrosoftGuidance'])
+    #foci contributed by Shebin and Michael Bargury
     $Data['FociApps'] = @($Data['FociFamilies'])
     $Data['FociById'] = @{}
     foreach ($App in $Data['FociApps']) { if ($App.appId) { $Data['FociById']["$($App.appId)".ToLowerInvariant()] = $App } }
@@ -86,17 +88,15 @@ function Get-CIPPCAAnalysisContext {
     $Data['AppGroupAliases'] = @{}
     foreach ($Property in @($Data['BypassApps'].appGroupAliases.PSObject.Properties)) { $Data['AppGroupAliases'][$Property.Name.ToLowerInvariant()] = $Property.Value }
 
-    $Data['FirstPartyNames'] = @{}
-    foreach ($Property in @($Data['FirstPartyApps'].PSObject.Properties)) { $Data['FirstPartyNames'][$Property.Name.ToLowerInvariant()] = "$($Property.Value)" }
+    $Data['FirstPartyNames'] = Get-CIPPMicrosoftFirstPartyApp
 
     $Data['AppDescriptionById'] = @{}
     foreach ($App in @($Data['AppDescriptions'])) { if ($App.appId) { $Data['AppDescriptionById']["$($App.appId)".ToLowerInvariant()] = $App } }
 
     $Data['HighPrivilegeRoleNames'] = @{}
-    foreach ($Property in @($Data['AdminRoles'].highPrivilegeRoles.PSObject.Properties)) { $Data['HighPrivilegeRoleNames'][$Property.Name.ToLowerInvariant()] = "$($Property.Value)" }
+    foreach ($Role in @(Get-CIPPPrivilegedRoleTemplateIds -WithNames)) { $Data['HighPrivilegeRoleNames']["$($Role.Id)".ToLowerInvariant()] = "$($Role.DisplayName)" }
     $Data['CriticalRoleIds'] = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-    foreach ($RoleId in @($Data['AdminRoles'].criticalRoleIds)) { $null = $Data['CriticalRoleIds'].Add("$RoleId") }
-    $Data['DirSyncRoleId'] = "$($Data['AdminRoles'].directorySynchronizationAccountsRoleId)"
+    foreach ($RoleId in @(Get-CIPPPrivilegedRoleTemplateIds -Set Critical)) { $null = $Data['CriticalRoleIds'].Add("$RoleId") }
 
     $PlanReference = $Data['Reference'].servicePlanIds
     $PlanIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)

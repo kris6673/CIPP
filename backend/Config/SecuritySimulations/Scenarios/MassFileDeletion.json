@@ -1,5 +1,5 @@
 {
-  "id": "mass-file-deletion",
+  "id": "MassFileDeletion",
   "title": "Mass file deletion",
   "category": "SharePoint & Data",
   "severity": "High",
@@ -8,12 +8,12 @@
   "persona": "user",
   "steps": [
     {
-      "id": "assumption",
+      "id": "Assumption",
       "title": "Starting assumption",
       "text": "The attacker controls a user's account with broad access to document libraries and intends to destroy data."
     },
     {
-      "id": "signin",
+      "id": "SignIn",
       "title": "Sign-in evaluated by Conditional Access",
       "text": "The attacker signs in from an unmanaged machine before the deletions begin. Strong sign-in controls are the last chance to stop it.",
       "whatIf": { "clientAppType": "browser", "devicePlatform": "windows", "deviceInfo": { "isCompliant": false }, "country": "NL", "ipAddress": "185.220.101.72" },
@@ -24,14 +24,14 @@
       "whenFixed": "Blocked: MFA is required, so the stolen password cannot reach the files."
     },
     {
-      "id": "delete-files",
+      "id": "DeleteFiles",
       "title": "Files deleted at scale",
       "text": "The attacker deletes large numbers of files across libraries in a short time. Shared workspaces suddenly lose their content.",
       "alerts": [ { "operation": "FileDeleted", "logbook": "Audit.SharePoint" } ],
       "whenFixed": "A mass-deletion alert fires on the burst and each deletion is written to the audit log."
     },
     {
-      "id": "recover",
+      "id": "Recover",
       "title": "Recovery from versions and retention",
       "text": "Deleted files and previous versions can be restored for a limited time. Quick detection means most content comes back.",
       "whenFixed": "Version history keeps prior copies, so the deleted files can be restored."

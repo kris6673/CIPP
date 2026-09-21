@@ -1,5 +1,5 @@
 {
-  "id": "role-assignment-escalation",
+  "id": "RoleAssignmentEscalation",
   "title": "Privilege escalation by role assignment",
   "category": "Identity & Conditional Access",
   "severity": "Critical",
@@ -9,12 +9,12 @@
   "attackerCanSatisfy": ["mfa"],
   "steps": [
     {
-      "id": "assumption",
+      "id": "Assumption",
       "title": "Starting assumption",
       "text": "The attacker has taken over a help-desk account that can manage group membership and role assignments."
     },
     {
-      "id": "signin",
+      "id": "SignIn",
       "title": "Sign-in evaluated by Conditional Access",
       "text": "The account signs in from an unfamiliar address at medium risk. Strong sign-in controls are the last chance to stop it before privileges are changed.",
       "whatIf": { "clientAppType": "browser", "devicePlatform": "windows", "signInRiskLevel": "medium", "country": "NL", "ipAddress": "185.220.101.33" },
@@ -25,16 +25,16 @@
       "whenFixed": "Blocked: MFA is required, so the stolen password cannot reach role management."
     },
     {
-      "id": "role-grant",
+      "id": "RoleGrant",
       "title": "Privileged role granted",
       "text": "The attacker adds its account to a privileged role, gaining tenant-wide control. The change takes effect immediately.",
       "alerts": [ { "operation": "Add member to role.", "logbook": "Audit.AzureActiveDirectory", "preset": "Add member to role." } ],
       "whenFixed": "The role change is written to the audit log and surfaces for review."
     },
     {
-      "id": "persistence",
+      "id": "Persistence",
       "title": "Back-door application added",
-      "text": "The attacker registers a service principal with broad permissions so access survives password and role cleanup. The app can act without a user present.",
+      "text": "The attacker registers a hidden application with broad permissions so access survives password and role cleanup. The application acts on its own, without a user present.",
       "alerts": [ { "operation": "Add service principal.", "logbook": "Audit.AzureActiveDirectory", "preset": "Add service principal." } ],
       "whenFixed": "Consent and application-credential controls stop the back-door app from being usable."
     }

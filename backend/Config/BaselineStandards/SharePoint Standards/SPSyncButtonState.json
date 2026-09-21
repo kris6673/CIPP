@@ -4,7 +4,7 @@
   "cat": "SharePoint Standards",
   "tag": [],
   "simulatorScenarios": [
-    { "scenario": "bulk-sync-unmanaged-device", "step": "sync", "role": "limits" }
+    { "scenario": "BulkSyncUnmanagedDevice", "step": "Sync", "role": "limits" }
   ],
   "impact": "Medium Impact",
   "helpText": "If disabled, users in the tenant will no longer be able to use the Sync button to sync SharePoint content on all sites. However, existing synced content will remain functional on the user's computer.",

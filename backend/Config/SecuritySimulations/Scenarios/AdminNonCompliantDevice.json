@@ -1,5 +1,5 @@
 {
-  "id": "admin-noncompliant-device",
+  "id": "AdminNonCompliantDevice",
   "title": "Global Admin on a non-compliant device",
   "category": "Identity & Conditional Access",
   "severity": "Critical",
@@ -9,14 +9,14 @@
   "attackerCanSatisfy": ["mfa"],
   "steps": [
     {
-      "id": "assumption",
+      "id": "Assumption",
       "title": "Starting assumption",
       "text": "An attacker controls a personal, unmanaged computer that a Global Administrator uses, and has the admin's password and MFA approval."
     },
     {
-      "id": "signin",
+      "id": "SignIn",
       "title": "Sign-in evaluated by Conditional Access",
-      "text": "The admin account signs in from the unmanaged Windows machine. Only a device requirement can separate this risky endpoint from a trusted one.",
+      "text": "The admin account signs in from the unmanaged Windows machine. Only a device requirement can tell this machine apart from a trusted one.",
       "whatIf": { "clientAppType": "browser", "devicePlatform": "windows", "deviceInfo": { "isCompliant": false } },
       "gaps": [
         { "when": ["allowed", "weakGrant"], "text": "Admins are not required to use a compliant device, so any machine can hold an admin session.", "role": "prevents", "fix": { "caTemplate": "Require a compliant device for administrators" } }
@@ -25,13 +25,13 @@
       "whenFixed": "Blocked: administrators must use a compliant device, so the unmanaged machine cannot hold the session."
     },
     {
-      "id": "portal-access",
+      "id": "PortalAccess",
       "title": "Admin portals opened",
       "text": "The attacker opens the admin centers and reviews users, roles and licensing. Nothing is changed yet, so the session looks like routine administration.",
       "whenFixed": "A shorter idle timeout ends the abandoned admin session before it can be misused."
     },
     {
-      "id": "role-grant",
+      "id": "RoleGrant",
       "title": "New administrator created",
       "text": "The attacker adds a second account to a privileged role so access survives a password reset. This creates a standing back door into the tenant.",
       "alerts": [ { "operation": "Add member to role.", "logbook": "Audit.AzureActiveDirectory", "preset": "Add member to role." } ],

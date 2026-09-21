@@ -1,5 +1,5 @@
 {
-  "id": "device-code-phishing",
+  "id": "DeviceCodePhishing",
   "title": "Device-code phishing",
   "category": "Identity & Conditional Access",
   "severity": "High",
@@ -9,12 +9,12 @@
   "attackerCanSatisfy": ["mfa"],
   "steps": [
     {
-      "id": "assumption",
+      "id": "Assumption",
       "title": "Starting assumption",
       "text": "The attacker starts a device-code sign-in and sends the code to the user with a convincing message. The user enters the code and approves it."
     },
     {
-      "id": "signin",
+      "id": "SignIn",
       "title": "Sign-in evaluated by Conditional Access",
       "text": "The device-code flow completes and hands the attacker a token that already satisfies MFA. Only a policy that blocks this flow can stop it.",
       "whatIf": { "clientAppType": "browser", "devicePlatform": "windows", "authenticationFlow": { "transferMethod": "deviceCodeFlow" }, "country": "DE", "ipAddress": "185.220.100.8" },
@@ -25,13 +25,13 @@
       "whenFixed": "Blocked: device code flow is refused, so the phished code cannot become a token."
     },
     {
-      "id": "token-use",
+      "id": "TokenUse",
       "title": "Token used to read mail and files",
       "text": "The attacker uses the token to read the user's mailbox and documents. The traffic looks like a normal signed-in app.",
       "whenFixed": "Mailbox auditing records the access even though the sign-in looked legitimate."
     },
     {
-      "id": "persistence",
+      "id": "Persistence",
       "title": "Inbox rule created for ongoing reach",
       "text": "The attacker adds an inbox rule to keep receiving the user's mail. This keeps a copy flowing after the token expires.",
       "alerts": [ { "operation": "New-InboxRule", "logbook": "Audit.Exchange", "preset": "New-InboxRule" } ],

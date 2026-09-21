@@ -1,5 +1,5 @@
 {
-  "id": "signin-outside-allowed-countries",
+  "id": "SignInOutsideAllowedCountries",
   "title": "Sign-in from outside allowed countries",
   "category": "Identity & Conditional Access",
   "severity": "High",
@@ -9,12 +9,12 @@
   "attackerCanSatisfy": ["mfa"],
   "steps": [
     {
-      "id": "assumption",
+      "id": "Assumption",
       "title": "Starting assumption",
       "text": "The attacker has the user's password and can approve MFA through a phished prompt. The organization only works from a small set of countries."
     },
     {
-      "id": "signin",
+      "id": "SignIn",
       "title": "Sign-in evaluated by Conditional Access",
       "text": "The attacker connects from an address in Russia. Only a location control can tell this apart from an ordinary sign-in.",
       "whatIf": { "clientAppType": "browser", "devicePlatform": "windows", "country": "RU", "ipAddress": "45.132.1.20" },
@@ -25,13 +25,13 @@
       "whenFixed": "Blocked: the sign-in comes from a country outside the allowed list and is refused."
     },
     {
-      "id": "mailbox-access",
+      "id": "MailboxAccess",
       "title": "Mailbox opened and read",
       "text": "The attacker reads recent mail and searches for finance and reset messages. The session behaves like the real user, so nothing looks out of place.",
       "whenFixed": "Mailbox auditing records the foreign-location access for responders to catch."
     },
     {
-      "id": "forwarding",
+      "id": "Forwarding",
       "title": "Mail forwarded outside the tenant",
       "text": "The attacker creates an inbox rule that forwards new mail to an external address. Copies now leave the tenant automatically.",
       "alerts": [ { "operation": "New-InboxRule", "logbook": "Audit.Exchange", "preset": "New-InboxRuleForward" } ],

@@ -4,8 +4,8 @@
   "cat": "Entra (AAD) Standards",
   "tag": [],
   "simulatorScenarios": [
-    { "scenario": "role-assignment-escalation", "step": "persistence", "role": "prevents" },
-    { "scenario": "malicious-oauth-consent", "step": "consent", "role": "prevents" }
+    { "scenario": "RoleAssignmentEscalation", "step": "Persistence", "role": "prevents" },
+    { "scenario": "MaliciousOAuthConsent", "step": "Consent", "role": "prevents" }
   ],
   "impact": "Medium Impact",
   "helpText": "Routes user application consent through the CIPP consent policy so only allow-listed applications can be consented to without admin review.",

@@ -16,12 +16,12 @@
     "AdminMFAV2"
   ],
   "simulatorScenarios": [
-    { "scenario": "password-spray-no-mfa", "step": "signin", "role": "prevents" },
-    { "scenario": "role-assignment-escalation", "step": "signin", "role": "prevents" },
-    { "scenario": "mass-user-deletion", "step": "signin", "role": "prevents" },
-    { "scenario": "mass-group-deletion", "step": "signin", "role": "prevents" },
-    { "scenario": "mfa-tampering", "step": "disable-mfa", "role": "recovers" },
-    { "scenario": "mass-file-deletion", "step": "signin", "role": "prevents" }
+    { "scenario": "PasswordSprayNoMfa", "step": "SignIn", "role": "prevents" },
+    { "scenario": "RoleAssignmentEscalation", "step": "SignIn", "role": "prevents" },
+    { "scenario": "MassUserDeletion", "step": "SignIn", "role": "prevents" },
+    { "scenario": "MassGroupDeletion", "step": "SignIn", "role": "prevents" },
+    { "scenario": "MfaTampering", "step": "DisableMfa", "role": "recovers" },
+    { "scenario": "MassFileDeletion", "step": "SignIn", "role": "prevents" }
   ],
   "impact": "High Impact",
   "helpText": "Enables per user MFA for all users. The directory synchronisation service account is excluded - it cannot complete MFA and enforcing it breaks sync.",

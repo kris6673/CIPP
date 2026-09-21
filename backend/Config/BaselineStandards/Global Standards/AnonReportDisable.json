@@ -4,7 +4,7 @@
   "cat": "Global Standards",
   "tag": [],
   "simulatorScenarios": [
-    { "scenario": "auditing-off", "step": "disable-check", "role": "detects" }
+    { "scenario": "AuditingOff", "step": "DisableCheck", "role": "detects" }
   ],
   "impact": "Low Impact",
   "helpText": "Shows usernames instead of pseudo anonymised names in reports. This standard is required for reporting to work correctly.",

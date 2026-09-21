@@ -22,15 +22,7 @@ function Resolve-CIPPSimulationIdentity {
     if ($null -eq $Roles) { $Roles = @(Get-CIPPSimulationCache -TenantFilter $TenantFilter -Type 'Roles') }
     if ($null -eq $Policies) { $Policies = @(Get-CIPPSimulationCache -TenantFilter $TenantFilter -Type 'ConditionalAccessPolicies') }
 
-    $PrivilegedRoleTemplates = @(
-        '62e90394-69f5-4237-9190-012177145e10'
-        'e8611ab8-c189-46e8-94e1-60213ab1f814'
-        '194ae4cb-b126-40b2-bd5b-6091b380977d'
-        'b1be1c3e-b65d-4f19-8427-f6fa0d97feb9'
-        '29232cdf-9323-42fd-ade2-1d097af3e4de'
-        'f28a1f50-f6e7-4571-818b-6a12f2af6b6c'
-        'fe930be7-5e62-47db-91af-98c3a49a38b1'
-    )
+    $PrivilegedRoleTemplates = @(Get-CIPPPrivilegedRoleTemplateIds)
 
     $ExcludedUserIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
     foreach ($Policy in $Policies) {

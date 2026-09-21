@@ -1,24 +1,24 @@
 {
-  "id": "malicious-oauth-consent",
+  "id": "MaliciousOAuthConsent",
   "title": "Malicious OAuth app consent",
   "category": "Identity & Conditional Access",
   "severity": "High",
   "summary": "A user is tricked into consenting to a malicious application, which then reads mail and files through the granted permissions.",
   "steps": [
     {
-      "id": "assumption",
+      "id": "Assumption",
       "title": "Starting assumption",
       "text": "The attacker sends a convincing link asking the user to grant an application access to their data. The user clicks through the consent screen."
     },
     {
-      "id": "consent",
+      "id": "Consent",
       "title": "Consent granted to the application",
-      "text": "The user approves the app, which registers a service principal and receives standing access to mail and files. No password is needed again.",
+      "text": "The user approves the application, which is added to the tenant and receives standing access to mail and files. No password is needed again.",
       "alerts": [ { "operation": "Add service principal.", "logbook": "Audit.AzureActiveDirectory", "preset": "Add service principal." } ],
       "whenFixed": "User consent is routed to admin approval, so the malicious app is never granted access."
     },
     {
-      "id": "mail-access",
+      "id": "MailAccess",
       "title": "Mail and files read through the app",
       "text": "The app reads the user's mailbox and documents using the permissions it was given. The access continues without any further sign-in.",
       "whenFixed": "Mailbox auditing records the app's access for responders to review."

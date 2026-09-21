@@ -10,7 +10,7 @@
     "SMB1001 (2.8)"
   ],
   "simulatorScenarios": [
-    { "scenario": "mfa-tampering", "step": "re-register", "role": "detects" }
+    { "scenario": "MfaTampering", "step": "ReRegister", "role": "detects" }
   ],
   "impact": "Low Impact",
   "helpText": "Configures the report suspicious activity settings and system credential preferences in the authentication methods policy.",

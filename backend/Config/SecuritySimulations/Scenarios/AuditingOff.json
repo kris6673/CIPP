@@ -1,29 +1,29 @@
 {
-  "id": "auditing-off",
+  "id": "AuditingOff",
   "title": "Silent tenant: auditing turned off",
   "category": "Audit & Detection",
   "severity": "High",
   "summary": "With the Unified Audit Log disabled, an attacker acts inside the tenant knowing that key actions leave no usable trail.",
   "steps": [
     {
-      "id": "assumption",
+      "id": "Assumption",
       "title": "Starting assumption",
       "text": "The attacker has taken over an account and finds that the Unified Audit Log is turned off. Actions will not be recorded for later investigation."
     },
     {
-      "id": "disable-check",
+      "id": "DisableCheck",
       "title": "No audit trail confirmed",
       "text": "The attacker confirms that sign-ins and admin actions are not being logged. This removes the main record responders would rely on.",
       "whenFixed": "The Unified Audit Log is on, so every following action is recorded for investigation."
     },
     {
-      "id": "mailbox-access",
+      "id": "MailboxAccess",
       "title": "Mailbox read without a trace",
       "text": "The attacker opens the mailbox and searches for valuable mail. With mailbox auditing off, the access leaves little evidence.",
       "whenFixed": "Mailbox auditing records the access even when the attacker expects silence."
     },
     {
-      "id": "exfil",
+      "id": "Exfiltration",
       "title": "Mail forwarded out",
       "text": "The attacker adds a rule that forwards new mail to an external address, assuming the change will go unseen.",
       "alerts": [ { "operation": "New-InboxRule", "logbook": "Audit.Exchange", "preset": "New-InboxRuleForward" } ],

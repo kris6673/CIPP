@@ -6,7 +6,7 @@ function Invoke-ListCAGapAnalysis {
         Tenant.SecuritySimulations.Read
     .DESCRIPTION
         Conditional Access gap analysis for one tenant from the cached policies: findings, the
-        persona-by-control coverage matrix, CIS alignment, Zero Trust signals and the posture score.
+        persona-by-control coverage matrix and the 1 to 10 posture score.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

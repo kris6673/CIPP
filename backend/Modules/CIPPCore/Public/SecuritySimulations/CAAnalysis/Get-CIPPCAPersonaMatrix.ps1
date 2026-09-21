@@ -23,20 +23,20 @@ function Get-CIPPCAPersonaMatrix {
         $Context
     )
 
-    $ControlMeta = $Context.Data.Personas.controls
-    $ControlOrder = @('require-mfa', 'phishing-resistant-mfa', 'require-compliant-device', 'block-legacy-auth', 'sign-in-risk', 'user-risk', 'session-sif', 'block-countries')
+    $ControlMeta = $Context.Data.CoverageControls
+    $ControlOrder = @('RequireMfa', 'PhishingResistantMfa', 'RequireCompliantDevice', 'BlockLegacyAuth', 'SignInRisk', 'UserRisk', 'SessionControls', 'BlockCountries')
     $Personas = @(
         [PSCustomObject]@{ id = 'admins'; label = 'Admins'; expected = $ControlOrder }
-        [PSCustomObject]@{ id = 'users'; label = 'Users'; expected = @($ControlOrder | Where-Object { $_ -ne 'phishing-resistant-mfa' }) }
-        [PSCustomObject]@{ id = 'guests'; label = 'Guests'; expected = @('require-mfa', 'block-legacy-auth', 'sign-in-risk', 'session-sif', 'block-countries') }
-        [PSCustomObject]@{ id = 'workloadIdentities'; label = 'Workload identities'; expected = @('sign-in-risk', 'block-countries') }
+        [PSCustomObject]@{ id = 'users'; label = 'Users'; expected = @($ControlOrder | Where-Object { $_ -ne 'PhishingResistantMfa' }) }
+        [PSCustomObject]@{ id = 'guests'; label = 'Guests'; expected = @('RequireMfa', 'BlockLegacyAuth', 'SignInRisk', 'SessionControls', 'BlockCountries') }
+        [PSCustomObject]@{ id = 'workloadIdentities'; label = 'Workload identities'; expected = @('SignInRisk', 'BlockCountries') }
     )
     $Round = { param($Value) [int][math]::Round([double]$Value, [System.MidpointRounding]::AwayFromZero) }
 
     $Licenses = $Context.Licenses
     $Unavailable = [System.Collections.Generic.List[string]]::new()
-    if ($Licenses.HasEntraIdP2 -ne $true) { $Unavailable.Add('sign-in-risk'); $Unavailable.Add('user-risk') }
-    if ($Licenses.HasIntunePlan1 -ne $true) { $Unavailable.Add('require-compliant-device') }
+    if ($Licenses.HasEntraIdP2 -ne $true) { $Unavailable.Add('SignInRisk'); $Unavailable.Add('UserRisk') }
+    if ($Licenses.HasIntunePlan1 -ne $true) { $Unavailable.Add('RequireCompliantDevice') }
     $WorkloadRiskAvailable = $Licenses.HasWorkloadIdPremium -eq $true
 
     $PolicyPersonas = {
@@ -54,43 +54,43 @@ function Get-CIPPCAPersonaMatrix {
     }
 
     $Detectors = @{
-        'block-legacy-auth'        = {
+        'BlockLegacyAuth'        = {
             param($P)
             $Types = @($P.conditions.clientAppTypes)
             (($Types -contains 'exchangeActiveSync') -or ($Types -contains 'other')) -and (@($P.grantControls.builtInControls) -contains 'block')
         }
-        'require-mfa'              = {
+        'RequireMfa'              = {
             param($P)
             (@($P.grantControls.builtInControls) -contains 'mfa') -or (-not [string]::IsNullOrWhiteSpace("$($P.grantControls.authenticationStrength.id)"))
         }
-        'require-compliant-device' = {
+        'RequireCompliantDevice' = {
             param($P)
             $C = @($P.grantControls.builtInControls)
             ($C -contains 'compliantDevice') -or ($C -contains 'domainJoinedDevice')
         }
-        'sign-in-risk'             = {
+        'SignInRisk'             = {
             param($P)
             (@($P.conditions.signInRiskLevels).Count -gt 0) -or (@($P.conditions.servicePrincipalRiskLevels).Count -gt 0)
         }
-        'user-risk'                = { param($P) @($P.conditions.userRiskLevels).Count -gt 0 }
-        'session-sif'              = {
+        'UserRisk'                = { param($P) @($P.conditions.userRiskLevels).Count -gt 0 }
+        'SessionControls'              = {
             param($P)
             ($P.sessionControls.signInFrequency.isEnabled -eq $true) -or ($P.sessionControls.persistentBrowser.isEnabled -eq $true)
         }
-        'block-countries'          = {
+        'BlockCountries'          = {
             param($P)
             $L = $P.conditions.locations
             ($null -ne $L) -and ((@($L.includeLocations).Count -gt 0) -or (@($L.excludeLocations).Count -gt 0)) -and (@($P.grantControls.builtInControls) -contains 'block')
         }
-        'phishing-resistant-mfa'   = { param($P) Test-CIPPCAPolicyPhishingResistant -Policy $P -Context $Context }
+        'PhishingResistantMfa'   = { param($P) Test-CIPPCAPolicyPhishingResistant -Policy $P -Context $Context }
     }
 
     $SeverityForGap = {
         param($PersonaId, $Control)
         switch ($PersonaId) {
-            'admins' { if ($Control -in @('require-mfa', 'phishing-resistant-mfa')) { 'Critical' } else { 'High' } }
-            'users' { if ($Control -eq 'require-mfa') { 'Critical' } elseif ($Control -eq 'block-legacy-auth') { 'High' } else { 'Medium' } }
-            'guests' { if ($Control -eq 'require-mfa') { 'High' } else { 'Medium' } }
+            'admins' { if ($Control -in @('RequireMfa', 'PhishingResistantMfa')) { 'Critical' } else { 'High' } }
+            'users' { if ($Control -eq 'RequireMfa') { 'Critical' } elseif ($Control -eq 'BlockLegacyAuth') { 'High' } else { 'Medium' } }
+            'guests' { if ($Control -eq 'RequireMfa') { 'High' } else { 'Medium' } }
             default { 'Low' }
         }
     }
@@ -116,7 +116,7 @@ function Get-CIPPCAPersonaMatrix {
                 $Cells.Add([PSCustomObject]@{ persona = $Persona.label; control = $ControlLabel; state = 'NotApplicable'; policies = [string[]]@() })
                 continue
             }
-            $Unlicensed = ($Unavailable -contains $Control) -or ($Persona.id -eq 'workloadIdentities' -and $Control -eq 'sign-in-risk' -and -not $WorkloadRiskAvailable)
+            $Unlicensed = ($Unavailable -contains $Control) -or ($Persona.id -eq 'workloadIdentities' -and $Control -eq 'SignInRisk' -and -not $WorkloadRiskAvailable)
             if ($Unlicensed) {
                 $Cells.Add([PSCustomObject]@{ persona = $Persona.label; control = $ControlLabel; state = 'Unlicensed'; policies = [string[]]@() })
                 continue

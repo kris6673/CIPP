@@ -1,5 +1,5 @@
 {
-  "id": "stolen-token-replay",
+  "id": "StolenTokenReplay",
   "title": "Stolen session token replay",
   "category": "Identity & Conditional Access",
   "severity": "Critical",
@@ -9,14 +9,14 @@
   "attackerCanSatisfy": ["mfa"],
   "steps": [
     {
-      "id": "assumption",
+      "id": "Assumption",
       "title": "Starting assumption",
-      "text": "The attacker has captured a valid session token from the user through an adversary-in-the-middle page. The token still carries the multifactor claim the user completed."
+      "text": "The attacker has captured a valid session token from the user through a fake sign-in page that relayed the real one. The token still carries the multifactor approval the user completed."
     },
     {
-      "id": "signin",
+      "id": "SignIn",
       "title": "Sign-in evaluated by Conditional Access",
-      "text": "The attacker replays the token from an unmanaged Windows browser on a hosting-provider address. Because the token already satisfies MFA, only device and risk controls can still stop the session.",
+      "text": "The attacker replays the token from an unmanaged Windows browser on a hosting-provider address. Because the token already carries MFA, only device and risk controls can still stop the session.",
       "whatIf": { "clientAppType": "browser", "devicePlatform": "windows", "deviceInfo": { "isCompliant": false }, "signInRiskLevel": "medium", "country": "NL", "ipAddress": "185.220.101.47" },
       "gaps": [
         { "when": ["allowed", "weakGrant"], "text": "No compliant-device requirement, so a replayed token from any machine is accepted.", "role": "prevents", "fix": { "caTemplate": "Require a compliant or Microsoft Entra hybrid joined device" } },
@@ -26,13 +26,13 @@
       "whenFixed": "Blocked: the device is not compliant, so the replayed token is refused."
     },
     {
-      "id": "mailbox-search",
+      "id": "MailboxSearch",
       "title": "Mailbox searched for valuable mail",
       "text": "The attacker opens the mailbox and searches for invoices, payroll and password-reset messages. Nothing is changed yet, so the activity looks like normal browsing.",
       "whenFixed": "Mailbox auditing records the search, giving responders an early signal of takeover."
     },
     {
-      "id": "persistence",
+      "id": "Persistence",
       "title": "Forwarding set up for ongoing access",
       "text": "The attacker creates an inbox rule and turns on mailbox forwarding so copies of new mail reach an outside address. This keeps the attacker informed even after the token expires.",
       "alerts": [

@@ -1,5 +1,5 @@
 {
-  "id": "mass-user-deletion",
+  "id": "MassUserDeletion",
   "title": "Mass user deletion",
   "category": "Audit & Detection",
   "severity": "High",
@@ -9,12 +9,12 @@
   "attackerCanSatisfy": ["mfa"],
   "steps": [
     {
-      "id": "assumption",
+      "id": "Assumption",
       "title": "Starting assumption",
       "text": "The attacker controls an account with user-management rights and intends to cause maximum disruption."
     },
     {
-      "id": "signin",
+      "id": "SignIn",
       "title": "Sign-in evaluated by Conditional Access",
       "text": "The account signs in from an unfamiliar address before the deletions begin. Strong sign-in controls are the last chance to stop it.",
       "whatIf": { "clientAppType": "browser", "devicePlatform": "windows", "country": "NL", "ipAddress": "185.220.101.60" },
@@ -25,14 +25,14 @@
       "whenFixed": "Blocked: MFA is required, so the stolen password cannot reach user management."
     },
     {
-      "id": "delete-users",
+      "id": "DeleteUsers",
       "title": "Accounts deleted in bulk",
       "text": "The attacker deletes many accounts quickly, cutting off sign-in and mail for those users. The business impact is immediate.",
       "alerts": [ { "operation": "Delete user", "logbook": "Audit.AzureActiveDirectory" } ],
       "whenFixed": "Each deletion is written to the audit log, so the burst is detected quickly."
     },
     {
-      "id": "recover",
+      "id": "Recover",
       "title": "Recovery window",
       "text": "Deleted accounts and their data can be restored for a limited time. The faster the burst is noticed, the more can be recovered.",
       "whenFixed": "Retention of deleted users' OneDrive data keeps their files recoverable during the window."

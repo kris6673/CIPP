@@ -7,8 +7,8 @@
     "mdo_spam_notifications_only_for_admins"
   ],
   "simulatorScenarios": [
-    { "scenario": "mailbox-rule-exfiltration", "step": "mailbox-forward", "role": "detects" },
-    { "scenario": "transport-rule-exfiltration", "step": "exfil", "role": "detects" }
+    { "scenario": "MailboxRuleExfiltration", "step": "MailboxForward", "role": "detects" },
+    { "scenario": "TransportRuleExfiltration", "step": "Exfiltration", "role": "detects" }
   ],
   "impact": "Low Impact",
   "helpText": "Set the Outbound Spam Alert e-mail address",

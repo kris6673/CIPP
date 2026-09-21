@@ -47,7 +47,7 @@ function Get-CIPPCAGapAnalysis {
         'Test-CIPPCAGapCaImmuneResources'
         'Test-CIPPCAGapResourceExclusionBypass'
         'Test-CIPPCAGapUncoveredAppExclusions'
-        'Test-CIPPCAGapDocumentedExclusions'
+        'Test-CIPPCAGapMicrosoftGuidance'
     )
 
     $Findings = [System.Collections.Generic.List[object]]::new()

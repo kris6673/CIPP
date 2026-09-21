@@ -4,7 +4,7 @@
   "cat": "SharePoint Standards",
   "tag": [],
   "simulatorScenarios": [
-    { "scenario": "bulk-sync-unmanaged-device", "step": "sync", "role": "limits" }
+    { "scenario": "BulkSyncUnmanagedDevice", "step": "Sync", "role": "limits" }
   ],
   "impact": "High Impact",
   "helpText": "Sets the file extensions the OneDrive sync client refuses to sync. The list replaces the tenant list, matching admin center behaviour.",

@@ -30,7 +30,7 @@ function Test-CIPPCAGapSwissCheeseGrant {
                 if ($Group) { "$Group" } else { "unique:$ControlName" }
             } | Select-Object -Unique)
         $SoleGroup = if ($DistinctGroups.Count -eq 1) { $DistinctGroups[0] } else { $null }
-        $IsManagedAccessOnly = @($DistinctGroups | Where-Object { $_ -ne 'device-trust' -and $_ -ne 'app-protection' }).Count -eq 0
+        $IsManagedAccessOnly = @($DistinctGroups | Where-Object { $_ -ne 'DeviceTrust' -and $_ -ne 'AppProtection' }).Count -eq 0
         $IsAcceptedEquivalentOr = ($null -ne $SoleGroup) -or $IsManagedAccessOnly
 
         $LabelList = @($Controls | ForEach-Object {
@@ -44,7 +44,7 @@ function Test-CIPPCAGapSwissCheeseGrant {
             $SpansBothGroups = ($null -eq $SoleGroup) -and $IsManagedAccessOnly
             $Explanation = if ($SpansBothGroups) {
                 'Accepting either a managed device or a protected app is the pattern Microsoft recommends for mixed corporate and personal devices; both paths prove the access is managed.'
-            } elseif ($SoleGroup -eq 'device-trust') {
+            } elseif ($SoleGroup -eq 'DeviceTrust') {
                 'Accepting either a compliant device or a hybrid-joined device is a recommended way to require a managed device across cloud-managed and domain-joined estates; neither path is weaker than the other.'
             } else {
                 'Accepting either an approved client app or an app protection policy is the recommended pattern for protecting data in mobile apps; both paths provide equivalent protection.'

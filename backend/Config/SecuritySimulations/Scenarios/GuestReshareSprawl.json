@@ -1,5 +1,5 @@
 {
-  "id": "guest-reshare-sprawl",
+  "id": "GuestReshareSprawl",
   "title": "Guest re-share sprawl",
   "category": "SharePoint & Data",
   "severity": "Medium",
@@ -8,19 +8,19 @@
   "persona": "guest",
   "steps": [
     {
-      "id": "assumption",
+      "id": "Assumption",
       "title": "Starting assumption",
       "text": "A guest was shared a folder for a project and can re-share it. The attacker controls that guest account."
     },
     {
-      "id": "reshare",
+      "id": "Reshare",
       "title": "Files re-shared to more outsiders",
       "text": "The guest shares the files onward to additional external people. Access now reaches people the owner never approved.",
       "alerts": [ { "operation": "SharingSet", "logbook": "Audit.SharePoint" } ],
       "whenFixed": "External users cannot re-share, so access does not spread beyond the owner's intent."
     },
     {
-      "id": "sprawl",
+      "id": "Sprawl",
       "title": "Access spreads beyond control",
       "text": "Each new recipient can potentially share again, widening exposure. The owner loses track of who can reach the data.",
       "whenFixed": "Automatic guest-access expiry removes stale external access before it spreads far."
