@@ -3,13 +3,20 @@ function Invoke-CIPPCASituationBattery {
     .SYNOPSIS
         Evaluates every predefined sign-in situation against a tenant's live Conditional Access.
     .DESCRIPTION
-        Each situation names a persona and sign-in conditions.
+        Each situation names a persona and sign-in conditions. The admin, user and guest accounts are
+        picked from the cache unless -IdentityOverrides names them (persona -> user id), and situations
+        marked countryFromSelection sign in from -Country (default RU).
     .FUNCTIONALITY
         Internal
     #>
     [CmdletBinding()]
-    param([Parameter(Mandatory = $true)]$TenantFilter)
+    param(
+        [Parameter(Mandatory = $true)]$TenantFilter,
+        [hashtable]$IdentityOverrides,
+        [string]$Country
+    )
 
+    $Country = if ([string]::IsNullOrWhiteSpace($Country)) { 'RU' } else { "$Country".Trim().ToUpperInvariant() }
     $Capabilities = $(try { Get-CIPPTenantCapabilities -TenantFilter $TenantFilter } catch { $null })
     $HasP2 = $Capabilities.AAD_PREMIUM_P2 -eq $true
     $RiskConditions = @('signInRiskLevel', 'userRiskLevel', 'insiderRiskLevel')
@@ -26,19 +33,50 @@ function Invoke-CIPPCASituationBattery {
     $Roles = @(Get-CIPPSimulationCache -TenantFilter $TenantFilter -Type 'Roles')
     $Policies = @(Get-CIPPSimulationCache -TenantFilter $TenantFilter -Type 'ConditionalAccessPolicies')
 
+    $UsersById = @{}
+    foreach ($User in $Users) { if ($User.id) { $UsersById["$($User.id)"] = $User } }
+
+    $PrivilegedTemplates = @(Get-CIPPPrivilegedRoleTemplateIds)
+    $AdminIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($Role in @($Roles | Where-Object { $PrivilegedTemplates -contains $_.roleTemplateId })) {
+        foreach ($Member in @($Role.members | Where-Object { $_.id })) { $null = $AdminIds.Add("$($Member.id)") }
+    }
+    $AdminCandidates = @($Users | Where-Object { $_.id -and $AdminIds.Contains("$($_.id)") -and $_.accountEnabled -eq $true -and "$($_.userType)" -ne 'Guest' } |
+            Sort-Object -Property displayName | ForEach-Object {
+                [PSCustomObject]@{ userId = "$($_.id)"; displayName = "$($_.displayName)"; userPrincipalName = "$($_.userPrincipalName)" }
+            })
+
     $Identities = @{}
     foreach ($Persona in @('admin', 'user', 'guest')) {
-        $Identities[$Persona] = Resolve-CIPPSimulationIdentity -TenantFilter $TenantFilter -Persona $Persona -Users $Users -Roles $Roles -Policies $Policies
+        $OverrideId = $(if ($IdentityOverrides) { "$($IdentityOverrides[$Persona])" } else { '' })
+        $Selected = $(if ($OverrideId) { $UsersById[$OverrideId] } else { $null })
+        if ($Selected) {
+            $Identities[$Persona] = [PSCustomObject]@{
+                persona           = $Persona
+                kind              = 'Selected'
+                userId            = "$($Selected.id)"
+                displayName       = "$($Selected.displayName)"
+                userPrincipalName = "$($Selected.userPrincipalName)"
+            }
+        } else {
+            $Identities[$Persona] = Resolve-CIPPSimulationIdentity -TenantFilter $TenantFilter -Persona $Persona -Users $Users -Roles $Roles -Policies $Policies
+        }
+    }
+
+    $ConditionsFor = {
+        param($Situation)
+        if ($Situation.countryFromSelection -ne $true) { return $Situation.conditions }
+        $Conditions = $Situation.conditions | Select-Object -Property * -ExcludeProperty ipAddress
+        $Conditions | Add-Member -NotePropertyName country -NotePropertyValue $Country -Force
+        $Conditions
     }
 
     $Bodies = [System.Collections.Generic.List[object]]::new()
-    $Evaluable = [System.Collections.Generic.List[object]]::new()
     foreach ($Situation in $Situations) {
         $Persona = $(if ("$($Situation.persona)") { "$($Situation.persona)" } else { 'user' })
         $Identity = $Identities[$Persona]
         if (-not $Identity) { continue }
-        $Bodies.Add((New-CIPPCAWhatIfRequest -UserId $Identity.userId -IncludeApplications $Situation.includeApplications -Conditions $Situation.conditions))
-        $Evaluable.Add($Situation)
+        $Bodies.Add((New-CIPPCAWhatIfRequest -UserId $Identity.userId -IncludeApplications $Situation.includeApplications -Conditions (& $ConditionsFor $Situation)))
     }
 
     $Evaluations = if ($Bodies.Count -gt 0) { @(Invoke-CIPPCAWhatIf -TenantFilter $TenantFilter -Bodies @($Bodies)) } else { @() }
@@ -63,7 +101,7 @@ function Invoke-CIPPCASituationBattery {
             reportOnlyWouldStop = @()
             missingControl      = $(if ($Situation.missingControl) { "$($Situation.missingControl.text)" } else { '' })
             fix                 = $Situation.missingControl.fix
-            conditions          = $Situation.conditions
+            conditions          = (& $ConditionsFor $Situation)
             policies            = @()
             error               = $null
         }
@@ -96,6 +134,8 @@ function Invoke-CIPPCASituationBattery {
 
     [PSCustomObject]@{
         identities = [PSCustomObject]$Identities
+        candidates = [PSCustomObject]@{ admins = @($AdminCandidates) }
+        country    = $Country
         situations = @($Rows)
         excluded   = @($Excluded)
         summary    = [PSCustomObject]@{

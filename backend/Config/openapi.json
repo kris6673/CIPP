@@ -14906,6 +14906,82 @@
         "x-cipp-any-tenant": true
       }
     },
+    "/api/ExecBaselineAddStandard": {
+      "post": {
+        "summary": "ExecBaselineAddStandard",
+        "operationId": "ExecBaselineAddStandard",
+        "tags": [
+          "Tenant > Standards"
+        ],
+        "description": "Adds one standard, with its configured settings, to a stage of an existing baseline. The baseline\nis read with Get-CIPPBaseline, the standard is appended to the stage (replacing an existing\nsingle-instance copy) and the whole baseline is saved again through New-CIPPBaseline, the same\nwrite path the baseline editor uses. Body: baselineId, stage (1-based, default 1), standard,\nvariables, remediateEnabled (default false), alertEnabled (default true).",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "alertEnabled": {
+                    "type": "string"
+                  },
+                  "baselineId": {
+                    "type": "string"
+                  },
+                  "remediateEnabled": {
+                    "type": "boolean"
+                  },
+                  "stage": {
+                    "type": "string"
+                  },
+                  "standard": {
+                    "type": "string"
+                  },
+                  "variables": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                  "properties": {
+                    "Metadata": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "Results": {
+                      "x-cipp-field-source": "backend"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Baselines.ReadWrite"
+      }
+    },
     "/api/ExecBaselineMigrate": {
       "post": {
         "summary": "ExecBaselineMigrate",
@@ -32596,7 +32672,7 @@
         "tags": [
           "Tenant > SecuritySimulations"
         ],
-        "description": "Plays one security scenario against a tenant: grades the standards each step relies on, evaluates\nthe scenario's sign-in live through the Conditional Access What If API, and checks whether an\naudit-log alert would fire.",
+        "description": "Plays one security scenario against a tenant: grades the standards each step relies on, evaluates\nthe scenario's sign-in live through the Conditional Access What If API, and checks whether an\naudit-log alert would fire. The result is stored so the catalog shows it. With scenarioId 'All'\nevery scenario is played in one go, sharing the graded standards and resolved identities.",
         "requestBody": {
           "required": true,
           "content": {
@@ -41803,8 +41879,16 @@
         "tags": [
           "Tenant > SecuritySimulations"
         ],
-        "description": "Evaluates every predefined sign-in situation (admin, user and guest personas under unmanaged\ndevices, foreign locations, legacy clients, device-code flow, risk levels and more) live against the\ntenant's Conditional Access through the What If API, and names the control missing wherever a\nsign-in gets through.",
+        "description": "Evaluates every predefined sign-in situation (admin, user and guest personas under unmanaged\ndevices, foreign locations, legacy clients, device-code flow, risk levels and more) live against the\ntenant's Conditional Access through the What If API, and names the control missing wherever a\nsign-in gets through. Optional adminUserId, userUserId and guestUserId pick the accounts to sign\nin as; country picks where the foreign-country sign-ins come from.",
         "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           }
@@ -41820,6 +41904,12 @@
                     "type": "object",
                     "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
                     "properties": {
+                      "candidates": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "country": {
+                        "x-cipp-field-source": "backend"
+                      },
                       "excluded": {
                         "x-cipp-field-source": "backend"
                       },
@@ -55999,8 +56089,16 @@
         "tags": [
           "Tenant > SecuritySimulations"
         ],
-        "description": "Lists the security scenarios that can be simulated, with a per-tenant summary of how many of the\nstandards each scenario relies on are already in place (from the tenant's baseline alignment -\nnothing is evaluated here).",
+        "description": "Lists the security scenarios that can be simulated with the outcome and time of each scenario's\nlast stored run for the tenant. With scenarioId it returns that scenario's last stored run in full\n(cached true/false plus the result), so the run view can show it without evaluating again.",
         "parameters": [
+          {
+            "name": "scenarioId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "$ref": "#/components/parameters/tenantFilter"
           }
@@ -56014,7 +56112,15 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                    "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                    "properties": {
+                      "cached": {
+                        "x-cipp-field-source": "backend"
+                      },
+                      "result": {
+                        "x-cipp-field-source": "backend"
+                      }
+                    }
                   }
                 }
               }

@@ -5,38 +5,72 @@ function Invoke-CIPPSecuritySimulation {
     .DESCRIPTION
         For every step of the scenario: the standards tagged to that step are graded (alignment row if
         assigned, engine -GradeOnly otherwise), a whatIf step is evaluated live through the What If API for
-        the scenario's persona, and alert steps check whether an audit-log alert rule would fire.
+        the scenario's persona, and alert steps check whether an audit-log alert rule would fire. The
+        result is stored through Set-CIPPSecuritySimulationRun so the catalog can show it later.
+        -Shared is a hashtable a caller running several scenarios passes in: definitions, alignment rows,
+        alert rules, resolved identities and graded standards are kept there so nothing is evaluated twice.
     .FUNCTIONALITY
         Internal
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]$TenantFilter,
-        [Parameter(Mandatory = $true)]$ScenarioId
+        [Parameter(Mandatory = $true)]$ScenarioId,
+        [hashtable]$Shared,
+        [switch]$NoCache
     )
 
     $Scenario = Get-CIPPSecuritySimulationDefinition -Id $ScenarioId | Select-Object -First 1
     if (-not $Scenario) { throw "Unknown scenario '$ScenarioId'." }
 
-    $Definitions = @(Get-CIPPBaselineDefinition)
-    $StandardMap = Get-CIPPSecuritySimulationStandardMap -Definitions $Definitions
+    if ($null -eq $Shared) { $Shared = @{} }
+    if (-not $Shared.ContainsKey('Definitions')) { $Shared['Definitions'] = @(Get-CIPPBaselineDefinition) }
+    if (-not $Shared.ContainsKey('StandardMap')) { $Shared['StandardMap'] = Get-CIPPSecuritySimulationStandardMap -Definitions $Shared['Definitions'] }
+    if (-not $Shared.ContainsKey('Capabilities')) { $Shared['Capabilities'] = $(try { Get-CIPPTenantCapabilities -TenantFilter $TenantFilter } catch { $null }) }
+    if (-not $Shared.ContainsKey('AlignmentRows')) {
+        $AlignmentTable = Get-CippTable -tablename 'BaselineAlignment'
+        $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $TenantFilter
+        $Shared['AlignmentRows'] = @(Get-CIPPAzDataTableEntity @AlignmentTable -Filter "PartitionKey eq '$SafeTenant'")
+    }
+    if (-not $Shared.ContainsKey('Identities')) { $Shared['Identities'] = @{} }
+    if (-not $Shared.ContainsKey('States')) { $Shared['States'] = @{} }
+
+    $StandardMap = $Shared['StandardMap']
+    $Capabilities = $Shared['Capabilities']
+    $AlignmentRows = @($Shared['AlignmentRows'])
     $StepStandards = if ($StandardMap.ContainsKey("$($Scenario.id)")) { $StandardMap["$($Scenario.id)"] } else { @{} }
 
-    $Capabilities = $(try { Get-CIPPTenantCapabilities -TenantFilter $TenantFilter } catch { $null })
     $Required = @($Scenario.requiredCapabilities | Where-Object { $_ })
     $Licensed = $Required.Count -eq 0 -or @($Required | Where-Object { $Capabilities.$_ -eq $true }).Count -gt 0
-
-    $AlignmentTable = Get-CippTable -tablename 'BaselineAlignment'
-    $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $TenantFilter
-    $AlignmentRows = @(Get-CIPPAzDataTableEntity @AlignmentTable -Filter "PartitionKey eq '$SafeTenant'")
 
     $Steps = @($Scenario.steps | Where-Object { $_ })
     $NeedsIdentity = @($Steps | Where-Object { $_.whatIf }).Count -gt 0
     $NeedsAlerts = @($Steps | Where-Object { $_.alerts }).Count -gt 0
-    $Rules = if ($NeedsAlerts) { @(Get-CIPPSimulationAlertRules -TenantFilter $TenantFilter) } else { @() }
+    $Rules = @()
+    if ($NeedsAlerts) {
+        if (-not $Shared.ContainsKey('Rules')) { $Shared['Rules'] = @(Get-CIPPSimulationAlertRules -TenantFilter $TenantFilter) }
+        $Rules = @($Shared['Rules'])
+    }
     $Persona = $(if ("$($Scenario.persona)") { "$($Scenario.persona)" } else { 'user' })
-    $Identity = if ($NeedsIdentity -and $Licensed) { Resolve-CIPPSimulationIdentity -TenantFilter $TenantFilter -Persona $Persona } else { $null }
+    $Identity = $null
+    if ($NeedsIdentity -and $Licensed) {
+        if (-not $Shared['Identities'].ContainsKey($Persona)) {
+            $Shared['Identities'][$Persona] = Resolve-CIPPSimulationIdentity -TenantFilter $TenantFilter -Persona $Persona
+        }
+        $Identity = $Shared['Identities'][$Persona]
+    }
     $AttackerCanSatisfy = @($Scenario.attackerCanSatisfy | Where-Object { $_ })
+
+    $StateFor = {
+        param($Entry)
+        $Name = "$($Entry.Definition.name)"
+        if (-not $Shared['States'].ContainsKey($Name)) {
+            $Shared['States'][$Name] = Get-CIPPSimulationStandardState -TenantFilter $TenantFilter -Definition $Entry.Definition -Role $Entry.Role -AlignmentRows $AlignmentRows -Capabilities $Capabilities
+        }
+        $State = $Shared['States'][$Name].PSObject.Copy()
+        $State.role = $Entry.Role
+        $State
+    }
 
     $WhatIfCalls = 0
     $Results = [System.Collections.Generic.List[object]]::new()
@@ -51,9 +85,7 @@ function Invoke-CIPPSecuritySimulation {
         $StepId = "$($Step.id)"
         $Standards = [System.Collections.Generic.List[object]]::new()
         if ($StepStandards.ContainsKey($StepId)) {
-            foreach ($Entry in $StepStandards[$StepId]) {
-                $Standards.Add((Get-CIPPSimulationStandardState -TenantFilter $TenantFilter -Definition $Entry.Definition -Role $Entry.Role -AlignmentRows $AlignmentRows -Capabilities $Capabilities))
-            }
+            foreach ($Entry in $StepStandards[$StepId]) { $Standards.Add((& $StateFor $Entry)) }
         }
 
         $Alerts = [System.Collections.Generic.List[object]]::new()
@@ -148,7 +180,17 @@ function Invoke-CIPPSecuritySimulation {
             }
         }
         foreach ($Alert in @($Alerts | Where-Object { -not $_.configured })) {
-            $Fixes.Add([PSCustomObject]@{ type = 'alertPreset'; name = $(if ($Alert.preset) { $Alert.preset } else { $Alert.operation }); label = "Alert on $($Alert.operation)"; role = 'detects'; status = 'Not configured'; assigned = $false; step = $StepId })
+            $Fixes.Add([PSCustomObject]@{
+                    type      = 'alertPreset'
+                    name      = $(if ($Alert.preset) { $Alert.preset } else { $Alert.operation })
+                    label     = "Alert on $($Alert.operation)"
+                    role      = 'detects'
+                    status    = 'Not configured'
+                    assigned  = $false
+                    step      = $StepId
+                    operation = "$($Alert.operation)"
+                    logbook   = "$($Alert.logbook)"
+                })
         }
 
         $StepReached = $Reached
@@ -185,9 +227,10 @@ function Invoke-CIPPSecuritySimulation {
         if ($Seen.Add("$($Fix.type)|$($Fix.name)")) { $UniqueFixes.Add($Fix) }
     }
     $Detected = @($Results | Where-Object { $_.reached } | ForEach-Object { $_.alerts } | Where-Object { $_.configured }).Count -gt 0
-    $LastRun = ($AlignmentRows | ForEach-Object { [int64]($_.LastRun ?? 0) } | Measure-Object -Maximum).Maximum
+    $AlignmentLastRun = ($AlignmentRows | ForEach-Object { [int64]($_.LastRun ?? 0) } | Measure-Object -Maximum).Maximum
+    $Now = [int64]([datetimeoffset]::UtcNow.ToUnixTimeSeconds())
 
-    [PSCustomObject]@{
+    $Output = [PSCustomObject]@{
         scenario     = [PSCustomObject]@{
             id       = "$($Scenario.id)"
             title    = "$($Scenario.title)"
@@ -199,6 +242,7 @@ function Invoke-CIPPSecuritySimulation {
         tenantFilter = $TenantFilter
         licensed     = [bool]$Licensed
         identity     = $Identity
+        lastRun      = $Now
         steps        = @($Results)
         summary      = [PSCustomObject]@{
             prevented                = $null -ne $PreventedAt
@@ -215,8 +259,17 @@ function Invoke-CIPPSecuritySimulation {
         }
         evidence     = [PSCustomObject]@{
             whatIfCalls      = $WhatIfCalls
-            alignmentLastRun = $(if ($LastRun) { [int64]$LastRun } else { $null })
+            alignmentLastRun = $(if ($AlignmentLastRun) { [int64]$AlignmentLastRun } else { $null })
             alertRules       = $Rules.Count
         }
     }
+
+    if (-not $NoCache.IsPresent) {
+        try {
+            Set-CIPPSecuritySimulationRun -TenantFilter $TenantFilter -Result $Output
+        } catch {
+            Write-Information "Invoke-CIPPSecuritySimulation: could not store the run for $($Scenario.id): $($_.Exception.Message)"
+        }
+    }
+    $Output
 }

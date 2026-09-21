@@ -28,7 +28,6 @@ function Get-CIPPCAGapAnalysis {
         'Test-CIPPCAGapDeviceRegistrationBypass'
         'Test-CIPPCAGapKnownBypassApps'
         'Test-CIPPCAGapMissingMfa'
-        'Test-CIPPCAGapBroadPolicyExclusions'
         'Test-CIPPCAGapReportOnlyState'
         'Test-CIPPCAGapResilienceDefaults'
         'Test-CIPPCAGapLocationConditions'
@@ -64,6 +63,7 @@ function Get-CIPPCAGapAnalysis {
     $Persona = Get-CIPPCAPersonaMatrix -Context $Context
     foreach ($Finding in @($Persona.findings)) { $Findings.Add($Finding) }
 
+    $Findings = [System.Collections.Generic.List[object]]@($Findings | Where-Object { "$($_.severity)" -notin @('Info', 'Low') })
     $Sequence = 0
     foreach ($Finding in $Findings) {
         $Sequence++

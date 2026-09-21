@@ -31,7 +31,6 @@ function Get-CIPPCAPersonaMatrix {
         [PSCustomObject]@{ id = 'guests'; label = 'Guests'; expected = @('RequireMfa', 'BlockLegacyAuth', 'SignInRisk', 'SessionControls', 'BlockCountries') }
         [PSCustomObject]@{ id = 'workloadIdentities'; label = 'Workload identities'; expected = @('SignInRisk', 'BlockCountries') }
     )
-    $Round = { param($Value) [int][math]::Round([double]$Value, [System.MidpointRounding]::AwayFromZero) }
 
     $Licenses = $Context.Licenses
     $Unavailable = [System.Collections.Generic.List[string]]::new()
@@ -105,8 +104,6 @@ function Get-CIPPCAPersonaMatrix {
 
     $Cells = [System.Collections.Generic.List[object]]::new()
     $Findings = [System.Collections.Generic.List[object]]::new()
-    $TotalExpected = 0
-    $TotalCovered = 0.0
 
     foreach ($Persona in $Personas) {
         $Assigned = @($Buckets[$Persona.id])
@@ -121,15 +118,14 @@ function Get-CIPPCAPersonaMatrix {
                 $Cells.Add([PSCustomObject]@{ persona = $Persona.label; control = $ControlLabel; state = 'Unlicensed'; policies = [string[]]@() })
                 continue
             }
-            $TotalExpected++
             $Detector = $Detectors[$Control]
             $EnabledHits = [string[]]@($Assigned | Where-Object { $_.state -eq 'enabled' -and (& $Detector $_) } | ForEach-Object { "$($_.displayName)" })
             $ReportOnlyHits = [string[]]@($Assigned | Where-Object { $_.state -eq 'enabledForReportingButNotEnforced' -and (& $Detector $_) } | ForEach-Object { "$($_.displayName)" })
 
             if ($EnabledHits.Count -gt 0) {
-                $State = 'Enforced'; $Names = $EnabledHits; $TotalCovered += 1
+                $State = 'Enforced'; $Names = $EnabledHits
             } elseif ($ReportOnlyHits.Count -gt 0) {
-                $State = 'ReportOnly'; $Names = $ReportOnlyHits; $TotalCovered += 0.5
+                $State = 'ReportOnly'; $Names = $ReportOnlyHits
             } else {
                 $State = 'Missing'; $Names = [string[]]@()
             }
@@ -150,13 +146,10 @@ function Get-CIPPCAPersonaMatrix {
         }
     }
 
-    $OverallScore = if ($TotalExpected -eq 0) { 100 } else { & $Round (($TotalCovered / $TotalExpected) * 100) }
-
     [PSCustomObject]@{
         personas     = [string[]]@($Personas | ForEach-Object { $_.label })
         controls     = [string[]]@($ControlOrder | ForEach-Object { "$($ControlMeta.$_.label)" })
         cells        = @($Cells)
         findings     = @($Findings)
-        overallScore = $OverallScore
     }
 }
