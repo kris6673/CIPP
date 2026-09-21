@@ -46,4 +46,8 @@ For Settings Catalog and Administrative Templates this means any change made dir
 | Administrative Templates | Removed. Every configured setting on the policy is cleared before the template's are applied. |
 | All other types          | Left as they are. The template's settings are merged over the existing ones.                  |
 
+{% hint style="info" %}
+An Administrative Templates policy built on an imported ADMX file (for example a browser vendor's templates) can be deployed to any tenant where the same ADMX and ADML files have been imported. Intune gives an imported setting a different identifier in every tenant, so CIPP matches each setting by its name, category and class rather than by identifier. Where the ADMX has not been imported into a target tenant, the deployment stops and names the settings it could not find; import the files under Devices > Configuration > Import ADMX in that tenant, wait until they show as Available, and deploy again.
+{% endhint %}
+
 </details>
