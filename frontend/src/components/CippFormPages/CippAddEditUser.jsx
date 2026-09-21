@@ -491,6 +491,7 @@ const CippAddEditUser = (props) => {
     )
 
     applyField('jobTitle', template.jobTitle)
+    applyField('addedAliases', template.addedAliases)
     applyField('streetAddress', template.streetAddress)
     applyField('city', template.city)
     applyField('state', template.state)
