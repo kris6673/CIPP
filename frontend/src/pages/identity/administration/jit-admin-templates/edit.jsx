@@ -334,6 +334,7 @@ const Page = () => {
                 multiline
                 rows={3}
                 formControl={formControl}
+                helperText="Supports %cipptechnician% and %cipptechnicianupn% for the requesting technician."
               />
             </Grid>
 
@@ -409,6 +410,7 @@ const Page = () => {
                   label="Default Username"
                   name="defaultUserName"
                   formControl={formControl}
+                  helperText="Supports %cipptechnician% (the signed-in technician's account name before the @), resolved when the template is applied."
                 />
               </Grid>
               {!isAllTenants && (
