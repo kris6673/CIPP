@@ -39,15 +39,16 @@ function Test-CIPPCAGapBroadPolicyExclusions {
             $BgExcluded = (@($Users.excludeUsers | Where-Object { "$_".ToLowerInvariant() -eq $BreakGlassId }).Count -gt 0) -or
             (@($Users.excludeGroups | Where-Object { "$_".ToLowerInvariant() -eq $BreakGlassId }).Count -gt 0)
         }
-        $BgNote = if ($BgExcluded) { ' (the break-glass exclusion is expected and is not counted here)' } else { '' }
+        $BgNote = if ($BgExcluded) { ' (the emergency-access exclusion is expected and is not counted)' } else { '' }
 
         $Params = @{
             Severity         = if ($AppExclusions -gt 0) { 'Medium' } else { 'Low' }
-            Category         = 'Policy Scope'
-            Title            = 'Broad policy with exclusions - review for gaps'
-            Description      = "This policy targets All Users and All Cloud Apps but has exclusions beyond break-glass. Non-break-glass user/group/role exclusions: $NonBgUserExclusions, App exclusions: $AppExclusions.$BgNote Exclusions create potential bypass paths."
-            Remediation      = 'Regularly audit exclusions. Ensure every excluded entity - other than documented break-glass accounts - has a business justification and is covered by a compensating policy.'
+            Category         = 'Policy scope'
+            Title            = 'Tenant-wide policy has exclusions beyond the emergency-access account'
+            Description      = "This policy applies to all users and all applications, so every exclusion is a path around it. It exempts $NonBgUserExclusions users, groups or roles and $AppExclusions applications$BgNote."
+            Remediation      = 'Confirm that every exclusion has a documented business reason and that another policy still protects what it exempts.'
             AffectedPolicies = @($Policy.displayName)
+            DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/concept-conditional-access-users-groups'
         }
         $Findings.Add((New-CIPPCAGapFinding @Params))
     }

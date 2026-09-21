@@ -82,55 +82,56 @@ function Test-CIPPCAGapGuestExclusion {
 
         $EnforcementDetail = ''
         if ($ResourceTenantEnforceable.Count -gt 0) {
-            $EnforcementDetail += "`n`nResource tenant enforceable (excluded from this policy): $(@($ResourceTenantEnforceable | ForEach-Object { & $LabelOf $_ }) -join ', '). These guest types can be required to satisfy MFA in YOUR tenant if you enable MFA trust in Cross-Tenant Access Settings. The guest completes MFA in their home tenant, and you trust that MFA claim via inbound trust settings."
+            $EnforcementDetail += "`n`nGuest types this tenant can hold to its own requirements: $(@($ResourceTenantEnforceable | ForEach-Object { & $LabelOf $_ }) -join ', '). They complete multifactor authentication in their home organization, and this tenant can be set to trust that result."
         }
         if ($HomeTenantOnly.Count -gt 0) {
-            $EnforcementDetail += "`n`nHome tenant only (excluded from this policy): $(& $LabelOf 'b2bDirectConnectUser'). These users authenticate entirely in their home tenant - your CA policies are NOT enforced. You cannot directly require MFA for B2B Direct Connect users, but you can require their home tenant has equivalent policies via trust settings."
+            $EnforcementDetail += "`n`nGuest types that sign in only through their home organization: $(& $LabelOf 'b2bDirectConnectUser'). This tenant cannot enforce its own requirements on them and can only ask that their home organization applies equivalent ones."
         }
         if ($OtherTypes.Count -gt 0) {
-            $EnforcementDetail += "`n`nOther external users (excluded from this policy): $(& $LabelOf 'otherExternalUser'). External identities not covered by B2B collaboration or direct connect."
+            $EnforcementDetail += "`n`nOther external identities exempt here: $(& $LabelOf 'otherExternalUser'). These are external accounts that fall outside the standard guest and partner categories."
         }
 
         if ($TargetsSecurityRegistration) {
             $Severity = if ($HasGuestCoveragePolicy) { 'Medium' } else { 'High' }
-            $ContextDetail = "This policy protects security info registration but excludes $GuestDescription. A compromised B2B guest account could register attacker-controlled MFA methods from any location without any controls."
+            $ContextDetail = "This policy protects the registration of sign-in methods, yet $GuestDescription are exempt from it. A compromised guest account could add its own sign-in methods unchallenged."
         } elseif ($Blocks -and $TargetsAllApps) {
             $Severity = if ($HasGuestCoveragePolicy) { 'Medium' } else { 'High' }
-            $ContextDetail = "This policy blocks access for all apps but excludes $GuestDescription. These external users bypass the block entirely."
+            $ContextDetail = "This policy blocks access to every application, yet $GuestDescription are exempt from it and pass where everyone else is stopped."
         } elseif ($RequiresMfa -and $TargetsAllApps) {
             $Severity = if ($HasGuestCoveragePolicy) { 'Medium' } else { 'High' }
-            $ContextDetail = "This policy requires MFA for all apps but excludes $GuestDescription. These external users can access resources without MFA."
+            $ContextDetail = "This policy requires multifactor authentication for every application, yet $GuestDescription are exempt from it and can sign in with a password alone."
         } else {
             $Severity = if ($HasGuestCoveragePolicy) { 'Low' } else { 'Medium' }
-            $ContextDetail = "This policy targets all users but excludes $GuestDescription. External users bypass this policy's controls."
+            $ContextDetail = "This policy applies to all users, yet $GuestDescription are exempt from it and its requirements do not reach them."
         }
         if (-not $HasGuestCoveragePolicy) {
-            $ContextDetail += ' No separate policy was found covering guest/external users for comparable controls - this creates an unprotected gap.'
+            $ContextDetail += ' No other policy applies comparable requirements to guests, so they are left without this protection.'
         }
 
         $TypesText = if ($ExcludesGuestsSimple) {
-            ' Excluded types: All guest and external user types.'
+            ' Exempt guest types: every type of guest and external user.'
         } elseif ($ExcludedGuestTypes.Count -gt 0) {
-            " Excluded types: $(@($ExcludedGuestTypes | ForEach-Object { & $LabelOf $_ }) -join ', ')."
+            " Exempt guest types: $(@($ExcludedGuestTypes | ForEach-Object { & $LabelOf $_ }) -join ', ')."
         } else { '' }
-        $ScopeText = if ($ExternalTenantScope) { " Tenant scope: $ExternalTenantScope." } else { '' }
+        $ScopeText = if ($ExternalTenantScope) { " This applies to guests from $ExternalTenantScope." } else { '' }
 
         $Remediation = if ($HasGuestCoveragePolicy) {
-            'A compensating policy was found, but verify it enforces equivalent controls for guest/external users. Ensure the guest policy covers the same apps and actions as this policy. For B2B Collaboration guests (b2bCollaborationGuest, b2bCollaborationMember): enable MFA trust in Cross-Tenant Access Settings (Entra Admin Center > External Identities > Cross-tenant access settings > Inbound access settings > Trust settings > "Trust multi-factor authentication from Azure AD tenants"). For B2B Direct Connect users: your CA policies do not apply - require equivalent policies in the partner tenant via trust settings.'
+            'Confirm that the policy covering guests applies the same requirements to the same applications, and trust the multifactor authentication guests complete in their home organization so they can meet it.'
         } else {
-            "Create a dedicated CA policy for guest/external users with appropriate controls, or remove the guest exclusion from this policy. Per CIS and Microsoft Zero Trust guidance, guest accounts should be subject to at least MFA and ideally session time restrictions. If guests must be excluded from this specific policy, create companion policies like ""$($Reference.templates.mfaB2BGuest)"" (for internalGuest, b2bCollaborationMember, b2bDirectConnectUser, serviceProvider) and ""$($Reference.templates.mfaMixedGuests)"" (for b2bCollaborationGuest, otherExternalUser) to ensure coverage. For B2B Collaboration guests: enable MFA trust in Cross-Tenant Access Settings to require guests complete MFA in their home tenant before accessing your resources. For B2B Direct Connect users: these users authenticate in their home tenant only - your CA policies do NOT apply. Require the partner organization has equivalent policies via Cross-Tenant Access Settings trust configuration."
+            "Require multifactor authentication from guests through a dedicated policy such as ""$($Reference.templates.mfaB2BGuest)"" or ""$($Reference.templates.mfaMixedGuests)"", or remove the exemption from this policy, and trust the multifactor authentication guests complete in their home organization."
         }
 
         $TitleCount = if ($ExcludesAllTypes) { 'All' } else { "$($ExcludedGuestTypes.Count)" }
-        $TitleSuffix = if ($HasGuestCoveragePolicy) { '' } else { ' - no compensating policy found' }
+        $TitleSuffix = if ($HasGuestCoveragePolicy) { '' } else { ' with no other policy covering them' }
 
         $Params = @{
             Severity         = $Severity
-            Category         = 'Guest/External User Exclusion'
-            Title            = "$TitleCount guest/external user type(s) excluded$TitleSuffix"
+            Category         = 'Guest coverage'
+            Title            = "$TitleCount external user type(s) exempt from this policy$TitleSuffix"
             Description      = $ContextDetail + $TypesText + $ScopeText + $EnforcementDetail
             Remediation      = $Remediation
             AffectedPolicies = @($Policy.displayName)
+            DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/policy-old-require-mfa-guest'
         }
         if (-not $HasGuestCoveragePolicy) { $Params['CaTemplate'] = "$($Reference.templates.mfaB2BGuest)" }
         $Findings.Add((New-CIPPCAGapFinding @Params))
@@ -156,12 +157,13 @@ function Test-CIPPCAGapGuestExclusion {
         $Names = @($GuestExcludingPolicies | ForEach-Object { $_.displayName })
         $Params = @{
             Severity         = 'High'
-            Category         = 'Guest/External User Coverage'
-            Title            = "$($GuestExcludingPolicies.Count) policy(ies) exclude guests but no guest-specific MFA policy exists"
-            Description      = "$($GuestExcludingPolicies.Count) enabled policy(ies) exclude guest/external users, and no dedicated policy was found requiring MFA specifically for guests. Guest accounts are a common lateral movement target - B2B collaboration accounts, external partners, and service providers should all be subject to at least MFA controls. Policies excluding guests: $($Names -join ', ')."
-            Remediation      = 'Create a dedicated CA policy requiring MFA for all guest/external users across all cloud apps. Include session controls like sign-in frequency (e.g., 1 hour) for guests. Consider requiring compliant devices or approved apps for guest access to sensitive resources.'
+            Category         = 'Guest coverage'
+            Title            = "Guests are exempt from $($GuestExcludingPolicies.Count) policy(ies) and face no multifactor requirement"
+            Description      = "External accounts are a common way into a tenant, and here they can sign in with a password alone. The enforced policies that exempt them: $($Names -join ', ')."
+            Remediation      = 'Require multifactor authentication from all guest and external users for every application, and consider a shorter session lifetime for them.'
             AffectedPolicies = $Names
             CaTemplate       = "$($Reference.templates.mfaGuests)"
+            DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/policy-old-require-mfa-guest'
         }
         $Findings.Add((New-CIPPCAGapFinding @Params))
     }

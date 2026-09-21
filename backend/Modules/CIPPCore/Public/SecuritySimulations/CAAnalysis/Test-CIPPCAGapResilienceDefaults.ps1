@@ -24,9 +24,10 @@ function Test-CIPPCAGapResilienceDefaults {
             Severity         = 'Medium'
             Category         = 'Resilience'
             Title            = 'Resilience defaults are disabled'
-            Description      = 'This policy disables resilience defaults, which means users may be blocked during an Entra ID outage.'
-            Remediation      = 'Only disable resilience defaults if strict real-time policy evaluation is required. For most organizations, keeping resilience defaults improves availability.'
+            Description      = 'During a Microsoft sign-in service outage, people covered by this policy lose access as soon as their session expires instead of being allowed to keep working.'
+            Remediation      = 'Keep resilience defaults enabled unless a strict need for real-time evaluation outweighs losing access during an outage.'
             AffectedPolicies = @($Policy.displayName)
+            DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/resilience-defaults'
         }
         $Findings.Add((New-CIPPCAGapFinding @Params))
     }

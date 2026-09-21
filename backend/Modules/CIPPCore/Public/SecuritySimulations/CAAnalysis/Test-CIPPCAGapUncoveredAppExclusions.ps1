@@ -46,17 +46,18 @@ function Test-CIPPCAGapUncoveredAppExclusions {
     }
 
     if ($Uncovered.Count -gt 0) {
-        $AppList = @($Uncovered | ForEach-Object { "- $($_.displayName) ($($_.appId)) - excluded from: $($_.excludedFrom -join ', ') - no dedicated CA policy found for this app" }) -join "`n"
+        $AppList = @($Uncovered | ForEach-Object { "- $($_.displayName), exempt from $($_.excludedFrom -join ', ')" }) -join "`n"
         $Affected = [System.Collections.Generic.List[string]]::new()
         foreach ($Entry in $Uncovered) { foreach ($Name in $Entry.excludedFrom) { if (-not $Affected.Contains($Name)) { $Affected.Add($Name) } } }
         $Params = @{
             Severity         = 'High'
-            Category         = 'Application Coverage'
-            Title            = "$($Uncovered.Count) app(s) excluded from ""All resources"" policies with no alternative CA coverage"
-            Description      = "$($Uncovered.Count) application(s) are excluded from your ""All resources"" Conditional Access policies and have no dedicated policy covering them - they receive zero CA enforcement:`n$AppList`n`nPer Microsoft documentation, when an app is excluded from an ""All resources"" (All cloud apps) policy, it falls completely outside your CA baseline. Microsoft recommends creating a baseline multifactor authentication policy targeting all users and all resources without any resource exclusions. Additionally, some applications cannot be individually targeted in the CA app picker - the only way to protect them is via an ""All resources"" policy. Excluding them creates an uncloseable gap unless you remove the exclusion."
-            Remediation      = 'For each excluded app choose one approach. Option A (preferred): remove the app exclusion from your "All resources" policy; if the app needs different controls, create a separate policy targeting that specific app with the appropriate grant controls so the "All resources" policy acts as the baseline floor. Option B: create a dedicated policy that explicitly targets the excluded app by its App ID (Users: All users or the app''s user population; Grant: Require MFA or appropriate controls; enable in report-only first). Some apps cannot be individually targeted and can only be protected via "All resources" - for those, Option A is the only option. See https://learn.microsoft.com/entra/identity/conditional-access/concept-conditional-access-cloud-apps'
+            Category         = 'Application coverage'
+            Title            = "$($Uncovered.Count) application(s) are subject to no Conditional Access policy at all"
+            Description      = "These applications are exempt from the tenant-wide policies and no other policy covers them, so sign-ins to them face no requirements:`n$AppList`n`nSome applications cannot be selected individually in a policy, in which case a tenant-wide policy is the only way to protect them."
+            Remediation      = 'Remove each exemption from the tenant-wide policy and, where an application genuinely needs different requirements, give it a policy of its own.'
             AffectedPolicies = @($Affected)
             RelatedIds       = @($Uncovered | ForEach-Object { $_.appId })
+            DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/concept-conditional-access-cloud-apps'
         }
         $Findings.Add((New-CIPPCAGapFinding @Params))
     }

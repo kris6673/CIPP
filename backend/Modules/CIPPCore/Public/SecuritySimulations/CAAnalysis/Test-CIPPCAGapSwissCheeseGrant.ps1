@@ -42,25 +42,25 @@ function Test-CIPPCAGapSwissCheeseGrant {
                 $Label = $Labels.$ControlName
                 if ($Label) { "$Label" } else { $ControlName }
             })
-        $Joined = $LabelList -join ' OR '
+        $Joined = $LabelList -join ' or '
 
         if ($IsAcceptedEquivalentOr) {
             $SpansBothGroups = ($null -eq $SoleGroup) -and $IsManagedAccessOnly
             $Explanation = if ($SpansBothGroups) {
-                'Requiring a compliant/hybrid-joined device OR an approved app/app protection policy is Microsoft''s recommended MDM-or-MAM pattern for mobile and BYOD scenarios: a managed device satisfies compliance, and an unmanaged BYOD device satisfies app protection instead. Both paths enforce management-based control of equivalent strength - neither is a weaker fallback for the other.'
+                'Accepting either a managed device or a protected app is the pattern Microsoft recommends for mixed corporate and personal devices; both paths prove the access is managed.'
             } elseif ($SoleGroup -eq 'device-trust') {
-                'Requiring a compliant device OR a Microsoft Entra hybrid joined device is a Microsoft-recommended way to require a managed, trusted device while supporting both Intune-managed and hybrid-joined estates. Both controls enforce device trust - neither is weaker than the other.'
+                'Accepting either a compliant device or a hybrid-joined device is a recommended way to require a managed device across cloud-managed and domain-joined estates; neither path is weaker than the other.'
             } else {
-                'Requiring an approved client app OR an app protection policy is Microsoft''s recommended mobile application management (MAM) pattern. Both controls enforce app-level protection of equivalent strength.'
+                'Accepting either an approved client app or an app protection policy is the recommended pattern for protecting data in mobile apps; both paths provide equivalent protection.'
             }
             $Params = @{
                 Severity         = 'Info'
-                Category         = 'Swiss Cheese Model'
-                Title            = 'Grant controls use "OR" between equivalent-strength controls - accepted pattern'
-                Description      = "This policy requires $Joined. Although it uses the OR operator, all controls are management-based controls of equivalent strength, so there is no ""weakest control"" for an attacker to downgrade to. $Explanation"
-                Remediation      = 'No change required - this OR is between controls of equivalent strength and does not weaken the policy. ' +
-                'If you intend these device/app controls to be layered on top of MFA, add MFA as a separate policy or as an AND condition; do not rely on this policy alone for the MFA layer.'
+                Category         = 'Grant requirements'
+                Title            = 'Policy accepts either of two equally strong requirements'
+                Description      = "This policy is satisfied by $Joined. Because these requirements are of equal strength, there is no weaker path for an attacker to choose. $Explanation"
+                Remediation      = 'No change needed. If multifactor authentication is meant to apply on top of these device or app requirements, make sure a separate policy enforces it.'
                 AffectedPolicies = @($Policy.displayName)
+                DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/concept-conditional-access-grant'
             }
             $Findings.Add((New-CIPPCAGapFinding @Params))
             continue
@@ -68,11 +68,12 @@ function Test-CIPPCAGapSwissCheeseGrant {
 
         $Params = @{
             Severity         = 'High'
-            Category         = 'Swiss Cheese Model'
-            Title            = 'Grant controls use "OR" - weakest control is effective'
-            Description      = "This policy requires $Joined. With the OR operator across controls of differing strength, only the WEAKEST control needs to be satisfied - an attacker satisfies the easiest one and skips the rest. This contradicts the Swiss cheese model of layered security."
-            Remediation      = 'Change the operator to "AND" so ALL controls must be satisfied, or split into separate policies each requiring a single control. Use AND, not OR, for grant controls of differing strength.'
+            Category         = 'Grant requirements'
+            Title            = 'Policy is satisfied by the weakest of several requirements'
+            Description      = "This policy accepts $Joined. Because the requirements differ in strength and any one of them is enough, an attacker only needs to meet the easiest one and the stronger ones add nothing."
+            Remediation      = 'Require all of these controls together, or split them into separate policies that each enforce a single requirement.'
             AffectedPolicies = @($Policy.displayName)
+            DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/concept-conditional-access-grant'
         }
         $Findings.Add((New-CIPPCAGapFinding @Params))
     }

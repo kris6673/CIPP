@@ -35,16 +35,17 @@ function Test-CIPPCAGapHighValueApps {
 
     if ($Unprotected.Count -gt 0) {
         $CriticalApps = @($Unprotected | Where-Object { $_.risk -eq 'critical' })
-        $AppLines = @($Unprotected | ForEach-Object { "- $($_.name) ($($_.description)) - $("$($_.risk)".ToUpperInvariant()) RISK. App ID: $($_.appId)" }) -join "`n"
-        $CriticalSuffix = if ($CriticalApps.Count -gt 0) { " ($($CriticalApps.Count) critical)" } else { '' }
+        $AppLines = @($Unprotected | ForEach-Object { "- $($_.name) ($($_.description)), $($_.risk) risk" }) -join "`n"
+        $CriticalSuffix = if ($CriticalApps.Count -gt 0) { ", $($CriticalApps.Count) of them critical" } else { '' }
         $Params = @{
-            Severity    = if ($CriticalApps.Count -gt 0) { 'Critical' } else { 'High' }
-            Category    = 'Application Coverage'
-            Title       = "$($Unprotected.Count) high-value application(s) lack MFA/blocking policies$CriticalSuffix"
-            Description = "$($Unprotected.Count) high-value Microsoft application(s) do not have Conditional Access policies requiring MFA, authentication strength, or blocking access. These applications provide access to critical tenant resources and should have the strongest protection. Unprotected applications:`n$AppLines`n`nRisk by application: Azure Management / Azure Portal give full control over subscription resources (backdoors, data exfiltration, crypto miners); Microsoft Graph gives API access to all M365 data (mail, files, users, groups) and can be used to escalate privileges; Exchange Online exposes corporate email (business email compromise); SharePoint/OneDrive exposes corporate documents. Without MFA/strong auth on these apps, a compromised password grants full access to your tenant's most sensitive resources."
-            Remediation = 'Create Conditional Access policies for high-value applications. Azure Management / Azure Portal: All users, cloud app "Azure Management" (Portal, ARM, PowerShell, CLI), grant phishing-resistant MFA, sign-in frequency Every time, exclude break-glass only. Office 365 (Exchange, SharePoint, Teams): All users, cloud app "Office 365", grant Require MFA, consider device compliance or approved client app. Microsoft Graph: All users, grant MFA + compliant device, sign-in frequency Every time. Best practice: use "All cloud apps" policies for baseline MFA, then layer application-specific policies with stronger controls for high-value resources.'
-            RelatedIds  = @($Unprotected | ForEach-Object { "$($_.appId)" })
-            CaTemplate  = "$($Context.Data.Reference.templates.mfaAllUsers)"
+            Severity         = if ($CriticalApps.Count -gt 0) { 'Critical' } else { 'High' }
+            Category         = 'Application coverage'
+            Title            = "$($Unprotected.Count) high-value Microsoft service(s) can be reached with a password alone$CriticalSuffix"
+            Description      = "No enforced policy requires multifactor authentication or blocks access for these services, which hold the tenant's most sensitive data and controls:`n$AppLines`n`nA stolen password is enough to manage Azure resources, read mail and files through the API, or open mailboxes and documents directly."
+            Remediation      = 'Require multifactor authentication from all users for all applications as the baseline, and add stricter requirements such as phishing-resistant methods for Azure management.'
+            RelatedIds       = @($Unprotected | ForEach-Object { "$($_.appId)" })
+            CaTemplate       = "$($Context.Data.Reference.templates.mfaAllUsers)"
+            DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/policy-all-users-mfa-strength'
         }
         $Findings.Add((New-CIPPCAGapFinding @Params))
     }

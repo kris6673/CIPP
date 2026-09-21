@@ -25,10 +25,10 @@ function Test-CIPPCAGapCaImmuneResources {
     $Names = @($Resources | ForEach-Object { "$($_.displayName)" }) -join ', '
     $Params = @{
         Severity         = 'Info'
-        Category         = 'CA-Immune Resources'
-        Title            = "$($Resources.Count) Microsoft resources are always immune to Conditional Access"
-        Description      = "$($AllAppsPolicies.Count) of your policies target ""All cloud apps"", but $($Resources.Count) Microsoft resources are always excluded from CA evaluation: $Names. These will show 'notApplied' in sign-in logs regardless of your policies."
-        Remediation      = 'This is by-design and cannot be changed. Monitor sign-in logs for these resource IDs as they can be used for password verification without triggering CA.'
+        Category         = 'Always-exempt services'
+        Title            = "$($Resources.Count) Microsoft services are never subject to Conditional Access"
+        Description      = "Although $($AllAppsPolicies.Count) of your policies cover every application, Microsoft exempts these services by design: $Names. Sign-ins to them are recorded as not evaluated, and they can be used to test whether a password is valid without triggering any policy."
+        Remediation      = 'Nothing can change this. Watch sign-in activity against these services for signs of password testing.'
         AffectedPolicies = @($AllAppsPolicies | ForEach-Object { $_.displayName })
         RelatedIds       = @($Resources | ForEach-Object { "$($_.resourceId)" })
     }

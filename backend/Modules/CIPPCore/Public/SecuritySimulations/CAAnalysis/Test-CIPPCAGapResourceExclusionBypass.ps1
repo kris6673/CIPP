@@ -32,19 +32,20 @@ function Test-CIPPCAGapResourceExclusionBypass {
     $HasAzureAdGraphPolicy = @($Context.Enabled | Where-Object { @($_.conditions.applications.includeApplications | Where-Object { "$_".ToLowerInvariant() -eq $AzureAdGraph }).Count -gt 0 }).Count -gt 0
 
     $CoverageNote = if ($HasAzureAdGraphPolicy) {
-        ' You have a policy explicitly targeting Azure AD Graph, which provides coverage for the enforcement audience.'
+        ' A policy already covers the directory service through which these basic permissions are now enforced, so the change is accounted for.'
     } else {
-        ' No policy explicitly targets Azure AD Graph. If your "All resources" policies have exclusions but do not cover the Azure AD Graph resource, the enforcement change may cause unexpected CA challenges for apps that only request low-privilege scopes. Review and test before the rollout completes.'
+        ' No policy covers the directory service through which these basic permissions are now enforced, so applications that only ask for basic profile details may be challenged unexpectedly or, depending on rollout, still slip through.'
     }
 
     $Params = @{
         Severity         = if ($HasAzureAdGraphPolicy) { 'Info' } else { 'Medium' }
-        Category         = 'Low-Privilege Scope Enforcement'
-        Title            = "$($PoliciesWithExclusions.Count) ""All resources"" policy(ies) with exclusions - affected by March 2026 enforcement change"
-        Description      = "$($PoliciesWithExclusions.Count) enabled policy(ies) target ""All resources"" with a combined $TotalExclusions app exclusion(s): $($Names -join ', '). Microsoft is rolling out a behavioral change (March-June 2026) that affects these policies. Previously, low-privilege scopes (User.Read, openid, profile, email, offline_access, People.Read) were automatically exempt from CA enforcement when ANY resource was excluded. This created a bypass path where apps could read directory data without meeting policy controls. What's changing: these scopes are now mapped to Azure AD Graph (Windows Azure Active Directory, ID: $AzureAdGraph) as the enforcement audience, so any ""All resources"" policy - even with exclusions - will enforce on these scopes. Confidential client apps that were excluded and relied on low-privilege scopes had an even broader set of unprotected scopes (User.Read.All, User.ReadBasic.All, People.Read.All, GroupMember.Read.All, Member.Read.Hidden); those will now also face CA enforcement, closing the directory enumeration bypass.$CoverageNote"
-        Remediation      = "1) Remove resource exclusions where possible - Microsoft recommends ""All resources"" policies with NO exclusions as the baseline; create separate, less-restrictive policies for apps that need exemptions. 2) If exclusions cannot be removed immediately, create a report-only policy targeting Azure AD Graph ($AzureAdGraph) with the same controls to preview impact. 3) Review apps requesting only low-privilege scopes in the sign-in logs (resource ""Windows Azure Active Directory""). 4) Update custom apps that only request openid/profile/User.Read and are not designed to handle CA claims challenges. 5) Consider a dedicated policy targeting the Azure AD Graph resource for granular control. See https://learn.microsoft.com/entra/identity/conditional-access/concept-conditional-access-cloud-apps#new-conditional-access-behavior-when-an-all-resources-policy-has-a-resource-exclusion"
+        Category         = 'Exemption scope'
+        Title            = "$($PoliciesWithExclusions.Count) tenant-wide policy(ies) with exemptions are affected by a Microsoft change"
+        Description      = "The enforced policies $($Names -join ', ') cover every application but exempt $TotalExclusions application(s) between them. Until recently, any such exemption also let applications read basic profile and directory details without meeting the policy. Microsoft now enforces those basic permissions through the directory service itself, which closes that path but may change how applications that relied on it behave.$CoverageNote"
+        Remediation      = 'Aim for tenant-wide policies without application exemptions, giving applications that need lighter requirements a policy of their own, and cover the directory service explicitly where exemptions must remain.'
         AffectedPolicies = $Names
         RelatedIds       = @($AzureAdGraph)
+        DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/concept-conditional-access-cloud-apps#new-conditional-access-behavior-when-an-all-resources-policy-has-a-resource-exclusion'
     }
     if (-not $HasAzureAdGraphPolicy) { $Params['CaTemplate'] = "$($Context.Data.Reference.templates.windowsAzureAdBaselineScopes)" }
     $Findings.Add((New-CIPPCAGapFinding @Params))

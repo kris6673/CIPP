@@ -21,11 +21,12 @@ function Test-CIPPCAGapReportOnlyState {
         if ($Policy.state -ne 'enabledForReportingButNotEnforced') { continue }
         $Params = @{
             Severity         = 'Info'
-            Category         = 'Policy State'
+            Category         = 'Policy state'
             Title            = 'Policy is in report-only mode'
-            Description      = 'This policy is enabled for reporting but NOT enforced. It will log what WOULD happen but takes no action.'
-            Remediation      = "Review sign-in logs to validate the policy's impact, then enable enforcement when ready."
+            Description      = 'The policy records the sign-ins it would have affected but does not act on them, so it provides no protection yet.'
+            Remediation      = 'Confirm from the recorded results that the policy behaves as intended, then enforce it.'
             AffectedPolicies = @($Policy.displayName)
+            DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/concept-conditional-access-report-only'
         }
         $Findings.Add((New-CIPPCAGapFinding @Params))
     }

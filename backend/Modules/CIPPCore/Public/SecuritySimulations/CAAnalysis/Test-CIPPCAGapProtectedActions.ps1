@@ -34,11 +34,12 @@ function Test-CIPPCAGapProtectedActions {
         if ($UsesBasicMfa) {
             $Params = @{
                 Severity         = 'High'
-                Category         = 'Protected Actions Configuration'
-                Title            = 'Protected Actions policy uses basic MFA instead of authentication strength'
-                Description      = "This policy targets protected actions ($ActionList) but uses the basic ""Require MFA"" grant control instead of an authentication strength. Protected Actions policies MUST use authentication strength to function correctly. With basic MFA the policy may not enforce correctly during the protected action, users may bypass the additional authentication requirement, and Microsoft's recommendation is always authentication strength for Protected Actions. Protected Actions are sensitive operations such as deleting or modifying CA policies, changing role assignments and modifying app registrations - they require phishing-resistant or strong authentication to prevent privilege escalation attacks."
-                Remediation      = 'Replace the grant control: remove "Require multifactor authentication" and add an authentication strength (recommended: "Phishing-resistant MFA"; minimum: "Multifactor authentication"). In the Entra admin center open Protection > Conditional Access > this policy > Grant > "Require authentication strength" and choose the strength. Verify all targeted admins have registered the required methods before enforcing, and use report-only mode first.'
+                Category         = 'Protected actions'
+                Title            = 'Protected administrative actions rely on basic multifactor authentication'
+                Description      = "This policy guards sensitive administrative operations but asks only for basic multifactor authentication rather than an authentication strength. Protected actions are designed to work with an authentication strength, so the extra check may not be applied reliably when an administrator performs them. Operations covered: $ActionList."
+                Remediation      = 'Require an authentication strength, preferably phishing-resistant, for these protected actions and confirm the administrators involved have registered a suitable method.'
                 AffectedPolicies = @($Policy.displayName)
+                DocumentationUrl = 'https://learn.microsoft.com/entra/identity/role-based-access-control/protected-actions-overview'
             }
             $Findings.Add((New-CIPPCAGapFinding @Params))
         }
@@ -48,11 +49,12 @@ function Test-CIPPCAGapProtectedActions {
         if ($TargetsAllUsers -and -not $TargetsAdminRoles) {
             $Params = @{
                 Severity         = 'Medium'
-                Category         = 'Protected Actions Configuration'
-                Title            = "Protected Actions policy targets 'All users' instead of specific admin roles"
-                Description      = "This policy targets protected actions ($ActionList) and applies to All users. Protected Actions are typically administrative operations that only admins can perform. Targeting ""All users"" creates unnecessary auth prompts for non-admin users who wouldn't be able to perform these actions anyway. Best practice: target only the specific admin roles that perform these protected actions (CA policy changes: Conditional Access Administrator, Security Administrator; role management: Privileged Role Administrator, Global Administrator; app registration changes: Application Administrator, Cloud Application Administrator)."
-                Remediation      = 'Determine which roles perform these actions in your environment, change the policy from "All users" to those directory roles, and make sure break-glass accounts are excluded.'
+                Category         = 'Protected actions'
+                Title            = 'Protected administrative actions policy applies to everyone rather than administrators'
+                Description      = "Only administrators can perform the operations this policy guards, yet it applies to every user and prompts people who could never carry them out. Operations covered: $ActionList."
+                Remediation      = 'Scope the policy to the administrator roles that actually perform these operations, keeping the emergency-access accounts excluded.'
                 AffectedPolicies = @($Policy.displayName)
+                DocumentationUrl = 'https://learn.microsoft.com/entra/identity/role-based-access-control/protected-actions-overview'
             }
             $Findings.Add((New-CIPPCAGapFinding @Params))
         }
@@ -62,11 +64,12 @@ function Test-CIPPCAGapProtectedActions {
             if (-not (Test-CIPPCAPolicyPhishingResistant -Policy $Policy -Context $Context)) {
                 $Params = @{
                     Severity         = 'Info'
-                    Category         = 'Protected Actions Configuration'
-                    Title            = "Protected Actions using ""$StrengthName"" - consider phishing-resistant MFA"
-                    Description      = "This policy protects sensitive admin actions ($ActionList) using the ""$StrengthName"" authentication strength. Microsoft's recommendation is phishing-resistant MFA for Protected Actions to prevent privilege escalation attacks: standard MFA methods (SMS, TOTP, push notifications) can be defeated by adversary-in-the-middle (AiTM) phishing. Attackers who compromise an admin account want to delete CA policies, modify role assignments for persistence, or change app registrations to grant broad API permissions. Phishing-resistant methods include FIDO2 security keys, Windows Hello for Business, Certificate-Based Authentication and passkeys in Microsoft Authenticator."
-                    Remediation      = 'Deploy phishing-resistant credentials to admins who perform protected actions, update this policy to the "Phishing-resistant MFA" authentication strength, and use Temporary Access Pass (TAP) to bootstrap credential registration. This is informational only - the current configuration meets minimum requirements.'
+                    Category         = 'Protected actions'
+                    Title            = "Protected actions accept ""$StrengthName"" instead of phishing-resistant methods"
+                    Description      = "Common multifactor methods such as text messages, codes and push approvals can be captured by a convincing phishing page, and the operations this policy guards are exactly what an attacker with a captured administrator session would go after. Operations covered: $ActionList."
+                    Remediation      = 'Move the administrators who perform these operations to phishing-resistant sign-in methods and raise this policy to the phishing-resistant strength. The current setting meets the minimum.'
                     AffectedPolicies = @($Policy.displayName)
+                    DocumentationUrl = 'https://learn.microsoft.com/entra/identity/role-based-access-control/protected-actions-overview'
                 }
                 $Findings.Add((New-CIPPCAGapFinding @Params))
             }
@@ -75,11 +78,12 @@ function Test-CIPPCAGapProtectedActions {
         if ($Policy.state -eq 'enabledForReportingButNotEnforced') {
             $Params = @{
                 Severity         = 'Info'
-                Category         = 'Protected Actions Configuration'
-                Title            = 'Protected Actions policy in report-only mode - consider enabling for enforcement'
-                Description      = 'This Protected Actions policy is currently in report-only mode. While this is the recommended initial deployment state, once you have validated that admins can satisfy the requirements the policy should be enabled for enforcement. In report-only mode the additional authentication is NOT required, sign-in logs only show what would have happened, and admins can still perform protected actions without the additional verification - your protected actions are currently NOT protected. Report-only should be a temporary validation phase, not a permanent state.'
-                Remediation      = 'Review sign-in logs to check that admins satisfy the authentication strength in report-only, confirm all targeted admins have registered the required credentials, then change the policy state from "Report-only" to "On" and monitor for authentication failures in the first 24-48 hours. Enable enforcement after 1-2 weeks of successful report-only validation.'
+                Category         = 'Protected actions'
+                Title            = 'Protected administrative actions policy is not yet enforced'
+                Description      = 'The policy is in report-only mode, so administrators can still carry out these sensitive operations without the extra verification. Report-only is a sensible starting point, but it offers no protection until the policy is enforced.'
+                Remediation      = 'Enforce the policy once the recorded results show that the administrators involved can meet the requirement.'
                 AffectedPolicies = @($Policy.displayName)
+                DocumentationUrl = 'https://learn.microsoft.com/entra/identity/role-based-access-control/protected-actions-overview'
             }
             $Findings.Add((New-CIPPCAGapFinding @Params))
         }
@@ -88,11 +92,12 @@ function Test-CIPPCAGapProtectedActions {
         if (-not $HasExclusions -and $Policy.state -eq 'enabled') {
             $Params = @{
                 Severity         = 'Medium'
-                Category         = 'Protected Actions Configuration'
-                Title            = 'Protected Actions policy has no user exclusions - ensure break-glass access'
-                Description      = 'This policy protects sensitive admin actions but does not exclude any users (such as break-glass accounts). Risk: if the authentication strength requirement fails (e.g., FIDO2 not working, auth service outage), admins may be unable to perform critical operations like disabling a misconfigured CA policy that locks out users, modifying role assignments to restore access, or responding to security incidents that require CA policy changes. Break-glass accounts should be excluded from Protected Actions policies to ensure emergency access to critical admin operations.'
-                Remediation      = 'Identify your break-glass accounts (typically 2 emergency access accounts with permanent Global Admin), add them to the "Exclude users" list of this policy, and make sure they are cloud-only, monitored with alerts for any sign-in activity, excluded from ALL CA policies that could block emergency access, and use strong randomly generated passwords stored in a secure physical location.'
+                Category         = 'Protected actions'
+                Title            = 'Protected administrative actions policy has no emergency-access exclusion'
+                Description      = 'Nobody is exempt from this policy. If the required sign-in method stops working, for example during a service outage, no administrator can perform the operations needed to recover, such as disabling a faulty policy or restoring a role assignment.'
+                Remediation      = 'Exclude the emergency-access accounts from this policy and monitor any sign-in by them.'
                 AffectedPolicies = @($Policy.displayName)
+                DocumentationUrl = 'https://learn.microsoft.com/entra/identity/role-based-access-control/protected-actions-overview'
             }
             $Findings.Add((New-CIPPCAGapFinding @Params))
         }

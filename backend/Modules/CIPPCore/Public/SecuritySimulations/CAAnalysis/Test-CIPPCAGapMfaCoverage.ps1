@@ -30,21 +30,23 @@ function Test-CIPPCAGapMfaCoverage {
         $Policy = $ReportOnlyMfaForAll[0]
         $Params = @{
             Severity         = 'Medium'
-            Category         = 'MFA Coverage'
-            Title            = 'MFA for All Users exists but is Report-only'
-            Description      = "The policy $($Policy.displayName) requires MFA for All Users, but is currently in Report-only mode and is not enforced. Sign-ins are logged but not blocked, so users can still authenticate without MFA."
-            Remediation      = 'After observing report-only telemetry for 7-14 days with no unexpected blocks, switch this policy to On (enabled) so MFA is actually enforced. Confirm break-glass accounts are excluded before flipping the state.'
+            Category         = 'Multifactor coverage'
+            Title            = 'The multifactor policy for all users is in report-only mode'
+            Description      = "$($Policy.displayName) would require multifactor authentication from everyone, but it only records what would happen. Until it is enforced, users can still sign in with a password alone."
+            Remediation      = 'Enforce the policy once the report-only results show no unexpected impact and the emergency-access accounts are excluded.'
             AffectedPolicies = @($Policy.displayName)
+            DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/policy-all-users-mfa-strength'
         }
         $Findings.Add((New-CIPPCAGapFinding @Params))
     } else {
         $Params = @{
-            Severity    = 'Critical'
-            Category    = 'MFA Coverage'
-            Title       = 'No policy requires MFA for All Users'
-            Description = 'No enabled or report-only policy was found that requires MFA (or authentication strength) for All Users. This means there may be users who can authenticate without MFA.'
-            Remediation = 'Create a baseline policy requiring MFA for All Users and All Cloud Apps. This is the foundation of the Swiss cheese model - MFA is the bare minimum.'
-            CaTemplate  = "$($Context.Data.Reference.templates.mfaAllUsers)"
+            Severity         = 'Critical'
+            Category         = 'Multifactor coverage'
+            Title            = 'No policy requires multifactor authentication from all users'
+            Description      = 'Nothing in the tenant ensures that every user proves their identity with a second factor. Any account whose password is stolen or guessed can be signed in to directly.'
+            Remediation      = 'Require multifactor authentication from all users for all applications as the baseline policy, with only the emergency-access accounts excluded.'
+            CaTemplate       = "$($Context.Data.Reference.templates.mfaAllUsers)"
+            DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/policy-all-users-mfa-strength'
         }
         $Findings.Add((New-CIPPCAGapFinding @Params))
     }

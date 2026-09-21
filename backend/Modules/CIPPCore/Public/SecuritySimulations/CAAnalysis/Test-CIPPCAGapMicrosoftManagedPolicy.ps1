@@ -29,11 +29,12 @@ function Test-CIPPCAGapMicrosoftManagedPolicy {
         if (-not (& $IsManaged $Policy) -or $Policy.state -ne 'disabled') { continue }
         $Params = @{
             Severity         = 'Info'
-            Category         = 'Microsoft-Managed Policies'
-            Title            = 'MC1246002: Disabled managed policy - possible Baseline Security Mode phantom draft'
-            Description      = 'Between Nov 2025 and Feb 2026, Baseline Security Mode accidentally created disabled draft CA policies in some tenants (MC1246002). These phantom policies are not a security risk - Microsoft is removing unintended drafts automatically. If you did not intentionally disable this managed policy, this is likely the cause.'
-            Remediation      = 'No action required if this was created by Baseline Security Mode. Microsoft will clean up phantom drafts. If you intentionally disabled this managed policy, consider enabling it in report-only mode to evaluate its impact. See: https://learn.microsoft.com/entra/identity/conditional-access/managed-policies'
+            Category         = 'Microsoft-managed policies'
+            Title            = 'Microsoft-managed policy is switched off'
+            Description      = 'Microsoft has created disabled draft copies of its managed policies in some tenants without being asked, and removes those drafts itself. If nobody in your organization switched this policy off, that is the likely explanation and there is no exposure from it.'
+            Remediation      = 'No change needed if Microsoft created this draft. If the policy was switched off deliberately, consider running it in report-only mode to see what it would do.'
             AffectedPolicies = @($Policy.displayName)
+            DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/managed-policies'
         }
         $Findings.Add((New-CIPPCAGapFinding @Params))
     }
@@ -43,18 +44,19 @@ function Test-CIPPCAGapMicrosoftManagedPolicy {
         $ReportOnlyCount = @($ManagedPolicies | Where-Object { $_.state -eq 'enabledForReportingButNotEnforced' }).Count
         $DisabledCount = @($ManagedPolicies | Where-Object { $_.state -eq 'disabled' }).Count
         $Names = @($ManagedPolicies | ForEach-Object { $_.displayName })
-        $Detail = "Detected $($ManagedPolicies.Count) Microsoft-managed Conditional Access policy(ies): $($Names -join ', '). "
-        if ($ReportOnlyCount -gt 0) { $Detail += "$ReportOnlyCount are in report-only mode. " }
-        if ($DisabledCount -gt 0) { $Detail += "$DisabledCount are disabled. " }
-        $Detail += 'Microsoft-managed policies auto-adapt to tenant changes and cannot be renamed or deleted. They may overlap with your custom policies - review for redundancy or conflicts. '
+        $Detail = "The managed policies are $($Names -join ', '). "
+        if ($ReportOnlyCount -gt 0) { $Detail += "$ReportOnlyCount of them are in report-only mode. " }
+        if ($DisabledCount -gt 0) { $Detail += "$DisabledCount of them are disabled. " }
+        $Detail += 'Microsoft maintains these policies and adjusts them as the tenant changes; they cannot be renamed or deleted and may overlap with your own policies. '
 
         $Params = @{
             Severity         = 'Info'
-            Category         = 'Microsoft-Managed Policies'
-            Title            = "$($ManagedPolicies.Count) Microsoft-managed CA policy(ies) detected"
+            Category         = 'Microsoft-managed policies'
+            Title            = "$($ManagedPolicies.Count) Microsoft-managed policy(ies) are present in the tenant"
             Description      = $Detail
-            Remediation      = 'Review Microsoft-managed policies alongside your custom policies for overlap. Consider enabling managed policies that are in report-only mode for defense-in-depth. You can exclude users from managed policies but cannot rename or delete them. See: https://learn.microsoft.com/entra/identity/conditional-access/managed-policies'
+            Remediation      = 'Check the managed policies against your own for overlap, and consider enforcing the ones still in report-only mode.'
             AffectedPolicies = $Names
+            DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/managed-policies'
         }
         $Findings.Add((New-CIPPCAGapFinding @Params))
     }

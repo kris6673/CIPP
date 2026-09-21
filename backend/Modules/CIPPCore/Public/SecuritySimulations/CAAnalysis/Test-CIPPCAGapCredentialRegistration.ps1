@@ -42,10 +42,10 @@ function Test-CIPPCAGapCredentialRegistration {
 
         $Issues = [System.Collections.Generic.List[string]]::new()
         if ($RequiresCompliance -and -not $HasMfaAlternative) {
-            $Issues.Add('Device compliance: Users provisioning WHfB/Platform SSO on a NEW device cannot satisfy this requirement during initial setup (device is not enrolled yet)')
+            $Issues.Add('A managed-device requirement, which a device cannot meet while it is still being set up')
         }
         if (($RequiresApprovedApp -or $RequiresAppProtection) -and -not $HasMfaAlternative) {
-            $Issues.Add('Approved/protected app: Users setting up credentials during device provisioning may not have approved apps installed yet')
+            $Issues.Add('An approved or protected app requirement, which may not be met before those apps are installed')
         }
         if ($HasLocationConditions) {
             if ($IncludedLocations.Count -gt 0 -and -not ($IncludedLocations -contains 'All') -and -not ($IncludedLocations -contains 'AllTrusted')) {
@@ -56,29 +56,30 @@ function Test-CIPPCAGapCredentialRegistration {
                             if ($Named.displayName) { "$($Named.displayName)" } else { "$_" }
                         }
                     }) -join ', '
-                $Issues.Add("Trusted location requirement: Policy requires access from: $LocationNames. Users setting up credentials from home/remote locations (common for new device setup) will be blocked")
+                $Issues.Add("A network requirement limiting setup to $LocationNames, which blocks people setting up a device from home or on the road")
             }
             if (($ExcludedLocations -contains 'AllTrusted') -and -not ($IncludedLocations -contains 'AllTrusted')) {
-                $Issues.Add('Untrusted location block: Policy blocks access from untrusted locations. Users setting up new devices from home/public networks may be blocked')
+                $Issues.Add('A block on untrusted networks, which affects people setting up a device from home or a public network')
             }
         }
         if ($HasDeviceFilter) {
-            $Issues.Add('Device filter: Device filters may not evaluate correctly on devices during initial provisioning before they are fully enrolled/registered')
+            $Issues.Add('A device filter, which may not evaluate reliably before the device is fully registered')
         }
 
         if ($Issues.Count -eq 0) {
             $StateNote = if ($Policy.state -eq 'enabledForReportingButNotEnforced') {
-                'This policy is currently in report-only mode - switch it to On if you want it enforced during registration.'
+                'The policy is in report-only mode, so it will only apply during registration once it is enforced.'
             } else {
-                'This policy is enabled, so it applies during registration automatically.'
+                'The policy is enforced, so it already applies during registration.'
             }
             $Params = @{
                 Severity         = 'Info'
-                Category         = 'Credential Registration Constraints'
-                Title            = 'Targets "Register security info" - will apply to WHfB / Platform SSO registration (July 2026)'
-                Description      = "Since July 2026 (MC1326253) this policy is evaluated during Windows Hello for Business and macOS Platform SSO credential registration - not just sign-in. Good news: this policy requires only MFA / authentication strength with no device-compliance, trusted-location, approved/protected-app, or device-filter constraints - so it should not block users provisioning a new device. This is the recommended configuration for a registration-targeting policy. $StateNote"
-                Remediation      = 'No changes required. Confirm the grant control is achievable on a new device (a user enrolling WHfB can satisfy your authentication strength with a FIDO2 key, Authenticator push, or a Temporary Access Pass), keep the policy free of device/location constraints, and update helpdesk docs because users may see a new authentication prompt during device setup. Reference: MC1326253 / https://learn.microsoft.com/entra/identity/conditional-access/policy-all-users-security-info-registration'
+                Category         = 'Sign-in method registration'
+                Title            = 'Sign-in method registration policy is compatible with new-device setup'
+                Description      = "Policies that protect the registration of sign-in methods now also apply when people set up Windows Hello or macOS Platform SSO on a new device. This one asks only for multifactor authentication and has no device, network or app conditions, so it should not get in the way of setting up a new device. $StateNote"
+                Remediation      = 'No change needed. Make sure people can meet the multifactor requirement on a brand-new device, for example with a Temporary Access Pass, and let the helpdesk know an extra prompt can appear during setup.'
                 AffectedPolicies = @($Policy.displayName)
+                DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/policy-all-users-security-info-registration'
             }
             $Findings.Add((New-CIPPCAGapFinding @Params))
             continue
@@ -90,20 +91,21 @@ function Test-CIPPCAGapCredentialRegistration {
         }
 
         $Remediation = if ($RequiresCompliance -and -not $HasMfaAlternative) {
-            'High priority: remove device compliance requirements from this policy or add exclusions for users during initial device provisioning. Options: 1) separate policies - one for sign-in (with compliance) and one for registration (MFA + phishing-resistant authentication only); 2) use Temporary Access Pass (TAP) for new device enrollment, excluded from this policy; 3) allow registration from trusted corporate networks only; 4) use report-only mode to see impact without blocking users. Recommended grant controls for registration policies: MFA + authentication strength (phishing-resistant) - avoid device compliance/location requirements.'
+            'Keep the managed-device requirement for ordinary sign-in but not for registering sign-in methods, and let new devices be set up with multifactor authentication or a Temporary Access Pass.'
         } elseif ($HasLocationConditions) {
-            'Review recommended: if users commonly set up new devices from home/remote locations, consider 1) allowing "All locations" for registration (even if blocking specific locations for sign-in); 2) including "MFA Trusted IPs" or home office locations in allowed locations; 3) a separate registration policy with relaxed location requirements; 4) report-only mode to identify affected users. MFA is still required by default for ALL passwordless credential registration (WHfB, Platform SSO, passkeys) even without CA policies.'
+            'Allow registration from any network, or at least from the networks people actually set up devices on, and keep the stricter network rules for ordinary sign-in.'
         } else {
-            "Review this policy's device filter and app requirements to ensure they don't block legitimate credential registration flows. Test with report-only mode. Ensure users setting up new devices can satisfy policy requirements, or add exclusions/adjust conditions for the registration flow."
+            'Confirm that people can meet the device and app conditions of this policy while setting up a new device, and relax them for the registration step if they cannot.'
         }
 
         $Params = @{
             Severity         = $Severity
-            Category         = 'Credential Registration Constraints'
-            Title            = 'Policy may block Windows Hello / Platform SSO setup on new devices (July 2026 enforcement)'
-            Description      = "Since July 2026 (MC1326253) this policy is enforced during Windows Hello for Business and macOS Platform SSO credential registration - not just sign-in. This policy has the following constraints that may prevent users from completing device setup:`n$(@($Issues | ForEach-Object { "- $_" }) -join "`n")`n`nWhen users provision WHfB on a new laptop or register macOS Platform SSO credentials for the first time, they may not be able to satisfy these requirements. This can block legitimate enrollment flows. Per Microsoft's Message Center post (MC1326253), admins should review policies targeting ""Register security info"" and test with report-only mode."
+            Category         = 'Sign-in method registration'
+            Title            = 'Policy may stop people from setting up a new device'
+            Description      = "Policies that protect the registration of sign-in methods also apply when people set up Windows Hello or macOS Platform SSO on a new device. This one has conditions a brand-new device may not be able to meet:`n$(@($Issues | ForEach-Object { "- $_" }) -join "`n")`n`nPeople setting up a new laptop or Mac could be unable to finish, and the helpdesk would see failed enrollments."
             Remediation      = $Remediation
             AffectedPolicies = @($Policy.displayName)
+            DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/policy-all-users-security-info-registration'
         }
         $Findings.Add((New-CIPPCAGapFinding @Params))
     }

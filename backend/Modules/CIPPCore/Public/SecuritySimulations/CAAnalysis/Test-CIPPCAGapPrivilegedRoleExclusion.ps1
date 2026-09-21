@@ -65,32 +65,32 @@ function Test-CIPPCAGapPrivilegedRoleExclusion {
         $Severity = if ($HasCritical) { 'Critical' } else { 'High' }
         if ($TargetsSecurityRegistration) {
             $ScenarioNames = if ($CriticalNames.Count -gt 0) { $CriticalNames -join ', ' } else { $AllNames -join ', ' }
-            $AttackScenario = "This policy protects security info registration but excludes $ScenarioNames. An attacker who compromises one of these admin accounts can register their own MFA methods (phone, authenticator app) from ANY location or device with NO controls. This gives them persistent access that survives a password reset."
+            $AttackScenario = "This policy protects the registration of sign-in methods, yet $ScenarioNames are exempt from it. Someone who takes over one of these administrator accounts can add their own sign-in methods unchallenged and keep access even after a password reset."
             $Severity = 'Critical'
         } elseif ($Blocks) {
-            $AttackScenario = "This policy blocks access but excludes privileged role(s): $($AllNames -join ', '). These admin accounts bypass the block entirely, creating a privileged access path."
+            $AttackScenario = "This policy blocks access, yet $($AllNames -join ', ') are exempt from it. The most powerful accounts in the tenant pass where everyone else is stopped."
         } elseif ($RequiresMfa -and $TargetsAllApps) {
-            $AttackScenario = "This policy requires MFA for all apps but excludes: $($AllNames -join ', '). These admins can access all cloud apps without MFA - the highest-value accounts have the weakest protection."
+            $AttackScenario = "This policy requires multifactor authentication for every application, yet $($AllNames -join ', ') are exempt from it. The accounts an attacker values most can sign in with a password alone."
         } else {
-            $AttackScenario = "This policy excludes $($ExcludedHighPriv.Count) privileged role(s): $($AllNames -join ', '). Privileged accounts should have EQUAL or STRICTER controls, not exemptions."
+            $AttackScenario = "This policy exempts $($ExcludedHighPriv.Count) privileged role(s): $($AllNames -join ', '). Administrator accounts should face the same or stricter requirements as everyone else, not fewer."
         }
         if ($CoveringPolicy) { $Severity = 'Info' }
 
         $CoveredNote = if ($CoveringPolicy) {
             $StateLabel = if ($CoveringPolicy.state -eq 'enabledForReportingButNotEnforced') { 'report-only' } else { 'enabled' }
-            " However, these roles appear to be covered by a separate policy: $($CoveringPolicy.displayName) ($StateLabel). Verify that policy enforces equivalent or stricter controls for these admin roles."
+            " A separate policy, $($CoveringPolicy.displayName) ($StateLabel), does appear to cover these roles."
         } else {
-            ' No separate policy was found that covers these excluded admin roles with MFA or authentication strength. Per Microsoft Zero Trust and CIS benchmarks, privileged roles should be the FIRST users subject to strong controls, not excluded from them.'
+            ' No other policy requires multifactor authentication from these roles, so the exemption leaves them without that protection.'
         }
 
         $TitleSuffix = ''
-        if ($HasCritical) { $TitleSuffix += ' - includes critical admin roles' }
-        if ($CoveringPolicy) { $TitleSuffix += ' (covered by separate policy)' }
+        if ($HasCritical) { $TitleSuffix += ', including top admin roles' }
+        if ($CoveringPolicy) { $TitleSuffix += ' (covered elsewhere)' }
 
         $Remediation = if ($CoveringPolicy) {
-            "The excluded admin roles appear covered by $($CoveringPolicy.displayName). Confirm that policy enforces equivalent controls (MFA, authentication strength, device compliance). Break-glass accounts should still be excluded by specific user ID, never by role."
+            "Confirm that $($CoveringPolicy.displayName) holds these roles to the same or stricter requirements, and exclude only named emergency-access accounts rather than whole roles."
         } else {
-            "Remove $($AllNames -join ', ') from the excluded roles. If you need emergency access, exclude 1-2 dedicated break-glass accounts by user ID (in excludeUsers) instead of excluding an entire admin role. Break-glass accounts should have complex passwords, be cloud-only, and be monitored with alerts."
+            "Remove the exemption for $($AllNames -join ', ') and exclude only the named emergency-access accounts instead."
         }
 
         $Affected = [System.Collections.Generic.List[string]]::new()
@@ -99,12 +99,13 @@ function Test-CIPPCAGapPrivilegedRoleExclusion {
 
         $Params = @{
             Severity         = $Severity
-            Category         = 'Privileged Role Exclusion'
-            Title            = "$($ExcludedHighPriv.Count) privileged role(s) excluded$TitleSuffix"
+            Category         = 'Administrator coverage'
+            Title            = "$($ExcludedHighPriv.Count) privileged role(s) exempt from this policy$TitleSuffix"
             Description      = $AttackScenario + $CoveredNote
             Remediation      = $Remediation
             AffectedPolicies = @($Affected)
             RelatedIds       = @($ExcludedHighPriv | ForEach-Object { $_.id })
+            DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/policy-old-require-mfa-admin'
         }
         $Findings.Add((New-CIPPCAGapFinding @Params))
     }
@@ -117,11 +118,12 @@ function Test-CIPPCAGapPrivilegedRoleExclusion {
         $AffectedNames = @($PoliciesExcludingCritical | ForEach-Object { $_.displayName })
         $Params = @{
             Severity         = 'Critical'
-            Category         = 'Privileged Role Exclusion'
-            Title            = "$($PoliciesExcludingCritical.Count) policy(ies) exclude critical admin roles (Global Admin, Privileged Role Admin, etc.)"
-            Description      = "$($PoliciesExcludingCritical.Count) enabled policy(ies) exclude one or more critical admin roles from their controls: $($AffectedNames -join ', '). Global Administrators and Privileged Role Administrators are the highest-value targets for attackers. Excluding them from CA policies means these accounts have WEAKER protection than regular users - the opposite of Zero Trust principles. Break-glass access should use dedicated accounts excluded by user ID, not entire admin roles."
-            Remediation      = 'Remove admin role exclusions from all CA policies. Instead: 1) Create 2 cloud-only break-glass accounts with complex passwords, 2) Exclude them by user ID (not role) from MFA policies, 3) Set up Azure Monitor alerts for any break-glass sign-in, 4) Ensure all admin roles are subject to phishing-resistant MFA (FIDO2 or certificate-based). Per CIS 6.2.1 and Microsoft Zero Trust: admins should have equal or stricter controls.'
+            Category         = 'Administrator coverage'
+            Title            = "$($PoliciesExcludingCritical.Count) enforced policy(ies) exempt the top administrator roles"
+            Description      = "The following policies exempt roles such as Global Administrator or Privileged Role Administrator: $($AffectedNames -join ', '). These are the accounts attackers seek first, and here they receive less protection than a regular user."
+            Remediation      = 'Remove the role exemptions from every policy, exclude only two named emergency-access accounts, and require phishing-resistant multifactor authentication from all administrators.'
             AffectedPolicies = $AffectedNames
+            DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/policy-old-require-mfa-admin'
         }
         $Findings.Add((New-CIPPCAGapFinding @Params))
     }

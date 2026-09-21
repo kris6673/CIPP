@@ -26,19 +26,18 @@ function Test-CIPPCAGapFociExclusion {
 
             $Family = @($FociApps | Where-Object { "$($_.appId)".ToLowerInvariant() -ne $Key })
             $FamilyNames = @($Family | Select-Object -First 8 | ForEach-Object { "$($_.displayName)" })
-            $Overflow = if ($Family.Count -gt 8) { '...' } else { '' }
+            $Overflow = if ($Family.Count -gt 8) { ' and others' } else { '' }
 
             $Params = @{
                 Severity         = 'Critical'
-                Category         = 'FOCI Token Sharing'
-                Title            = "Excluded FOCI app ""$($App.displayName)"" shares tokens with $($Family.Count) other apps"
-                Description      = """$($App.displayName)"" ($AppId) is excluded from this policy and belongs to the FOCI (Family of Client IDs) family. " +
-                'FOCI apps share refresh tokens, meaning any FOCI app can obtain an access token for any other FOCI family member. ' +
-                "Excluding one effectively excludes ALL: $($FamilyNames -join ', ')$Overflow."
-                Remediation      = 'Remove the exclusion or accept that ALL 45+ FOCI family apps are effectively excluded. ' +
-                'Consider targeting specific apps in a separate policy instead of excluding from a broad policy.'
+                Category         = 'Shared app tokens'
+                Title            = "Exempting $($App.displayName) also exempts $($Family.Count) related Microsoft apps"
+                Description      = "$($App.displayName) belongs to a family of Microsoft applications that share sign-in tokens, so a token obtained through one member works for the others. " +
+                "Exempting it from this policy therefore exempts the whole family, including $($FamilyNames -join ', ')$Overflow."
+                Remediation      = 'Remove the exemption and, if this application needs different treatment, give it a dedicated policy instead of exempting it from a broad one.'
                 AffectedPolicies = @($Policy.displayName)
                 RelatedIds       = @($Family | ForEach-Object { "$($_.appId)" })
+                DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/concept-conditional-access-cloud-apps'
             }
             $Findings.Add((New-CIPPCAGapFinding @Params))
         }

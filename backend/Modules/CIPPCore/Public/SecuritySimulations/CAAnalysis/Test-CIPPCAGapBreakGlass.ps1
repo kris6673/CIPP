@@ -36,7 +36,7 @@ function Test-CIPPCAGapBreakGlass {
     $UserTargetingPolicies = @($AllPolicies | Where-Object { & $TargetsUsers $_ })
 
     if ($BreakGlass) {
-        $Label = if ($BreakGlass.type -eq 'user') { 'break-glass account' } else { 'break-glass group' }
+        $Label = if ($BreakGlass.type -eq 'user') { 'emergency-access account' } else { 'emergency-access group' }
         $DisplayName = "$($BreakGlass.displayName)"
         $ExcludeTarget = if ($BreakGlass.type -eq 'user') { 'excluded users' } else { 'excluded groups' }
 
@@ -46,12 +46,13 @@ function Test-CIPPCAGapBreakGlass {
             if ($Excluded) {
                 $Params = @{
                     Severity         = 'Info'
-                    Category         = 'Break-Glass'
-                    Title            = "Break-glass $($BreakGlass.type) excluded"
-                    Description      = "The $Label $DisplayName is excluded from this policy. This ensures emergency access is preserved if this policy causes a lockout."
-                    Remediation      = "No action required. Verify the $Label periodically to ensure it is still valid and monitored for sign-in activity."
+                    Category         = 'Emergency access'
+                    Title            = "The emergency-access $($BreakGlass.type) is excluded from this policy"
+                    Description      = "The $Label $DisplayName keeps working even if this policy locks everyone else out."
+                    Remediation      = "No change needed. Keep monitoring any sign-in by the $Label and confirm periodically that it still works."
                     AffectedPolicies = @($Policy.displayName)
                     RelatedIds       = @($BreakGlass.id)
+                    DocumentationUrl = 'https://learn.microsoft.com/entra/identity/role-based-access-control/security-emergency-access'
                 }
                 $Findings.Add((New-CIPPCAGapFinding @Params))
                 continue
@@ -73,42 +74,46 @@ function Test-CIPPCAGapBreakGlass {
             if ($IsMicrosoftManaged -and $Policy.state -eq 'disabled') {
                 $Params = @{
                     Severity         = 'Info'
-                    Category         = 'Break-Glass'
-                    Title            = "Break-glass $($BreakGlass.type) not excluded (disabled Microsoft managed policy)"
-                    Description      = "The $Label $DisplayName is not excluded from this policy, but the policy is disabled and Microsoft managed. No risk while disabled."
-                    Remediation      = "If you enable this policy, add the $Label $DisplayName to the exclusions first to prevent emergency access lockout."
+                    Category         = 'Emergency access'
+                    Title            = "Disabled Microsoft-managed policy does not exclude the emergency-access $($BreakGlass.type)"
+                    Description      = "The $Label $DisplayName is not on the exclusion list of this Microsoft-managed policy. Because the policy is switched off, there is no exposure today."
+                    Remediation      = "Exclude the $Label $DisplayName before this policy is ever enabled, so emergency access is preserved."
                     AffectedPolicies = @($Policy.displayName)
                     RelatedIds       = @($BreakGlass.id)
+                    DocumentationUrl = 'https://learn.microsoft.com/entra/identity/role-based-access-control/security-emergency-access'
                 }
             } elseif ($Policy.state -eq 'enabledForReportingButNotEnforced') {
                 $Params = @{
                     Severity         = 'Medium'
-                    Category         = 'Break-Glass'
-                    Title            = "Break-glass $($BreakGlass.type) not excluded (report-only policy)"
-                    Description      = "The $Label $DisplayName is not excluded from this policy. This policy is currently in report-only mode so there is no enforcement risk, but the $Label should be added before switching to enabled."
-                    Remediation      = "Add the $Label $DisplayName to the user/group exclusions before enabling enforcement on this policy."
+                    Category         = 'Emergency access'
+                    Title            = "Report-only policy does not exclude the emergency-access $($BreakGlass.type)"
+                    Description      = "The $Label $DisplayName is not on the exclusion list. The policy is in report-only mode, so nothing is enforced yet, but enabling it as it stands could lock out emergency access."
+                    Remediation      = "Exclude the $Label $DisplayName before this policy is switched to enforced."
                     AffectedPolicies = @($Policy.displayName)
                     RelatedIds       = @($BreakGlass.id)
+                    DocumentationUrl = 'https://learn.microsoft.com/entra/identity/role-based-access-control/security-emergency-access'
                 }
             } elseif ($Policy.state -eq 'disabled') {
                 $Params = @{
                     Severity         = 'Low'
-                    Category         = 'Break-Glass'
-                    Title            = "Break-glass $($BreakGlass.type) not excluded (disabled policy)"
-                    Description      = "The $Label $DisplayName is not excluded from this policy. This policy is currently disabled so there is no enforcement risk."
-                    Remediation      = "Add the $Label $DisplayName to the exclusions before enabling this policy."
+                    Category         = 'Emergency access'
+                    Title            = "Disabled policy does not exclude the emergency-access $($BreakGlass.type)"
+                    Description      = "The $Label $DisplayName is not on the exclusion list. The policy is switched off, so there is no exposure today, but enabling it as it stands could lock out emergency access."
+                    Remediation      = "Exclude the $Label $DisplayName before this policy is enabled."
                     AffectedPolicies = @($Policy.displayName)
                     RelatedIds       = @($BreakGlass.id)
+                    DocumentationUrl = 'https://learn.microsoft.com/entra/identity/role-based-access-control/security-emergency-access'
                 }
             } else {
                 $Params = @{
                     Severity         = $Severity
-                    Category         = 'Break-Glass'
-                    Title            = "Break-glass $($BreakGlass.type) NOT excluded"
-                    Description      = "The $Label $DisplayName is NOT excluded from this enabled policy. If this policy causes a lockout (e.g. misconfigured MFA, compliance, or block rule), the $Label will also be blocked and cannot be used for emergency access."
-                    Remediation      = "Add the $Label $DisplayName to the $ExcludeTarget for this policy to preserve emergency access: edit the policy in the Entra admin center, open Users > Exclude, add $DisplayName and save."
+                    Category         = 'Emergency access'
+                    Title            = "Enforced policy does not exclude the emergency-access $($BreakGlass.type)"
+                    Description      = "The $Label $DisplayName is subject to this enforced policy. If the policy misfires, for example through a faulty multifactor, device or block rule, the $Label is locked out with everyone else and cannot be used to recover."
+                    Remediation      = "Add $DisplayName to the $ExcludeTarget of this policy so emergency access survives a lockout."
                     AffectedPolicies = @($Policy.displayName)
                     RelatedIds       = @($BreakGlass.id)
+                    DocumentationUrl = 'https://learn.microsoft.com/entra/identity/role-based-access-control/security-emergency-access'
                 }
             }
             $Findings.Add((New-CIPPCAGapFinding @Params))
@@ -125,31 +130,33 @@ function Test-CIPPCAGapBreakGlass {
                 if ($Policy.state -eq 'enabled') { $EnabledWithoutCount++ }
             }
         }
-        $BreakGlassLabel = if ($BreakGlass.type -eq 'user') { 'Break-glass account' } else { 'Break-glass group' }
+        $BreakGlassLabel = if ($BreakGlass.type -eq 'user') { 'Emergency-access account' } else { 'Emergency-access group' }
         $TotalPolicyCount = $AllPolicies.Count
-        $Overview = "$BreakGlassLabel`: $DisplayName. Tenant overview - total policies in tenant: $TotalPolicyCount; policies targeting users: $($UserTargetingPolicies.Count); with break-glass excluded: $($WithNames.Count); without break-glass excluded: $($WithoutNames.Count)."
+        $Overview = "$BreakGlassLabel`: $DisplayName. The tenant has $TotalPolicyCount policies, of which $($UserTargetingPolicies.Count) apply to users; $($WithNames.Count) exclude the $Label and $($WithoutNames.Count) do not."
 
         if ($WithoutNames.Count -gt 0) {
             $Listed = @($WithoutNames | Select-Object -First 10) -join ', '
-            $Overflow = if ($WithoutNames.Count -gt 10) { " and $($WithoutNames.Count - 10) more..." } else { '' }
+            $Overflow = if ($WithoutNames.Count -gt 10) { " and $($WithoutNames.Count - 10) more" } else { '' }
             $Params = @{
                 Severity         = if ($EnabledWithoutCount -gt 0) { 'High' } else { 'Medium' }
-                Category         = 'Break-Glass'
-                Title            = "$BreakGlassLabel coverage: $($WithNames.Count) of $($UserTargetingPolicies.Count) policies ($TotalPolicyCount total in tenant)"
-                Description      = "$Overview The $($BreakGlassLabel.ToLowerInvariant()) $DisplayName was detected by analyzing exclusion patterns across your policies. $($WithoutNames.Count) user-targeting policy(ies) do NOT exclude this $($BreakGlassLabel.ToLowerInvariant()). Without break-glass exclusions, a misconfigured CA policy can lock out ALL administrators. Microsoft recommends excluding break-glass accounts from every Conditional Access policy to ensure emergency access. Policies WITHOUT break-glass exclusion: $Listed$Overflow"
-                Remediation      = "Add break-glass exclusions to all $($WithoutNames.Count) policies listed above (edit each policy > Users > Exclude > add $DisplayName > save). Best practices: exclude break-glass from ALL CA policies, use cloud-only accounts with 16+ character passwords stored in a physical safe, no mailbox assigned, Azure Monitor alerts for ANY break-glass sign-in, and test quarterly. See https://learn.microsoft.com/entra/identity/role-based-access-control/security-emergency-access"
+                Category         = 'Emergency access'
+                Title            = "$BreakGlassLabel excluded from only $($WithNames.Count) of $($UserTargetingPolicies.Count) policies that could lock it out"
+                Description      = "$Overview $DisplayName was identified as the $($BreakGlassLabel.ToLowerInvariant()) because it is the identity excluded most often across your policies. A single misconfigured policy among the $($WithoutNames.Count) that do not exclude it could lock out every administrator, with no account left to recover access. Policies that do not exclude it: $Listed$Overflow"
+                Remediation      = "Exclude $DisplayName from all $($WithoutNames.Count) policies listed and from every future policy, and alert on any sign-in by it."
                 AffectedPolicies = @($WithoutNames)
                 RelatedIds       = @($BreakGlass.id)
+                DocumentationUrl = 'https://learn.microsoft.com/entra/identity/role-based-access-control/security-emergency-access'
             }
         } else {
             $Params = @{
                 Severity         = 'Info'
-                Category         = 'Break-Glass'
-                Title            = "$BreakGlassLabel excluded from all $($UserTargetingPolicies.Count) user-targeting policies ($TotalPolicyCount total in tenant)"
-                Description      = "$Overview The $($BreakGlassLabel.ToLowerInvariant()) $DisplayName is correctly excluded from all user-targeting Conditional Access policies. This ensures emergency access is preserved across your entire tenant. Break-glass accounts are cloud-only emergency access accounts with permanent Global Admin privileges that are excluded from all CA policies to prevent administrative lockout."
-                Remediation      = "Ongoing maintenance: confirm $DisplayName is your intended break-glass $($BreakGlass.type), set up Azure Monitor alerts for ANY activity on it, test emergency access every 3 months, make sure new CA policies also exclude it, and maintain 2 break-glass accounts for redundancy."
+                Category         = 'Emergency access'
+                Title            = "$BreakGlassLabel is excluded from all $($UserTargetingPolicies.Count) policies that apply to users"
+                Description      = "$Overview Emergency access is preserved across the tenant: whatever a policy does, $DisplayName can still sign in to recover from a lockout."
+                Remediation      = "Confirm $DisplayName is the intended emergency-access $($BreakGlass.type), keep a second one for redundancy, alert on any sign-in by them and test them regularly."
                 AffectedPolicies = @($WithNames)
                 RelatedIds       = @($BreakGlass.id)
+                DocumentationUrl = 'https://learn.microsoft.com/entra/identity/role-based-access-control/security-emergency-access'
             }
         }
         $Findings.Add((New-CIPPCAGapFinding @Params))
@@ -160,15 +167,16 @@ function Test-CIPPCAGapBreakGlass {
                 ($C -contains 'mfa') -or ($null -ne $_.grantControls.authenticationStrength) -or ($C -contains 'block') -or ($C -contains 'compliantDevice')
             })
         $CriticalList = @($CriticalPolicies | Select-Object -First 10 | ForEach-Object { "- $($_.displayName)" }) -join "`n"
-        $CriticalOverflow = if ($CriticalPolicies.Count -gt 10) { "`n...and $($CriticalPolicies.Count - 10) more" } else { '' }
+        $CriticalOverflow = if ($CriticalPolicies.Count -gt 10) { "`nand $($CriticalPolicies.Count - 10) more" } else { '' }
         $TotalPolicyCount = $AllPolicies.Count
         $Params = @{
             Severity         = 'Critical'
-            Category         = 'Break-Glass'
-            Title            = "No break-glass account or group detected across $TotalPolicyCount policies"
-            Description      = "No consistent user or group exclusions were found across your $TotalPolicyCount Conditional Access policies that would indicate a break-glass (emergency access) account or group. Tenant overview - total policies in tenant: $TotalPolicyCount; policies targeting users: $($UserTargetingPolicies.Count); break-glass exclusions found: 0. Without break-glass accounts excluded from CA policies, a misconfiguration can lock out ALL administrators, including Global Admins. Microsoft Support intervention may be required, causing extended downtime. Critical policies that need break-glass exclusions:`n$CriticalList$CriticalOverflow"
-            Remediation      = "Immediate action required: 1) create 2 break-glass accounts (cloud-only, Global Admin, 16+ character passwords, no mailbox); 2) exclude them from ALL $TotalPolicyCount CA policies (edit each policy > Users > Exclude > add both accounts); 3) set up Azure Monitor alerts on ANY break-glass sign-in; 4) test quarterly. See https://learn.microsoft.com/entra/identity/role-based-access-control/security-emergency-access"
+            Category         = 'Emergency access'
+            Title            = "No emergency-access account could be identified across $TotalPolicyCount policies"
+            Description      = "None of the $TotalPolicyCount policies share a consistently excluded user or group, which is how an emergency-access account normally shows up; $($UserTargetingPolicies.Count) of them apply to users. Without such an account, one faulty policy can lock out every administrator, and recovery then depends on Microsoft support and can take days. Policies that most need an exclusion:`n$CriticalList$CriticalOverflow"
+            Remediation      = 'Create two dedicated emergency-access accounts, exclude them from every policy and alert on any sign-in by them.'
             AffectedPolicies = @($CriticalPolicies | ForEach-Object { $_.displayName })
+            DocumentationUrl = 'https://learn.microsoft.com/entra/identity/role-based-access-control/security-emergency-access'
         }
         $Findings.Add((New-CIPPCAGapFinding @Params))
     }

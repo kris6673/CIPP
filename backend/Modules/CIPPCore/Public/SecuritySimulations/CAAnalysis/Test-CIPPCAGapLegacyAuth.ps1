@@ -29,12 +29,13 @@ function Test-CIPPCAGapLegacyAuth {
     if ($BlocksLegacy) { return @() }
 
     $Params = @{
-        Severity    = 'Critical'
-        Category    = 'Legacy Auth'
-        Title       = 'No policy blocks legacy authentication'
-        Description = 'No enabled policy was found that blocks legacy authentication protocols. Legacy auth cannot support MFA and is a top attack vector.'
-        Remediation = 'Create a policy that blocks Exchange ActiveSync and Other client types for All Users.'
-        CaTemplate  = "$($Context.Data.Reference.templates.blockLegacyAuth)"
+        Severity         = 'Critical'
+        Category         = 'Older sign-in methods'
+        Title            = 'Older sign-in methods that cannot use multifactor authentication are still allowed'
+        Description      = 'No enforced policy stops the older mail and client protocols that cannot perform multifactor authentication. A stolen password is enough to sign in through them, which is why they are the usual route for password-spray attacks.'
+        Remediation      = 'Block the older sign-in methods (Exchange ActiveSync and other legacy clients) for every user.'
+        CaTemplate       = "$($Context.Data.Reference.templates.blockLegacyAuth)"
+        DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/policy-block-legacy-authentication'
     }
     $Findings.Add((New-CIPPCAGapFinding @Params))
 
@@ -44,11 +45,12 @@ function Test-CIPPCAGapLegacyAuth {
         if (@($Policy.grantControls.builtInControls) -contains 'block') { continue }
         $Params = @{
             Severity         = 'Medium'
-            Category         = 'Legacy Authentication'
-            Title            = 'Legacy auth clients targeted but not blocked'
-            Description      = 'This policy targets legacy authentication clients (Exchange ActiveSync / Other) but does not block them. Legacy auth cannot support MFA, so the grant it applies cannot be met - block these clients explicitly instead.'
-            Remediation      = 'Block legacy authentication. Legacy auth protocols cannot perform MFA and are a common attack vector for password spray and credential stuffing attacks.'
+            Category         = 'Older sign-in methods'
+            Title            = 'A policy covers older sign-in methods without blocking them'
+            Description      = 'This policy applies to older sign-in methods but grants access instead of blocking it. Those methods cannot complete multifactor authentication, so the requirement this policy sets can never be met and the policy adds no protection.'
+            Remediation      = 'Change this policy to block the older sign-in methods, or rely on a dedicated policy that blocks them for every user.'
             AffectedPolicies = @($Policy.displayName)
+            DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/policy-block-legacy-authentication'
         }
         $Findings.Add((New-CIPPCAGapFinding @Params))
     }

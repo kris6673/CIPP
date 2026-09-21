@@ -51,21 +51,23 @@ function Test-CIPPCAGapUserAgentBypass {
                 if ($Companion) {
                     $Params = @{
                         Severity         = 'Info'
-                        Category         = 'User-Agent Bypass'
-                        Title            = "Platform condition targets $Targeted - unknown-platform bypass covered by companion policy"
-                        Description      = "This policy enforces controls only for platforms: $Targeted. On its own that would allow a user-agent-spoofing bypass to an unrecognized platform, but $($Companion.displayName) blocks access from unknown/unsupported platforms tenant-wide, which closes that path."
-                        Remediation      = "No action required for the unknown-platform bypass - it is covered by $($Companion.displayName). Do verify that any recognized platforms you intentionally do not target here (e.g. iOS/Android) are covered by another policy such as app protection / MAM."
+                        Category         = 'Platform coverage'
+                        Title            = "Policy applies to $Targeted only, with unknown platforms blocked elsewhere"
+                        Description      = "On its own, a policy limited to $Targeted could be sidestepped by a device that presents itself as an unrecognized platform. $($Companion.displayName) blocks such platforms across the tenant, which closes that route."
+                        Remediation      = "No change needed for unknown platforms, which $($Companion.displayName) covers. Confirm that the recognized platforms this policy leaves out are covered by another policy."
                         AffectedPolicies = @($Policy.displayName, $Companion.displayName)
+                        DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/policy-all-users-device-unknown-unsupported'
                     }
                 } else {
                     $Params = @{
                         Severity         = 'High'
-                        Category         = 'User-Agent Bypass'
-                        Title            = "Platform condition only targets $Targeted - user-agent spoofing risk"
-                        Description      = "This policy enforces controls only for platforms: $Targeted. An attacker can spoof their user-agent string to appear as an unrecognized platform (e.g. Linux, ChromeOS, or a custom UA) to bypass this policy entirely. Tools like MFASweep actively exploit this gap by enumerating user-agent strings."
-                        Remediation      = 'Change the platform condition to target "All platforms" instead of specific platforms, or create a companion policy that blocks access from unknown/unsupported device platforms (supplementary CA hardening). This eliminates the user-agent spoofing bypass path.'
+                        Category         = 'Platform coverage'
+                        Title            = "Policy applies only to $Targeted and can be sidestepped from other platforms"
+                        Description      = 'A sign-in that presents itself as a platform this policy does not list, such as Linux or an unrecognized device type, is not subject to its requirements. The platform a device reports is easily changed and attackers routinely try alternatives to find one that is not covered.'
+                        Remediation      = 'Apply the policy to all platforms, or block sign-ins from unsupported and unknown platforms with a companion policy.'
                         AffectedPolicies = @($Policy.displayName)
                         CaTemplate       = "$($Context.Data.Reference.templates.blockUnsupportedPlatforms)"
+                        DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/policy-all-users-device-unknown-unsupported'
                     }
                 }
                 $Findings.Add((New-CIPPCAGapFinding @Params))
@@ -79,16 +81,17 @@ function Test-CIPPCAGapUserAgentBypass {
             $HasMobile = $ClientAppTypes -contains 'mobileAppsAndDesktopClients'
             if ($RequiresMfa -and (-not $HasBrowser -or -not $HasMobile)) {
                 $Missing = [System.Collections.Generic.List[string]]::new()
-                if (-not $HasBrowser) { $Missing.Add('browser') }
-                if (-not $HasMobile) { $Missing.Add('mobileAppsAndDesktopClients') }
-                $MissingText = $Missing -join ', '
+                if (-not $HasBrowser) { $Missing.Add('web browsers') }
+                if (-not $HasMobile) { $Missing.Add('desktop and mobile apps') }
+                $MissingText = $Missing -join ' and '
                 $Params = @{
                     Severity         = 'Medium'
-                    Category         = 'User-Agent Bypass'
-                    Title            = "MFA policy does not cover client app type(s): $MissingText"
-                    Description      = "This policy requires MFA but only targets client app types: $($ClientAppTypes -join ', '). Missing coverage for: $MissingText. An attacker can use a client matching the uncovered app type to bypass MFA. MFASweep tests both browser and desktop/mobile client types to find these gaps."
-                    Remediation      = 'Ensure MFA policies cover all modern client app types: both "browser" and "mobileAppsAndDesktopClients". Use a separate policy to block legacy auth (exchangeActiveSync + other).'
+                    Category         = 'Platform coverage'
+                    Title            = "Multifactor policy does not cover sign-ins from $MissingText"
+                    Description      = "The multifactor requirement in this policy applies only to some kinds of client ($($ClientAppTypes -join ', ')). Anyone can choose a client of an uncovered kind and sign in with a password alone."
+                    Remediation      = 'Apply the multifactor requirement to both web browsers and desktop and mobile apps, and block the older sign-in methods separately.'
                     AffectedPolicies = @($Policy.displayName)
+                    DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/concept-conditional-access-conditions#client-apps'
                 }
                 $Findings.Add((New-CIPPCAGapFinding @Params))
             }
@@ -109,12 +112,13 @@ function Test-CIPPCAGapUserAgentBypass {
 
     if ($MfaPoliciesUseSpecificPlatforms -and -not $BlocksUnknownPlatforms) {
         $Params = @{
-            Severity    = 'High'
-            Category    = 'User-Agent Bypass'
-            Title       = 'MFA policies use platform-specific conditions without blocking unknown platforms'
-            Description = 'One or more MFA policies target specific device platforms (e.g. iOS, Android, Windows) instead of all platforms, AND no policy blocks unknown or unsupported device platforms. This creates a gap exploitable by tools like MFASweep, which enumerate user-agent strings to find platforms where MFA is not enforced. An attacker can spoof a Linux, ChromeOS, or unrecognized user-agent to bypass MFA entirely.'
-            Remediation = "Either change all MFA policies to target 'All platforms' (recommended), or create a companion policy that blocks access from unknown/unsupported device platforms (supplementary CA hardening). This closes the user-agent spoofing bypass path that MFASweep exploits."
-            CaTemplate  = "$($Context.Data.Reference.templates.blockUnsupportedPlatforms)"
+            Severity         = 'High'
+            Category         = 'Platform coverage'
+            Title            = 'Platform-limited multifactor policies leave unknown platforms open'
+            Description      = 'One or more enforced multifactor policies apply only to specific device platforms, and nothing blocks sign-ins from platforms that are unsupported or unrecognized. A device that reports itself as an unlisted platform can sign in with a password alone.'
+            Remediation      = 'Apply the multifactor policies to all platforms, or block sign-ins from unsupported and unknown platforms with a companion policy.'
+            CaTemplate       = "$($Context.Data.Reference.templates.blockUnsupportedPlatforms)"
+            DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/policy-all-users-device-unknown-unsupported'
         }
         $Findings.Add((New-CIPPCAGapFinding @Params))
     }

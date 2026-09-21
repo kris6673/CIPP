@@ -195,6 +195,18 @@ const Page = () => {
                           </Typography>
                         )}
                       </Box>
+                      {finding.documentationUrl && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          href={finding.documentationUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          sx={{ whiteSpace: 'nowrap', alignSelf: 'center' }}
+                        >
+                          Microsoft Documentation
+                        </Button>
+                      )}
                     </Box>
                   ))}
                 </Stack>

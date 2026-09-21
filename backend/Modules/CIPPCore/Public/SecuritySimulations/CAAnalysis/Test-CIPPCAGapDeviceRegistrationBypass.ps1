@@ -53,25 +53,26 @@ function Test-CIPPCAGapDeviceRegistrationBypass {
 
         $Blocks = $Controls -contains 'block'
         $Issues = [System.Collections.Generic.List[string]]::new()
-        if ($UsesLocationCondition) { $Issues.Add('location-based conditions') }
-        if ($RequiresCompliantDevice) { $Issues.Add('a compliant/hybrid-joined device requirement') }
+        if ($UsesLocationCondition) { $Issues.Add('network location conditions') }
+        if ($RequiresCompliantDevice) { $Issues.Add('a managed-device requirement') }
         $IssueText = $Issues -join ' and '
 
         $Framing = if ($Blocks) {
-            "This policy blocks access using $IssueText, but those conditions are NOT evaluated for the Device Registration Service ($DrsId). Device registration is therefore not covered by this block and can still occur (for example from an untrusted location)."
+            "This policy blocks access based on $IssueText, but the device registration service ignores those conditions. New devices can therefore still be registered, for example from an untrusted network."
         } else {
-            "This policy relies on $IssueText to grant access, but those controls are NOT evaluated for the Device Registration Service ($DrsId) - only MFA / authentication strength is."
+            "This policy relies on $IssueText, but the device registration service ignores those conditions and only responds to a multifactor requirement."
         }
 
         $Params = @{
             Severity         = if ($ExplicitlyTargetsRegistration) { 'High' } else { 'Medium' }
-            Category         = 'Device Registration Bypass'
-            Title            = if ($ExplicitlyTargetsRegistration) { 'Device registration protected only by controls the service ignores' } else { "Device Registration Service not covered by this policy's controls" }
-            Description      = "$Framing The DRS only honors MFA grant controls (MSRC VULN-153600 - confirmed by-design by Microsoft). No separate enabled policy was found that requires MFA or authentication strength for the register-device user action, so device registration currently has no working control from this policy."
-            Remediation      = 'Create (or enable) a dedicated policy that requires MFA or authentication strength for the "Register or join devices" user action. Do not rely on location or device compliance to protect device enrollment.'
+            Category         = 'Device registration'
+            Title            = if ($ExplicitlyTargetsRegistration) { 'Device registration is protected only by conditions the service ignores' } else { 'Device registration is not covered by the conditions of this policy' }
+            Description      = "$Framing No other enforced policy requires multifactor authentication when a device is registered, so anyone with a valid password can register a device that may then count as trusted."
+            Remediation      = 'Require multifactor authentication for registering or joining devices through a dedicated policy, since network and device conditions do not protect this step.'
             AffectedPolicies = @($Policy.displayName)
             RelatedIds       = @($DrsId)
             CaTemplate       = "$($Context.Data.Reference.templates.registerSecurityInfo)"
+            DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/policy-all-users-device-registration'
         }
         $Findings.Add((New-CIPPCAGapFinding @Params))
     }

@@ -42,11 +42,12 @@ function Test-CIPPCAGapMissingMfa {
 
         $Params = @{
             Severity         = 'Medium'
-            Category         = 'Swiss Cheese Model'
-            Title            = 'Policy does not require MFA'
-            Description      = "This policy grants access with: $($Controls -join ', ') but does not require MFA. Per the Swiss cheese model, MFA should be the bare minimum requirement layered under everything else."
-            Remediation      = 'Add MFA as a grant control requirement. MFA should be the baseline layer of defense. Consider using Authentication Strengths for phishing-resistant MFA.'
+            Category         = 'Grant requirements'
+            Title            = 'Policy grants access without requiring multifactor authentication'
+            Description      = "Access is granted on the basis of $($Controls -join ', ') alone. A stolen password is enough to pass this policy, because a second factor is not part of what it asks for."
+            Remediation      = 'Make multifactor authentication part of what this policy requires, ideally through an authentication strength.'
             AffectedPolicies = @($Policy.displayName)
+            DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/policy-all-users-mfa-strength'
         }
         $Findings.Add((New-CIPPCAGapFinding @Params))
     }

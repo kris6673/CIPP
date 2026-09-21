@@ -40,12 +40,13 @@ function Test-CIPPCAGapLocationConditions {
             if ($null -ne $Location -and $Location.isTrusted -eq $false) {
                 $Params = @{
                     Severity         = 'Medium'
-                    Category         = 'Location Configuration'
+                    Category         = 'Locations'
                     Title            = "Named location ""$($Location.displayName)"" is not marked as trusted"
-                    Description      = "The named location ""$($Location.displayName)"" used in this policy is not marked as trusted. If this policy also references ""All trusted locations"", this location will NOT be included in the trusted set and users from this location may be unexpectedly blocked or challenged."
-                    Remediation      = "Mark ""$($Location.displayName)"" as trusted in Entra ID if it represents a known-good network, or ensure the policy logic handles untrusted locations as intended."
+                    Description      = 'This policy refers to a network location that is not flagged as trusted. Where the policy also relies on the set of trusted locations, this one falls outside it, and people connecting from there may be blocked or challenged unexpectedly.'
+                    Remediation      = "Mark ""$($Location.displayName)"" as trusted if it is a known corporate network, or confirm the policy is meant to treat it as untrusted."
                     AffectedPolicies = @($Policy.displayName)
                     RelatedIds       = @($LocationId)
+                    DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/concept-assignment-network'
                 }
                 $Findings.Add((New-CIPPCAGapFinding @Params))
             }
@@ -58,12 +59,13 @@ function Test-CIPPCAGapLocationConditions {
                 $Names = @($Untrusted | ForEach-Object { "$($_.displayName)" }) -join ', '
                 $Params = @{
                     Severity         = 'High'
-                    Category         = 'Location Configuration'
-                    Title            = "Policy uses ""All trusted locations"" but $($Untrusted.Count) location(s) are NOT trusted"
-                    Description      = "This policy conditions on ""All trusted locations"" but the following named location(s) are not marked as trusted and will be EXCLUDED from the trusted set: $Names. Users signing in from these locations will not be recognized as coming from a trusted location, which may cause accidental lockouts or unexpected MFA prompts."
-                    Remediation      = 'Review each untrusted named location in Entra ID > Protection > Conditional Access > Named locations. Mark locations as trusted if they represent corporate offices, VPNs, or other known-good networks. If a location should not be trusted, ensure this policy''s behavior is correct for non-trusted traffic.'
+                    Category         = 'Locations'
+                    Title            = "Policy relies on trusted locations while $($Untrusted.Count) defined location(s) are not trusted"
+                    Description      = "The following defined network locations are not flagged as trusted and therefore fall outside what this policy treats as trusted: $Names. People connecting from them may be locked out or prompted unexpectedly."
+                    Remediation      = 'Flag the locations that represent corporate offices or VPNs as trusted, and confirm the policy behaves as intended for the remaining ones.'
                     AffectedPolicies = @($Policy.displayName)
                     RelatedIds       = @($Untrusted | ForEach-Object { "$($_.id)" })
+                    DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/concept-assignment-network'
                 }
                 $Findings.Add((New-CIPPCAGapFinding @Params))
             }
@@ -75,12 +77,13 @@ function Test-CIPPCAGapLocationConditions {
             if ($Context.NamedLocationById.ContainsKey($LocationId)) { continue }
             $Params = @{
                 Severity         = 'Medium'
-                Category         = 'Location Configuration'
-                Title            = 'Policy references a deleted or missing named location'
-                Description      = "This policy references named location ID ""$LocationId"" which does not exist. The location may have been deleted. This stale reference will never match any traffic, which could silently change the policy's effective behavior - potentially blocking or allowing access unintentionally."
-                Remediation      = 'Remove the stale location reference from this policy and replace it with a valid named location if needed.'
+                Category         = 'Locations'
+                Title            = 'Policy refers to a network location that no longer exists'
+                Description      = 'One of the locations this policy depends on has been deleted. The condition can never match, which silently changes what the policy allows or blocks.'
+                Remediation      = 'Remove the stale reference and, if the condition is still needed, point the policy at a current location.'
                 AffectedPolicies = @($Policy.displayName)
                 RelatedIds       = @($LocationId)
+                DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/concept-assignment-network'
             }
             $Findings.Add((New-CIPPCAGapFinding @Params))
         }
@@ -94,12 +97,13 @@ function Test-CIPPCAGapLocationConditions {
             if (@($Location.countriesAndRegions | Where-Object { $_ }).Count -gt 0) { continue }
             $Params = @{
                 Severity         = 'High'
-                Category         = 'Location Configuration'
+                Category         = 'Locations'
                 Title            = "Country location ""$($Location.displayName)"" has no countries defined"
-                Description      = "This policy references the country-based named location ""$($Location.displayName)"" which has zero countries configured. The location condition will never match any traffic, which could create a security gap (if used as an include condition) or make the exclude condition meaningless."
-                Remediation      = 'Add the intended countries to this named location, or remove it from this policy.'
+                Description      = 'The country list behind this location is empty, so the condition never matches. Depending on how it is used, the policy either never applies or its exclusion has no effect.'
+                Remediation      = 'Add the intended countries to this location, or remove it from the policy.'
                 AffectedPolicies = @($Policy.displayName)
                 RelatedIds       = @($LocationId)
+                DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/concept-assignment-network'
             }
             $Findings.Add((New-CIPPCAGapFinding @Params))
         }

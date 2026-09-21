@@ -69,16 +69,16 @@
   },
   "controlOrder": ["block-legacy-auth", "require-mfa", "require-compliant-device", "sign-in-risk", "user-risk", "session-sif", "block-countries", "phishing-resistant-mfa", "block-non-corp-network", "block-high-risk-apps"],
   "controls": {
-    "block-legacy-auth": { "label": "Block legacy authentication", "description": "Policy with clientAppTypes 'exchangeActiveSync' / 'other' and a Block grant." },
-    "require-mfa": { "label": "Require multi-factor authentication", "description": "Grant controls require MFA (built-in MFA or auth strength)." },
-    "require-compliant-device": { "label": "Require compliant or hybrid-joined device", "description": "Grant controls require compliantDevice or domainJoinedDevice." },
-    "sign-in-risk": { "label": "Sign-in risk based access", "description": "Conditions include one or more signInRiskLevels." },
-    "user-risk": { "label": "User risk based access", "description": "Conditions include one or more userRiskLevels." },
-    "session-sif": { "label": "Sign-in frequency / session controls", "description": "Session controls enforce signInFrequency or persistentBrowser." },
-    "block-countries": { "label": "Country / location block", "description": "Location condition combined with a Block grant (allow-list or deny-list)." },
-    "phishing-resistant-mfa": { "label": "Phishing-resistant MFA", "description": "Authentication strength = phishing-resistant (FIDO2, Windows Hello, X.509)." },
-    "block-non-corp-network": { "label": "Restrict to corporate network / trusted locations", "description": "Location condition that excludes trusted locations combined with Block." },
-    "block-high-risk-apps": { "label": "Block high-risk applications", "description": "Block grant scoped to specific high-risk applications." }
+    "block-legacy-auth": { "label": "Block legacy authentication", "description": "Without it, older sign-in methods that cannot use multifactor authentication remain available to them." },
+    "require-mfa": { "label": "Require multi-factor authentication", "description": "Without it, a stolen or guessed password is enough to sign in as one of them." },
+    "require-compliant-device": { "label": "Require compliant or hybrid-joined device", "description": "Without it, they can sign in from any device, including unmanaged or infected ones." },
+    "sign-in-risk": { "label": "Sign-in risk based access", "description": "Without it, a sign-in that Microsoft rates as suspicious goes through without any extra check." },
+    "user-risk": { "label": "User risk based access", "description": "Without it, an account that Microsoft rates as likely compromised keeps working until someone notices." },
+    "session-sif": { "label": "Sign-in frequency / session controls", "description": "Without it, a session on a shared or lost device stays valid indefinitely." },
+    "block-countries": { "label": "Country / location block", "description": "Without it, sign-ins are accepted from any country or network." },
+    "phishing-resistant-mfa": { "label": "Phishing-resistant MFA", "description": "Without it, their multifactor prompt can be captured by a convincing phishing page." },
+    "block-non-corp-network": { "label": "Restrict to corporate network / trusted locations", "description": "Without it, sign-ins are accepted from outside the organization's own networks." },
+    "block-high-risk-apps": { "label": "Block high-risk applications", "description": "Without it, applications considered too risky remain reachable." }
   },
   "patterns": [
     { "persona": "microsoft365serviceaccounts", "pattern": "(?<=^|[^A-Za-z0-9])(microsoft365serviceaccounts?|m365service|m365svc|directorysynchronization|aadc?onnect|entraconnect)(?=$|[^a-z0-9])" },

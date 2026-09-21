@@ -140,12 +140,13 @@ function Get-CIPPCAPersonaMatrix {
 
             if ($State -eq 'Missing' -and $Persona.id -ne 'workloadIdentities') {
                 $Params = @{
-                    Severity    = & $SeverityForGap $Persona.id $Control
-                    Category    = 'Persona coverage'
-                    Title       = "$($Persona.label): no policy applies ""$ControlLabel"""
-                    Description = "No enforced Conditional Access policy that targets $($Persona.label) applies ""$ControlLabel"". $($ControlMeta.$Control.description)"
-                    Remediation = "Deploy a Conditional Access policy for $($Persona.label) that applies this control, or extend one that already targets them."
-                    CaTemplate  = "$ControlLabel for $($Persona.label)"
+                    Severity         = & $SeverityForGap $Persona.id $Control
+                    Category         = 'Persona coverage'
+                    Title            = "$($Persona.label) have no enforced policy for ""$ControlLabel"""
+                    Description      = "None of the enforced policies that apply to $($Persona.label) provides this control. $($ControlMeta.$Control.description)"
+                    Remediation      = "Extend a policy that already applies to $($Persona.label) with this control, or add a dedicated one."
+                    CaTemplate       = "$ControlLabel for $($Persona.label)"
+                    DocumentationUrl = 'https://learn.microsoft.com/entra/identity/conditional-access/concept-conditional-access-policy-common'
                 }
                 $Findings.Add((New-CIPPCAGapFinding @Params))
             }

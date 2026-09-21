@@ -30,7 +30,7 @@ function Test-CIPPCAGapGuestAuthStrength {
         $StrengthType = 'MFA'
         if ($RequiresAuthStrength) {
             $StrengthName = if ($Grant.authenticationStrength.displayName) { "$($Grant.authenticationStrength.displayName)" } else { 'Unknown' }
-            $StrengthType = if (Test-CIPPCAPolicyPhishingResistant -Policy $Policy -Context $Context) { 'Phishing-resistant MFA' } else { "Authentication strength: $StrengthName" }
+            $StrengthType = if (Test-CIPPCAPolicyPhishingResistant -Policy $Policy -Context $Context) { 'Phishing-resistant MFA' } else { "the ""$StrengthName"" authentication strength" }
         }
 
         $GuestTypes = [System.Collections.Generic.List[string]]::new()
@@ -42,19 +42,20 @@ function Test-CIPPCAGapGuestAuthStrength {
             if ($TypeString.Contains('internalGuest')) { $GuestTypes.Add('Internal guests') }
             if ($TypeString.Contains('serviceProvider')) { $GuestTypes.Add('Service provider users') }
         }
-        $GuestTypeText = if ($GuestTypes.Count -gt 0) { $GuestTypes -join ', ' } else { 'All guest/external users' }
+        $GuestTypeText = if ($GuestTypes.Count -gt 0) { $GuestTypes -join ', ' } else { 'all guest and external users' }
 
         $PhishingNote = if ($RequiresAuthStrength -and $StrengthType -eq 'Phishing-resistant MFA') {
-            ' Phishing-resistant MFA note: very few tenants have phishing-resistant MFA deployed. If you require phishing-resistant MFA for guests, ensure their home tenant supports FIDO2, Windows Hello for Business, or Certificate-Based Authentication, AND that you trust those MFA claims inbound.'
+            ' Few organizations have phishing-resistant methods rolled out, so guests can only meet this requirement if their home organization supports such methods and this tenant trusts the result.'
         } else { '' }
 
         $Params = @{
             Severity         = 'Info'
-            Category         = 'Guest Authentication Requirements'
-            Title            = "Guest users required to satisfy $StrengthType - may need Cross-Tenant Access Settings"
-            Description      = "This policy requires $StrengthType for $GuestTypeText. Important: guest users authenticate in their home tenant, not in your resource tenant. For guests to satisfy this policy requirement you must 1) enable MFA trust in Cross-Tenant Access Settings for the guest's home tenant, 2) the guest must have already completed MFA in their home tenant, and 3) the home tenant must present an MFA claim that satisfies your authentication strength requirement. B2B Collaboration guests can satisfy MFA requirements if their home tenant presents MFA claims AND you trust those claims in Cross-Tenant Access Settings. B2B Direct Connect users authenticate entirely in their home tenant - your policy requirements are not directly enforced, but you can require that their home tenant has equivalent policies.$PhishingNote Without Cross-Tenant Access MFA trust enabled, guest users will be blocked even if they completed MFA in their home tenant."
-            Remediation      = "Review Cross-Tenant Access Settings (Entra Admin Center > External Identities > Cross-tenant access settings > Inbound access settings) and enable MFA trust for each organization whose guests need access (default settings for all external organizations, or organization-specific settings for specific partner tenants). Under B2B collaboration trust settings check ""Trust multi-factor authentication from Azure AD tenants"" (optionally also trust compliant and hybrid joined devices). Validate the guest sign-in flow with a guest from a trusted tenant. If only specific guests need $StrengthType, scope the includeGuestsOrExternalUsers condition to those guest types. Use report-only mode first to identify which guests would be blocked."
+            Category         = 'Guest coverage'
+            Title            = 'Guest multifactor requirement depends on trusting their home organization'
+            Description      = "This policy requires $StrengthType from $GuestTypeText. Guests prove their identity in their home organization rather than here, so they can only meet this requirement if this tenant is set to trust the multifactor authentication their home organization performed. Until that trust is in place, guests are blocked even after completing multifactor authentication at home.$PhishingNote"
+            Remediation      = 'Trust the multifactor authentication performed by the home organizations of your guests in the cross-tenant access settings, for all external organizations or per partner, and verify with a guest sign-in before enforcing.'
             AffectedPolicies = @($Policy.displayName)
+            DocumentationUrl = 'https://learn.microsoft.com/entra/external-id/authentication-conditional-access'
         }
         $Findings.Add((New-CIPPCAGapFinding @Params))
     }
