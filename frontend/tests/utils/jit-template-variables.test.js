@@ -1,4 +1,8 @@
-import { resolveJitTemplateVariables } from '../../src/utils/jit-template-variables'
+import {
+  JIT_TEMPLATE_VARIABLES,
+  JIT_USERNAME_VARIABLES,
+  resolveJitTemplateVariables,
+} from '../../src/utils/jit-template-variables'
 
 const UPN = 'kbk@complea.dk'
 
@@ -22,6 +26,18 @@ describe('resolveJitTemplateVariables', () => {
   it('passes empty template text through unchanged so the caller guards still work', () => {
     expect(resolveJitTemplateVariables(undefined, UPN)).toBeUndefined()
     expect(resolveJitTemplateVariables('', UPN)).toBe('')
+  })
+
+  it('resolves every token the % popup offers, so the list cannot drift from the resolver', () => {
+    for (const { variable } of JIT_TEMPLATE_VARIABLES) {
+      expect(resolveJitTemplateVariables(variable, UPN)).not.toContain('%')
+    }
+  })
+
+  it('keeps the full UPN out of the username popup, since the backend appends the domain', () => {
+    for (const { variable } of JIT_USERNAME_VARIABLES) {
+      expect(resolveJitTemplateVariables(variable, UPN)).not.toContain('@')
+    }
   })
 
   it('blanks the tokens when no UPN is known yet', () => {

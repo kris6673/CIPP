@@ -45,7 +45,7 @@ The expiration action offers **Delete User** and **Disable User** whatever the s
 | Default User                          | The account the elevation is granted to. Shown when the template targets an existing user, and not available on an All Tenants template. |
 
 {% hint style="info" %}
-Default First Name, Default Last Name, Default Username and Reason Template accept variables for whoever applies the template: `%cipptechnician%` is the part of the signed-in technician's account name before the @ symbol, and `%cipptechnicianupn%` is the whole account name. They are filled in on the JIT Admin page when the template is applied, so a single template such as `jit-%cipptechnician%` names every technician's account after them and keeps the audit trail readable. Keep `%cipptechnicianupn%` out of Default Username, since the domain is added to that field separately. Anything else between percent signs is left as typed.
+Default First Name, Default Last Name, Default Username and Reason Template accept variables for whoever applies the template: `%cipptechnician%` is the part of the signed-in technician's account name before the @ symbol, and `%cipptechnicianupn%` is the whole account name. They are filled in on the JIT Admin page when the template is applied, so a single template such as `jit-%cipptechnician%` names every technician's account after them and keeps the audit trail readable. Typing `%` in any of these fields offers the variables that apply there, and Default Username only offers `%cipptechnician%`, since the domain is added to that field separately. Anything else between percent signs is left as typed.
 {% endhint %}
 
 {% hint style="warning" %}

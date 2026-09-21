@@ -16,6 +16,10 @@ import { CippJitRoleTemplateApply } from "../../../../components/CippComponents/
 import { useRouter } from "next/router";
 import { ApiGetCall } from "../../../../api/ApiCall";
 import { useEffect } from "react";
+import {
+  JIT_TEMPLATE_VARIABLES,
+  JIT_USERNAME_VARIABLES,
+} from "../../../../utils/jit-template-variables";
 
 const Page = () => {
   const userSettingsDefaults = useSettings();
@@ -330,6 +334,7 @@ const Page = () => {
                 type="textField"
                 label="Reason Template"
                 name="reasonTemplate"
+                autocompleteOptions={JIT_TEMPLATE_VARIABLES}
                 placeholder="Enter a default reason template for JIT Admin requests"
                 multiline
                 rows={3}
@@ -391,6 +396,7 @@ const Page = () => {
                   fullWidth
                   label="Default First Name"
                   name="defaultFirstName"
+                  autocompleteOptions={JIT_TEMPLATE_VARIABLES}
                   formControl={formControl}
                 />
               </Grid>
@@ -400,6 +406,7 @@ const Page = () => {
                   fullWidth
                   label="Default Last Name"
                   name="defaultLastName"
+                  autocompleteOptions={JIT_TEMPLATE_VARIABLES}
                   formControl={formControl}
                 />
               </Grid>
@@ -409,6 +416,7 @@ const Page = () => {
                   fullWidth
                   label="Default Username"
                   name="defaultUserName"
+                  autocompleteOptions={JIT_USERNAME_VARIABLES}
                   formControl={formControl}
                   helperText="Supports %cipptechnician% (the signed-in technician's account name before the @), resolved when the template is applied."
                 />
