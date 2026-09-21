@@ -11,7 +11,8 @@
     {
       "id": "Assumption",
       "title": "Starting assumption",
-      "text": "The attacker has captured a valid session token from the user through a fake sign-in page that relayed the real one. The token still carries the multifactor approval the user completed."
+      "text": "The attacker has captured a valid session token from the user through a fake sign-in page that relayed the real one. The token still carries the multifactor approval the user completed.",
+      "whenFixed": "The Check browser extension recognises the fake sign-in page and blocks it, so no token is captured in the first place."
     },
     {
       "id": "SignIn",

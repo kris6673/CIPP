@@ -6,8 +6,8 @@ import {
   Button,
   Card,
   CardContent,
-  Chip,
   CircularProgress,
+  Collapse,
   Container,
   Divider,
   Stack,
@@ -29,9 +29,7 @@ import { Layout as DashboardLayout } from '../../../layouts/index'
 import { TabbedLayout } from '../../../layouts/TabbedLayout'
 import tabOptions from './tabOptions.json'
 import { CippHead } from '../../../components/CippComponents/CippHead'
-import { CippDataTable } from '../../../components/CippTable/CippDataTable'
 import { CippTimeAgo } from '../../../components/CippComponents/CippTimeAgo'
-import CippButtonCard from '../../../components/CippCards/CippButtonCard'
 import CippFormSkeleton from '../../../components/CippFormPages/CippFormSkeleton'
 import { CippBaselineAddStandardDialog } from '../../../components/CippBaselines/CippBaselineAddStandardDialog'
 import { CippAlertPresetDialog } from '../../../components/CippComponents/CippAlertPresetDialog'
@@ -49,49 +47,37 @@ const CATEGORY_ORDER = [
   'Exchange & Email',
   'SharePoint & Data',
 ]
-const severityDot = {
-  Critical: 'error.main',
-  High: 'warning.main',
-  Medium: 'text.secondary',
+
+// One colour per outcome, used for the dot in the list and the status text in the run view.
+const outcomeStyle = {
+  Prevented: { text: 'Prevented', color: 'success.main' },
+  Detected: { text: 'Alerted, not prevented', color: 'warning.main' },
+  NotPrevented: { text: 'Not prevented', color: 'error.main' },
+  NotRun: { text: 'Not checked yet', color: 'text.disabled' },
 }
-const verdictDot = {
+const verdictColor = {
+  blocked: 'success.main',
+  pass: 'success.main',
+  partial: 'warning.main',
+  allowed: 'error.main',
+  fail: 'error.main',
+}
+const timelineDot = {
   blocked: 'success',
   pass: 'success',
   partial: 'warning',
   allowed: 'error',
   fail: 'error',
-  unknown: 'grey',
-  info: 'grey',
-}
-const outcomeChip = {
-  Prevented: { label: 'Prevented', color: 'success' },
-  Detected: { label: 'Alerted, not prevented', color: 'warning' },
-  NotPrevented: { label: 'Not prevented', color: 'error' },
-  NotRun: { label: 'Not checked yet', color: 'default' },
-}
-const fixStatusColor = {
-  Missing: 'error',
-  'Not configured': 'error',
-  Drift: 'error',
-  'Accepted deviation': 'warning',
 }
 const fixTypeLabel = {
   standard: 'Standard',
-  caTemplate: 'CA policy',
+  caTemplate: 'Conditional Access policy',
   alertPreset: 'Alert',
 }
 
-const CheckLine = ({ state, text, note }) => {
-  const mark =
-    state === true ? '✓' : state === false ? '✕' : state === 'warn' ? '!' : '?'
-  const color =
-    state === true
-      ? 'success.main'
-      : state === false
-        ? 'error.main'
-        : state === 'warn'
-          ? 'warning.main'
-          : 'text.secondary'
+const CheckLine = ({ ok, warn, text, note }) => {
+  const color = warn ? 'warning.main' : ok ? 'success.main' : 'error.main'
+  const mark = warn ? '!' : ok ? '✓' : '✕'
   return (
     <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
       <Typography
@@ -109,7 +95,7 @@ const CheckLine = ({ state, text, note }) => {
             sx={{ color: 'text.secondary' }}
           >
             {' '}
-            - {note}
+            · {note}
           </Typography>
         )}
       </Typography>
@@ -117,76 +103,93 @@ const CheckLine = ({ state, text, note }) => {
   )
 }
 
-const Stat = ({ label, value, color }) => (
-  <Box>
-    <Typography
-      variant="caption"
-      sx={{
-        color: 'text.secondary',
-        fontWeight: 600,
-        letterSpacing: 0.8,
-        textTransform: 'uppercase',
-      }}
-    >
-      {label}
-    </Typography>
-    <Typography
-      variant="subtitle2"
-      sx={{ color: color ?? 'text.primary', fontWeight: 700 }}
-    >
-      {value}
-    </Typography>
-  </Box>
-)
+const stepStatus = (step, fixed) => {
+  const verdict = fixed ? step.verdictWhenFixed : step.verdict
+  if (fixed) {
+    if (verdict === 'blocked') return { text: 'Blocked', color: 'success.main' }
+    if (verdict === 'pass') return { text: 'Protected', color: 'success.main' }
+    if (verdict === 'allowed')
+      return { text: 'Still allowed', color: 'error.main' }
+    return null
+  }
+  if (!step.verdictLabel) return null
+  return {
+    text: step.verdictLabel,
+    color: verdictColor[verdict] ?? 'text.secondary',
+  }
+}
+
+const standardNote = (standard) => {
+  if (standard.compliant === true) return null
+  if (standard.compliant === false)
+    return standard.status === 'Drift' ? 'drifted' : 'not in place'
+  return standard.status?.toLowerCase() ?? 'not checked'
+}
+
+// Policy-by-policy result of the live What If evaluation, folded away until asked for.
+const PolicyResults = ({ policies }) => {
+  const [open, setOpen] = useState(false)
+  if (policies.length === 0) return null
+  return (
+    <Box>
+      <Button
+        size="small"
+        sx={{ px: 0, minWidth: 0 }}
+        onClick={() => setOpen((value) => !value)}
+      >
+        {open ? 'Hide' : 'Show'} the {policies.length} policies evaluated
+      </Button>
+      <Collapse in={open}>
+        <Stack spacing={0.5} sx={{ mt: 0.5 }}>
+          {policies.map((policy) => (
+            <Typography
+              key={policy.displayName}
+              variant="body2"
+              sx={{
+                color: policy.policyApplies ? 'text.primary' : 'text.secondary',
+              }}
+            >
+              {policy.displayName}
+              <Typography
+                component="span"
+                variant="body2"
+                sx={{ color: 'text.secondary' }}
+              >
+                {' '}
+                · {policy.result}
+              </Typography>
+            </Typography>
+          ))}
+        </Stack>
+      </Collapse>
+    </Box>
+  )
+}
 
 // One action per gap: standards go straight into a baseline, alerts straight into the alert
 // rules, both through the same dialogs and endpoints the Baselines and Alerts pages use.
 const FixAction = ({ fix, onAddStandard, onEnableAlert }) => {
   const router = useRouter()
-  if (fix.type === 'standard' && fix.assigned) {
-    return (
-      <Button
-        size="small"
-        sx={{ py: 0, minWidth: 0 }}
-        onClick={() => router.push('/tenant/baselines/alignment')}
-      >
-        Review in alignment
-      </Button>
+  const button = (label, onClick) => (
+    <Button
+      size="small"
+      variant="outlined"
+      sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+      onClick={onClick}
+    >
+      {label}
+    </Button>
+  )
+  if (fix.type === 'standard' && fix.assigned)
+    return button('Review', () => router.push('/tenant/baselines/alignment'))
+  if (fix.type === 'standard')
+    return button('Add to baseline', () => onAddStandard(fix))
+  if (fix.type === 'caTemplate')
+    return button('Deploy', () =>
+      router.push('/tenant/conditional/list-template')
     )
-  }
-  if (fix.type === 'standard') {
-    return (
-      <Button
-        size="small"
-        sx={{ py: 0, minWidth: 0 }}
-        onClick={() => onAddStandard(fix)}
-      >
-        Add to a baseline
-      </Button>
-    )
-  }
-  if (fix.type === 'caTemplate') {
-    return (
-      <Button
-        size="small"
-        sx={{ py: 0, minWidth: 0 }}
-        onClick={() => router.push('/tenant/conditional/list-template')}
-      >
-        Deploy a CA template
-      </Button>
-    )
-  }
-  if (fix.type === 'alertPreset') {
-    return (
-      <Button
-        size="small"
-        sx={{ py: 0, minWidth: 0 }}
-        onClick={() => onEnableAlert(fix)}
-      >
-        Enable the alert
-      </Button>
-    )
-  }
+  if (fix.type === 'alertPreset')
+    return button('Enable', () => onEnableAlert(fix))
   return null
 }
 
@@ -247,30 +250,23 @@ const ScenarioRun = ({ tenant, scenarioId, onBack }) => {
       step.id ===
       (fixed ? summary?.preventedWhenFixedAtStep : summary?.preventedAtStep)
   )
-  const alreadyInPlace = [
-    ...new Set(
-      steps.flatMap((step) =>
-        asArray(step.standards)
-          .filter((s) => s.compliant === true)
-          .map((s) => s.label)
-      )
-    ),
-  ]
-
   const evaluationFailed = steps.some(
     (step) => step.reached && step.whatIf?.error
   )
-  const headline = fixed
-    ? prevented
-      ? `Blocked at "${preventedStep?.title}"`
-      : 'No mapped control stops this chain'
-    : prevented
-      ? `Blocked at "${preventedStep?.title}"`
+  const headline = prevented
+    ? `Blocked at "${preventedStep?.title}"`
+    : fixed
+      ? 'No mapped control stops this chain'
       : evaluationFailed
         ? 'The sign-in could not be evaluated'
         : summary?.detected
-          ? 'Attack succeeds, but an alert would fire'
-          : 'Attack succeeds, undetected'
+          ? 'The attack succeeds, but an alert would fire'
+          : 'The attack succeeds, undetected'
+  const headlineColor = prevented
+    ? 'success.main'
+    : !fixed && evaluationFailed
+      ? 'warning.main'
+      : 'error.main'
   const subline = result?.scenario?.outcome
     ? prevented
       ? result.scenario.outcome.prevented
@@ -287,66 +283,54 @@ const ScenarioRun = ({ tenant, scenarioId, onBack }) => {
   }
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={3}>
       <Box>
         <Button
           size="small"
           startIcon={<CippIcons.ArrowBack />}
           onClick={onBack}
+          sx={{ ml: -1 }}
         >
           All scenarios
         </Button>
       </Box>
+
       <Box
         sx={{
           display: 'flex',
-          alignItems: 'flex-end',
+          alignItems: 'flex-start',
           gap: 2,
           flexWrap: 'wrap',
         }}
       >
-        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+        <Box sx={{ flex: 1, minWidth: 280 }}>
           <Typography variant="h4">
             {result?.scenario?.title ?? 'Checking scenario'}
           </Typography>
           {result?.scenario?.summary && (
             <Typography
-              variant="body2"
-              sx={{ color: 'text.secondary', mt: 0.5, maxWidth: 720 }}
+              variant="body1"
+              sx={{ color: 'text.secondary', mt: 1, maxWidth: 760 }}
             >
               {result.scenario.summary}
-              {result.identity
-                ? ` Sign-ins are evaluated live as ${result.identity.userPrincipalName}.`
-                : ''}
             </Typography>
           )}
           {result?.lastRun && (
             <Typography
               variant="caption"
-              sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}
+              sx={{ color: 'text.secondary', display: 'block', mt: 1 }}
             >
-              Checked <CippTimeAgo data={result.lastRun} />
-              {result.evidence?.whatIfCalls
-                ? ` · ${result.evidence.whatIfCalls} live What If evaluation${result.evidence.whatIfCalls === 1 ? '' : 's'}`
+              {result.identity
+                ? `Evaluated as ${result.identity.userPrincipalName} · `
                 : ''}
-              . Nothing was changed in the tenant.
+              checked <CippTimeAgo data={result.lastRun} />
+              {fixed
+                ? ' · assumes every control on the right is in place; sign-in outcomes are the expected results, not a live evaluation'
+                : ''}
             </Typography>
           )}
         </Box>
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-          <Button
-            size="small"
-            variant="outlined"
-            disabled={loading}
-            startIcon={
-              run.isPending ? (
-                <CircularProgress size={14} color="inherit" />
-              ) : undefined
-            }
-            onClick={startRun}
-          >
-            {run.isPending ? 'Checking' : 'Run again'}
-          </Button>
           {result && (
             <ToggleButtonGroup
               value={mode}
@@ -364,13 +348,26 @@ const ScenarioRun = ({ tenant, scenarioId, onBack }) => {
               }}
             >
               <ToggleButton value="current" aria-label="current state">
-                Current state
+                Today
               </ToggleButton>
-              <ToggleButton value="fixed" aria-label="recommended state">
-                Recommended state
+              <ToggleButton value="fixed" aria-label="with the fixes in place">
+                With fixes
               </ToggleButton>
             </ToggleButtonGroup>
           )}
+          <Button
+            size="small"
+            variant="outlined"
+            disabled={loading}
+            startIcon={
+              run.isPending ? (
+                <CircularProgress size={14} color="inherit" />
+              ) : undefined
+            }
+            onClick={startRun}
+          >
+            {run.isPending ? 'Checking' : 'Run again'}
+          </Button>
         </Stack>
       </Box>
 
@@ -379,288 +376,203 @@ const ScenarioRun = ({ tenant, scenarioId, onBack }) => {
         <Alert severity="error">{getCippError(stored.error)}</Alert>
       )}
       {loading && !result && <CippFormSkeleton layout={[1, 3, 1, 1, 1]} />}
-
       {result && result.licensed === false && (
         <Alert severity="warning">
           This tenant is not licensed for the capabilities this scenario needs,
-          so the live sign-in evaluation was skipped. The standards checks still
-          ran.
+          so the live sign-in evaluation was skipped. The standards were still
+          checked.
         </Alert>
       )}
 
       {result && (
         <>
-          <Card>
-            <CardContent
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                flexWrap: 'wrap',
-              }}
+          <Box>
+            <Typography
+              variant="h5"
+              sx={{ color: headlineColor, fontWeight: 700 }}
             >
-              <Box sx={{ flex: 1, minWidth: 260 }}>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    color: prevented
-                      ? 'success.main'
-                      : !fixed && evaluationFailed
-                        ? 'warning.main'
-                        : 'error.main',
-                    fontWeight: 700,
-                  }}
-                >
-                  {headline}
-                </Typography>
-                <Typography
-                  variant="body2"
-                  sx={{ color: 'text.secondary', maxWidth: 640 }}
-                >
-                  {subline}
-                </Typography>
-              </Box>
-              <Stack direction="row" spacing={4}>
-                <Stat
-                  label="Prevented"
-                  value={
-                    prevented ? `Yes, step ${preventedStep?.index ?? ''}` : 'No'
-                  }
-                  color={prevented ? 'success.main' : 'error.main'}
-                />
-                <Stat
-                  label="Alerted"
-                  value={fixed || summary?.detected ? 'Yes' : 'No'}
-                  color={
-                    fixed || summary?.detected ? 'success.main' : 'error.main'
-                  }
-                />
-                <Stat
-                  label="Standards in place"
-                  value={
-                    fixed
-                      ? `${summary?.standardsTotal ?? 0} / ${summary?.standardsTotal ?? 0}`
-                      : `${summary?.standardsCompliant ?? 0} / ${summary?.standardsTotal ?? 0}`
-                  }
-                  color={
-                    fixed || (summary?.standardsGap ?? 0) === 0
-                      ? 'success.main'
-                      : 'warning.main'
-                  }
-                />
-              </Stack>
-            </CardContent>
-          </Card>
+              {headline}
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ color: 'text.secondary', maxWidth: 760, mt: 0.5 }}
+            >
+              {subline}
+            </Typography>
+          </Box>
 
-          {fixed && (
-            <Alert severity="info">
-              This view assumes every control listed under "Closes the gaps" is
-              in place. The Conditional Access What If API only evaluates
-              policies that exist, so sign-in outcomes here are the scenario's
-              expected results, not a live evaluation.
-            </Alert>
-          )}
-
-          <Grid container spacing={3}>
+          <Grid container spacing={4}>
             <Grid size={{ md: 8, xs: 12 }}>
               <Timeline
                 sx={{
                   p: 0,
                   m: 0,
                   [`& .MuiTimelineOppositeContent-root`]: {
-                    flex: 0.08,
-                    minWidth: 56,
+                    flex: 0.06,
+                    minWidth: 48,
                     pl: 0,
+                    pr: 1.5,
                   },
-                  [`& .MuiTimelineContent-root`]: { flex: 0.92 },
+                  [`& .MuiTimelineContent-root`]: { flex: 0.94 },
                 }}
               >
                 {steps.map((step, index) => {
                   const reached = fixed ? step.reachedWhenFixed : step.reached
                   const verdict = fixed ? step.verdictWhenFixed : step.verdict
-                  const label = fixed
-                    ? verdict === 'blocked'
-                      ? 'Blocked'
-                      : verdict === 'pass'
-                        ? 'Protected'
-                        : verdict === 'allowed'
-                          ? 'Still allowed'
-                          : ''
-                    : step.verdictLabel
+                  const status = stepStatus(step, fixed)
                   const whatIf = step.whatIf
                   const triggeredGaps = asArray(whatIf?.gaps).filter(
                     (gap) => gap.triggered
                   )
-                  const policies = asArray(whatIf?.policies)
-                  const chipColor =
-                    verdictDot[verdict] === 'grey'
-                      ? 'default'
-                      : verdictDot[verdict]
+                  const reportOnly = asArray(whatIf?.reportOnlyWouldStop)
                   return (
                     <TimelineItem
                       key={step.id}
-                      sx={{ opacity: reached ? 1 : 0.45 }}
+                      sx={{ opacity: reached ? 1 : 0.4 }}
                     >
-                      <TimelineOppositeContent sx={{ m: 'auto 0' }}>
+                      <TimelineOppositeContent sx={{ pt: 0.75 }}>
                         <Typography
                           variant="caption"
-                          sx={{ color: 'text.secondary', fontWeight: 600 }}
+                          sx={{ color: 'text.secondary' }}
                         >
-                          Step {step.index}
+                          {step.index}
                         </Typography>
                       </TimelineOppositeContent>
                       <TimelineSeparator>
                         <TimelineDot
-                          color={verdictDot[verdict] ?? 'grey'}
-                          variant="outlined"
+                          color={timelineDot[verdict] ?? 'grey'}
+                          variant={reached ? 'filled' : 'outlined'}
+                          sx={{ my: 0.75 }}
                         />
                         {index < steps.length - 1 && <TimelineConnector />}
                       </TimelineSeparator>
-                      <TimelineContent sx={{ py: 0.5, px: 2, pb: 3 }}>
-                        <Stack spacing={1}>
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 1,
-                              flexWrap: 'wrap',
-                            }}
+                      <TimelineContent sx={{ pt: 0.25, pb: 3.5, pr: 0 }}>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'baseline',
+                            gap: 1.5,
+                            flexWrap: 'wrap',
+                          }}
+                        >
+                          <Typography
+                            variant="subtitle1"
+                            sx={{ fontWeight: 600 }}
                           >
+                            {step.title}
+                          </Typography>
+                          {status && (
                             <Typography
-                              variant="subtitle1"
-                              sx={{ fontWeight: 600 }}
+                              variant="caption"
+                              sx={{ color: status.color, fontWeight: 600 }}
                             >
-                              {step.title}
+                              {status.text}
                             </Typography>
-                            {label && (
-                              <Chip
-                                size="small"
-                                label={label}
-                                color={chipColor}
-                              />
-                            )}
-                            {!reached && (
-                              <Chip
-                                size="small"
-                                variant="outlined"
-                                label="Not reached"
-                              />
-                            )}
-                          </Box>
+                          )}
+                          {!reached && (
+                            <Typography
+                              variant="caption"
+                              sx={{ color: 'text.secondary' }}
+                            >
+                              not reached
+                            </Typography>
+                          )}
+                        </Box>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: 'text.secondary',
+                            maxWidth: 720,
+                            mt: 0.5,
+                          }}
+                        >
+                          {fixed && step.whenFixed ? step.whenFixed : step.text}
+                        </Typography>
+
+                        {!fixed && whatIf?.error && (
                           <Typography
                             variant="body2"
-                            sx={{ color: 'text.secondary', maxWidth: 720 }}
+                            sx={{ color: 'warning.main', mt: 1 }}
                           >
-                            {fixed && step.whenFixed
-                              ? step.whenFixed
-                              : step.text}
+                            {whatIf.error}
                           </Typography>
+                        )}
 
-                          {!fixed && whatIf?.error && (
-                            <Alert severity="warning">{whatIf.error}</Alert>
-                          )}
-
-                          {!fixed && (
-                            <Stack spacing={0.5}>
+                        {!fixed &&
+                          (triggeredGaps.length > 0 ||
+                            reportOnly.length > 0 ||
+                            asArray(step.standards).length > 0 ||
+                            asArray(step.alerts).length > 0) && (
+                            <Stack spacing={0.5} sx={{ mt: 1.5 }}>
                               {triggeredGaps.map((gap) => (
                                 <CheckLine
                                   key={gap.text}
-                                  state={false}
+                                  ok={false}
                                   text={gap.text}
-                                  note="missing control"
                                 />
                               ))}
-                              {whatIf &&
-                                asArray(whatIf.reportOnlyWouldStop).length >
-                                  0 && (
-                                  <CheckLine
-                                    state="warn"
-                                    text={`Report-only policy would have stopped this sign-in: ${asArray(whatIf.reportOnlyWouldStop).join(', ')}`}
-                                    note="never enforced"
-                                  />
-                                )}
+                              {reportOnly.length > 0 && (
+                                <CheckLine
+                                  warn
+                                  text={`A report-only policy would have stopped this sign-in: ${reportOnly.join(', ')}`}
+                                />
+                              )}
                               {asArray(step.standards).map((standard) => (
                                 <CheckLine
                                   key={standard.name}
-                                  state={standard.compliant}
+                                  ok={standard.compliant === true}
+                                  warn={standard.compliant === null}
                                   text={standard.label}
-                                  note={`${standard.status}${standard.detail ? `: ${standard.detail}` : ''} · ${standard.role}`}
+                                  note={standardNote(standard)}
                                 />
                               ))}
                               {asArray(step.alerts).map((alert) => (
                                 <CheckLine
                                   key={alert.operation}
-                                  state={alert.configured}
+                                  ok={alert.configured}
                                   text={
                                     alert.configured
-                                      ? `An alert rule watches "${alert.operation}"`
-                                      : `No alert rule watches "${alert.operation}"`
-                                  }
-                                  note={
-                                    alert.configured
-                                      ? asArray(alert.rules).join(', ')
-                                      : 'nobody is told'
+                                      ? `An alert watches "${alert.operation}"`
+                                      : `Nothing alerts on "${alert.operation}"`
                                   }
                                 />
                               ))}
                             </Stack>
                           )}
-
-                          {fixed && (
-                            <Stack spacing={0.5}>
-                              {asArray(step.fixes).map((fix) => (
-                                <CheckLine
-                                  key={`${fix.type}-${fix.name}`}
-                                  state={true}
-                                  text={
-                                    fix.type === 'caTemplate'
-                                      ? fix.name
-                                      : fix.label
-                                  }
-                                  note={`${fixTypeLabel[fix.type] ?? fix.type} in place`}
-                                />
-                              ))}
-                            </Stack>
-                          )}
-
-                          {!fixed && policies.length > 0 && (
-                            <CippButtonCard
-                              component="accordion"
-                              title={`Policy-by-policy result (${policies.length})`}
-                            >
-                              <CippDataTable
-                                queryKey={`SecuritySimulation-${scenarioId}-${step.id}-policies`}
-                                title="Conditional Access policies"
-                                data={policies}
-                                simpleColumns={[
-                                  'displayName',
-                                  'state',
-                                  'policyApplies',
-                                  'result',
-                                ]}
+                        {fixed && asArray(step.fixes).length > 0 && (
+                          <Stack spacing={0.5} sx={{ mt: 1.5 }}>
+                            {asArray(step.fixes).map((fix) => (
+                              <CheckLine
+                                key={`${fix.type}-${fix.name}`}
+                                ok
+                                text={
+                                  fix.type === 'caTemplate'
+                                    ? fix.name
+                                    : fix.label
+                                }
                               />
-                            </CippButtonCard>
-                          )}
-                        </Stack>
+                            ))}
+                          </Stack>
+                        )}
+                        {!fixed && whatIf && (
+                          <Box sx={{ mt: 1 }}>
+                            <PolicyResults
+                              policies={asArray(whatIf.policies)}
+                            />
+                          </Box>
+                        )}
                       </TimelineContent>
                     </TimelineItem>
                   )
                 })}
               </Timeline>
             </Grid>
+
             <Grid size={{ md: 4, xs: 12 }}>
               <Card>
                 <CardContent>
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      color: 'text.secondary',
-                      fontWeight: 600,
-                      letterSpacing: 0.8,
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Closes the gaps
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                    What closes the gaps
                   </Typography>
                   {fixes.length === 0 && (
                     <Typography
@@ -672,60 +584,36 @@ const ScenarioRun = ({ tenant, scenarioId, onBack }) => {
                   )}
                   <Stack divider={<Divider flexItem />} sx={{ mt: 1 }}>
                     {fixes.map((fix) => (
-                      <Box key={`${fix.type}-${fix.name}`} sx={{ py: 1.25 }}>
-                        <Box
-                          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
-                        >
-                          <Typography
-                            variant="body2"
-                            sx={{ fontWeight: 600, flex: 1, minWidth: 0 }}
-                          >
+                      <Box
+                        key={`${fix.type}-${fix.name}`}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1.5,
+                          py: 1.25,
+                        }}
+                      >
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
                             {fix.type === 'caTemplate' ? fix.name : fix.label}
                           </Typography>
-                          <Chip
-                            size="small"
-                            label={fix.status}
-                            color={fixStatusColor[fix.status] ?? 'default'}
-                          />
-                        </Box>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1,
-                            flexWrap: 'wrap',
-                            mt: 0.25,
-                          }}
-                        >
                           <Typography
                             variant="caption"
                             sx={{ color: 'text.secondary' }}
                           >
-                            {fixTypeLabel[fix.type] ?? fix.type} · {fix.role}{' '}
-                            step{' '}
+                            {fixTypeLabel[fix.type] ?? fix.type} · step{' '}
                             {steps.find((step) => step.id === fix.step)
                               ?.index ?? ''}
                           </Typography>
-                          <FixAction
-                            fix={fix}
-                            onAddStandard={openAddStandard}
-                            onEnableAlert={openEnableAlert}
-                          />
                         </Box>
+                        <FixAction
+                          fix={fix}
+                          onAddStandard={openAddStandard}
+                          onEnableAlert={openEnableAlert}
+                        />
                       </Box>
                     ))}
                   </Stack>
-                  {alreadyInPlace.length > 0 && (
-                    <>
-                      <Divider sx={{ my: 1.5 }} />
-                      <Typography
-                        variant="caption"
-                        sx={{ color: 'text.secondary' }}
-                      >
-                        Already in place: {alreadyInPlace.join(', ')}
-                      </Typography>
-                    </>
-                  )}
                 </CardContent>
               </Card>
             </Grid>
@@ -796,7 +684,7 @@ const ScenarioList = ({ tenant, catalog, onOpen }) => {
   ).length
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={4}>
       <Box
         sx={{
           display: 'flex',
@@ -807,37 +695,23 @@ const ScenarioList = ({ tenant, catalog, onOpen }) => {
       >
         <Box sx={{ flex: 1, minWidth: 280 }}>
           <Typography
-            variant="body2"
+            variant="body1"
             sx={{ color: 'text.secondary', maxWidth: 720 }}
           >
-            Pick an event that could happen to this tenant to see how it plays
-            out today and which standard, policy or alert closes each gap.
+            Each scenario is an event that could happen to this tenant. Open one
+            to see how it plays out today and what closes each gap.
           </Typography>
           {scenarios.length > 0 && (
             <Typography
-              variant="body2"
-              sx={{ color: 'text.secondary', mt: 0.5 }}
+              variant="caption"
+              sx={{ color: 'text.secondary', display: 'block', mt: 1 }}
             >
               {checked.length === 0 ? (
                 'No scenario has been checked yet.'
               ) : (
                 <>
-                  Last checked <CippTimeAgo data={lastRun} /> ·{' '}
-                  <Typography
-                    component="span"
-                    variant="body2"
-                    sx={{ color: 'success.main', fontWeight: 600 }}
-                  >
-                    {preventedCount} prevented
-                  </Typography>{' '}
-                  ·{' '}
-                  <Typography
-                    component="span"
-                    variant="body2"
-                    sx={{ color: 'error.main', fontWeight: 600 }}
-                  >
-                    {notPreventedCount} not prevented
-                  </Typography>
+                  Last checked <CippTimeAgo data={lastRun} /> · {preventedCount}{' '}
+                  prevented · {notPreventedCount} not prevented
                   {checked.length < scenarios.length
                     ? ` · ${scenarios.length - checked.length} not checked yet`
                     : ''}
@@ -908,7 +782,14 @@ const ScenarioList = ({ tenant, catalog, onOpen }) => {
             </Typography>
             <Card>
               {rows.map((scenario, index) => {
-                const chip = outcomeChip[scenario.outcome] ?? outcomeChip.NotRun
+                const style =
+                  outcomeStyle[scenario.outcome] ?? outcomeStyle.NotRun
+                const detail =
+                  scenario.licensed === false
+                    ? 'Not licensed'
+                    : scenario.outcome === 'NotRun'
+                      ? style.text
+                      : `${style.text}${scenario.fixCount > 0 ? ` · ${scenario.fixCount} gap${scenario.fixCount === 1 ? '' : 's'}` : ''}`
                 return (
                   <Box
                     key={scenario.id}
@@ -918,7 +799,7 @@ const ScenarioList = ({ tenant, catalog, onOpen }) => {
                       alignItems: 'center',
                       gap: 1.5,
                       px: 2.25,
-                      py: 1.5,
+                      py: 1.25,
                       cursor: 'pointer',
                       borderBottom: index < rows.length - 1 ? 1 : 0,
                       borderColor: 'divider',
@@ -931,54 +812,28 @@ const ScenarioList = ({ tenant, catalog, onOpen }) => {
                         height: 8,
                         borderRadius: '50%',
                         flexShrink: 0,
-                        bgcolor:
-                          severityDot[scenario.severity] ?? 'text.secondary',
+                        bgcolor: style.color,
                       }}
-                      title={scenario.severity}
                     />
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography variant="subtitle2" noWrap>
-                        {scenario.title}
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        noWrap
-                        sx={{ color: 'text.secondary' }}
-                      >
-                        {scenario.summary}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
-                      <Chip
-                        size="small"
-                        label={chip.label}
-                        color={chip.color}
-                        variant={
-                          scenario.outcome === 'NotRun' ? 'outlined' : 'filled'
-                        }
-                      />
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          color: 'text.secondary',
-                          display: 'block',
-                          mt: 0.25,
-                        }}
-                      >
-                        {scenario.lastRun ? (
-                          <>
-                            checked <CippTimeAgo data={scenario.lastRun} />
-                            {scenario.fixCount > 0
-                              ? ` · ${scenario.fixCount} gap${scenario.fixCount === 1 ? '' : 's'}`
-                              : ''}
-                          </>
-                        ) : scenario.licensed === false ? (
-                          'not licensed for this scenario'
-                        ) : (
-                          'not checked yet'
-                        )}
-                      </Typography>
-                    </Box>
+                    <Typography
+                      variant="body1"
+                      noWrap
+                      sx={{ flex: 1, minWidth: 0 }}
+                    >
+                      {scenario.title}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color:
+                          scenario.licensed === false
+                            ? 'text.disabled'
+                            : style.color,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {detail}
+                    </Typography>
                   </Box>
                 )
               })}
