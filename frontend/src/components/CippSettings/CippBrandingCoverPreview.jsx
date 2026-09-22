@@ -163,6 +163,19 @@ export const REPORT_COVER_PRESETS = [
     footer: "Confidential — Prepared for the leadership team",
   },
   {
+    id: "baseline",
+    label: "Security Baseline Report",
+    reportName: "Security Baseline Report",
+    coverLabel: "Security Baseline",
+    title: "Baseline",
+    accent: "Report",
+    subtitle:
+      "The security protections in place today, the improvements rolling out next, and the reasons behind each choice.",
+    metaPrimary: SAMPLE_TENANT_NAME,
+    metaSecondary: null,
+    footer: "Confidential & Proprietary",
+  },
+  {
     // Last: this one has no fixed content of its own — it renders whatever an operator assembles in
     // the report builder, so it belongs after the reports that are the same every time.
     id: "reportBuilder",
