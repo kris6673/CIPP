@@ -503,7 +503,7 @@ namespace CIPP.Reporting
                     if (!string.IsNullOrEmpty(toneField))
                     {
                         var colour = ToneColour(ReportNode.RowStr(r, toneField));
-                        rowCells[ci] = CellRuns(text, colour, bold: false, italic: true);
+                        rowCells[ci] = CellRuns(text, colour, bold: false, italic: true, size: ReportStyles.StatusText);
                     }
                     else if (!string.IsNullOrEmpty(colourField))
                     {
@@ -534,6 +534,19 @@ namespace CIPP.Reporting
             var style = BrandedTableStyle(ctx);
             ApplyDataTableGeometry(ctx, style, widths, cells.Count, hidden > 0, emptyRow);
             style.Alignments = aligns;
+            // A status word stands in the client page's 14pt line rather than the 10.4pt cell line, so its
+            // cell carries the difference as padding: the word sits 0.9pt lower and a one-line row is 27pt.
+            for (var ci = 0; ci < columns.Count; ci++)
+            {
+                if (string.IsNullOrEmpty(ReportNode.RowStr(columns[ci], "toneField"))) continue;
+                for (var ri = 1; ri <= shown.Count; ri++)
+                {
+                    var pad = style.CellPaddings!.TryGetValue((ri, ci), out var p) ? p : new PdfCellPadding();
+                    pad.Top = style.CellPaddingTop + 0.9;
+                    pad.Bottom = style.CellPaddingBottom + 1.4;
+                    style.CellPaddings[(ri, ci)] = pad;
+                }
+            }
             // Client body rows are wrap={false}: a row that does not fit moves whole to the next page. OfficeIMO
             // throws on an unsplittable row taller than a page, so a row is kept whole only when its height,
             // measured by word-wrapping each cell with the Helvetica metrics, is under half a page (the

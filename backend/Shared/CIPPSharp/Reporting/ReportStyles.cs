@@ -21,6 +21,7 @@ namespace CIPP.Reporting
         public const double Heading3 = 12;
         public const double TableCell = 8;
         public const double TableHeaderCell = 7;
+        public const double StatusText = 9;
         public const double BulletText = 9;
         public const double CodeBlock = 8;
         public const double FooterText = 7;
