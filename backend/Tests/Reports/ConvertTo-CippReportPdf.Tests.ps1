@@ -231,6 +231,20 @@ Describe 'Report builder cover block' {
     }
 }
 
+Describe 'Cover footer note' {
+    It 'prefers the branding cover note over the report''s own, which is the fallback' {
+        $Cover = {
+            param($Branding)
+            $Bytes = ConvertTo-CippReportPdf -Blocks @(@{ type = 'blank'; title = 'T'; content = '<p>x</p>' }) -Variables @{ coverfooternote = 'Report wording' } -Branding $Branding -TenantName 'Contoso' -ReportName 'T'
+            [OfficeIMO.Pdf.PdfReadDocument]::Open($Bytes).Pages[0].ExtractText()
+        }
+        $Branded = & $Cover @{ colour = '#0E4C92'; coverFooterText = 'Branded wording' }
+        $Branded | Should -Match 'BRANDED\s+WORDING'
+        $Branded | Should -Not -Match 'REPORT\s+WORDING'
+        & $Cover @{ colour = '#0E4C92' } | Should -Match 'REPORT\s+WORDING'
+    }
+}
+
 Describe 'Gallery covers on Infographic pages' {
     It 'reads a gallery cover into the page and leaves a missing one as a plain background' {
         function Get-CIPPImage { param($PartitionKey, $Id) if ($Id -eq 'g1') { @{ data = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==' } } }

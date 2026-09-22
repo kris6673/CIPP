@@ -389,9 +389,11 @@ namespace CIPP.Reporting
             if (ctx.Variables.TryGetValue("covermetanote", out var cmn) && !string.IsNullOrWhiteSpace(cmn))
                 Wrapped(San(cmn), y + 8, heroW, 11, 11 * lineBox, subtitleC);
 
+            // Branding's cover note wins and the report's own wording is the fallback (client ReportDocument),
+            // so a configured note is not silently ignored by every report that words its own.
             var note = "CONFIDENTIAL & PROPRIETARY";
-            if (ctx.Variables.TryGetValue("coverfooternote", out var cfn) && !string.IsNullOrWhiteSpace(cfn)) note = cfn;
-            else if (!string.IsNullOrEmpty(ctx.Theme.CoverFooterText)) note = ctx.Theme.CoverFooterText;
+            if (!string.IsNullOrEmpty(ctx.Theme.CoverFooterText)) note = ctx.Theme.CoverFooterText;
+            else if (ctx.Variables.TryGetValue("coverfooternote", out var cfn) && !string.IsNullOrWhiteSpace(cfn)) note = cfn;
             note = San(ReportTheme.ApplyVariables(note, ctx.Variables)).ToUpperInvariant();
             Line(note, 0, noteTop, w, 9, ctx.Theme.Palette["footer"], OfficeTextAlignment.Center);
 
