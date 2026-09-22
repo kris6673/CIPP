@@ -19,6 +19,7 @@ BeforeAll {
             'SharePointSiteUsage' {
                 @(
                     [pscustomobject]@{ rootWebTemplate = 'Group'; fileCount = '10'; storageUsedInBytes = 1GB }
+                    [pscustomobject]@{ rootWebTemplate = 'Team Channel'; fileCount = 2; storageUsedInBytes = 1GB }
                     [pscustomobject]@{ rootWebTemplate = 'SitePage'; fileCount = 5; storageUsedInBytes = 2GB }
                 )
             }
@@ -52,9 +53,10 @@ Describe 'Get-CIPPSharePointSharingReport' {
 
     It 'summarises each workload from the usage caches' {
         $s = $script:Report.summary
-        $s.teamsSites | Should -Be 1
-        $s.teamsFiles | Should -Be 10
-        $s.teamsStorageUsedGB | Should -Be 1
+        # Group-connected and Teams channel sites both count as Teams.
+        $s.teamsSites | Should -Be 2
+        $s.teamsFiles | Should -Be 12
+        $s.teamsStorageUsedGB | Should -Be 2
         $s.sharePointSites | Should -Be 1
         $s.sharePointFiles | Should -Be 5
         $s.sharePointStorageUsedGB | Should -Be 2

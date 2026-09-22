@@ -48,10 +48,10 @@ function Get-CIPPSharePointSharingReport {
     }
     $LastDataRefresh = $CacheTimestamps | Sort-Object | Select-Object -First 1
 
-    # --- Environment summaries per workload. Teams-connected sites (rootWebTemplate 'Group') are
+    # --- Environment summaries per workload. Teams-connected sites (rootWebTemplate 'Group' and 'Team Channel') are
     #     reported separately from the remaining SharePoint sites; OneDrive is per account. ---
-    $TeamsSiteRows = @($CacheData['SharePointSiteUsage'] | Where-Object { $_.rootWebTemplate -eq 'Group' })
-    $SharePointSiteRows = @($CacheData['SharePointSiteUsage'] | Where-Object { $_.rootWebTemplate -ne 'Group' })
+    $TeamsSiteRows = @($CacheData['SharePointSiteUsage'] | Where-Object { $_.rootWebTemplate -in @('Group', 'Team Channel') })
+    $SharePointSiteRows = @($CacheData['SharePointSiteUsage'] | Where-Object { $_.rootWebTemplate -notin @('Group', 'Team Channel') })
     $OneDriveRows = $CacheData['OneDriveUsage']
 
     # --- Sharing link rollups ---
