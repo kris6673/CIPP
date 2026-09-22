@@ -284,7 +284,7 @@ namespace CIPP.Reporting
             }
             // Full-width brand rule under the header (HR auto-fits the content width; a fixed-width
             // rectangle risks exceeding it).
-            item.HR(2, ReportComponents.Pdf(ctx.Theme.Palette["heading"]), spacingBefore: 6.2, spacingAfter: 13);
+            item.HR(1, ReportComponents.Pdf(ctx.Theme.Palette["heading"]), spacingBefore: 6.2, spacingAfter: 14);
         }
 
         // Client PageFooter: a 20pt box 14pt above the paper edge with a 1pt rule along its top, 5pt of padding
