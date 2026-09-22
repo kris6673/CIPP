@@ -1292,8 +1292,10 @@ namespace CIPP.Reporting
         // height - unlike item.Canvas, which paints page-absolute and lets neighbours overlap it). The
         // drawing shares the SVG coordinate system (top-left origin, y down), so the geometry is copied
         // verbatim: the 400x200 plot is centred in a bordered white frame, title above, caption below.
-        private const double ChartViewW = 400, ChartViewH = 200;
-        private const double ChartTitleSize = 10, ChartLabelSize = 7;
+        // Client chartContainer/chartCanvas: a 1pt border and 16pt padding round the title (10pt on the 14pt
+        // page line, 12pt under it), the canvas and the 8pt under it, and a caption 8pt under that.
+        private const double ChartViewW = 400, ChartViewH = 200, ChartCanvasGap = 8;
+        private const double ChartTitleSize = 10, ChartLabelSize = 7, ChartCaptionSize = 8;
 
         internal static OfficeColor OC(string hex)
         {
@@ -1323,10 +1325,10 @@ namespace CIPP.Reporting
             // A drawing exactly the content width is rejected as too wide; availableWidth lets a chart draw
             // inside a narrower column (half-width side-by-side charts) instead of the full page width.
             var w = (availableWidth ?? ctx.ContentWidth) - 2;
-            const double pad = 16, titleH = 14, titleGap = 12, captionGap = 8, captionH = 10;
+            const double border = 1, pad = 16, titleH = 14, titleGap = 12, captionGap = 8, captionH = ChartCaptionSize * 1.4;
             var hasTitle = !string.IsNullOrEmpty(title);
             var hasCaption = !string.IsNullOrEmpty(caption);
-            var plotTop = pad + (hasTitle ? titleH + titleGap : 0);
+            var plotTop = border + pad + (hasTitle ? titleH + titleGap : 0);
             // The plot's own coordinate width: the 400pt design width, or the drawing if it is narrower
             // (a half-width chart), so the geometry scales down to fit rather than overflowing the frame.
             var vw = Math.Min(ChartViewW, w);
@@ -1337,18 +1339,17 @@ namespace CIPP.Reporting
                 value: ReportNode.RowNum(d, "value"),
                 colour: SeriesColour(ctx, ReportNode.RowStr(d, "colour"), i))).ToList();
 
-            // A donut is drawn to its own height - the ring and the legend rows it needs - rather than
-            // the 400x200 box the bar and trend charts fill, so the frame closes up under the legend
-            // instead of leaving a band of white there and above the ring.
+            // A donut grows past the 200pt canvas only when its legend packs into more rows than fit it.
             var viewH = k == "donut" && entries.Count > 0 ? DonutViewHeight(entries, vw) : ChartViewH;
-            var totalH = plotTop + viewH + pad + (hasCaption ? captionGap + captionH : 0);
+            var captionTop = plotTop + viewH + ChartCanvasGap + captionGap;
+            var totalH = (hasCaption ? captionTop + captionH : plotTop + viewH + ChartCanvasGap) + pad + border;
 
             var dw = new OfficeDrawing(w, totalH);
             var frame = OfficeShape.RoundedRectangle(w, totalH, 6);
             frame.FillColor = OC(ReportColours.White); frame.StrokeColor = OC(ReportColours.Line); frame.StrokeWidth = 1;
             dw.AddShape(frame, 0, 0);
             if (hasTitle)
-                AddT(dw, San(title!), 0, pad, w, titleH, ChartTitleSize, ctx.Theme.Palette["body"], OfficeTextAlignment.Center, true);
+                AddT(dw, San(title!), 0, border + pad, w, titleH, ChartTitleSize, ctx.Theme.Palette["body"], OfficeTextAlignment.Center, true);
 
             if (entries.Count == 0)
                 AddT(dw, "No data available for this chart.", 0, plotTop + viewH / 2 - 6, w, 12, ReportStyles.Body, ReportColours.Faint, OfficeTextAlignment.Center);
@@ -1357,10 +1358,10 @@ namespace CIPP.Reporting
             else DrawBar(ctx, dw, entries, leftPad, plotTop, vw);
 
             if (hasCaption)
-                AddT(dw, San(caption!), 0, plotTop + viewH + captionGap, w, captionH, ChartLabelSize, ctx.Theme.Palette["chart"], OfficeTextAlignment.Center);
+                AddT(dw, San(caption!), 0, captionTop, w, captionH, ChartCaptionSize, ctx.Theme.Palette["chart"], OfficeTextAlignment.Center, true);
 
             item.Drawing(dw, PdfAlign.Left);
-            item.Spacer(12);
+            item.Spacer(20);                           // client chartContainer marginBottom
         }
 
         /// <summary>A chart block flagged to render at half the page width (so two can sit side by side).</summary>
@@ -1442,8 +1443,8 @@ namespace CIPP.Reporting
             }
         }
 
-        // Donut geometry in chart coords: the ring's centre and radius, and where the legend starts.
-        private const double DonutCy = 68, DonutOuterR = 60, DonutInnerR = 25, DonutLegendY = 158, LegendRowH = 14;
+        // Donut geometry in chart coords (the client's): the ring's centre and radius, and where the legend starts.
+        private const double DonutCy = 85, DonutOuterR = 60, DonutInnerR = 25, DonutLegendY = 172, LegendRowH = 14;
         private const double LegendSwatch = 8, LegendSwatchGap = 4, LegendEntryGap = 18, LegendCharW = 3.6;
 
         // Legend entries packed into rows that fit the given width: they flow left to right and wrap when
@@ -1469,11 +1470,12 @@ namespace CIPP.Reporting
             return rows;
         }
 
-        /// <summary>The height a donut needs: the ring, then however many legend rows fit the width.</summary>
+        /// <summary>The height a donut needs: the client's 200pt canvas, which holds the ring and three legend
+        /// rows (the third runs into the 8pt under it), and a row more for each legend row past that.</summary>
         private static double DonutViewHeight(List<(string label, double value, string colour)> entries, double viewW = ChartViewW)
         {
             var rows = Math.Max(1, PackLegend(entries.Where(e => e.value > 0).ToList(), viewW).Count);
-            return DonutLegendY + rows * LegendRowH - 2;
+            return Math.Max(ChartViewH, DonutLegendY + (rows - 1) * LegendRowH + 4 - ChartCanvasGap);
         }
 
         private static void DrawDonut(ReportContext ctx, OfficeDrawing dw,
@@ -1509,11 +1511,11 @@ namespace CIPP.Reporting
                 dw.AddShape(slice, ox, oy);
                 preceding += e.value;
             }
-            // Total in the middle, with an optional caption under it (client centreLabel).
-            var centred = string.IsNullOrEmpty(centreLabel);
-            AddT(dw, FmtNum(total), ox + viewW / 2 - 40, oy + cy - (centred ? 8 : 13), 80, 16, 14, ReportColours.Ink, OfficeTextAlignment.Center);
-            if (!centred)
-                AddT(dw, San(centreLabel!), ox + viewW / 2 - 40, oy + cy + 8, 80, 10, 7, ReportColours.Muted, OfficeTextAlignment.Center);
+            // Total in the middle, with an optional caption under it (client centreLabel): baselines 2pt above
+            // and 10pt below the centre, a text box's baseline sitting its font size under its top.
+            AddT(dw, FmtNum(total), ox + viewW / 2 - 40, oy + cy - 2 - 14, 80, 16, 14, ReportColours.Ink, OfficeTextAlignment.Center);
+            if (!string.IsNullOrEmpty(centreLabel))
+                AddT(dw, San(centreLabel!), ox + viewW / 2 - 40, oy + cy + 10 - 7, 80, 10, 7, ReportColours.Muted, OfficeTextAlignment.Center);
             DrawLegend(ctx, dw, visible, ox, oy, DonutLegendY, viewW);
         }
 
