@@ -209,6 +209,23 @@ Describe 'License report tree' {
         Get-Block $r 'richtable' | Should -BeNullOrEmpty
     }
 
+    It 'keeps long headline figures and money cells whole, never broken inside the number' {
+        # CHF prints as a code, so seven-digit figures overrun a stat card and the 0.9-weight money
+        # columns are narrow: the kit shrinks the figure and gives the columns the client's widths.
+        $Data = Get-RichData
+        $Data.Summary.Currency = 'CHF'
+        $Data.Summary.MonthlySpend = 3285563
+        $Data.Summary.TotalPotentialAnnual = 13580460
+        $r = Build-CippLicenseReportTree -Data $Data
+        $Bytes = ConvertTo-CippReportPdf -Blocks $r.Blocks -Variables $r.Variables -TenantName 'Contoso' -ReportName 'T'
+        $Doc = [OfficeIMO.Pdf.PdfReadDocument]::Open($Bytes)
+        $Text = ($Doc.Pages | ForEach-Object { $_.ExtractText() }) -join "`n"
+        # The stat row reads as one line of whole figures (the cover meta line quotes them too, so match the row).
+        $Text | Should -Match 'CHF[ \xA0]3,285,563 CHF[ \xA0]838 CHF[ \xA0]13,580,460 27'
+        # The consolidation table's Now and Bundle cells.
+        foreach ($Figure in '14.25', '12.50') { $Text | Should -Match "CHF[ \xA0]$([regex]::Escape($Figure))" }
+    }
+
     It 'prints an unmapped currency as its code and falls back to USD for an unusable one' {
         $Nbsp = [string][char]0x00A0
         $r = Build-CippLicenseReportTree -Data @{ TenantName = 'C'; Summary = @{ Currency = 'chf'; MonthlySpend = 1234.5 } }

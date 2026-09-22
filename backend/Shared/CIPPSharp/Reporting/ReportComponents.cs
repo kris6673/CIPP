@@ -522,11 +522,64 @@ namespace CIPP.Reporting
             }
 
             var style = BrandedTableStyle(ctx);
-            style.ColumnWidthWeights = widths;
+            ApplyDataTableGeometry(ctx, style, widths, cells.Count, hidden > 0);
             style.Alignments = aligns;
             item.Table(cells, PdfAlign.Left, style);
             if (hidden > 0)
                 Note(ctx, item, $"... and {hidden} more. Export the table from the report page for the full list.");
+        }
+
+        // The client DataTable's box (styles.table/tableHeader/tableRow + tableColumns): the row is inset 12pt
+        // inside a 1pt border and each column but the last keeps a 6pt gutter on its right, so a cell's text
+        // width is its share of the inset row less the gutter. OfficeIMO pads every cell alike, so the edge
+        // columns carry the inset (and the border) as their own padding and are widened by it, which gives
+        // every column exactly the client's text width. No vertical rules: the outline is straight per-cell
+        // borders on the perimeter, because a table-level border draws the full grid. The corners stay square:
+        // OfficeIMO strokes a rounded cell border as the cell's whole rounded box clipped to a strip, which on
+        // a multi-column table leaves 6pt stubs across the header band. Rows are divided by the client's pale
+        // 1pt panel line, which sits inside the row's box (so a row is 13pt of padding plus its 10.4pt lines),
+        // and the header band is 28pt for one line of 7pt text on a 14pt pitch. The pads are split to put the
+        // text where the client's sits. 16pt follows the table, 4pt when the truncation note does.
+        private const double TableInset = 12, TableGutter = 6, TableBorder = 1;
+        private static void ApplyDataTableGeometry(ReportContext ctx, PdfTableStyle style, List<double> weights, int rowCount, bool noteFollows)
+        {
+            var cols = weights.Count;
+            var edge = TableInset + TableBorder;
+            var total = weights.Sum();
+            var inner = ctx.ContentWidth - 2 * edge;
+            style.ColumnWidthWeights = weights.Select((w, i) => w / total * inner + (i == 0 ? edge : 0) + (i == cols - 1 ? edge : 0)).ToList();
+            style.BorderWidth = 0;
+            style.RowSeparatorColor = Pdf(ReportColours.Panel);
+            style.RowSeparatorWidth = 1;
+            style.HeaderSeparatorColor = Pdf(ctx.Theme.Palette["table"]); // no line under the band
+            style.HeaderSeparatorWidth = 1;
+            style.LineHeight = 1.3;                                      // client tableCell lineHeight
+            style.HeaderFontSize = 14 / 1.3;                             // header leading 14 (runs stay 7pt)
+            style.CellPaddingLeft = 0;
+            style.CellPaddingRight = TableGutter;
+            style.CellPaddingTop = 7.3;
+            style.CellPaddingBottom = 5.7;
+            style.SpacingAfter = noteFollows ? 4 : 16;
+            var line = Pdf(ReportColours.Line);
+            style.CellPaddings = new Dictionary<(int, int), PdfCellPadding>();
+            style.CellBorders = new Dictionary<(int, int), PdfCellBorder>();
+            for (var r = 0; r < rowCount; r++)
+            {
+                for (var c = 0; c < cols; c++)
+                {
+                    var first = c == 0; var last = c == cols - 1; var top = r == 0; var bottom = r == rowCount - 1;
+                    if (first || last || top)
+                        style.CellPaddings[(r, c)] = new PdfCellPadding
+                        {
+                            Left = first ? edge : null,
+                            Right = last ? edge : null,
+                            Top = top ? 5.4 : null,
+                            Bottom = top ? 6.7 : null,
+                        };
+                    if (first || last || top || bottom)
+                        style.CellBorders[(r, c)] = new PdfCellBorder { Color = line, Width = TableBorder, Left = first, Right = last, Top = top, Bottom = bottom };
+                }
+            }
         }
 
         public static void Code(ReportContext ctx, PdfContentBuilder item, string text)
@@ -892,22 +945,57 @@ namespace CIPP.Reporting
             // and its border box no longer lines up with the rest. When any card in the row has a caption,
             // every other card reserves a blank caption line so all the boxes stay the same height.
             var reserveCaption = stats.Any(s => !string.IsNullOrEmpty(ReportNode.RowStr(s, "caption")));
+            // The number's room: the card's share of the row, less its side pads and a point of slack.
+            var valueWidth = (ctx.ContentWidth - StatGap * (stats.Count - 1)) / stats.Count - 2 * StatPadX - 1;
             item.Row(r =>
             {
-                r.Gap(10);
+                r.Gap(StatGap);
                 foreach (var s in stats)
                 {
                     var value = ReportNode.RowStr(s, "value") ?? string.Empty;
                     var label = (ReportNode.RowStr(s, "label") ?? string.Empty).ToUpperInvariant();
                     var caption = ReportNode.RowStr(s, "caption");
                     var colour = ReportNode.RowStr(s, "colour") ?? accent;
-                    r.PercentColumn(width, col => StatCard(ctx, col, value, label, caption, colour, accent, reserveCaption));
+                    r.PercentColumn(width, col => StatCard(ctx, col, value, label, caption, colour, accent, reserveCaption, valueWidth));
                 }
             });
             item.Spacer(8);
         }
 
-        private static void StatCard(ReportContext ctx, PdfContentBuilder col, string value, string label, string? caption, string colour, string accent, bool reserveCaption = false)
+        private const double StatGap = 10, StatPadX = 6;
+
+        // Helvetica-Bold advance widths (per 1000 em) for ' '..'~', the metrics OfficeIMO lays the standard
+        // font out with; anything else counts as a digit-wide 556 (the Latin-1 currency signs are).
+        private static readonly int[] HelveticaBoldWidths =
+        {
+            278, 333, 474, 556, 556, 889, 722, 238, 333, 333, 389, 584, 278, 333, 278, 278, 556, 556, 556, 556,
+            556, 556, 556, 556, 556, 556, 333, 333, 584, 584, 584, 611, 975, 722, 722, 722, 722, 667, 611, 778,
+            722, 278, 556, 722, 611, 833, 722, 778, 667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 333,
+            278, 333, 584, 556, 333, 556, 611, 556, 611, 556, 333, 611, 611, 278, 278, 556, 278, 889, 611, 611,
+            611, 611, 389, 556, 333, 611, 556, 778, 556, 556, 500, 389, 280, 389, 584,
+        };
+
+        // The stat number's font size: 20pt, or smaller when the figure would not fit its card on one line.
+        // The client lets a long figure run into the card's padding; the kit would break it inside the
+        // digits ("SEK 105,62" / "6"), so it scales the figure down to fit instead. A shrunk figure keeps
+        // one 20pt space (StatCard's strut), so that space is left out of the scaling. An emoji is 0.55em.
+        private const double SpaceEm = 0.278;
+        private static double StatValueSize(string value, double maxWidth)
+        {
+            var em = 0.0;
+            foreach (var seg in SegmentEmoji(San(value)))
+                em += seg.Kind == EmojiSegKind.Text
+                    ? seg.Text.Sum(ch => (ch >= ' ' && ch <= '~' ? HelveticaBoldWidths[ch - ' '] : ch == '\u00A0' ? 278 : 556) / 1000.0)
+                    : 0.55;
+            if (em * ReportStyles.StatNumber <= maxWidth) return ReportStyles.StatNumber;
+            var scaled = StatStrutAt(value) >= 0 ? em - SpaceEm : em;
+            return Math.Max(ReportStyles.StatLabel, (maxWidth - SpaceEm * ReportStyles.StatNumber) / scaled);
+        }
+
+        // Where a shrunk figure's 20pt strut goes: its first space ("KRW 13,580,460"), else -1 (appended).
+        private static int StatStrutAt(string value) => value.IndexOfAny(new[] { ' ', '\u00A0' });
+
+        private static void StatCard(ReportContext ctx, PdfContentBuilder col, string value, string label, string? caption, string colour, string accent, bool reserveCaption = false, double valueWidth = double.MaxValue)
         {
             // One cell, the number over the label as separate runs split by a line break, so there is no
             // internal row divider - just the outer card border and its brand top accent.
@@ -915,8 +1003,23 @@ namespace CIPP.Reporting
             // Size a number-adjacent emoji to ~the digit height and seat it on the digit cap box, so it does
             // not raise the line's ascent - otherwise the number rides lower than a sibling card with no emoji
             // (proportions measured for alignment: emoji ~0.55x the number, dropped ~0.18x onto the baseline).
-            EmitRuns(runs, value, colour, ReportStyles.StatNumber, bold: true,
-                emojiSize: ReportStyles.StatNumber * 0.55, emojiOffset: ReportStyles.StatNumber * -0.18);
+            // A figure too wide for the card shrinks. One of its spaces stays 20pt as a strut: OfficeIMO sizes
+            // a line by its text runs, so the strut keeps the 20pt line - the card keeps its height, the label
+            // stays level with the sibling cards' and the figure sits on their baseline. A figure with no
+            // space gets the strut after it.
+            var size = StatValueSize(value, valueWidth);
+            if (size < ReportStyles.StatNumber)
+            {
+                var at = StatStrutAt(value);
+                var head = at < 0 ? value : value[..at];
+                EmitRuns(runs, head, colour, size, bold: true, emojiSize: size * 0.55, emojiOffset: size * -0.18);
+                runs.Add(new PdfTextRun("\u00A0", true, false, Pdf(colour), false, false, ReportStyles.StatNumber));
+                if (at >= 0) EmitRuns(runs, value[(at + 1)..], colour, size, bold: true, emojiSize: size * 0.55, emojiOffset: size * -0.18);
+            }
+            else
+            {
+                EmitRuns(runs, value, colour, size, bold: true, emojiSize: size * 0.55, emojiOffset: size * -0.18);
+            }
             runs.Add(Run("\n", colour, ReportStyles.StatNumber));
             EmitRuns(runs, label, ReportColours.Muted, ReportStyles.StatLabel, bold: true);
             if (!string.IsNullOrEmpty(caption))
@@ -944,7 +1047,7 @@ namespace CIPP.Reporting
                 // against it), balanced by a comfortable bottom pad under the caption.
                 CellPaddings = new Dictionary<(int, int), PdfCellPadding>
                 {
-                    [(0, 0)] = new PdfCellPadding { Left = 6, Right = 6, Top = 22, Bottom = 12 },
+                    [(0, 0)] = new PdfCellPadding { Left = StatPadX, Right = StatPadX, Top = 22, Bottom = 12 },
                 },
                 Alignments = new List<PdfColumnAlign> { PdfColumnAlign.Center },
                 CellFills = new Dictionary<(int, int), PdfColor> { [(0, 0)] = Pdf(ReportColours.White) },
