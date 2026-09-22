@@ -10,7 +10,7 @@ This page grants time-limited administrative access. You choose who gets it, wha
 | JIT Admin Template (optional)              | Applies a saved template, filling in the rest of the form. Templates are managed on the [jit-admin-templates](../jit-admin-templates/ "mention") page.     |
 
 {% hint style="info" %}
-A default template is applied on its own once a tenant is selected. A template marked as the default for that specific tenant wins; failing that, a template marked as the default across All Tenants is used. Anything a template fills in can still be changed before submitting.
+A default template is applied on its own once a tenant is selected. A template marked as the default for that specific tenant wins; failing that, a template marked as the default across All Tenants is used. Anything a template fills in can still be changed before submitting. A template can contain `%cipptechnician%` in its name, username or reason text, or `%cipptechnicianupn%` in its reason; those are replaced with your own signed-in account name as the template is applied.
 {% endhint %}
 
 ## User

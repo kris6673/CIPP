@@ -44,6 +44,10 @@ The expiration action offers **Delete User** and **Disable User** whatever the s
 | Default Usage Location                | The country the account is licensed in. Shown for a new user, and optional.                                                              |
 | Default User                          | The account the elevation is granted to. Shown when the template targets an existing user, and not available on an All Tenants template. |
 
+{% hint style="info" %}
+Default First Name, Default Last Name, Default Username and Reason Template accept variables for whoever applies the template: `%cipptechnician%` is the part of the signed-in technician's account name before the @ symbol, and `%cipptechnicianupn%` is the whole account name. They are filled in on the JIT Admin page when the template is applied, so a single template such as `jit-%cipptechnician%` names every technician's account after them and keeps the audit trail readable. Typing `%` in any of these fields offers the variables that apply there, and Default Username only offers `%cipptechnician%`, since the domain is added to that field separately. Anything else between percent signs is left as typed.
+{% endhint %}
+
 {% hint style="warning" %}
 An All Tenants template can only create a new user. The Existing User option is not offered, because a specific account exists in one tenant and means nothing in the others. Domain and group selection are withdrawn for the same reason, so an All Tenants template covers the roles, timing and expiry behaviour while the tenant-specific details are supplied when the grant is made.
 {% endhint %}
