@@ -485,18 +485,24 @@ namespace CIPP.Reporting
             CellPaddingY = 6,    // client tableRow paddingVertical
         };
 
-        // The client renders header cells uppercase (styles.tableHeaderCell textTransform), so the header
-        // row (row 0) is upper-cased before it goes to OfficeIMO.
-        private static List<string[]> UpperHeader(IEnumerable<string[]> rows)
+        /// <summary>
+        /// A plain table of text rows, the first row its header (a markdown, HTML or database table; client
+        /// ReportBuilderPDF renderTable). The client draws it as the same DataTable as a rich table, with
+        /// equal columns and the first column bold, so it is one: the header row names the columns and every
+        /// other row is squared off to that many cells.
+        /// </summary>
+        public static void Table(ReportContext ctx, PdfContentBuilder item, IReadOnlyList<string[]> rows)
         {
-            var list = rows.ToList();
-            if (list.Count > 0)
-                list[0] = list[0].Select(c => (c ?? string.Empty).ToUpperInvariant()).ToArray();
-            return list;
+            if (rows.Count == 0) return;
+            var count = rows[0].Length > 0 ? rows[0].Length : rows.Max(r => r.Length);
+            string Cell(string[] row, int i) => i < row.Length ? row[i] ?? string.Empty : string.Empty;
+            var columns = Enumerable.Range(0, count).Select(i => (object?)new Dictionary<string, object?>
+            {
+                ["header"] = Cell(rows[0], i), ["key"] = "c" + i, ["width"] = 1.0, ["bold"] = i == 0,
+            }).ToList();
+            var body = rows.Skip(1).Select(r => (object?)Enumerable.Range(0, count).ToDictionary(i => "c" + i, i => (object?)Cell(r, i))).ToList();
+            RichTable(ctx, item, columns, body, 0);
         }
-
-        public static void Table(ReportContext ctx, PdfContentBuilder item, IEnumerable<string[]> rows)
-            => item.Table(UpperHeader(rows), PdfAlign.Left, BrandedTableStyle(ctx));
 
         // Shared status vocabulary (client STATUS_TONES): a status word coloured by tone.
         private static string ToneColour(string? tone) => tone switch
@@ -1874,7 +1880,7 @@ namespace CIPP.Reporting
         private static void RenderTableNode(ReportContext ctx, PdfContentBuilder item, ReportNode node)
         {
             var rows = node.Get<List<string[]>>("rows");
-            if (rows is { Count: > 0 }) item.Table(UpperHeader(rows), PdfAlign.Left, BrandedTableStyle(ctx));
+            if (rows is { Count: > 0 }) Table(ctx, item, rows);
         }
 
         private static List<string> StringItems(ReportNode node)
