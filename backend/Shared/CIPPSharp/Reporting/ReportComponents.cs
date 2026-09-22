@@ -1066,22 +1066,34 @@ namespace CIPP.Reporting
             if (stats.Count == 0) return;
             var accent = ctx.Theme.Palette["card"];
             var width = 100.0 / stats.Count; // column widths are percentages and must sum to ~100
-            // Each card is its own single-cell table, so a caption on one card makes only that card taller
-            // and its border box no longer lines up with the rest. When any card in the row has a caption,
-            // every other card reserves a blank caption line so all the boxes stay the same height.
-            var reserveCaption = stats.Any(s => !string.IsNullOrEmpty(ReportNode.RowStr(s, "caption")));
             // The number's room: the card's share of the row, less its side pads and a point of slack.
             var valueWidth = (ctx.ContentWidth - StatGap * (stats.Count - 1)) / stats.Count - 2 * StatPadX - 1;
+            // Each card is its own single-cell table, so a caption or a wrapped label makes only that card
+            // taller. The client's statsGrid stretches every card to the tallest, so each card's lines under
+            // the figure are measured (14pt label lines, then a caption 4pt under them on 14pt lines) and a
+            // shorter card makes up the difference in its bottom padding.
+            // ponytail: a caption card's label is measured without the 4pt strut that ends it, so a label
+            // within ~5pt of the card width can wrap unpredicted; measure the strut in if that shows up.
+            var textHeights = stats.Select(s =>
+            {
+                var label = San((ReportNode.RowStr(s, "label") ?? string.Empty).ToUpperInvariant());
+                var caption = ReportNode.RowStr(s, "caption");
+                var h = StatLine * WrappedLines(label, valueWidth, ReportStyles.StatLabel, bold: true);
+                return string.IsNullOrEmpty(caption) ? h : h + 4 + StatLine * WrappedLines(San(caption), valueWidth, ReportStyles.StatCaption, bold: false);
+            }).ToList();
+            var tallest = textHeights.Max();
             item.Row(r =>
             {
                 r.Gap(StatGap);
-                foreach (var s in stats)
+                for (var i = 0; i < stats.Count; i++)
                 {
+                    var s = stats[i];
                     var value = ReportNode.RowStr(s, "value") ?? string.Empty;
                     var label = (ReportNode.RowStr(s, "label") ?? string.Empty).ToUpperInvariant();
                     var caption = ReportNode.RowStr(s, "caption");
                     var colour = ReportNode.RowStr(s, "colour") ?? accent;
-                    r.PercentColumn(width, col => StatCard(ctx, col, value, label, caption, colour, accent, reserveCaption, valueWidth));
+                    var stretch = tallest - textHeights[i];
+                    r.PercentColumn(width, col => StatCard(ctx, col, value, label, caption, colour, accent, stretch, valueWidth));
                 }
             });
             item.Spacer(14);                           // client statsGrid marginBottom
@@ -1165,7 +1177,7 @@ namespace CIPP.Reporting
         // Where a shrunk figure's 20pt strut goes: its first space ("KRW 13,580,460"), else -1 (appended).
         private static int StatStrutAt(string value) => value.IndexOfAny(new[] { ' ', '\u00A0' });
 
-        private static void StatCard(ReportContext ctx, PdfContentBuilder col, string value, string label, string? caption, string colour, string accent, bool reserveCaption = false, double valueWidth = double.MaxValue)
+        private static void StatCard(ReportContext ctx, PdfContentBuilder col, string value, string label, string? caption, string colour, string accent, double stretch = 0, double valueWidth = double.MaxValue)
         {
             // One cell, the number over the label as separate runs split by a line break, so there is no
             // internal row divider - just the outer card border and its brand top accent.
@@ -1193,18 +1205,11 @@ namespace CIPP.Reporting
             runs.Add(Run("\n", colour, ReportStyles.StatNumber));
             EmitRuns(runs, label, ReportColours.Muted, ReportStyles.StatLabel, bold: true);
             // A caption sits 4pt under the label's 14pt line: a no-break space that tall ends the label line.
-            if (!string.IsNullOrEmpty(caption) || reserveCaption)
-                runs.Add(new PdfTextRun("\u00A0", true, false, Pdf(ReportColours.Muted), false, false, (StatLine + 4) / StatLeading));
             if (!string.IsNullOrEmpty(caption))
             {
+                runs.Add(new PdfTextRun("\u00A0", true, false, Pdf(ReportColours.Muted), false, false, (StatLine + 4) / StatLeading));
                 runs.Add(Run("\n", ctx.Theme.Palette["subtitle"], ReportStyles.StatCaption));
                 EmitRuns(runs, caption!, ctx.Theme.Palette["subtitle"], ReportStyles.StatCaption);
-            }
-            else if (reserveCaption)
-            {
-                // A blank caption line so this card matches the height of captioned cards in the same row.
-                runs.Add(Run("\n", ctx.Theme.Palette["subtitle"], ReportStyles.StatCaption));
-                runs.Add(Run(" ", ctx.Theme.Palette["subtitle"], ReportStyles.StatCaption));
             }
             var rows = new List<PdfTableCell[]> { new[] { new PdfTableCell(runs) } };
             var style = new PdfTableStyle
@@ -1220,14 +1225,14 @@ namespace CIPP.Reporting
                 CellPaddingY = 8,
                 // The first baseline where the client's figure sits (3pt accent, 10pt padding, 0.9x the figure
                 // size under its line top), and the card's foot 10pt of padding and the 1pt border under the
-                // last 14pt line.
+                // last 14pt line, stretched to the row's tallest card.
                 CellPaddings = new Dictionary<(int, int), PdfCellPadding>
                 {
                     [(0, 0)] = new PdfCellPadding
                     {
                         Left = StatPadX, Right = StatPadX,
                         Top = 3 + 10 + 0.9 * ReportStyles.StatNumber - CellAscent * StatLine / StatLeading,
-                        Bottom = 10 + 1 - 0.9 * ReportStyles.StatLabel + CellAscent * StatLine / StatLeading,
+                        Bottom = 10 + 1 - 0.9 * ReportStyles.StatLabel + CellAscent * StatLine / StatLeading + stretch,
                     },
                 },
                 Alignments = new List<PdfColumnAlign> { PdfColumnAlign.Center },
