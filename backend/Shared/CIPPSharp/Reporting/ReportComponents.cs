@@ -534,6 +534,24 @@ namespace CIPP.Reporting
             var style = BrandedTableStyle(ctx);
             ApplyDataTableGeometry(ctx, style, widths, cells.Count, hidden > 0, emptyRow);
             style.Alignments = aligns;
+            // Client body rows are wrap={false}: a row that does not fit moves whole to the next page. OfficeIMO
+            // throws on an unsplittable row taller than a page, so a row is kept whole only when a rough upper
+            // bound on its height (0.6em a character, x1.5 for word-wrap waste) is under half a page.
+            // ponytail: character-count estimate, not a glyph measure; a row past it splits as before.
+            var totalWeight = widths.Sum();
+            var keepWhole = new List<bool?> { null }; // the header row keeps the style default
+            foreach (var r in shown)
+            {
+                var lines = 1.0;
+                for (var ci = 0; ci < columns.Count; ci++)
+                {
+                    var textWidth = Math.Max(1, (ctx.ContentWidth - 2 * (TableInset + TableBorder)) * widths[ci] / totalWeight - TableGutter);
+                    var text = ReportNode.RowStr(r, ReportNode.RowStr(columns[ci], "key") ?? string.Empty) ?? string.Empty;
+                    lines = Math.Max(lines, text.Split('\n').Sum(seg => Math.Max(1, Math.Ceiling(1.5 * seg.Length * 0.6 * ReportStyles.TableCell / textWidth))));
+                }
+                keepWhole.Add(lines * ReportStyles.TableCell * 1.3 + style.CellPaddingTop + style.CellPaddingBottom < ctx.ContentHeight / 2 ? false : null);
+            }
+            style.RowAllowBreakAcrossPages = keepWhole;
             item.Table(cells, PdfAlign.Left, style);
             if (hidden > 0)
                 Note(ctx, item, $"... and {hidden} more. Export the table from the report page for the full list.");

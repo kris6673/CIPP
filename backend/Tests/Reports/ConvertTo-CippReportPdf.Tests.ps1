@@ -74,6 +74,15 @@ Describe 'ConvertTo-CippReportPdf' {
             # An unusable logo (here a PNG OfficeIMO rejects) must not sink the whole report.
             Test-IsPdf (ConvertTo-CippReportPdf -Blocks $b -Branding @{ logo = $script:TinyPng }) | Should -BeTrue
         }
+        It 'renders a table row taller than a page (the keep-rows-whole guard lets it split, not throw)' {
+            # Rich table rows are kept whole like the client's wrap={false}; OfficeIMO throws on an
+            # unsplittable row taller than the page, so a row this tall must stay splittable.
+            $Tall = (1..150 | ForEach-Object { "Line $_ of a very tall cell" }) -join "`n"
+            $Cols = @(@{ header = 'Setting'; key = 'name'; width = 1 }, @{ header = 'Value'; key = 'value'; width = 2 })
+            $Rows = @(@{ name = 'Short'; value = 'x' }, @{ name = 'Tall'; value = $Tall }, @{ name = 'After'; value = 'y' })
+            $b = @(@{ type = 'richtable'; title = 'Tall'; columns = $Cols; rows = $Rows; limit = 10 })
+            Test-IsPdf (ConvertTo-CippReportPdf -Blocks $b) | Should -BeTrue
+        }
         It 'accepts a pre-serialised JSON block string' {
             $json = ConvertTo-Json -InputObject @(@{ type = 'blank'; content = '<p>json</p>' }) -Depth 10
             Test-IsPdf (ConvertTo-CippReportPdf -Blocks $json) | Should -BeTrue
