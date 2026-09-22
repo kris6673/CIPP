@@ -107,3 +107,113 @@ Describe 'Report tree builders' {
         Test-Report $r 'Security Incident Report'
     }
 }
+
+Describe 'License report tree' {
+    BeforeAll {
+        $script:MidDot = [string][char]0x00B7
+        $script:EmDash = [string][char]0x2014
+        $script:Ellipsis = [string][char]0x2026
+        # The branding preview sample is the rich fixture: every section populated, internally consistent totals.
+        $RichPath = Join-Path $RepoRoot 'Config/ReportSamples/licensing.json'
+        function Get-RichData { @{ TenantName = 'Contoso Ltd' } + (Get-Content $RichPath -Raw | ConvertFrom-Json -AsHashtable) }
+        function Get-Block($Report, [string]$Type, [scriptblock]$Where = { $true }) { , @($Report.Blocks | Where-Object { $_.type -eq $Type } | Where-Object -FilterScript $Where) }
+    }
+
+    It 'quotes the headline figures the way the client did (Intl whole-unit money, JS rounding) and renders' {
+        $r = Build-CippLicenseReportTree -Data (Get-RichData) -GeneratedOn 'September 23, 2026'
+        $r.Variables.covermeta | Should -Be "96 people licensed $MidDot 11 plans $MidDot `$2,434 per month"
+        $r.Variables.covermetanote | Should -Be 'Potential saving: $10,060 per year'
+        $r.Variables.footerlabel | Should -Be "Contoso Ltd $EmDash Licensing"
+        $Stats = (Get-Block $r 'scorecard')[0].stats
+        @($Stats.value) | Should -Be @('$2,434', '$838', '$10,060', '27')
+        @($Stats | ForEach-Object { $_.colour }) | Should -Be @($null, '#22543D', '#22543D', '#744210')
+        $Alert = (Get-Block $r 'alertbox')[0]
+        $Alert.title | Should -Be 'Licensing: Significant savings available'
+        $Alert.content | Should -BeLike 'About 34% of the monthly licensing bill*'
+        $Alert.colour | Should -Be '#742A2A'
+        @((Get-Block $r 'richbullets' { $_.title -eq 'Where the savings come from' })[0].items.label) |
+            Should -Be @('$413 a month by removing licenses nobody uses.', '$302 a month by moving people to a cheaper plan.', '$4 a month by combining separate plans into one bundle.', '$120 a month by paying yearly for stable seats.')
+        Test-Report $r 'Microsoft 365 Licensing Review'
+    }
+
+    It 'rounds half a unit away from zero like Intl, not to even like .NET' {
+        $r = Build-CippLicenseReportTree -Data (Get-RichData)
+        $Downgrades = @((Get-Block $r 'richtable' { $_.columns[0].header -eq 'Current plan' })[0].rows)
+        # 58.5 and 12.5 are the half-unit cases: banker's rounding would print $58 and $12.
+        $Downgrades[1].saving | Should -Be '$59'
+        $Downgrades[3].saving | Should -Be '$13'
+        $Downgrades[1].unit | Should -Be '$6.50'
+    }
+
+    It 'builds each page from the right slice of the data' {
+        $r = Build-CippLicenseReportTree -Data (Get-RichData)
+        $Chart = (Get-Block $r 'chart')[0]
+        $Chart.chartData.Count | Should -Be 7
+        $Chart.chartData[6].label | Should -Be 'Other plans'
+        $Chart.chartData[6].value | Should -Be 70.75
+        $Spend = @((Get-Block $r 'richtable' { $_.columns[1].header -eq 'Owned' })[0].rows)
+        ($Spend | Where-Object { $_.plan -eq 'Microsoft Teams Rooms Pro' }).monthly | Should -Be 'not priced'
+        ($Spend | Where-Object { $_.plan -eq 'Microsoft Teams Rooms Pro' }).unit | Should -Be $EmDash
+        ($Spend | Where-Object { $_.plan -eq 'Office 365 Extra File Storage' }).unit | Should -Be '$0.20'
+        # The mailbox-only review tier claims no saving and stays off the client report.
+        $Reclaim = @((Get-Block $r 'richtable' { $_.columns[1].header -eq 'Why it can go' })[0].rows)
+        $Reclaim.Count | Should -Be 10
+        $Reclaim[-1].saving | Should -Be 'not priced'
+        # Only the first eight downgrade groups are spelled out; the rest are counted in a note.
+        $Bullets = @((Get-Block $r 'richbullets' { -not $_.title -and $_.items[0].label -like '*->*' })[0].items)
+        $Bullets.Count | Should -Be 8
+        $Bullets[0].label | Should -Be 'Microsoft 365 Copilot -> no plan:'
+        $Bullets[2].text | Should -BeLike '*Loses nothing that was used.'
+        (Get-Block $r 'note' { $_.content -like '*more groups*' })[0].content | Should -Be "$Ellipsis and 2 more groups, listed in full on the admin page."
+        $Terms = (Get-Block $r 'richtable' { $_.columns[2].header -like 'Held*' })[0]
+        $Terms.columns[2].header | Should -Be 'Held 6+ mo'
+        ($Terms.rows | Where-Object { $_.plan -eq 'Power BI Pro' }).yearlyNow | Should -Be 'unknown'
+        ($Terms.rows | Where-Object { $_.plan -eq 'Power BI Pro' }).saving | Should -Be $EmDash
+        (Get-Block $r 'infobox' { $_.title -eq 'Yearly seats that nobody holds' })[0].content |
+            Should -Be 'Microsoft 365 E3: 2 yearly seats unassigned, renews in 200 days. Microsoft 365 Business Basic: 6 yearly seats unassigned, renews in 45 days. Microsoft 365 Apps for business: 1 yearly seat unassigned. Microsoft Teams Rooms Pro: 1 yearly seat unassigned, renews in 300 days. These are paid for until renewal; reduce the count before that date.'
+        (Get-Block $r 'richbullets' { $_.items[0].label -eq 'Prices.' })[0].items.Count | Should -Be 7
+    }
+
+    It 'renders a tenant with no licenses: all-clear boxes, no chart, the empty-table note' {
+        $r = Build-CippLicenseReportTree -Data @{
+            TenantName   = 'Fabrikam'
+            Summary      = @{ Currency = 'EUR'; InactiveDays = 30; TenureMonths = 12; ProtectSecurityFeatures = $false; MonthlySpend = 0; DataAvailable = $false }
+            Products     = @(); Downgrades = @(); Upgrades = @(); Terms = @()
+            Optimization = @{ Opportunities = @() }
+        }
+        $Euro = [string][char]0x20AC
+        $r.Variables.covermeta | Should -Be "0 people licensed $MidDot 0 plans $MidDot ${Euro}0 per month"
+        $r.Variables.covermetanote | Should -Be 'No savings identified'
+        (Get-Block $r 'alertbox')[0].title | Should -Be 'Licensing: No priced spend'
+        (Get-Block $r 'alertbox')[0].colour | Should -Be '#22543D'
+        Get-Block $r 'chart' | Should -BeNullOrEmpty
+        Get-Block $r 'richbullets' { $_.title -eq 'Where the savings come from' } | Should -BeNullOrEmpty
+        (Get-Block $r 'note')[0].content | Should -Be 'No licenses were found for this organisation.'
+        (Get-Block $r 'clearbox').Count | Should -Be 5
+        (Get-Block $r 'infobox' { $_.title -eq 'What was not measured' })[0].content | Should -BeLike '*configured to treat them as optional*'
+        Test-Report $r 'Microsoft 365 Licensing Review'
+    }
+
+    It 'renders an empty report (no Summary at all) without throwing' {
+        $r = Build-CippLicenseReportTree -Data @{ TenantName = 'Contoso' }
+        $r.Variables.covermeta | Should -Be "0 people licensed $MidDot 0 plans $MidDot `$0 per month"
+        Test-Report $r 'Microsoft 365 Licensing Review'
+    }
+
+    It 'drops switched-off pages and shows only the anonymised notice when usage is anonymised' {
+        $Data = Get-RichData
+        $Data.Summary.AnonymizedReports = $true
+        $r = Build-CippLicenseReportTree -Data $Data -Sections @{ spend = $false; reclaim = $false; downgrades = $true; upgrades = $false; terms = $false; method = $false }
+        @((Get-Block $r 'page').title) | Should -Be @('Summary', 'Cheaper plans')
+        (Get-Block $r 'alertbox')[-1].title | Should -Be 'Usage reports are anonymised'
+        Get-Block $r 'richtable' | Should -BeNullOrEmpty
+    }
+
+    It 'prints an unmapped currency as its code and falls back to USD for an unusable one' {
+        $Nbsp = [string][char]0x00A0
+        $r = Build-CippLicenseReportTree -Data @{ TenantName = 'C'; Summary = @{ Currency = 'chf'; MonthlySpend = 1234.5 } }
+        (Get-Block $r 'scorecard')[0].stats[0].value | Should -Be "CHF${Nbsp}1,235"
+        $r = Build-CippLicenseReportTree -Data @{ TenantName = 'C'; Summary = @{ Currency = 'dollars'; MonthlySpend = 5 } }
+        (Get-Block $r 'scorecard')[0].stats[0].value | Should -Be '$5'
+    }
+}
