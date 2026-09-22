@@ -670,9 +670,8 @@ namespace CIPP.Reporting
         // spacing. The title is a bold run, then a small line-break run sets the title/body gap, then the
         // body runs; a left accent stripe is a per-cell LeftBorder over the cell's full border.
         private const double CalloutPadX = 12;      // client infoBox/alertBox padding (horizontal)
-        private const double CalloutPadY = 12;      // fallback vertical cell padding
-        private const double CalloutPadTop = 11;    // top padding (client padding 12, less the cell's own top leading)
-        private const double CalloutPadBottom = 10; // bottom padding (client 12; the cell's line descent already adds space)
+        private const double CalloutPadY = 12;      // client infoBox/alertBox padding (vertical)
+        private const double CellAscent = 0.74;     // a table cell's first baseline under its padding, x the table font size
         private const double CardCornerRadius = 6; // rounded corners on callout boxes and stat cards (client border-radius)
         private const double CalloutGap = 12;    // space after an InfoBox/ClearBox (client infoBox marginBottom 12)
         private const double AlertGap = 16;      // space after an AlertBox (client alertBox marginBottom 16)
@@ -830,30 +829,45 @@ namespace CIPP.Reporting
         // a tight body line height), or a single body row when untitled. One bordered cell stack lets the
         // title/body gap and the body line spacing each be set exactly - a single cell forces one uniform
         // line advance (the title can't get its own margin), and a panel's leading can't be set at all.
-        private static List<PdfTableCell[]> CalloutRows(string? title, string titleColour, double titleSize, List<PdfTextRun> bodyRuns)
+        private static List<PdfTableCell[]> CalloutRows(string? title, string titleColour, double titleSize, List<PdfTextRun> bodyRuns, double bodySize)
         {
             // One cell, one row: a multi-row table always draws a divider between rows (OfficeIMO borders are
-            // a grid), so title and body live in the same cell. The title is a bold run then a body-size line
-            // break; the cell's natural leading (no LineHeight override) then gives the taller title line its
-            // own margin above the body - matching the client's infoTitle marginBottom - while the body lines
-            // sit at the client's ~1.4 leading. This is why the callout uses no LineHeight.
+            // a grid), so title and body live in the same cell. A cell line is as tall as its largest run at
+            // the style's 1.4 leading and every line's baseline sits at the same depth in it, so the title
+            // line is sized to the client's baseline-to-baseline step from the title to the body: the title's
+            // 14pt page line plus its 6pt marginBottom, less the 0.9x-size baseline difference of the two.
+            // (A bare line break carries no size, so a no-break space at that size ends the title line.)
             var runs = new List<PdfTextRun>();
             if (!string.IsNullOrEmpty(title))
             {
                 EmitRuns(runs, title!, titleColour, titleSize, bold: true);
-                runs.Add(Run("\n", titleColour, ReportStyles.InfoText));
+                runs.Add(Run("\u00A0", titleColour, (14 + 6 - 0.9 * (titleSize - bodySize)) / 1.4));
+                runs.Add(Run("\n", titleColour, bodySize));
             }
             runs.AddRange(bodyRuns);
             return new List<PdfTableCell[]> { new[] { new PdfTableCell(runs) } };
         }
 
-        private static PdfTableStyle CalloutStyle(string bgHex, string? stripeHex, double stripeWidth, string borderHex, double borderWidth)
+        private static PdfTableStyle CalloutStyle(string bgHex, string? stripeHex, double stripeWidth, string borderHex, double borderWidth, double bodySize, double firstSize)
         {
+            // The client pads 12 inside the border (the stripe, on the left) and sets a line's baseline 0.9x its
+            // size under the line top; OfficeIMO sets a cell's first baseline CellAscent x the table's font size
+            // under its padding, and ends the cell that much above the last line's foot. The top and bottom
+            // pads carry the difference, so every line lands where the client's does.
+            var padding = new PdfCellPadding
+            {
+                Left = CalloutPadX + (stripeHex is null ? borderWidth : stripeWidth),
+                Right = CalloutPadX + borderWidth,
+                Top = CalloutPadY + borderWidth + 0.9 * firstSize - CellAscent * bodySize,
+                Bottom = CalloutPadY + borderWidth - (0.9 - CellAscent) * bodySize,
+            };
             // Single cell -> the table's BorderWidth draws just the perimeter box (no interior grid). The left
             // edge is overridden with the accent stripe via a per-cell LeftBorder when the callout has one.
             var style = new PdfTableStyle
             {
                 HeaderRowCount = 0,
+                FontSize = bodySize,
+                LineHeight = 1.4,
                 BorderColor = Pdf(borderHex),
                 BorderWidth = borderWidth,
                 CornerRadius = CardCornerRadius,  // softly rounded box; stripe/border are clipped to the rounded corners
@@ -862,7 +876,7 @@ namespace CIPP.Reporting
                 CellPaddingY = CalloutPadY,
                 CellPaddings = new Dictionary<(int, int), PdfCellPadding>
                 {
-                    [(0, 0)] = new PdfCellPadding { Left = CalloutPadX, Right = CalloutPadX, Top = CalloutPadTop, Bottom = CalloutPadBottom },
+                    [(0, 0)] = padding,
                 },
                 SpacingAfter = 0,                 // the gap after a callout is an explicit Spacer, not the table's
                 KeepTogether = true,              // a callout never splits across a page (client keeps each whole)
@@ -888,7 +902,8 @@ namespace CIPP.Reporting
         {
             var (accent, bg, titleColour) = InfoBoxColours(ctx, tone, colour, tintTitle);
             var body = CalloutBodyRuns(ctx, content, lines, ReportStyles.InfoText, ctx.Theme.Palette["subtitle"]);
-            item.Table(CalloutRows(title, titleColour, ReportStyles.InfoTitle, body), PdfAlign.Left, CalloutStyle(bg, accent, 4, ReportColours.Line, 1));
+            item.Table(CalloutRows(title, titleColour, ReportStyles.InfoTitle, body, ReportStyles.InfoText), PdfAlign.Left,
+                CalloutStyle(bg, accent, 4, ReportColours.Line, 1, ReportStyles.InfoText, string.IsNullOrEmpty(title) ? ReportStyles.InfoText : ReportStyles.InfoTitle));
             item.Spacer(CalloutGap);
         }
 
@@ -912,7 +927,8 @@ namespace CIPP.Reporting
         {
             var accent = string.IsNullOrEmpty(colour) ? ctx.Theme.Palette["card"] : colour!;
             var body = CalloutBodyRuns(ctx, content, lines, ReportStyles.AlertText, ctx.Theme.Palette["body"]);
-            item.Table(CalloutRows(title, accent, ReportStyles.AlertTitle, body), PdfAlign.Left, CalloutStyle(ReportColours.AlertBg, null, 0, accent, 2));
+            item.Table(CalloutRows(title, accent, ReportStyles.AlertTitle, body, ReportStyles.AlertText), PdfAlign.Left,
+                CalloutStyle(ReportColours.AlertBg, null, 0, accent, 2, ReportStyles.AlertText, string.IsNullOrEmpty(title) ? ReportStyles.AlertText : ReportStyles.AlertTitle));
             item.Spacer(AlertGap);
         }
 
@@ -985,7 +1001,8 @@ namespace CIPP.Reporting
         {
             var (accent, bg, titleColour) = InfoBoxColours(ctx, tone, colour, tintTitle);
             var body = CalloutBodyRuns(ctx, content, false, ReportStyles.InfoText, ctx.Theme.Palette["subtitle"]);
-            col.Table(CalloutRows(title, titleColour, ReportStyles.InfoTitle, body), PdfAlign.Left, CalloutStyle(bg, accent, 4, ReportColours.Line, 1));
+            col.Table(CalloutRows(title, titleColour, ReportStyles.InfoTitle, body, ReportStyles.InfoText), PdfAlign.Left,
+                CalloutStyle(bg, accent, 4, ReportColours.Line, 1, ReportStyles.InfoText, string.IsNullOrEmpty(title) ? ReportStyles.InfoText : ReportStyles.InfoTitle));
         }
 
         // Series colour for a chart entry: its own colour, else the theme series cycled by index.
@@ -1052,7 +1069,7 @@ namespace CIPP.Reporting
         internal static double TextEm(string s, bool bold)
         {
             var widths = bold ? HelveticaBoldWidths : HelveticaWidths;
-            return s.Sum(ch => (ch >= ' ' && ch <= '~' ? widths[ch - ' '] : ch == ' ' ? 278 : 556) / 1000.0);
+            return s.Sum(ch => (ch >= ' ' && ch <= '~' ? widths[ch - ' '] : ch == '\u00A0' ? 278 : 556) / 1000.0);
         }
 
         // How many lines `text` takes in a column `width` points wide: each '\n' line word-wrapped greedily,
