@@ -18,7 +18,7 @@ function Invoke-ExecGetLicenseReportPdf {
     Write-LogMessage -Headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # The tenant to report on. A single tenant; AllTenants is not supported.
-    $TenantFilter = $Request.Body.tenantFilter ?? $Request.Query.tenantFilter
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     if ([string]::IsNullOrWhiteSpace($TenantFilter) -or $TenantFilter -eq 'AllTenants') {
         return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = 'A single tenant is required for the license report.' })
     }

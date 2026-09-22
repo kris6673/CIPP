@@ -36,9 +36,9 @@ BeforeAll {
         $Sample
     }
 
-    function Invoke-Report($Body) {
+    function Invoke-Report($Body, $Query = @{}) {
         $script:Called = $null
-        Invoke-ExecGetLicenseReportPdf -Request @{ Body = $Body; Query = @{}; Headers = @{} } -TriggerMetadata @{ FunctionName = 'ExecGetLicenseReportPdf' }
+        Invoke-ExecGetLicenseReportPdf -Request @{ Body = $Body; Query = $Query; Headers = @{} } -TriggerMetadata @{ FunctionName = 'ExecGetLicenseReportPdf' }
     }
 }
 
@@ -49,6 +49,11 @@ Describe 'Invoke-ExecGetLicenseReportPdf' {
         $Response.ContentType | Should -Be 'application/pdf'
         $Response.Headers.'Content-Disposition' | Should -Be 'inline; filename="Licensing_Report_contoso_onmicrosoft_com.pdf"'
         [System.Text.Encoding]::ASCII.GetString($Response.Body[0..4]) | Should -Be '%PDF-'
+    }
+
+    It 'reports on the query tenant, the one the tenant-scope check authorised, over a body tenant' {
+        $null = Invoke-Report @{ tenantFilter = 'other.onmicrosoft.com' } @{ tenantFilter = 'contoso.onmicrosoft.com' }
+        $Called.TenantFilter | Should -Be 'contoso.onmicrosoft.com'
     }
 
     It 'passes the page analysis settings through, with only an explicit false turning a switch off' {
