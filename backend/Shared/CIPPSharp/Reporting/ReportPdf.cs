@@ -281,23 +281,44 @@ namespace CIPP.Reporting
             item.Spacer(8);
         }
 
+        // Client PageFooter: a 20pt box 14pt above the paper edge with a 1pt rule along its top, 5pt of padding
+        // under the rule, the label on the left and a bold "Page N of M" on the right. The page's bottom
+        // padding reserves the box plus 6pt, so the body stops 40pt above the paper edge.
+        private const double FooterInset = 14, FooterHeight = 20, FooterReserve = FooterInset + FooterHeight + 6;
+
         private static void ApplyContentChrome(PdfPageBuilder p, ReportContext ctx, string footerText, string watermark)
         {
-            if (ctx.Theme.FooterShow || ctx.Theme.ShowPageNumbers)
+            var showText = ctx.Theme.FooterShow && !string.IsNullOrEmpty(footerText);
+            if (showText || ctx.Theme.ShowPageNumbers)
             {
+                p.Margin(ReportStyles.PagePadding, ReportStyles.PagePadding, ReportStyles.PagePadding, FooterReserve);
+                // The label's baseline above the paper edge: under the rule and the padding, 0.9x its size into
+                // the page's 14pt line. OfficeIMO sets every footer zone on one baseline, so the page number
+                // shares it (the client centres its shorter natural line, 3pt lower).
+                var baseline = FooterInset + FooterHeight - 1 - 5 - 0.9 * ReportStyles.FooterText;
+                var w = ctx.ContentWidth;
+                // The rule: a 1pt band at the top of a shape whose foot sits on the footer baseline.
+                var rule = OfficeIMO.Drawing.OfficeShape.Path(w, FooterInset + FooterHeight - baseline,
+                    OfficeIMO.Drawing.OfficePathCommand.MoveTo(0, 0), OfficeIMO.Drawing.OfficePathCommand.LineTo(w, 0),
+                    OfficeIMO.Drawing.OfficePathCommand.LineTo(w, 1), OfficeIMO.Drawing.OfficePathCommand.LineTo(0, 1),
+                    OfficeIMO.Drawing.OfficePathCommand.Close());
+                rule.FillColor = ReportComponents.OC(ReportColours.Line);
+                // The client's page number starts at the left of its 80pt box at the right edge. A zone can only
+                // right-align, so an empty shape after the text fills the rest of the box (sized for one-digit
+                // numbers; OfficeIMO leaves 4pt between the text and the shape).
+                var numberPad = OfficeIMO.Drawing.OfficeShape.Rectangle(80 - 4 - ReportComponents.TextEm("Page 8 of 8", bold: true) * ReportStyles.FooterText, 1);
                 p.Footer(f =>
                 {
-                    f.Color(ReportComponents.Pdf(ctx.Theme.Palette["footer"])).FontSize(ReportStyles.FooterText);
-                    var showText = ctx.Theme.FooterShow && !string.IsNullOrEmpty(footerText);
-                    var safeFooter = ReportMarkdown.Sanitize(footerText);
-                    if (ctx.Theme.ShowPageNumbers)
-                        f.Text(b =>
-                        {
-                            if (showText) b.Text(safeFooter + "   -   ");
-                            b.Text("Page ").CurrentPage().Text(" of ").TotalPages();
-                        });
-                    else if (showText)
-                        f.Text(safeFooter);
+                    f.FontSize(ReportStyles.FooterText).Offset(FooterReserve - baseline);
+                    f.Shape(rule, PdfAlign.Center);
+                    if (ctx.Theme.ShowPageNumbers) f.Shape(numberPad, PdfAlign.Right);
+                    var label = new PdfTextRun(ReportMarkdown.Sanitize(footerText), color: ReportComponents.Pdf(ctx.Theme.Palette["footer"]), fontSize: ReportStyles.FooterText);
+                    var number = new PdfTextRun(" ", bold: true, color: ReportComponents.Pdf(ReportColours.Faint), fontSize: ReportStyles.FooterText);
+                    PdfTextRun Number(string s) => new(s, bold: true, color: number.Color, fontSize: ReportStyles.FooterText);
+                    f.StyledZones(
+                        showText ? z => z.Run(label) : null,
+                        null,
+                        ctx.Theme.ShowPageNumbers ? z => z.Run(Number("Page ")).CurrentPage(number).Run(Number(" of ")).TotalPages(number) : null);
                 });
             }
             // Named on purpose: OfficeIMO's positional order is (text, fontSize, colour, opacity, angle), so

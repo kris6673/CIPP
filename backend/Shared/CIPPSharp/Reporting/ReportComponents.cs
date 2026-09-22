@@ -1049,7 +1049,7 @@ namespace CIPP.Reporting
         };
 
         // A run of text's advance in em.
-        private static double TextEm(string s, bool bold)
+        internal static double TextEm(string s, bool bold)
         {
             var widths = bold ? HelveticaBoldWidths : HelveticaWidths;
             return s.Sum(ch => (ch >= ' ' && ch <= '~' ? widths[ch - ' '] : ch == ' ' ? 278 : 556) / 1000.0);
@@ -1215,7 +1215,7 @@ namespace CIPP.Reporting
         private const double ChartViewW = 400, ChartViewH = 200;
         private const double ChartTitleSize = 10, ChartLabelSize = 7;
 
-        private static OfficeColor OC(string hex)
+        internal static OfficeColor OC(string hex)
         {
             var (r, g, b) = ColourMath.ToRgb(hex);
             return OfficeColor.FromRgb((byte)r, (byte)g, (byte)b);
