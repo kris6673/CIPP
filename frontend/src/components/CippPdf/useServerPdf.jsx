@@ -11,9 +11,12 @@ const requestInit = (body) =>
       }
     : { credentials: 'same-origin' }
 
-/** Fetch a server-rendered PDF as a Blob (GET, or POST when `body` is given); rejects with the HTTP status. */
-export const fetchServerPdf = (url, body) =>
-  fetch(url, requestInit(body)).then((res) =>
+/**
+ * Fetch a server-rendered PDF as a Blob (GET, or POST when `body` is given); rejects with the HTTP status.
+ * An aborted `signal` drops the request, so the server can stop rendering a PDF nobody will see.
+ */
+export const fetchServerPdf = (url, body, signal) =>
+  fetch(url, { ...requestInit(body), signal }).then((res) =>
     res.ok ? res.blob() : Promise.reject(res.status)
   )
 
@@ -52,8 +55,9 @@ export const useServerPdf = ({ url, body, enabled = true }) => {
     }
     let objectUrl
     let cancelled = false
+    const controller = new AbortController()
     setState({ pdfUrl: '', loading: true, error: null })
-    fetchServerPdf(url, body)
+    fetchServerPdf(url, body, controller.signal)
       .then((blob) => {
         if (cancelled) return
         objectUrl = URL.createObjectURL(blob)
@@ -69,6 +73,7 @@ export const useServerPdf = ({ url, body, enabled = true }) => {
       })
     return () => {
       cancelled = true
+      controller.abort()
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
