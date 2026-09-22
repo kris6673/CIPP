@@ -83,6 +83,21 @@ Describe 'ConvertTo-CippReportPdf' {
             $b = @(@{ type = 'richtable'; title = 'Tall'; columns = $Cols; rows = $Rows; limit = 10 })
             Test-IsPdf (ConvertTo-CippReportPdf -Blocks $b) | Should -BeTrue
         }
+        It 'moves a row that would straddle a page break whole onto the next page' {
+            # Twenty short lines in a third-width column: about 220pt, under half a page, so it is kept
+            # whole. Filler rows put its top near the page foot, where it would otherwise be cut (a
+            # row follows it: OfficeIMO already moves a table's last row whole).
+            $Tall = (@('ROWSTART') + (2..19 | ForEach-Object { "Line $_ of the setting value" }) + @('ROWEND')) -join "`n"
+            $Cols = @(@{ header = 'Setting'; key = 'name'; width = 1 }, @{ header = 'Today'; key = 'value'; width = 1 }, @{ header = 'Target'; key = 'target'; width = 1 })
+            $Rows = @(1..20 | ForEach-Object { @{ name = "Filler $_"; value = 'x'; target = 'y' } }) +
+                @(@{ name = 'Tall'; value = $Tall; target = 'z' }, @{ name = 'After'; value = 'x'; target = 'y' })
+            $b = @(@{ type = 'richtable'; title = 'Straddle'; columns = $Cols; rows = $Rows; limit = 50 })
+            $Pages = @([OfficeIMO.Pdf.PdfReadDocument]::Open((ConvertTo-CippReportPdf -Blocks $b)).Pages | ForEach-Object { $_.ExtractText() })
+            $Start = @(0..($Pages.Count - 1) | Where-Object { $Pages[$_] -match 'ROWSTART' })
+            $End = @(0..($Pages.Count - 1) | Where-Object { $Pages[$_] -match 'ROWEND' })
+            $Start | Should -HaveCount 1
+            $End | Should -Be $Start
+        }
         It 'accepts a pre-serialised JSON block string' {
             $json = ConvertTo-Json -InputObject @(@{ type = 'blank'; content = '<p>json</p>' }) -Depth 10
             Test-IsPdf (ConvertTo-CippReportPdf -Blocks $json) | Should -BeTrue

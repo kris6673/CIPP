@@ -535,19 +535,20 @@ namespace CIPP.Reporting
             ApplyDataTableGeometry(ctx, style, widths, cells.Count, hidden > 0, emptyRow);
             style.Alignments = aligns;
             // Client body rows are wrap={false}: a row that does not fit moves whole to the next page. OfficeIMO
-            // throws on an unsplittable row taller than a page, so a row is kept whole only when a rough upper
-            // bound on its height (0.6em a character, x1.5 for word-wrap waste) is under half a page.
-            // ponytail: character-count estimate, not a glyph measure; a row past it splits as before.
+            // throws on an unsplittable row taller than a page, so a row is kept whole only when its height,
+            // measured by word-wrapping each cell with the Helvetica metrics, is under half a page (the
+            // margin covers the measure differing from OfficeIMO's own wrap).
             var totalWeight = widths.Sum();
             var keepWhole = new List<bool?> { null }; // the header row keeps the style default
             foreach (var r in shown)
             {
-                var lines = 1.0;
+                var lines = 1;
                 for (var ci = 0; ci < columns.Count; ci++)
                 {
                     var textWidth = Math.Max(1, (ctx.ContentWidth - 2 * (TableInset + TableBorder)) * widths[ci] / totalWeight - TableGutter);
                     var text = ReportNode.RowStr(r, ReportNode.RowStr(columns[ci], "key") ?? string.Empty) ?? string.Empty;
-                    lines = Math.Max(lines, text.Split('\n').Sum(seg => Math.Max(1, Math.Ceiling(1.5 * seg.Length * 0.6 * ReportStyles.TableCell / textWidth))));
+                    var bold = RowBool(columns[ci], "bold") || !string.IsNullOrEmpty(ReportNode.RowStr(columns[ci], "colourField"));
+                    lines = Math.Max(lines, WrappedLines(text, textWidth, ReportStyles.TableCell, bold));
                 }
                 keepWhole.Add(lines * ReportStyles.TableCell * 1.3 + style.CellPaddingTop + style.CellPaddingBottom < ctx.ContentHeight / 2 ? false : null);
             }
@@ -1001,8 +1002,17 @@ namespace CIPP.Reporting
 
         private const double StatGap = 10, StatPadX = 6;
 
-        // Helvetica-Bold advance widths (per 1000 em) for ' '..'~', the metrics OfficeIMO lays the standard
-        // font out with; anything else counts as a digit-wide 556 (the Latin-1 currency signs are).
+        // Helvetica and Helvetica-Bold advance widths (per 1000 em) for ' '..'~', the metrics OfficeIMO lays the
+        // standard font out with (the oblique faces share them); anything else counts as a digit-wide 556
+        // (the Latin-1 currency signs are).
+        private static readonly int[] HelveticaWidths =
+        {
+            278, 278, 355, 556, 556, 889, 667, 191, 333, 333, 389, 584, 278, 333, 278, 278, 556, 556, 556, 556,
+            556, 556, 556, 556, 556, 556, 278, 278, 584, 584, 584, 556, 1015, 667, 667, 722, 722, 667, 611, 778,
+            722, 278, 500, 667, 556, 833, 722, 778, 667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 278,
+            278, 278, 469, 556, 333, 556, 556, 500, 556, 556, 278, 556, 556, 222, 222, 500, 222, 833, 556, 556,
+            556, 556, 333, 500, 278, 556, 500, 722, 500, 500, 500, 334, 260, 334, 584,
+        };
         private static readonly int[] HelveticaBoldWidths =
         {
             278, 333, 474, 556, 556, 889, 722, 238, 333, 333, 389, 584, 278, 333, 278, 278, 556, 556, 556, 556,
@@ -1011,6 +1021,36 @@ namespace CIPP.Reporting
             278, 333, 584, 556, 333, 556, 611, 556, 611, 556, 333, 611, 611, 278, 278, 556, 278, 889, 611, 611,
             611, 611, 389, 556, 333, 611, 556, 778, 556, 556, 500, 389, 280, 389, 584,
         };
+
+        // A run of text's advance in em.
+        private static double TextEm(string s, bool bold)
+        {
+            var widths = bold ? HelveticaBoldWidths : HelveticaWidths;
+            return s.Sum(ch => (ch >= ' ' && ch <= '~' ? widths[ch - ' '] : ch == ' ' ? 278 : 556) / 1000.0);
+        }
+
+        // How many lines `text` takes in a column `width` points wide: each '\n' line word-wrapped greedily,
+        // a word wider than the column broken across as many lines as it fills.
+        private static int WrappedLines(string text, double width, double size, bool bold)
+        {
+            var lines = 0;
+            var space = 0.278 * size;
+            foreach (var line in text.Replace("\r", "").Split('\n'))
+            {
+                lines++;
+                var x = 0.0;
+                foreach (var word in line.Split(' '))
+                {
+                    var w = TextEm(word, bold) * size;
+                    if (x > 0 && x + space + w > width) { lines++; x = 0; }
+                    else if (x > 0) x += space;
+                    var extra = Math.Max(0, (int)Math.Ceiling(w / width) - 1);
+                    lines += extra;
+                    x += w - extra * width;
+                }
+            }
+            return lines;
+        }
 
         // The stat number's font size: 20pt, or smaller when the figure would not fit its card on one line.
         // The client lets a long figure run into the card's padding; the kit would break it inside the
@@ -1021,9 +1061,7 @@ namespace CIPP.Reporting
         {
             var em = 0.0;
             foreach (var seg in SegmentEmoji(San(value)))
-                em += seg.Kind == EmojiSegKind.Text
-                    ? seg.Text.Sum(ch => (ch >= ' ' && ch <= '~' ? HelveticaBoldWidths[ch - ' '] : ch == '\u00A0' ? 278 : 556) / 1000.0)
-                    : 0.55;
+                em += seg.Kind == EmojiSegKind.Text ? TextEm(seg.Text, bold: true) : 0.55;
             if (em * ReportStyles.StatNumber <= maxWidth) return ReportStyles.StatNumber;
             var scaled = StatStrutAt(value) >= 0 ? em - SpaceEm : em;
             return Math.Max(ReportStyles.StatLabel, (maxWidth - SpaceEm * ReportStyles.StatNumber) / scaled);
