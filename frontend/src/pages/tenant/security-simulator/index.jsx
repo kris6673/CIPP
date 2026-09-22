@@ -44,7 +44,10 @@ import { CippIcons } from '../../../utils/icon-registry'
 const REPORT_ID = 'securitysimulations'
 const TEST_PREFIX = 'SecuritySimulation_'
 const NAME_PREFIX = 'Security Simulation - '
-const asArray = (value) => (Array.isArray(value) ? value : value ? [value] : [])
+const asArray = (value) =>
+  (Array.isArray(value) ? value : value ? [value] : []).filter(
+    (entry) => entry !== null && entry !== undefined
+  )
 const testsQueryKey = (tenant) => `${tenant}-ListTests-${REPORT_ID}`
 const parseData = (row) => {
   if (!row?.ResultDataJson) return null
