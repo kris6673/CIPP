@@ -21,9 +21,13 @@
     <!-- Compile-only: ExcludeAssets="runtime" keeps the System.Management.Automation facade out of bin\
          (PowerShell supplies the real assembly at runtime) while still compiling against its types. -->
     <PackageReference Include="PowerShellStandard.Library" Version="5.1.1" PrivateAssets="all" ExcludeAssets="runtime" />
+  </ItemGroup>
+  <ItemGroup>
     <!-- Server-side PDF renderer. MIT, zero third-party deps: only OfficeIMO.Pdf.dll + OfficeIMO.Core.dll land in bin\.
-         3.4.1 is the first upstream release carrying PdfTableStyle.CornerRadius / PdfPanelStyle.CornerRadius
-         (rounded callout boxes and stat cards); OfficeIMO.Core resolves transitively. -->
-    <PackageReference Include="OfficeIMO.Pdf" Version="3.4.1" />
+         INTERIM: vendored net8.0 builds of upstream OfficeIMO master 0f8249112 (3.4.3, unreleased) for its PDF
+         generation allocation and throughput work. Once a release ships it, restore
+         <PackageReference Include="OfficeIMO.Pdf" Version="..." /> and delete lib\. -->
+    <Reference Include="OfficeIMO.Pdf" HintPath="lib\OfficeIMO.Pdf.dll" />
+    <Reference Include="OfficeIMO.Core" HintPath="lib\OfficeIMO.Core.dll" />
   </ItemGroup>
 </Project>
