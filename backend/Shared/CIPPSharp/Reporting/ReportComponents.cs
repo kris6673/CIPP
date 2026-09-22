@@ -1138,7 +1138,7 @@ namespace CIPP.Reporting
 
         // How many lines `text` takes in a column `width` points wide: each '\n' line word-wrapped greedily,
         // a word wider than the column broken across as many lines as it fills.
-        private static int WrappedLines(string text, double width, double size, bool bold)
+        internal static int WrappedLines(string text, double width, double size, bool bold)
         {
             var lines = 0;
             var space = 0.278 * size;

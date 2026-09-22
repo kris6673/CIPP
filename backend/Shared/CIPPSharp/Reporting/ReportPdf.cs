@@ -250,17 +250,28 @@ namespace CIPP.Reporting
             // client's are.
             var titleColour = ctx.Theme.Palette["title"];
             var subtitleColour = ctx.Theme.Palette["subtitle"];
-            Action<PdfParagraphBuilder> titleRun = b => { b.FontSize(ReportStyles.PageTitle); ReportComponents.EmitInline(b, title ?? ctx.ReportName, titleColour, ReportStyles.PageTitle, bold: true); };
-            var titleStyle = new PdfParagraphStyle { LineHeight = (14 + 8 - 0.9 * (ReportStyles.PageTitle - ReportStyles.PageSubtitle)) / ReportStyles.PageTitle, SpacingAfter = 0 };
+            var titleText = title ?? ctx.ReportName;
+            Action<PdfParagraphBuilder> titleRun = b => { b.FontSize(ReportStyles.PageTitle); ReportComponents.EmitInline(b, titleText, titleColour, ReportStyles.PageTitle, bold: true); };
             Action<PdfParagraphBuilder>? subtitleRun = string.IsNullOrEmpty(subtitle) ? null
                 : b => { b.FontSize(ReportStyles.PageSubtitle); ReportComponents.EmitInline(b, subtitle!, subtitleColour, ReportStyles.PageSubtitle); };
             var subtitleStyle = new PdfParagraphStyle { LineHeight = 14 / ReportStyles.PageSubtitle, SpacingAfter = 0 };
             var titleSeat = 0.9 * ReportStyles.PageTitle - ReportComponents.FlowBaseline;
 
-            // Client pageHeader: the title block takes the width and the branding logo sits at the right
-            // edge, 30pt tall and top-aligned with the title's line. Without a logo the paragraphs flow
-            // directly. The title's seat goes in the text column, so the logo stays at the page top.
+            // Client pageHeader: the title block takes the width (flex 1) and the branding logo sits at the
+            // right edge, 30pt tall and top-aligned with the title's line, with no gap between them. Without
+            // a logo the paragraphs flow directly. The title's seat goes in the text column, so the logo
+            // stays at the page top.
             var logoType = ctx.Logo is { Length: > 0 } ? ReportComponents.ImageContentType(ctx.Logo) : null;
+            var box = logoType is null ? (w: 0.0, h: 0.0) : ReportComponents.LogoBox(ctx.Logo!, 30, 120);
+            // A one-line title sits on the client's 14pt line, which also carries the 8pt down to the
+            // subtitle. The client keeps that 14pt pitch when the title wraps, so its 20pt lines run into
+            // each other; a title too long for one line takes a 1.15 leading here instead.
+            var titleLines = ReportComponents.WrappedLines(ReportMarkdown.Sanitize(titleText), ctx.ContentWidth - box.w, ReportStyles.PageTitle, bold: true);
+            var titleStyle = new PdfParagraphStyle
+            {
+                LineHeight = titleLines > 1 ? 1.15 : (14 + 8 - 0.9 * (ReportStyles.PageTitle - ReportStyles.PageSubtitle)) / ReportStyles.PageTitle,
+                SpacingAfter = 0,
+            };
             if (logoType is null)
             {
                 item.Spacer(titleSeat);
@@ -269,17 +280,16 @@ namespace CIPP.Reporting
             }
             else
             {
-                var box = ReportComponents.LogoBox(ctx.Logo!, 30, 120);
                 item.Row(r =>
                 {
-                    r.Gap(12);
-                    r.PercentColumn(75, c =>
+                    r.Gap(0);
+                    r.RelativeColumn(c =>
                     {
                         c.Spacer(titleSeat);
                         c.Paragraph(titleRun, PdfAlign.Left, null, titleStyle);
                         if (subtitleRun is not null) c.Paragraph(subtitleRun, PdfAlign.Left, null, subtitleStyle);
                     });
-                    r.PercentColumn(25, c => c.Image(ctx.Logo!, box.w, box.h, PdfAlign.Right));
+                    r.FixedColumn(box.w, c => c.Image(ctx.Logo!, box.w, box.h, PdfAlign.Right));
                 });
             }
             // Full-width brand rule under the header (HR auto-fits the content width; a fixed-width
