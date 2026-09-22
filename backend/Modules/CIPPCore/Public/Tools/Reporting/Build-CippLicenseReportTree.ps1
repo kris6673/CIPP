@@ -164,7 +164,7 @@ function Build-CippLicenseReportTree {
                 monthly      = $(if ($Row.PriceKnown) { whole $Row.MonthlySpend } else { 'not priced' })
             }
         }
-        $Blocks.Add((New-CippReportTable -Limit 30 -Rows @($SpendRows) -Columns @(
+        $Blocks.Add((New-CippReportTable -Limit 30 -Rows @($SpendRows) -EmptyText 'No licenses were found for this organisation.' -Columns @(
                     @{ header = 'Plan'; key = 'plan'; width = 3; bold = $true }
                     @{ header = 'Owned'; key = 'owned'; width = 0.8; align = 'right' }
                     @{ header = 'In use'; key = 'used'; width = 0.8; align = 'right' }
@@ -172,8 +172,6 @@ function Build-CippLicenseReportTree {
                     @{ header = 'Per seat'; key = 'unit'; width = 1; align = 'right' }
                     @{ header = 'Per month'; key = 'monthly'; width = 1.1; align = 'right' }
                 )))
-        # The kit table has no empty-state row, so the client's in-table empty text follows it as a note.
-        if ($Products.Count -eq 0) { $Blocks.Add((New-CippReportNote -Text 'No licenses were found for this organisation.')) }
     }
 
     # -- Licenses you can remove --

@@ -224,3 +224,12 @@ Describe 'Gallery covers on Infographic pages' {
         $Blocks[1].heroImage | Should -Be ''
     }
 }
+
+Describe 'Table empty state' {
+    It 'draws a table''s emptyText inside the table when it has no rows' {
+        $Table = @{ type = 'richtable'; columns = @(@{ header = 'Plan'; key = 'p'; width = 2 }, @{ header = 'Seats'; key = 's'; width = 1 }); rows = @(); limit = 10; emptyText = 'Nothing to list.' }
+        $Bytes = ConvertTo-CippReportPdf -Blocks @($Table) -Variables @{} -Branding @{ colour = '#0E4C92' } -TenantName 'Contoso' -ReportName 'T'
+        $Text = ([OfficeIMO.Pdf.PdfReadDocument]::Open($Bytes).Pages | ForEach-Object { $_.ExtractText() }) -join "`n"
+        $Text | Should -Match 'PLAN\s+SEATS\s+Nothing to list\.'
+    }
+}

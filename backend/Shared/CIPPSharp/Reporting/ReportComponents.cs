@@ -468,8 +468,10 @@ namespace CIPP.Reporting
         /// A column with <c>toneField</c> draws its value as italic status text coloured by the row's tone
         /// field (Compliant=green, Review=red, ...); a <c>bold</c> column draws its value bold. Header band
         /// in the brand table colour, uppercase; striped body rows; rows beyond <c>limit</c> drop to a note.
+        /// With no rows, <c>emptyText</c> is drawn inside the border as one full-width italic row (client
+        /// DataTable emptyText: 8pt faint italic, padding 12); without it the table is a bare header.
         /// </summary>
-        public static void RichTable(ReportContext ctx, PdfContentBuilder item, List<object?> columns, List<object?> rows, int limit)
+        public static void RichTable(ReportContext ctx, PdfContentBuilder item, List<object?> columns, List<object?> rows, int limit, string? emptyText = null)
         {
             if (columns.Count == 0) return;
             var widths = new List<double>();
@@ -521,8 +523,16 @@ namespace CIPP.Reporting
                 cells.Add(rowCells);
             }
 
+            var emptyRow = shown.Count == 0 && !string.IsNullOrEmpty(emptyText);
+            if (emptyRow)
+            {
+                var runs = new List<PdfTextRun>();
+                EmitRuns(runs, San(emptyText!), ReportColours.Faint, ReportStyles.TableCell, bold: false, italic: true);
+                cells.Add(new[] { new PdfTableCell(runs, columnSpan: columns.Count) });
+            }
+
             var style = BrandedTableStyle(ctx);
-            ApplyDataTableGeometry(ctx, style, widths, cells.Count, hidden > 0);
+            ApplyDataTableGeometry(ctx, style, widths, cells.Count, hidden > 0, emptyRow);
             style.Alignments = aligns;
             item.Table(cells, PdfAlign.Left, style);
             if (hidden > 0)
@@ -541,7 +551,7 @@ namespace CIPP.Reporting
         // and the header band is 28pt for one line of 7pt text on a 14pt pitch. The pads are split to put the
         // text where the client's sits. 16pt follows the table, 4pt when the truncation note does.
         private const double TableInset = 12, TableGutter = 6, TableBorder = 1;
-        private static void ApplyDataTableGeometry(ReportContext ctx, PdfTableStyle style, List<double> weights, int rowCount, bool noteFollows)
+        private static void ApplyDataTableGeometry(ReportContext ctx, PdfTableStyle style, List<double> weights, int rowCount, bool noteFollows, bool emptyRow = false)
         {
             var cols = weights.Count;
             var edge = TableInset + TableBorder;
@@ -579,6 +589,15 @@ namespace CIPP.Reporting
                     if (first || last || top || bottom)
                         style.CellBorders[(r, c)] = new PdfCellBorder { Color = line, Width = TableBorder, Left = first, Right = last, Top = top, Bottom = bottom };
                 }
+            }
+            // The empty-state row (client tableEmpty: 12pt all round inside the 1pt border) is one cell
+            // spanning every column, so it carries the row's whole outline itself. The client's row is
+            // 38pt with the text's cap top 13.5pt under the band; the pads put the text there.
+            if (emptyRow)
+            {
+                for (var c = 1; c < cols; c++) { style.CellPaddings.Remove((1, c)); style.CellBorders.Remove((1, c)); }
+                style.CellPaddings[(1, 0)] = new PdfCellPadding { Left = TableBorder + 12, Right = TableBorder + 12, Top = 13.5, Bottom = 15.3 };
+                style.CellBorders[(1, 0)] = new PdfCellBorder { Color = line, Width = TableBorder, Left = true, Right = true, Top = false, Bottom = true };
             }
         }
 
@@ -1782,7 +1801,7 @@ namespace CIPP.Reporting
                     StatRow(ctx, item, block.ListOf("stats") ?? new List<object?>());
                     break;
                 case "richtable":
-                    RichTable(ctx, item, block.ListOf("columns") ?? new List<object?>(), block.ListOf("rows") ?? new List<object?>(), (int)(block.Num("limit") ?? ParseNumber(block.Str("limit")) ?? 0));
+                    RichTable(ctx, item, block.ListOf("columns") ?? new List<object?>(), block.ListOf("rows") ?? new List<object?>(), (int)(block.Num("limit") ?? ParseNumber(block.Str("limit")) ?? 0), block.Str("emptyText"));
                     break;
                 case "richbullets":
                     RichBullets(ctx, item, block.ListOf("items") ?? new List<object?>());

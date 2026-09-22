@@ -188,7 +188,8 @@ Describe 'License report tree' {
         (Get-Block $r 'alertbox')[0].colour | Should -Be '#22543D'
         Get-Block $r 'chart' | Should -BeNullOrEmpty
         Get-Block $r 'richbullets' { $_.title -eq 'Where the savings come from' } | Should -BeNullOrEmpty
-        (Get-Block $r 'note')[0].content | Should -Be 'No licenses were found for this organisation.'
+        (Get-Block $r 'richtable')[0].emptyText | Should -Be 'No licenses were found for this organisation.'
+        Get-Block $r 'note' | Should -BeNullOrEmpty
         (Get-Block $r 'clearbox').Count | Should -Be 5
         (Get-Block $r 'infobox' { $_.title -eq 'What was not measured' })[0].content | Should -BeLike '*configured to treat them as optional*'
         Test-Report $r 'Microsoft 365 Licensing Review'

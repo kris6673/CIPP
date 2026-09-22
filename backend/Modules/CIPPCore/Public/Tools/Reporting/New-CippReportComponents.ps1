@@ -54,9 +54,11 @@ function New-CippReportStatRow {
 
 function New-CippReportTable {
     # A data table. -Columns: @( @{ header; key; width; bold; align; toneField }, ... ). -Rows: row objects.
-    param([string]$Title, [Parameter(Mandatory)][object[]]$Columns, [object[]]$Rows = @(), [int]$Limit = 25)
+    # -EmptyText is drawn inside the table border when there are no rows (client DataTable emptyText).
+    param([string]$Title, [Parameter(Mandatory)][object[]]$Columns, [object[]]$Rows = @(), [int]$Limit = 25, [string]$EmptyText)
     $n = [ordered]@{ type = 'richtable'; columns = @($Columns); rows = @($Rows); limit = $Limit }
     if ($Title) { $n.title = $Title }
+    if ($EmptyText) { $n.emptyText = $EmptyText }
     $n
 }
 
