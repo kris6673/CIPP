@@ -1040,10 +1040,18 @@ namespace CIPP.Reporting
                     r.PercentColumn(width, col => StatCard(ctx, col, value, label, caption, colour, accent, reserveCaption, valueWidth));
                 }
             });
-            item.Spacer(8);
+            item.Spacer(14);                           // client statsGrid marginBottom
         }
 
         private const double StatGap = 10, StatPadX = 6;
+
+        // Client statCard: the figure on a 23pt line (20pt at lineHeight 1.15) with 7pt under it, then the 7pt
+        // label and any caption on the page's 14pt lines. A cell line is its largest run x LineHeight but never
+        // under the table's size x LineHeight, so StatLeading makes the figure's line the client's step from
+        // the figure's baseline to the label's, and a table size of StatLine / StatLeading makes every other
+        // line (a label, a wrapped label line, a caption) the 14pt page line.
+        private const double StatLine = 14;
+        private const double StatLeading = (ReportStyles.StatNumber * 1.15 + 7 + 0.9 * (ReportStyles.StatLabel - ReportStyles.StatNumber)) / ReportStyles.StatNumber;
 
         // Helvetica and Helvetica-Bold advance widths (per 1000 em) for ' '..'~', the metrics OfficeIMO lays the
         // standard font out with (the oblique faces share them); anything else counts as a digit-wide 556
@@ -1140,6 +1148,9 @@ namespace CIPP.Reporting
             }
             runs.Add(Run("\n", colour, ReportStyles.StatNumber));
             EmitRuns(runs, label, ReportColours.Muted, ReportStyles.StatLabel, bold: true);
+            // A caption sits 4pt under the label's 14pt line: a no-break space that tall ends the label line.
+            if (!string.IsNullOrEmpty(caption) || reserveCaption)
+                runs.Add(new PdfTextRun("\u00A0", true, false, Pdf(ReportColours.Muted), false, false, (StatLine + 4) / StatLeading));
             if (!string.IsNullOrEmpty(caption))
             {
                 runs.Add(Run("\n", ctx.Theme.Palette["subtitle"], ReportStyles.StatCaption));
@@ -1155,17 +1166,25 @@ namespace CIPP.Reporting
             var style = new PdfTableStyle
             {
                 HeaderRowCount = 0,
+                FontSize = StatLine / StatLeading,
+                LineHeight = StatLeading,
                 BorderColor = Pdf(ReportColours.Line),
                 BorderWidth = 1,
                 CornerRadius = CardCornerRadius,  // softly rounded card; top accent bar is clipped to the rounded corners
                 RowSeparatorWidth = 0,
                 CellPaddingX = 6,
                 CellPaddingY = 8,
-                // The big number needs clear space under the top accent (a plain number otherwise sits tight
-                // against it), balanced by a comfortable bottom pad under the caption.
+                // The first baseline where the client's figure sits (3pt accent, 10pt padding, 0.9x the figure
+                // size under its line top), and the card's foot 10pt of padding and the 1pt border under the
+                // last 14pt line.
                 CellPaddings = new Dictionary<(int, int), PdfCellPadding>
                 {
-                    [(0, 0)] = new PdfCellPadding { Left = StatPadX, Right = StatPadX, Top = 22, Bottom = 12 },
+                    [(0, 0)] = new PdfCellPadding
+                    {
+                        Left = StatPadX, Right = StatPadX,
+                        Top = 3 + 10 + 0.9 * ReportStyles.StatNumber - CellAscent * StatLine / StatLeading,
+                        Bottom = 10 + 1 - 0.9 * ReportStyles.StatLabel + CellAscent * StatLine / StatLeading,
+                    },
                 },
                 Alignments = new List<PdfColumnAlign> { PdfColumnAlign.Center },
                 CellFills = new Dictionary<(int, int), PdfColor> { [(0, 0)] = Pdf(ReportColours.White) },
