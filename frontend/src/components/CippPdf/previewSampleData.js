@@ -302,3 +302,10 @@ export const SAMPLE_MAIL_FLOW = {
     EmailMalware: 37,
   },
 }
+
+export const SAMPLE_LICENSING = {
+  licensedUsers: 96,
+  plans: 11,
+  monthlySpend: 2433.75,
+  potentialAnnual: 10059.6,
+}

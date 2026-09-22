@@ -4,6 +4,7 @@ import { createReportStyles } from "../CippPdf/reportPdfStyles";
 import { applyFooterText, applyWatermarkText, createReportTheme } from "../CippPdf/reportTheme";
 import {
   SAMPLE_BEC,
+  SAMPLE_LICENSING,
   SAMPLE_MAIL_FLOW,
   SAMPLE_PERMISSIONS,
   SAMPLE_SHARING,
@@ -23,6 +24,13 @@ const SAMPLE_ANALYSIS_DATE = new Date(SAMPLE_BEC.becData.ExtractedAt).toLocaleSt
 });
 
 const SAMPLE_MAIL_FLOW_TOTAL = Object.values(SAMPLE_MAIL_FLOW.totals).reduce((a, b) => a + b, 0);
+
+// Whole units, as the licensing report quotes its headline figures.
+const usd = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 0,
+}).format;
 
 /**
  * Every report CIPP can produce, in the order they are offered everywhere: the built-in reports
@@ -138,6 +146,21 @@ export const REPORT_COVER_PRESETS = [
       SAMPLE_MAIL_FLOW.totals.EmailPhish + SAMPLE_MAIL_FLOW.totals.EmailMalware
     ).toLocaleString()} threats caught`,
     footer: "Confidential — For Internal Use Only",
+  },
+  {
+    id: "licensing",
+    label: "Licensing Report",
+    reportName: "Licensing Report",
+    coverLabel: "Microsoft 365 Licensing Review",
+    title: "Licensing",
+    accent: "Report",
+    subtitle: `What ${SAMPLE_TENANT_NAME} pays Microsoft for each month, which of it is used, and where the same work could be done for less.`,
+    metaPrimary: SAMPLE_TENANT_NAME,
+    metaSecondary: `${SAMPLE_LICENSING.licensedUsers} people licensed · ${SAMPLE_LICENSING.plans} plans · ${usd(
+      SAMPLE_LICENSING.monthlySpend
+    )} per month`,
+    metaTertiary: `Potential saving: ${usd(SAMPLE_LICENSING.potentialAnnual)} per year`,
+    footer: "Confidential — Prepared for the leadership team",
   },
   {
     // Last: this one has no fixed content of its own — it renders whatever an operator assembles in
