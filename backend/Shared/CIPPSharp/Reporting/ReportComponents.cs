@@ -348,40 +348,52 @@ namespace CIPP.Reporting
             if (!string.IsNullOrEmpty(accent)) { Line(accent, leftPad, y, w - leftPad, titleSize, primary, OfficeTextAlignment.Left, true); y += titleSize * lineBox; }
             if (!string.IsNullOrEmpty(lead) || !string.IsNullOrEmpty(accent)) y += 20;  // client title marginBottom 20
 
+            // Client coverHero is the page less its 60pt padding each side; the text under the title wraps
+            // inside it. Its footer note is the last line on the cover, its line box ending at the 60pt page
+            // pad, with 32pt kept above it (client coverFooter marginTop), so a block that wraps further than
+            // the page allows drops the lines that would run into the note rather than overprint it.
+            var heroW = ctx.ContentWidth + 2 * ReportStyles.PagePadding - 2 * coverPad;
+            var noteTop = ctx.ContentHeight + ReportStyles.PagePadding - coverPad - 9 * lineBox;
+            // Draws `text` wrapped to `width` on `pitch`-point lines from the client line top `top` and returns
+            // the height of the lines drawn. Each line is placed like any other cover line: react-pdf seats the
+            // baseline 0.9x the size under the line top even in a taller line (the subtitle's 21pt one).
+            double Wrapped(string text, double top, double width, double size, double pitch, string colour, bool bold = false)
+            {
+                var drawn = 0.0;
+                foreach (var line in WrapLines(text, width, size, bold))
+                {
+                    if (top + drawn + pitch > noteTop - 32) break;
+                    Line(line, leftPad, top + drawn, width, size, colour, OfficeTextAlignment.Left, bold);
+                    drawn += pitch;
+                }
+                return drawn;
+            }
+
             if (ctx.Variables.TryGetValue("coversubtitle", out var cs) && !string.IsNullOrWhiteSpace(cs))
             {
-                // Wraps within a fixed-width box like the client subtitle (maxWidth 400) at its lineHeight 1.5
-                // (21pt a line), then the client marginBottom 40. AddText centres the glyphs in a line that
-                // tall, so the box starts half the extra leading above the client line top.
-                const double subW = 400, subLine = ReportStyles.CoverSubtitle * 1.5;
-                var sub = San(cs);
-                var subLines = WrappedLines(sub, subW, ReportStyles.CoverSubtitle, bold: false);
-                AddT(dw, sub, leftPad, y - (subLine - ReportStyles.CoverSubtitle) / 2, subW, subLine * subLines + 4, ReportStyles.CoverSubtitle, coverText,
-                    OfficeTextAlignment.Left, false, true, subLine);
-                y += subLine * subLines + 40;
+                // The client subtitle: maxWidth 400 at its lineHeight 1.5 (21pt a line), then marginBottom 40.
+                y += Wrapped(San(cs), y, Math.Min(400, heroW), ReportStyles.CoverSubtitle, ReportStyles.CoverSubtitle * 1.5, coverText) + 40;
             }
 
             // The subject line under the title: usually the tenant, but a covertenant override names a
             // different subject (the BEC report puts the compromised user here instead of the tenant).
+            // Client coverMetaCard: maxWidth 500, then the label's marginBottom 8.
             var coverTenant = (ctx.Variables.TryGetValue("covertenant", out var cvt) && !string.IsNullOrWhiteSpace(cvt)) ? cvt : ctx.TenantName;
             if (!string.IsNullOrEmpty(coverTenant))
-            {
-                Line(San(coverTenant), leftPad, y, w - leftPad, 18, coverText, OfficeTextAlignment.Left, true);
-                y += 18 * lineBox + 8;                 // client coverMetaLabel marginBottom 8
-            }
-            // Optional cover meta (client CoverMeta): extra detail lines under the tenant, then a note.
+                y += Wrapped(San(coverTenant), y, Math.Min(500, heroW), 18, 18 * lineBox, coverText, bold: true) + 8;
+            // Optional cover meta (client CoverMeta): extra detail lines under the tenant (4pt under each),
+            // then a note 8pt under them.
             if (ctx.Variables.TryGetValue("covermeta", out var cm) && !string.IsNullOrWhiteSpace(cm))
                 foreach (var line in cm.Replace("\r", "").Split('\n'))
-                { Line(San(line), leftPad, y, w - leftPad * 2, 12, subtitleC, OfficeTextAlignment.Left); y += 12 * lineBox + 4; }
+                    y += Wrapped(San(line), y, heroW, 12, 12 * lineBox, subtitleC) + 4;
             if (ctx.Variables.TryGetValue("covermetanote", out var cmn) && !string.IsNullOrWhiteSpace(cmn))
-                Line(San(cmn), leftPad, y + 8, w - leftPad * 2, 11, subtitleC, OfficeTextAlignment.Left);
+                Wrapped(San(cmn), y + 8, heroW, 11, 11 * lineBox, subtitleC);
 
-            // Client coverFooter: the last line on the cover, its line box ending at the 60pt page pad.
             var note = "CONFIDENTIAL & PROPRIETARY";
             if (ctx.Variables.TryGetValue("coverfooternote", out var cfn) && !string.IsNullOrWhiteSpace(cfn)) note = cfn;
             else if (!string.IsNullOrEmpty(ctx.Theme.CoverFooterText)) note = ctx.Theme.CoverFooterText;
             note = San(ReportTheme.ApplyVariables(note, ctx.Variables)).ToUpperInvariant();
-            Line(note, 0, ctx.ContentHeight + ReportStyles.PagePadding - coverPad - 9 * lineBox, w, 9, ctx.Theme.Palette["footer"], OfficeTextAlignment.Center);
+            Line(note, 0, noteTop, w, 9, ctx.Theme.Palette["footer"], OfficeTextAlignment.Center);
 
             item.Drawing(dw, PdfAlign.Left);
         }
@@ -1155,6 +1167,34 @@ namespace CIPP.Reporting
                     lines += extra;
                     x += w - extra * width;
                 }
+            }
+            return lines;
+        }
+
+        // `text` broken into the lines WrappedLines counts: greedy word wrap, with a word wider than the
+        // column cut where it fills a line (never inside a surrogate pair).
+        internal static List<string> WrapLines(string text, double width, double size, bool bold)
+        {
+            var lines = new List<string>();
+            double Em(string s) => TextEm(s, bold) * size;
+            foreach (var para in text.Replace("\r", "").Split('\n'))
+            {
+                var line = string.Empty;
+                foreach (var word in para.Split(' '))
+                {
+                    if (line.Length > 0 && Em(line + " " + word) > width) { lines.Add(line); line = string.Empty; }
+                    var rest = line.Length > 0 ? line + " " + word : word;
+                    while (Em(rest) > width && rest.Length > 1)
+                    {
+                        var n = rest.Length - 1;
+                        while (n > 1 && Em(rest[..n]) > width) n--;
+                        if (char.IsHighSurrogate(rest[n - 1]) && n > 1) n--;
+                        lines.Add(rest[..n]);
+                        rest = rest[n..];
+                    }
+                    line = rest;
+                }
+                lines.Add(line);
             }
             return lines;
         }
