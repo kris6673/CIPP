@@ -242,7 +242,13 @@ Selecting Identity, Devices, or Custom jumps to that tab, keeping the same test 
 
 <summary>Alerts</summary>
 
-Alerts generated for the tenant, with counts for Active and Snoozed. Switch between the two to filter the list, and use the clock icon on a row to snooze an alert or remove an existing snooze. **Manage** opens the [alert-configuration](../tenant/administration/alert-configuration/ "mention") page.
+Every item the tenant's scripted alerts are currently reporting, with counts for Open, Acknowledged, Snoozed and Resolved in the last 48 hours. Each row shows when the item was first seen and when the alert last confirmed it, so an entry that says "checked 3d ago" tells you the alert has not completed a run for this tenant in three days. Items that resolved and came back three times or more are marked as flapping.
+
+* The tick icon acknowledges an open item, with an optional note. It stays listed as known until the alert stops reporting it.
+* The clock icon snoozes an item, hiding it for 7 to 90 days. Snoozed items sit in their own section with a bin icon to lift the snooze early.
+* Recently resolved items appear in a muted section for two days, so you can confirm a fix landed.
+
+**History** opens the [alert-history](../tenant/administration/alert-configuration/alert-history.md "mention") page for every tenant; **Manage** opens the [alert-configuration](../tenant/administration/alert-configuration/ "mention") page.
 
 </details>
 

@@ -161,6 +161,7 @@
     * [Alert Configuration](user-documentation/tenant/administration/alert-configuration/README.md)
       * [Add Alert](user-documentation/tenant/administration/alert-configuration/alert.md)
       * [Rogue Apps](user-documentation/tenant/administration/alert-configuration/rogue-apps.md)
+      * [Alert History](user-documentation/tenant/administration/alert-configuration/alert-history.md)
       * [Snoozed Alerts](user-documentation/tenant/administration/alert-configuration/snoozed-alerts.md)
     * [Audit Logs](user-documentation/tenant/administration/audit-logs/README.md)
       * [View Audit Log](user-documentation/tenant/administration/audit-logs/log.md)
