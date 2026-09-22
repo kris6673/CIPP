@@ -162,9 +162,14 @@ If tools show up and return data, you're done.
 
 <summary>Add a callback for an AI provider CIPP doesn't list</summary>
 
-Add the provider's callback URL to the **MCP client app** (the API client you flagged MCP Access), not the CIPP-MCP resource app. Easiest: on the **API Clients** page → **MCP** tab, the **MCP Connector Apps** section lets you add or remove custom redirect URIs per client. In Azure instead: **Entra ID → App registrations →** your MCP client app **→ Authentication → Add a platform → Mobile and desktop applications →** paste the callback → **Configure**.
+Add the provider's callback URL to the **MCP client app** (the API client you flagged MCP Access), not the CIPP-MCP resource app. Easiest: on the **API Clients** page → **MCP** tab, each MCP client has its own section with its connector URL and two callback boxes. Add the URL to the box that matches how the client signs in, then **Save Redirect URIs**:
 
-Use **Mobile and desktop applications**, not Web or Single-page application — AI providers redeem the code without a secret, which only that platform allows (the wrong one fails at the end of sign-in with `AADSTS7000218` or `AADSTS9002327`). Ensure **Allow public client flows** is **Yes** (Save to Azure sets this).
+- **Mobile & desktop callbacks (public / PKCE)** — clients that redeem the authorization code without a secret: Claude, ChatGPT, VS Code, and CLI / loopback clients. This is almost every AI.
+- **Web callbacks (confidential)** — only clients that sign in with a client secret: Copilot Studio / Microsoft 365 Copilot agents.
+
+CIPP writes each box to the matching Entra platform and always keeps the built-in provider callbacks. A callback under the wrong platform fails at the end of sign-in — a secret-less client under Web returns `AADSTS7000218` / `AADSTS9002327`, and a secret-based client under Mobile & desktop returns `AADSTS700025`. **Allow public client flows** stays **Yes** (Save to Azure sets this).
+
+In Azure instead: **Entra ID → App registrations →** your MCP client app **→ Authentication → Add a platform →** pick **Mobile and desktop applications** (public / PKCE) or **Web** (secret-based) → paste the callback → **Configure**.
 
 </details>
 
@@ -220,7 +225,7 @@ In your agent: **Tools → Add a tool → Model Context Protocol**. Set:
 - `<cipp-backend-host>` is CIPP's backend host: the `…azurewebsites.net` **Application ID URI** shown under **Expose an API** on the **CIPP-MCP** resource app registration. It's the host in the `scope=` of the sign-in challenge, **not** your vanity `cipp.app` domain.
 
 {% hint style="warning" %}
-**Keep `offline_access` in the Scopes field.** It's what makes Entra issue a refresh token; without it, Copilot Studio re-prompts users to sign in roughly every hour. CIPP admin-consents `offline_access` (and `user_impersonation` on the CIPP-MCP resource) on the MCP client app for you when you enable MCP on the client, so a refresh token is issued even in tenants that disable user consent to applications: you don't need to grant consent by hand.
+**Keep `offline_access` in the Scopes field.** It's what makes Entra issue a refresh token; without it, Copilot Studio re-prompts users to sign in roughly every hour. When you enable MCP on the client, CIPP admin-consents `offline_access` on the MCP client app and pre-authorizes the client on the **CIPP-MCP** resource app's `user_impersonation` scope, so a refresh token is issued and no consent prompt appears — even in tenants that disable user consent to applications. You don't need to grant consent by hand.
 {% endhint %}
 
 {% endstep %}
@@ -232,7 +237,7 @@ In your agent: **Tools → Add a tool → Model Context Protocol**. Set:
 Click **Create / Save**. Copilot Studio generates a **Redirect / callback URL**.
 
 - If it's `https://global.consent.azure-apim.net/redirect`, CIPP already registered it on the MCP client app during Save to Azure, so there is nothing to do.
-- If Copilot Studio shows a different (per-connector) URL, add it to the **MCP client app** registration: **Authentication → Add a platform → Web** → paste it → **Configure / Save**.
+- If Copilot Studio shows a different (per-connector) URL, add it on the **API Clients** page → **MCP** tab: in that client's section, paste it into the **Web callbacks** box and **Save Redirect URIs**. (In Azure instead: your MCP client app → **Authentication → Add a platform → Web** → paste it → **Configure / Save**.)
 
 {% hint style="warning" %}
 For Copilot Studio the callback goes on the **Web** platform, the opposite of the other AI clients (which use **Mobile and desktop applications**). A secret-based sign-in from a Mobile/desktop registration fails with `AADSTS700025`; a callback that was never added fails with `AADSTS50011`.
