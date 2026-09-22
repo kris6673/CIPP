@@ -3,7 +3,7 @@ function Invoke-ExecPreviewReportBuilderPdf {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        CIPP.Core.ReadWrite
+        CIPP.ReportBuilder.ReadWrite
     .DESCRIPTION
         Renders the current (unsaved) Report Builder state to a PDF and returns it as application/pdf
         bytes without persisting a generated-report row. Powers the builder's live preview and download.
