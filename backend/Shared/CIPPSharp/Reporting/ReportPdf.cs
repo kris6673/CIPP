@@ -292,6 +292,16 @@ namespace CIPP.Reporting
         // padding reserves the box plus 6pt, so the body stops 40pt above the paper edge.
         private const double FooterInset = 14, FooterHeight = 20, FooterReserve = FooterInset + FooterHeight + 6, PagePaddingTop = 28;
 
+        // `text` cut to fit `width` points at `size` (Helvetica), ending in an ellipsis (1em) when cut.
+        internal static string FitLine(string text, double width, double size)
+        {
+            if (ReportComponents.TextEm(text, bold: false) * size <= width) return text;
+            var n = text.Length;
+            while (n > 0 && (ReportComponents.TextEm(text[..n], bold: false) + 1) * size > width) n--;
+            if (n > 0 && char.IsHighSurrogate(text[n - 1])) n--; // never split an emoji's surrogate pair
+            return text[..n].TrimEnd() + "…";
+        }
+
         private static void ApplyContentChrome(PdfPageBuilder p, ReportContext ctx, string footerText, string watermark)
         {
             // Client content page padding: 28 above (the header, or a continued table), 40 below (the footer).
@@ -319,7 +329,12 @@ namespace CIPP.Reporting
                     f.FontSize(ReportStyles.FooterText).Offset(FooterReserve - baseline);
                     f.Shape(rule, PdfAlign.Center);
                     if (ctx.Theme.ShowPageNumbers) f.Shape(numberPad, PdfAlign.Right);
-                    var label = new PdfTextRun(ReportMarkdown.Sanitize(footerText), color: ReportComponents.Pdf(ctx.Theme.Palette["footer"]), fontSize: ReportStyles.FooterText);
+                    // The client's label wraps beside the page number's 80pt box; a zone would run under it, so a
+                    // label too long for the room left of the box is cut with an ellipsis. The 16pt spare covers
+                    // the number growing left past its box with two- and three-digit page counts.
+                    var text = ReportMarkdown.Sanitize(footerText);
+                    if (ctx.Theme.ShowPageNumbers) text = FitLine(text, w - 80 - 16, ReportStyles.FooterText);
+                    var label = new PdfTextRun(text, color: ReportComponents.Pdf(ctx.Theme.Palette["footer"]), fontSize: ReportStyles.FooterText);
                     var number = new PdfTextRun(" ", bold: true, color: ReportComponents.Pdf(ReportColours.Faint), fontSize: ReportStyles.FooterText);
                     PdfTextRun Number(string s) => new(s, bold: true, color: number.Color, fontSize: ReportStyles.FooterText);
                     f.StyledZones(
