@@ -27,7 +27,6 @@ function Build-CippLicenseReportTree {
     $Ellipsis = [string][char]0x2026
     $OpenQuote = [string][char]0x201C
     $CloseQuote = [string][char]0x201D
-    $Nbsp = [string][char]0x00A0
     # Heavy check mark + VS16: the kit draws it as the same Twemoji image the client shows.
     $Check = [string][char]0x2714 + [string][char]0xFE0F
     $Colours = @{ danger = '#742A2A'; warning = '#744210'; success = '#22543D' }
@@ -62,12 +61,14 @@ function Build-CippLicenseReportTree {
     if ($Currency -notmatch '^[A-Z]{3}$') { $Currency = 'USD' }
     # ponytail: symbols for the catalog currencies the PDF fonts can draw; any other code prints as
     # "CODE 1,234" like Intl does for CHF/SEK. Glyphs such as INR/KRW's are not in the fonts, so they
-    # stay as codes rather than turning into '?'.
+    # stay as codes rather than turning into '?'. Intl joins code and number with a no-break space; a plain
+    # one is kept here so a narrow table cell wraps between the two instead of inside the number
+    # ("KRW 19,237." / "50").
     $Symbol = switch ($Currency) {
         'USD' { '$' } 'EUR' { [string][char]0x20AC } 'GBP' { [string][char]0x00A3 } 'JPY' { [string][char]0x00A5 }
         'CAD' { 'CA$' } 'AUD' { 'A$' } 'NZD' { 'NZ$' } 'CNY' { 'CN' + [char]0x00A5 } 'HKD' { 'HK$' }
         'MXN' { 'MX$' } 'BRL' { 'R$' } 'TWD' { 'NT$' }
-        default { $Currency + $Nbsp }
+        default { $Currency + ' ' }
     }
     function money($v, [int]$Digits) {
         $x = [math]::Round([decimal](nz $v), $Digits, [MidpointRounding]::AwayFromZero)

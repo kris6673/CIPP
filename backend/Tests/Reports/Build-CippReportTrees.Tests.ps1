@@ -227,9 +227,8 @@ Describe 'License report tree' {
     }
 
     It 'prints an unmapped currency as its code and falls back to USD for an unusable one' {
-        $Nbsp = [string][char]0x00A0
         $r = Build-CippLicenseReportTree -Data @{ TenantName = 'C'; Summary = @{ Currency = 'chf'; MonthlySpend = 1234.5 } }
-        (Get-Block $r 'scorecard')[0].stats[0].value | Should -Be "CHF${Nbsp}1,235"
+        (Get-Block $r 'scorecard')[0].stats[0].value | Should -Be 'CHF 1,235'
         $r = Build-CippLicenseReportTree -Data @{ TenantName = 'C'; Summary = @{ Currency = 'dollars'; MonthlySpend = 5 } }
         (Get-Block $r 'scorecard')[0].stats[0].value | Should -Be '$5'
     }
