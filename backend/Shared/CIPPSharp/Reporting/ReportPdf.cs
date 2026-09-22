@@ -242,22 +242,28 @@ namespace CIPP.Reporting
         // it can carry the brand-coloured rule the running-header API can't draw.
         private static void RenderPageHeader(ReportContext ctx, PdfContentBuilder item, string? title, string? subtitle)
         {
-            // Title and subtitle read as one unit (client pageTitle marginBottom 8), so the title line box
-            // is kept tight - the default paragraph line height otherwise balloons the gap between them -
-            // then the client paddingBottom 8 before the brand rule, and marginBottom 14 after it.
+            // Client pageHeader, from the 28pt page top: the 20pt title and 11pt subtitle each on the page's
+            // 14pt line (baseline 0.9x the size under the line top), 8pt between them, then 8pt of padding,
+            // the 1pt brand rule and 14pt under it. OfficeIMO seats every paragraph's first baseline
+            // FlowBaseline under its top, so the space above the title and the title line itself carry the
+            // difference in seats, and the rule's spacing puts it and the content under it where the
+            // client's are.
             var titleColour = ctx.Theme.Palette["title"];
             var subtitleColour = ctx.Theme.Palette["subtitle"];
             Action<PdfParagraphBuilder> titleRun = b => { b.FontSize(ReportStyles.PageTitle); ReportComponents.EmitInline(b, title ?? ctx.ReportName, titleColour, ReportStyles.PageTitle, bold: true); };
-            var titleStyle = new PdfParagraphStyle { LineHeight = 1.0, SpacingAfter = 3 };
+            var titleStyle = new PdfParagraphStyle { LineHeight = (14 + 8 - 0.9 * (ReportStyles.PageTitle - ReportStyles.PageSubtitle)) / ReportStyles.PageTitle, SpacingAfter = 0 };
             Action<PdfParagraphBuilder>? subtitleRun = string.IsNullOrEmpty(subtitle) ? null
                 : b => { b.FontSize(ReportStyles.PageSubtitle); ReportComponents.EmitInline(b, subtitle!, subtitleColour, ReportStyles.PageSubtitle); };
-            var subtitleStyle = new PdfParagraphStyle { LineHeight = 1.05, SpacingAfter = 3 };
+            var subtitleStyle = new PdfParagraphStyle { LineHeight = 14 / ReportStyles.PageSubtitle, SpacingAfter = 0 };
+            var titleSeat = 0.9 * ReportStyles.PageTitle - ReportComponents.FlowBaseline;
 
             // Client pageHeader: the title block takes the width and the branding logo sits at the right
-            // edge, 30pt tall and top-aligned with the title. Without a logo the paragraphs flow directly.
+            // edge, 30pt tall and top-aligned with the title's line. Without a logo the paragraphs flow
+            // directly. The title's seat goes in the text column, so the logo stays at the page top.
             var logoType = ctx.Logo is { Length: > 0 } ? ReportComponents.ImageContentType(ctx.Logo) : null;
             if (logoType is null)
             {
+                item.Spacer(titleSeat);
                 item.Paragraph(titleRun, PdfAlign.Left, null, titleStyle);
                 if (subtitleRun is not null) item.Paragraph(subtitleRun, PdfAlign.Left, null, subtitleStyle);
             }
@@ -269,6 +275,7 @@ namespace CIPP.Reporting
                     r.Gap(12);
                     r.PercentColumn(75, c =>
                     {
+                        c.Spacer(titleSeat);
                         c.Paragraph(titleRun, PdfAlign.Left, null, titleStyle);
                         if (subtitleRun is not null) c.Paragraph(subtitleRun, PdfAlign.Left, null, subtitleStyle);
                     });
@@ -277,21 +284,21 @@ namespace CIPP.Reporting
             }
             // Full-width brand rule under the header (HR auto-fits the content width; a fixed-width
             // rectangle risks exceeding it).
-            item.HR(2, ReportComponents.Pdf(ctx.Theme.Palette["heading"]));
-            item.Spacer(8);
+            item.HR(2, ReportComponents.Pdf(ctx.Theme.Palette["heading"]), spacingBefore: 6.2, spacingAfter: 13);
         }
 
         // Client PageFooter: a 20pt box 14pt above the paper edge with a 1pt rule along its top, 5pt of padding
         // under the rule, the label on the left and a bold "Page N of M" on the right. The page's bottom
         // padding reserves the box plus 6pt, so the body stops 40pt above the paper edge.
-        private const double FooterInset = 14, FooterHeight = 20, FooterReserve = FooterInset + FooterHeight + 6;
+        private const double FooterInset = 14, FooterHeight = 20, FooterReserve = FooterInset + FooterHeight + 6, PagePaddingTop = 28;
 
         private static void ApplyContentChrome(PdfPageBuilder p, ReportContext ctx, string footerText, string watermark)
         {
+            // Client content page padding: 28 above (the header, or a continued table), 40 below (the footer).
+            p.Margin(ReportStyles.PagePadding, PagePaddingTop, ReportStyles.PagePadding, FooterReserve);
             var showText = ctx.Theme.FooterShow && !string.IsNullOrEmpty(footerText);
             if (showText || ctx.Theme.ShowPageNumbers)
             {
-                p.Margin(ReportStyles.PagePadding, ReportStyles.PagePadding, ReportStyles.PagePadding, FooterReserve);
                 // The label's baseline above the paper edge: under the rule and the padding, 0.9x its size into
                 // the page's 14pt line. OfficeIMO sets every footer zone on one baseline, so the page number
                 // shares it (the client centres its shorter natural line, 3pt lower).

@@ -193,11 +193,18 @@ namespace CIPP.Reporting
             public double SpacingAfter { get; init; }
         }
 
-        // Body copy: 9pt, justified. The client uses lineHeight 1.5 / 8pt after, but OfficeIMO's leading
-        // renders looser at the same numbers, so a tighter 1.35 / 6pt gives the client's visual density.
+        // OfficeIMO leads a flow paragraph off the document's 11pt default size rather than its runs' size (a
+        // larger run raises its line by the same ratio) and seats the first baseline FlowBaseline under the
+        // paragraph's top. A client line is its lineHeight x the size, with the baseline 0.9x the size under
+        // the line top. So a client lineHeight becomes a LineHeight scaled by size / 11, and a paragraph of
+        // runs larger than 9pt needs (0.9 x size - FlowBaseline) of space above it to seat its baseline.
+        internal const double FlowBaseSize = 11, FlowBaseline = 8.1;
+        private static double FlowLineHeight(double clientLineHeight, double size) => clientLineHeight * size / Math.Max(size, FlowBaseSize);
+
+        // Body copy (client bodyText): 9pt at lineHeight 1.5, 8pt after, justified.
         public static TextStyle BodyStyle(ReportContext ctx) => new()
         {
-            Size = ReportStyles.Body, Colour = ctx.Theme.Palette["body"], Align = PdfAlign.Justify, LineHeight = 1.35, SpacingAfter = 6,
+            Size = ReportStyles.Body, Colour = ctx.Theme.Palette["body"], Align = PdfAlign.Justify, LineHeight = FlowLineHeight(1.5, ReportStyles.Body), SpacingAfter = 8,
         };
 
         public static void Paragraph(ReportContext ctx, PdfContentBuilder item, IReadOnlyList<TextRun> runs, TextStyle? style = null)
@@ -207,11 +214,17 @@ namespace CIPP.Reporting
                 new PdfParagraphStyle { LineHeight = st.LineHeight, SpacingAfter = st.SpacingAfter });
         }
 
-        // Section title: 14pt bold heading colour (client styles.sectionTitle marginBottom 8, tightened to
-        // 5 to offset OfficeIMO's looser leading around the heading).
+        // Section title (client sectionTitle): 14pt bold heading colour on the page's 14pt line, marginBottom 8.
+        // The space above seats the baseline 0.9x the size under the line top, and comes out of the 8 below.
+        private const double SectionTitleSeat = 0.9 * ReportStyles.SectionTitle - FlowBaseline;
         public static void SectionTitle(ReportContext ctx, PdfContentBuilder item, string title)
             => item.Paragraph(b => { b.FontSize(ReportStyles.SectionTitle); EmitInline(b, title, ctx.Theme.Palette["heading"], ReportStyles.SectionTitle, bold: true); },
-                PdfAlign.Left, null, new PdfParagraphStyle { LineHeight = 1.1, SpacingAfter = 5 });
+                PdfAlign.Left, null, new PdfParagraphStyle
+                {
+                    LineHeight = FlowLineHeight(14 / ReportStyles.SectionTitle, ReportStyles.SectionTitle),
+                    SpacingBefore = SectionTitleSeat,
+                    SpacingAfter = 8 - SectionTitleSeat,
+                });
 
         // A callout's list rendered as one paragraph, a line break between items (a panel ignores list
         // styling, so this matches the client's single-text-block callout bullets). `marker(i)` prefixes
@@ -415,19 +428,41 @@ namespace CIPP.Reporting
         /// body text - each an item.Paragraph with per-run colour so the marker and label differ from the text.</summary>
         public static void RichBullets(ReportContext ctx, PdfContentBuilder item, List<object?> items)
         {
-            foreach (var it in items)
+            // Client BulletList: the list is inset 12 with 12 under it; each item is a row of the 8pt bold
+            // marker (6pt after it, 1pt down, on the page's 14pt line) and the 9pt text at lineHeight 1.4, 6pt
+            // under the item. The text column hangs: a wrapped line starts under the text, not the marker, so
+            // the paragraph is indented to the text and the first line pulled back to the marker, with a tab
+            // stop at the text column. A one-line item is as tall as the marker's 15pt line, not the 12.6pt
+            // text line, so it keeps the 2.4pt difference below it.
+            const double markerSize = 8, markerGap = 6, listInset = 12, itemGap = 6, listGap = 12;
+            var textLine = 1.4 * ReportStyles.BulletText;
+            for (var i = 0; i < items.Count; i++)
             {
+                var it = items[i];
                 var label = ReportNode.RowStr(it, "label");
                 var text = ReportNode.RowStr(it, "text") ?? string.Empty;
                 var marker = ReportNode.RowStr(it, "marker"); // custom marker (e.g. "1.") else a bullet dot
+                marker = string.IsNullOrEmpty(marker) ? "•" : San(marker);
+                var hang = TextEm(marker, bold: true) * markerSize + markerGap;
+                var copy = string.IsNullOrEmpty(label) ? text : label + " " + text;
+                // ponytail: the label is measured as regular text, a hair narrow for its bold face.
+                var oneLine = WrappedLines(copy, ctx.ContentWidth - listInset - hang, ReportStyles.BulletText, bold: false) == 1;
+                var style = new PdfParagraphStyle
+                {
+                    LeftIndent = listInset + hang,
+                    FirstLineIndent = -hang,
+                    LineHeight = FlowLineHeight(1.4, ReportStyles.BulletText),
+                    SpacingAfter = itemGap + (oneLine ? 1 + 14 - textLine : 0) + (i == items.Count - 1 ? listGap : 0),
+                };
+                style.AddTabStop(0.01);
                 item.Paragraph(b =>
                 {
                     b.FontSize(ReportStyles.BulletText);
-                    b.Bold(true).Color(Pdf(ctx.Theme.Palette["heading"])).Text((string.IsNullOrEmpty(marker) ? "•" : San(marker)) + "  ");
+                    b.Bold(true).Color(Pdf(ctx.Theme.Palette["heading"])).FontSize(markerSize).Text(marker).Text("\t").FontSize(ReportStyles.BulletText);
                     var body = ctx.Theme.Palette["body"];
                     if (!string.IsNullOrEmpty(label)) EmitToBuilder(b, San(label) + " ", body, ReportStyles.BulletText, bold: true);
                     EmitToBuilder(b, San(text), body, ReportStyles.BulletText, bold: false);
-                }, PdfAlign.Left, null, new PdfParagraphStyle { LeftIndent = 12, SpacingAfter = 4, LineHeight = 1.3 });
+                }, PdfAlign.Left, null, style);
             }
         }
 
@@ -555,8 +590,8 @@ namespace CIPP.Reporting
                 for (var ri = 1; ri <= shown.Count; ri++)
                 {
                     var pad = style.CellPaddings!.TryGetValue((ri, ci), out var p) ? p : new PdfCellPadding();
-                    pad.Top = style.CellPaddingTop + 0.9;
-                    pad.Bottom = style.CellPaddingBottom + 1.4;
+                    pad.Top = (pad.Top ?? style.CellPaddingTop) + 0.9;
+                    pad.Bottom = (pad.Bottom ?? style.CellPaddingBottom) + 1.4;
                     style.CellPaddings[(ri, ci)] = pad;
                 }
             }
@@ -622,14 +657,17 @@ namespace CIPP.Reporting
             {
                 for (var c = 0; c < cols; c++)
                 {
+                    // The client's outline sits outside the rows, so the header band starts and the last row
+                    // ends a border's width further in than a cell border drawn on the cell edge: the header's
+                    // top pad and the last row's bottom pad each carry it.
                     var first = c == 0; var last = c == cols - 1; var top = r == 0; var bottom = r == rowCount - 1;
-                    if (first || last || top)
+                    if (first || last || top || bottom)
                         style.CellPaddings[(r, c)] = new PdfCellPadding
                         {
                             Left = first ? edge : null,
                             Right = last ? edge : null,
-                            Top = top ? 5.4 : null,
-                            Bottom = top ? 6.7 : null,
+                            Top = top ? 5.4 + TableBorder : null,
+                            Bottom = (top ? 6.7 + TableBorder : style.CellPaddingBottom) + (bottom ? TableBorder : 0),
                         };
                     if (first || last || top || bottom)
                         style.CellBorders[(r, c)] = new PdfCellBorder { Color = line, Width = TableBorder, Left = first, Right = last, Top = top, Bottom = bottom };
@@ -641,7 +679,7 @@ namespace CIPP.Reporting
             if (emptyRow)
             {
                 for (var c = 1; c < cols; c++) { style.CellPaddings.Remove((1, c)); style.CellBorders.Remove((1, c)); }
-                style.CellPaddings[(1, 0)] = new PdfCellPadding { Left = TableBorder + 12, Right = TableBorder + 12, Top = 13.5, Bottom = 15.3 };
+                style.CellPaddings[(1, 0)] = new PdfCellPadding { Left = TableBorder + 12, Right = TableBorder + 12, Top = 13.5, Bottom = 15.3 + TableBorder };
                 style.CellBorders[(1, 0)] = new PdfCellBorder { Color = line, Width = TableBorder, Left = true, Right = true, Top = false, Bottom = true };
             }
         }
@@ -1054,8 +1092,8 @@ namespace CIPP.Reporting
         private const double StatLeading = (ReportStyles.StatNumber * 1.15 + 7 + 0.9 * (ReportStyles.StatLabel - ReportStyles.StatNumber)) / ReportStyles.StatNumber;
 
         // Helvetica and Helvetica-Bold advance widths (per 1000 em) for ' '..'~', the metrics OfficeIMO lays the
-        // standard font out with (the oblique faces share them); anything else counts as a digit-wide 556
-        // (the Latin-1 currency signs are).
+        // standard font out with (the oblique faces share them); a no-break space is a space, the bullet 350,
+        // and anything else counts as a digit-wide 556 (the Latin-1 currency signs are).
         private static readonly int[] HelveticaWidths =
         {
             278, 278, 355, 556, 556, 889, 667, 191, 333, 333, 389, 584, 278, 333, 278, 278, 556, 556, 556, 556,
@@ -1077,7 +1115,7 @@ namespace CIPP.Reporting
         internal static double TextEm(string s, bool bold)
         {
             var widths = bold ? HelveticaBoldWidths : HelveticaWidths;
-            return s.Sum(ch => (ch >= ' ' && ch <= '~' ? widths[ch - ' '] : ch == '\u00A0' ? 278 : 556) / 1000.0);
+            return s.Sum(ch => (ch >= ' ' && ch <= '~' ? widths[ch - ' '] : ch == '\u00A0' ? 278 : ch == '\u2022' ? 350 : 556) / 1000.0);
         }
 
         // How many lines `text` takes in a column `width` points wide: each '\n' line word-wrapped greedily,
