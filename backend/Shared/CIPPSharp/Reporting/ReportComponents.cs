@@ -277,32 +277,41 @@ namespace CIPP.Reporting
             // logo and date with a 40pt margin under it, hero paddingTop 24) rather than a proportion of
             // page height, so the block lands where the react-pdf cover puts it. The drawing origin already
             // sits at the page margin, so each client "from page top" figure is offset by PagePadding here.
-            const double coverPad = 60, headerGap = 40, heroPad = 24, dateLine = 11, logoHeight = 100;
+            const double coverPad = 60, headerGap = 40, heroPad = 24, logoHeight = 100;
             var headerTop = coverPad - ReportStyles.PagePadding;
+
+            // The client cover's text sits on react-pdf's natural Helvetica leading: a line box 1.1x the size
+            // with the baseline 0.9x the size under its top. AddText puts the baseline a full size under its
+            // box top, so a line is drawn 0.1x its size above the top of the client line it stands for, and
+            // `y` below always tracks the client's line tops.
+            const double lineBox = 1.1;
+            void Line(string text, double x, double top, double width, double size, string colour, OfficeTextAlignment align, bool bold = false)
+                => AddT(dw, text, x, top - 0.1 * size, width, size * 1.2, size, colour, align, bold);
 
             // Client coverHeader: the branding logo on the left at 100pt (width by aspect ratio, capped so
             // a banner never reaches the date), the date on the right, the two vertically centred on each
-            // other. Without a logo the row is just the date line, which is where the hero's 135pt top came
-            // from (60 + 11 + 40 + 24).
+            // other. Without a logo the row is just the date line. The date keeps the cover's 60pt page
+            // inset on the right, like everything else on the cover.
             var logoType = ctx.Logo is { Length: > 0 } ? ImageContentType(ctx.Logo) : null;
             var logoBox = logoType is null ? (w: 0.0, h: 0.0) : LogoBox(ctx.Logo!, logoHeight, 260);
+            var dateLine = 9 * lineBox;
             var headerH = Math.Max(dateLine, logoBox.h);
             if (logoType is not null)
                 dw.AddImage(ctx.Logo!, logoType, new OfficeImageProjection(
                     new OfficeImagePlacement(leftPad, headerTop, logoBox.w, logoBox.h), new OfficeImageSourceCrop(0, 0, 0, 0), 0, null, null, false, false));
             if (!string.IsNullOrEmpty(ctx.GeneratedOn))
-                AddT(dw, San(ctx.GeneratedOn).ToUpperInvariant(), 0, headerTop + Math.Max(0, (headerH - 14) / 2), w, 14, 9, subtitleC, OfficeTextAlignment.Right);
+                Line(San(ctx.GeneratedOn).ToUpperInvariant(), 0, headerTop + (headerH - dateLine) / 2, ctx.ContentWidth - leftPad, 9, coverText, OfficeTextAlignment.Right);
 
             var coverLabel = (ctx.Variables.TryGetValue("coverlabel", out var cl) && !string.IsNullOrWhiteSpace(cl)) ? cl : "ASSESSMENT REPORT";
             coverLabel = San(coverLabel).ToUpperInvariant();
             var chipW = Math.Min(w - leftPad * 2, 26 + coverLabel.Length * 6.4);
-            var y = coverPad + headerH + headerGap + heroPad - ReportStyles.PagePadding;   // client coverHero content top (chip)
-            var chip = OfficeShape.RoundedRectangle(chipW, 26, 13); chip.FillColor = OC(primary);
+            // Client coverLabel: the 10pt label on its natural line inside 8pt of padding, so a 27pt pill.
+            var chipH = 8 + ReportStyles.CoverLabel * lineBox + 8;
+            var y = headerTop + headerH + headerGap + heroPad;   // client coverHero content top (chip)
+            var chip = OfficeShape.RoundedRectangle(chipW, chipH, chipH / 2); chip.FillColor = OC(primary);
             dw.AddShape(chip, leftPad, y);
-            // AddText seats the glyph near the top of its box, so a box that merely matches the pill leaves
-            // the label riding high; drop it so the 10pt label sits centred in the 26pt pill.
-            AddT(dw, coverLabel, leftPad, y + 9, chipW, 12, ReportStyles.CoverLabel, ctx.Theme.OnPrimary, OfficeTextAlignment.Center, true);
-            y += 58;                                  // chip height (~28) + client marginBottom 30
+            Line(coverLabel, leftPad, y + 8, chipW, ReportStyles.CoverLabel, ctx.Theme.OnPrimary, OfficeTextAlignment.Center, true);
+            y += chipH + 30;                          // client coverLabel marginBottom 30
 
             // Cover title: an explicit covertitle/coveraccent override (client coverTitle/coverAccent, e.g.
             // the BEC report's "BEC Compromise" / "Analysis") else the report name split on its last word.
@@ -322,17 +331,20 @@ namespace CIPP.Reporting
             // Helvetica Bold capitals average about 0.7em, so the size that fits is the box over that.
             double FitTitle(string s) => Math.Min(ReportStyles.CoverTitle, (w - leftPad) / Math.Max(1, s.Length * 0.7));
             var titleSize = Math.Min(FitTitle(lead), FitTitle(accent));
-            if (!string.IsNullOrEmpty(lead)) { AddT(dw, lead, leftPad, y, w - leftPad, 56, titleSize, coverText, OfficeTextAlignment.Left, true); y += 53; }
-            if (!string.IsNullOrEmpty(accent)) { AddT(dw, accent, leftPad, y, w - leftPad, 56, titleSize, primary, OfficeTextAlignment.Left, true); y += 53; }
+            if (!string.IsNullOrEmpty(lead)) { Line(lead, leftPad, y, w - leftPad, titleSize, coverText, OfficeTextAlignment.Left, true); y += titleSize * lineBox; }
+            if (!string.IsNullOrEmpty(accent)) { Line(accent, leftPad, y, w - leftPad, titleSize, primary, OfficeTextAlignment.Left, true); y += titleSize * lineBox; }
             if (!string.IsNullOrEmpty(lead) || !string.IsNullOrEmpty(accent)) y += 20;  // client title marginBottom 20
 
             if (ctx.Variables.TryGetValue("coversubtitle", out var cs) && !string.IsNullOrWhiteSpace(cs))
             {
-                // Wraps within a fixed-width box like the client subtitle (maxWidth 400); advance by the
-                // wrapped height (14pt at lineHeight 1.5 ~= 21/line) plus the client subtitle marginBottom 40.
-                const double subW = 400, subLine = 21;
-                var subLines = Math.Max(1, Math.Ceiling(San(cs).Length / 57.0));
-                AddT(dw, San(cs), leftPad, y, subW, subLine * subLines + 4, ReportStyles.CoverSubtitle, subtitleC, OfficeTextAlignment.Left, false, true);
+                // Wraps within a fixed-width box like the client subtitle (maxWidth 400) at its lineHeight 1.5
+                // (21pt a line), then the client marginBottom 40. AddText centres the glyphs in a line that
+                // tall, so the box starts half the extra leading above the client line top.
+                const double subW = 400, subLine = ReportStyles.CoverSubtitle * 1.5;
+                var sub = San(cs);
+                var subLines = WrappedLines(sub, subW, ReportStyles.CoverSubtitle, bold: false);
+                AddT(dw, sub, leftPad, y - (subLine - ReportStyles.CoverSubtitle) / 2, subW, subLine * subLines + 4, ReportStyles.CoverSubtitle, coverText,
+                    OfficeTextAlignment.Left, false, true, subLine);
                 y += subLine * subLines + 40;
             }
 
@@ -341,21 +353,22 @@ namespace CIPP.Reporting
             var coverTenant = (ctx.Variables.TryGetValue("covertenant", out var cvt) && !string.IsNullOrWhiteSpace(cvt)) ? cvt : ctx.TenantName;
             if (!string.IsNullOrEmpty(coverTenant))
             {
-                AddT(dw, San(coverTenant), leftPad, y, w - leftPad, 24, 18, coverText, OfficeTextAlignment.Left, true);
-                y += 26;
+                Line(San(coverTenant), leftPad, y, w - leftPad, 18, coverText, OfficeTextAlignment.Left, true);
+                y += 18 * lineBox + 8;                 // client coverMetaLabel marginBottom 8
             }
             // Optional cover meta (client CoverMeta): extra detail lines under the tenant, then a note.
             if (ctx.Variables.TryGetValue("covermeta", out var cm) && !string.IsNullOrWhiteSpace(cm))
                 foreach (var line in cm.Replace("\r", "").Split('\n'))
-                { AddT(dw, San(line), leftPad, y, w - leftPad * 2, 16, 12, subtitleC, OfficeTextAlignment.Left); y += 16; }
+                { Line(San(line), leftPad, y, w - leftPad * 2, 12, subtitleC, OfficeTextAlignment.Left); y += 12 * lineBox + 4; }
             if (ctx.Variables.TryGetValue("covermetanote", out var cmn) && !string.IsNullOrWhiteSpace(cmn))
-                AddT(dw, San(cmn), leftPad, y + 6, w - leftPad * 2, 16, 11, subtitleC, OfficeTextAlignment.Left);
+                Line(San(cmn), leftPad, y + 8, w - leftPad * 2, 11, subtitleC, OfficeTextAlignment.Left);
 
+            // Client coverFooter: the last line on the cover, its line box ending at the 60pt page pad.
             var note = "CONFIDENTIAL & PROPRIETARY";
             if (ctx.Variables.TryGetValue("coverfooternote", out var cfn) && !string.IsNullOrWhiteSpace(cfn)) note = cfn;
             else if (!string.IsNullOrEmpty(ctx.Theme.CoverFooterText)) note = ctx.Theme.CoverFooterText;
             note = San(ReportTheme.ApplyVariables(note, ctx.Variables)).ToUpperInvariant();
-            AddT(dw, note, 0, h - 16, w, 14, 9, ctx.Theme.Palette["footer"], OfficeTextAlignment.Center);
+            Line(note, 0, ctx.ContentHeight + ReportStyles.PagePadding - coverPad - 9 * lineBox, w, 9, ctx.Theme.Palette["footer"], OfficeTextAlignment.Center);
 
             item.Drawing(dw, PdfAlign.Left);
         }
@@ -1214,12 +1227,13 @@ namespace CIPP.Reporting
         // Positioned text into an OfficeDrawing at an explicit size/colour/alignment (AddText takes the
         // size via the font, so every label supplies a Helvetica OfficeFontInfo).
         private static void AddT(OfficeDrawing dw, string text, double x, double y, double w, double h,
-            double size, string colourHex, OfficeTextAlignment align, bool bold = false, bool wrap = false)
+            double size, string colourHex, OfficeTextAlignment align, bool bold = false, bool wrap = false, double? lineHeight = null)
             // The extended overload's wrapText makes a long block (the cover subtitle) fold inside its box
             // instead of overrunning the page; the short overload leaves WrapText off (read-only afterwards).
+            // `lineHeight` is the line pitch in points (null: 1.2x the size).
             => dw.AddText(text, x, y, w, h,
                 new OfficeFontInfo("Helvetica", size, bold ? OfficeFontStyle.Bold : OfficeFontStyle.Regular),
-                OC(colourHex), align, lineHeight: null, wrapText: wrap);
+                OC(colourHex), align, lineHeight: lineHeight, wrapText: wrap);
 
         public static void Chart(ReportContext ctx, PdfContentBuilder item, string? kind, List<object?> data,
             string? title = null, string? caption = null, double? max = null, string? centreLabel = null,
