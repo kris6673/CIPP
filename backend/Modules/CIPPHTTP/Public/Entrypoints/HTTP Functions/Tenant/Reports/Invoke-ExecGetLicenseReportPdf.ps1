@@ -67,15 +67,15 @@ function Invoke-ExecGetLicenseReportPdf {
 
     try {
         $TenantName = Get-CippReportTenantName -TenantFilter $TenantFilter -BrandingPresetId $BrandingPresetId
-        $GeneratedOn = (Get-Date).ToString('MMMM d, yyyy', [cultureinfo]'en-US')
         $Report = Get-CIPPLicenseRecommendation -TenantFilter $TenantFilter -Currency $Currency -InactiveDays $InactiveDays -TenureMonths $TenureMonths `
             -RecommendDowngrades $RecommendDowngrades -RecommendUpgrades $RecommendUpgrades -RecommendTerms $RecommendTerms -ProtectSecurityFeatures $ProtectSecurityFeatures
         $Data = @{ TenantName = $TenantName }
         foreach ($Property in $Report.PSObject.Properties) { $Data[$Property.Name] = $Property.Value }
 
-        $Tree = Build-CippLicenseReportTree -Data $Data -Sections $Sections -GeneratedOn $GeneratedOn
+        # Both date the report today in the instance's timezone.
+        $Tree = Build-CippLicenseReportTree -Data $Data -Sections $Sections
         $Bytes = ConvertTo-CippReportPdf -Blocks $Tree.Blocks -Variables $Tree.Variables -TenantName $TenantName -TenantFilter $TenantFilter `
-            -ReportName 'Licensing Report' -GeneratedOn $GeneratedOn -BrandingPresetId $BrandingPresetId
+            -ReportName 'Licensing Report' -BrandingPresetId $BrandingPresetId
         $FileName = ("Licensing_Report_$TenantFilter" -replace '[^a-zA-Z0-9_\-]', '_') + '.pdf'
         return ([HttpResponseContext]@{
                 StatusCode  = [HttpStatusCode]::OK

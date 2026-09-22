@@ -12,13 +12,14 @@ function Build-CippLicenseReportTree {
         $false drops a section; the summary page is always included.
     .PARAMETER GeneratedOn
         The generation date quoted on the method page (the cover date is ConvertTo-CippReportPdf's).
+        Defaults to today in the instance's timezone (CIPP_TIMEZONE), as the cover's does.
         Returns @{ Blocks; Variables }.
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][hashtable]$Data,
         [hashtable]$Sections = @{},
-        [string]$GeneratedOn = (Get-Date).ToString('MMMM d, yyyy', [cultureinfo]'en-US')
+        [string]$GeneratedOn = [TimeZoneInfo]::ConvertTime([DateTimeOffset]::UtcNow, $(try { [TimeZoneInfo]::FindSystemTimeZoneById([string]$env:CIPP_TIMEZONE) } catch { [TimeZoneInfo]::Utc })).ToString('MMMM d, yyyy', [cultureinfo]'en-US')
     )
 
     # This file stays ASCII: the typographic characters the client prints are built here.

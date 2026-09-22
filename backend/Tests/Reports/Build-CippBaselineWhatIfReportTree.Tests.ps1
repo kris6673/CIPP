@@ -172,6 +172,16 @@ Describe 'Build-CippBaselineWhatIfReportTree' {
         )
     }
 
+    It 'dates the waves in the instance timezone' {
+        # The sample's next wave is due at 12:00 UTC on October 7, already October 8 at UTC+14.
+        $Saved = $env:CIPP_TIMEZONE
+        try {
+            $env:CIPP_TIMEZONE = 'Pacific/Kiritimati'
+            $Items = (Get-After (Build-Sample) 'How The Rollout Works' 'richbullets').items
+        } finally { $env:CIPP_TIMEZONE = $Saved }
+        $Items[1].text | Should -BeLike '*Expected around October 8, 2026,*'
+    }
+
     It 'lists agreed exceptions with and without a reason' {
         $Items = (Get-After (Build-Sample) 'Agreed Exceptions We Will Not Change' 'richbullets').items
         @($Items.label) | Should -Be @('Enables per user MFA for all users.', 'Enable Usernames instead of pseudo anonymised names in reports')

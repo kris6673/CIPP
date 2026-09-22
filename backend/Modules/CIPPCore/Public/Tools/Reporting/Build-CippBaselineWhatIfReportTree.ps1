@@ -445,13 +445,23 @@ function Build-CippBaselineWhatIfReportTree {
         }
     }
 
-    # The client formats in the browser's timezone; the server has none to borrow, so UTC.
+    # The client formats in the viewer's timezone; the server uses the instance's (CIPP_TIMEZONE, set at
+    # warmup from the configured or region timezone), else UTC. A wave's date is when its stage was
+    # entered plus N days, so its time of day is arbitrary and UTC reads a day out for much of the world.
+    $reportZone = [TimeZoneInfo]::Utc
+    if ($env:CIPP_TIMEZONE) {
+        try {
+            $reportZone = [TimeZoneInfo]::FindSystemTimeZoneById($env:CIPP_TIMEZONE)
+        } catch {
+            Write-Information "Baseline report: unknown timezone '$($env:CIPP_TIMEZONE)', dating the waves in UTC"
+        }
+    }
     function formatAdvanceDate($epoch) {
         if (-not (truthy $epoch)) { return $null }
         try {
             $number = [double]$epoch
             $ms = if ($number -gt 1e12) { $number } else { $number * 1000 }
-            [DateTimeOffset]::FromUnixTimeMilliseconds([long]$ms).UtcDateTime.ToString('MMMM d, yyyy', [cultureinfo]::InvariantCulture)
+            [TimeZoneInfo]::ConvertTime([DateTimeOffset]::FromUnixTimeMilliseconds([long]$ms), $reportZone).ToString('MMMM d, yyyy', [cultureinfo]::InvariantCulture)
         } catch { $null }
     }
 

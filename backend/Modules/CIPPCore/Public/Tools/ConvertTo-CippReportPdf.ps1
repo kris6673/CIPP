@@ -21,7 +21,8 @@ function ConvertTo-CippReportPdf {
     .PARAMETER ReportName
         Report title shown on the cover and in the page header.
     .PARAMETER GeneratedOn
-        Human-readable generation date shown on the cover / available as %reportdate%.
+        Human-readable generation date shown on the cover / available as %reportdate%. Defaults to today
+        in the instance's timezone (CIPP_TIMEZONE), not the container's UTC clock.
     #>
     [CmdletBinding()]
     [OutputType([byte[]])]
@@ -32,13 +33,20 @@ function ConvertTo-CippReportPdf {
         $Variables,
         [string]$TenantName = 'Organization',
         [string]$ReportName = 'Report',
-        [string]$GeneratedOn = ((Get-Date).ToString('MMMM d, yyyy')),
+        [string]$GeneratedOn,
         [string]$PageSize = 'A4',
         [switch]$Landscape,
         # The tenant whose %variables% (global + tenant custom vars + built-ins like %cippurl%) resolve
         # the branding footer/watermark and cover text. Omit to skip variable replacement.
         [string]$TenantFilter
     )
+
+    # The client prints the viewer's date; the server prints today in the instance's timezone (set at
+    # warmup from the configured or region timezone), else UTC.
+    if (-not $PSBoundParameters.ContainsKey('GeneratedOn')) {
+        $Zone = try { [TimeZoneInfo]::FindSystemTimeZoneById([string]$env:CIPP_TIMEZONE) } catch { [TimeZoneInfo]::Utc }
+        $GeneratedOn = [TimeZoneInfo]::ConvertTime([DateTimeOffset]::UtcNow, $Zone).ToString('MMMM d, yyyy', [cultureinfo]'en-US')
+    }
 
     if ($null -eq $Branding) {
         $Branding = try {
