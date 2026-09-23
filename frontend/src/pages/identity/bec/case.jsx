@@ -1,18 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import NextLink from 'next/link'
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  Divider,
-  Link,
-  Stack,
-  Typography,
-} from '@mui/material'
+import { Alert, Box, Link, Stack, Typography } from '@mui/material'
 import { CippAutoComplete } from '../../../components/CippComponents/CippAutocomplete'
 import { Layout as DashboardLayout } from '../../../layouts/index'
 import { useSettings } from '../../../hooks/use-settings'
@@ -24,6 +13,7 @@ import { CippBecObjectiveGroups } from '../../../components/CippComponents/CippB
 import { CippBecTimelineEvaluator } from '../../../components/CippComponents/CippBecTimelineEvaluator'
 import { CippBecRemediationHistory } from '../../../components/CippComponents/CippBecRemediationHistory'
 import { CippApiResults } from '../../../components/CippComponents/CippApiResults'
+import CippButtonCard from '../../../components/CippCards/CippButtonCard'
 import { becGroupFlagged, BEC_GROUPS } from '../../../utils/bec-objectives'
 
 // The purpose-built case/remediation workspace. Data contract is unchanged: it polls execBECCheck
@@ -338,21 +328,22 @@ const Page = () => {
         {becData && <CippBecRemediationHistory becData={becData} />}
 
         {becData && (
-          <Card variant="outlined">
-            <CardHeader
-              title="Attack timeline"
-              subheader="The correlated events of this case over time, with the likely start of compromise marked"
-              titleTypographyProps={{ variant: 'h6' }}
+          <CippButtonCard
+            variant="outlined"
+            component="accordion"
+            accordionExpanded={true}
+            title="Attack timeline"
+          >
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              The correlated events of this case over time, with the likely
+              start of compromise marked.
+            </Typography>
+            <CippBecTimelineEvaluator
+              becData={becData}
+              windowDays={windowDays}
+              userData={userData}
             />
-            <Divider />
-            <CardContent>
-              <CippBecTimelineEvaluator
-                becData={becData}
-                windowDays={windowDays}
-                userData={userData}
-              />
-            </CardContent>
-          </Card>
+          </CippButtonCard>
         )}
       </Stack>
     </Box>

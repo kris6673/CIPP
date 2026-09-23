@@ -48,10 +48,12 @@ const oneLine = {
 // The non-linear view, drawn natively (SVG edges + themed HTML nodes — no graph library). It reads the
 // same correlated events as the timeline but groups them by where they came from and who they reached,
 // so lateral movement onto other accounts is visible as edges, not buried in a list.
+// `fill` swaps the fixed-height scroll box for one that takes the rest of a flex parent (full screen).
 export const CippBecCorrelationGraph = ({
   becData,
   windowDays = 7,
   userData,
+  fill = false,
 }) => {
   const theme = useTheme()
 
@@ -232,7 +234,13 @@ export const CippBecCorrelationGraph = ({
   }
 
   return (
-    <Box>
+    <Box
+      sx={
+        fill
+          ? { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }
+          : undefined
+      }
+    >
       <Stack
         direction="row"
         spacing={1}
@@ -262,7 +270,7 @@ export const CippBecCorrelationGraph = ({
       </Stack>
       <Box
         sx={{
-          height: 560,
+          ...(fill ? { flex: 1, minHeight: 320 } : { height: 560 }),
           overflow: 'auto',
           border: '1px solid',
           borderColor: 'divider',
