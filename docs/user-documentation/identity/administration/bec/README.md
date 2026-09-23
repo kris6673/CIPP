@@ -2,9 +2,9 @@
 description: Every Business Email Compromise run, for every user and every tenant, in one place.
 ---
 
-# BEC Reports
+# Business Email Compromise
 
-The BEC Reports page lists every [Compromise Remediation](../administration/users/user/bec.md) run CIPP has kept: one row per case, for every user in the selected tenant, or across all tenants when **All Tenants** is selected. It is where to go back to an investigation after the fact, to pull the report or the evidence package for a run completed weeks ago, or to see which runs queued from the Users page have finished.
+The Business Email Compromise page lists every [Compromise Remediation](case.md) run CIPP has kept: one row per case, for every user in the selected tenant, or across all tenants when **All Tenants** is selected. It is where to go back to an investigation after the fact, to pull the report or the evidence package for a run completed weeks ago, or to see which runs queued from the Users page have finished.
 
 Runs are never expired automatically. A run stays, with its results, until it is deleted here or from the user's run history.
 

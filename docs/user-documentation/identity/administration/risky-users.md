@@ -19,7 +19,7 @@ The properties returned are for the Graph resource type `riskyUser`. For more in
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Dismiss Risk</td><td>Marks the account's risk as dismissed, which tells Entra ID Protection the activity was legitimate and returns the account to a normal state.</td><td>true</td></tr><tr><td>Research Compromised Account</td><td>Opens the Compromise Remediation tab for the account, where the usual indicators of compromise are gathered in one place.</td><td>false</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 {% hint style="warning" %}
-Dismissing a risk closes it without changing anything about the account. It does not reset a password, revoke a session or remove whatever caused the detection, so an account that really is compromised stays compromised with its warning cleared. Investigate before dismissing, and remediate through the [bec.md](users/user/bec.md "mention") page or the Users list where the account turns out to be at risk.
+Dismissing a risk closes it without changing anything about the account. It does not reset a password, revoke a session or remove whatever caused the detection, so an account that really is compromised stays compromised with its warning cleared. Investigate before dismissing, and remediate through the [case.md](bec/case.md "mention") page or the Users list where the account turns out to be at risk.
 {% endhint %}
 
 {% hint style="info" %}
