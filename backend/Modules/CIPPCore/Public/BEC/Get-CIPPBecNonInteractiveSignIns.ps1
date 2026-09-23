@@ -51,6 +51,14 @@ function Get-CIPPBecNonInteractiveSignIns {
             IncomingTokenType   = $SignIn.incomingTokenType
             TokenProtection     = $SignIn.tokenProtectionStatusDetails.signInSessionStatus
             RiskLevelDuringSignIn = $SignIn.riskLevelDuringSignIn
+            RiskEventTypes      = @($SignIn.riskEventTypes_v2)
+            ASN                 = $SignIn.autonomousSystemNumber
+            DeviceCompliant     = $SignIn.deviceDetail.isCompliant
+            DeviceManaged       = $SignIn.deviceDetail.isManaged
+            OperatingSystem     = $SignIn.deviceDetail.operatingSystem
+            # tie audited mailbox and file actions back to this token and session
+            SessionId           = $SignIn.sessionId
+            UniqueTokenId       = $SignIn.uniqueTokenIdentifier
             ForeignLocation     = $Foreign
         }
     }

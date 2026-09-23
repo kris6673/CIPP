@@ -171,7 +171,20 @@ function Push-BECRun {
                 @{ Name = 'Status'; Expression = $SignInStatus },
                 @{ Name = 'IPAddress'; Expression = { $_.ipAddress } },
                 @{ Name = 'Country'; Expression = { $_.location.countryOrRegion } },
-                @{ Name = 'City'; Expression = { $_.location.city } })
+                @{ Name = 'City'; Expression = { $_.location.city } },
+                # what the IP verdicts weigh: the network, Entra's own risk call, the client and device,
+                # and the session/token ids that tie audited actions back to this sign-in
+                @{ Name = 'ASN'; Expression = { $_.autonomousSystemNumber } },
+                @{ Name = 'RiskLevelDuringSignIn'; Expression = { $_.riskLevelDuringSignIn } },
+                @{ Name = 'RiskEventTypes'; Expression = { @($_.riskEventTypes_v2) } },
+                @{ Name = 'UserAgent'; Expression = { $_.userAgent } },
+                @{ Name = 'DeviceCompliant'; Expression = { $_.deviceDetail.isCompliant } },
+                @{ Name = 'DeviceManaged'; Expression = { $_.deviceDetail.isManaged } },
+                @{ Name = 'DeviceTrustType'; Expression = { $_.deviceDetail.trustType } },
+                @{ Name = 'OperatingSystem'; Expression = { $_.deviceDetail.operatingSystem } },
+                @{ Name = 'Browser'; Expression = { $_.deviceDetail.browser } },
+                @{ Name = 'SessionId'; Expression = { $_.sessionId } },
+                @{ Name = 'UniqueTokenId'; Expression = { $_.uniqueTokenIdentifier } })
             & $Mark 'SignIns' ([pscustomobject]@{ Complete = $true; Cap = $null; Error = $null; Count = $SuspectUserSignIns.Count })
         } catch {
             $SuspectUserSignIns = @()
@@ -778,6 +791,41 @@ function Push-BECRun {
         & $StampActor $DirectoryAudits 'InitiatedBy' 'InitiatedByType' 'InitiatedById'
         & $StampActor $MailActivity 'Actor'
 
+        # Which addresses are the attacker's: sign-in baseline, CIPP's IP allow/block list and the
+        # tenant's own lists, geo, and the other accounts on each address. The IP review re-run calls
+        # the same analysis with the investigator's overrides.
+        & $Phase 'IPAnalysis' 'Establishing attacker IPs from the sign-in baseline, IP lists and other accounts'
+        Write-Information 'Full scope: IP analysis'
+        $IPDraft = [pscustomobject]@{
+            SuspectUserSignIns       = @($SuspectUserSignIns)
+            NonInteractiveSignIns    = @($NonInteractiveSignIns)
+            NewRules                 = @($RulesLog)
+            InboxRuleChanges         = @($RuleChangesLog)
+            MailboxPermissionChanges = @($PermissionsLog)
+            SafelistChanges          = @($SafelistChanges)
+            SharingChanges           = @($SharingChanges)
+            TransportRuleChanges     = @($TransportRuleChanges)
+            DirectoryAudits          = @($DirectoryAudits)
+            SentMessages             = @($SentMessages)
+            SentMessageAnalysis      = $SentMessageAnalysis
+            MailActivity             = @($MailActivity)
+        }
+        $IPAnalysis = & $Collect 'IPAnalysis' { Invoke-CIPPBecIPAnalysis -TenantFilter $TenantFilter -UserId $SuspectUser -UserPrincipalName $UserName -Results $IPDraft -Heuristics $Heuristics -WindowStart $startDate -UsageLocation $UsageLocation -Anchor $UserName }
+        if ($IPAnalysis.PSObject.Properties['Verdicts']) {
+            & $Mark 'SignInBaseline' $IPAnalysis.Baseline
+            & $Mark 'IPGuidance' $IPAnalysis.Guidance
+            & $Mark 'IPPeers' $IPAnalysis.PeersResult
+            & $Mark 'IPVerdicts' ([pscustomobject]@{ Complete = $true; Count = @($IPAnalysis.Verdicts).Count })
+            $IPVerdicts = @($IPAnalysis.Verdicts)
+            $IPBaseline = $IPAnalysis.Baseline.Data
+            $IPGuidance = @($IPAnalysis.Guidance.Data)
+            $IPPeers = @($IPAnalysis.Peers.Values)
+        } else {
+            & $Mark 'SignInBaseline' $IPAnalysis; & $Mark 'IPGuidance' $IPAnalysis; & $Mark 'IPPeers' $IPAnalysis; & $Mark 'IPVerdicts' $IPAnalysis
+            $IPVerdicts = @(); $IPBaseline = $null; $IPGuidance = @(); $IPPeers = @()
+        }
+        Set-CIPPBecIPVerdictStamp -Results $IPDraft -Verdicts $IPVerdicts
+
         # Geo-locate the client IPs behind rule changes, safelist changes, sharing changes, sent
         # mail and (Full scope) transport-rule changes, directory audits and mailbox activity so
         # activity can be compared against the user's assigned usage location. Sign-ins carry
@@ -891,6 +939,12 @@ function Push-BECRun {
             NonInteractiveSignIns    = @($NonInteractiveSignIns)
             MailActivity             = @($MailActivity)
             MailActivitySummary      = $MailActivitySummary
+            # the attacker-IP picture: one verdict per address plus the evidence behind it
+            IPVerdicts               = @($IPVerdicts)
+            IPBaseline               = $IPBaseline
+            IPGuidance               = @($IPGuidance)
+            IPPeers                  = @($IPPeers)
+            IPOverrides              = @()
             RiskState                = $RiskState
             Completeness             = [pscustomobject]$Completeness
             AnalysisWindowDays       = $WindowDays

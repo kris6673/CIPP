@@ -34,6 +34,8 @@ BeforeAll {
     function Get-CIPPBecRiskState { param($TenantFilter, $UserId, $StartDate, $Cap) }
     function Get-CIPPBecRogueAppFeed { }
     function Get-CIPPPartnerUserLookup { @{} }
+    # The IP analysis has its own suite; here it only has to be wired in and its verdicts stamped.
+    function Invoke-CIPPBecIPAnalysis { param($TenantFilter, $UserId, $UserPrincipalName, $Results, $Heuristics, $WindowStart, $UsageLocation, $Anchor, $Baseline, $KnownPeers, $Overrides, $ExtraPeers) }
 
     # Real pieces under test alongside the run
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/ConvertTo-CIPPBecHostAddress.ps1')
@@ -44,6 +46,7 @@ BeforeAll {
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Get-CIPPBecScore.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Get-CIPPBecRunSteps.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Get-CIPPBecErrorInfo.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Set-CIPPBecIPVerdictStamp.ps1')
     $FunctionPath = Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Push-BECRun.ps1' | Select-Object -First 1
     . $FunctionPath.FullName
 
@@ -117,6 +120,18 @@ Describe 'Push-BECRun' {
         Mock Get-CIPPBecDirectoryAudits { Empty }
         Mock Get-CIPPBecRegisteredDevices { Empty }
         Mock Get-CIPPBecNonInteractiveSignIns { Empty }
+        Mock Invoke-CIPPBecIPAnalysis {
+            $script:IPAnalysisInput = $Results
+            [pscustomobject]@{
+                Baseline    = New-CIPPBecCollectorResult -Data ([pscustomobject]@{ Successful = 12 }) -Count 12
+                Guidance    = New-CIPPBecCollectorResult -Data @()
+                PeersResult = New-CIPPBecCollectorResult -Data @()
+                Peers       = @{}
+                Geo         = @{}
+                Verdicts    = @([pscustomobject]@{ IP = '203.0.113.10'; Verdict = 'LikelyAttacker'; SuccessfulSignIns = 1; Activities = 2 })
+                Events      = @()
+            }
+        }
         Mock Get-CIPPBecMailActivity { $R = Empty; $R | Add-Member -NotePropertyName Summary -NotePropertyValue ([pscustomobject]@{ HardDeleteExceeded = $false }) -Force; $R }
         Mock Get-CIPPBecRiskState { New-CIPPBecCollectorResult -Data ([pscustomobject]@{ Listed = $false; Detections = @() }) -Count 0 }
         Mock Get-CIPPBecRogueAppFeed { [pscustomobject]@{ Apps = @{}; HuntressAvailable = $false } }
@@ -154,8 +169,17 @@ Describe 'Push-BECRun' {
         $R.Completeness.DefenderDetections.Error | Should -Be 'Invalid subscription'
         $R.Completeness.Delegations.Complete | Should -BeTrue
         $R.Completeness.RiskState.Complete | Should -BeTrue
-        # Quick score 21 + flagged delegation 2 + catalog grant 5 + risky transport change 4
-        $R.Score.Value | Should -Be 32
+        # the IP analysis gets the rows it judges, and its verdicts land on the case and on the rows
+        $script:IPAnalysisInput.InboxRuleChanges[0].ClientIP | Should -Be '203.0.113.10'
+        $script:IPAnalysisInput.SuspectUserSignIns[0].IPAddress | Should -Be '203.0.113.10'
+        $R.IPVerdicts[0].Verdict | Should -Be 'LikelyAttacker'
+        $R.IPBaseline.Successful | Should -Be 12
+        $R.InboxRuleChanges[0].IPVerdict | Should -Be 'LikelyAttacker'
+        $R.SuspectUserSignIns[0].IPVerdict | Should -Be 'LikelyAttacker'
+        $R.Completeness.SignInBaseline.Complete | Should -BeTrue
+        $R.Completeness.IPVerdicts.Count | Should -Be 1
+        # Quick score 21 + flagged delegation 2 + catalog grant 5 + risky transport change 4 + attacker IP 4
+        $R.Score.Value | Should -Be 36
     }
 
     It 'resolves a missing UPN from the object id, writes it back, and runs the investigation' {
@@ -217,14 +241,14 @@ Describe 'Push-BECRun' {
     }
 
     Context 'live progress (the async-deployment job the page polls)' {
-        It 'creates the job when the queue did not, marks the run Running, walks each of the twelve phases running then done, and ends succeeded' {
+        It 'creates the job when the queue did not, marks the run Running, walks each of the thirteen phases running then done, and ends succeeded' {
             Push-BECRun -Item $script:Item
-            Should -Invoke New-CIPPAsyncDeployment -Times 1 -ParameterFilter { $JobId -eq 'BEC-20260820120000-test01' -and $Names -contains 'victim@contoso.com' -and @($StepTitles).Count -eq 12 -and $Source -eq 'BEC' }
+            Should -Invoke New-CIPPAsyncDeployment -Times 1 -ParameterFilter { $JobId -eq 'BEC-20260820120000-test01' -and $Names -contains 'victim@contoso.com' -and @($StepTitles).Count -eq 13 -and $Source -eq 'BEC' }
             Should -Invoke Set-CIPPBecReport -Times 1 -ParameterFilter { $Properties.Status -eq 'Running' -and $Properties.StartedAt }
             @($script:StatusCalls.Status) | Should -Be @('running', 'succeeded')
             $script:StatusCalls[-1].Logs | Should -Match 'threat level High'
-            @(($script:StepCalls | Where-Object { $_.Status -eq 'running' }).Index) | Should -Be @(0..11) -Because 'the phases run in order'
-            @(($script:StepCalls | Where-Object { $_.Status -eq 'succeeded' }).Index) | Should -Be @(0..11)
+            @(($script:StepCalls | Where-Object { $_.Status -eq 'running' }).Index) | Should -Be @(0..12) -Because 'the phases run in order'
+            @(($script:StepCalls | Where-Object { $_.Status -eq 'succeeded' }).Index) | Should -Be @(0..12)
             ($script:StepCalls | Where-Object { $_.Status -eq 'succeeded' })[-1].Message | Should -Match '^Threat level High'
             @($script:StepCalls | Where-Object { $_.Status -eq 'failed' }).Count | Should -Be 0
             $script:StepCalls | ForEach-Object { $_.JobId | Should -Be 'BEC-20260820120000-test01'; $_.Name | Should -Be 'victim@contoso.com' }
@@ -243,7 +267,7 @@ Describe 'Push-BECRun' {
         It 'recreates the job at start so a Craft retry shows a clean progression instead of the dead attempt''s steps' {
             Mock Get-CIPPAsyncDeployment { @([pscustomobject]@{ Name = 'victim@contoso.com'; Status = 'running'; Steps = @([pscustomobject]@{ Title = 'x'; Status = 'succeeded'; Message = 'Done' }); Logs = '' }) }
             Push-BECRun -Item $script:Item
-            Should -Invoke New-CIPPAsyncDeployment -Times 1 -ParameterFilter { $JobId -eq 'BEC-20260820120000-test01' -and @($StepTitles).Count -eq 12 }
+            Should -Invoke New-CIPPAsyncDeployment -Times 1 -ParameterFilter { $JobId -eq 'BEC-20260820120000-test01' -and @($StepTitles).Count -eq 13 }
             @($script:StatusCalls.Status) | Should -Be @('running', 'succeeded')
         }
     }

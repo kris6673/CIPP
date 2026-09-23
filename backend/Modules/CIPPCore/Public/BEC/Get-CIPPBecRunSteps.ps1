@@ -25,6 +25,7 @@ function Get-CIPPBecRunSteps {
         [pscustomobject]@{ Key = 'ReceivedMail'; Title = 'Received mail and Defender verdicts' }
         [pscustomobject]@{ Key = 'Directory'; Title = 'Directory audits, registered devices and non-interactive sign-ins' }
         [pscustomobject]@{ Key = 'Activity'; Title = 'Mailbox activity and Identity Protection' }
+        [pscustomobject]@{ Key = 'IPAnalysis'; Title = 'Attacker IPs: sign-in baseline, IP lists and other accounts' }
         [pscustomobject]@{ Key = 'Score'; Title = 'Location analysis, threat score and report' }
     )
 }

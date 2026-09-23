@@ -70,6 +70,8 @@ function Get-CIPPBecScore {
         RiskyUserMedium                = if ($Results.RiskState.Listed -eq $true -and $Results.RiskState.RiskState -eq 'atRisk' -and $Results.RiskState.RiskLevel -eq 'medium') { 1 } else { 0 }
         RiskyUserLow                   = if ($Results.RiskState.Listed -eq $true -and $Results.RiskState.RiskState -eq 'atRisk' -and $Results.RiskState.RiskLevel -eq 'low') { 1 } else { 0 }
         ConfirmedCompromised           = if ($Results.RiskState.RiskState -eq 'confirmedCompromised') { 1 } else { 0 }
+        # addresses judged the attacker's (by an investigator, the CIPP list or the heuristics) that got in or acted
+        AttackerIPs                    = @($Results.IPVerdicts | Where-Object { $_.Verdict -in @('Compromised', 'LikelyAttacker') -and ([int]$_.SuccessfulSignIns -gt 0 -or [int]$_.Activities -gt 0) }).Count
     }
 
     $Descriptions = @{
@@ -103,6 +105,7 @@ function Get-CIPPBecScore {
         RiskyUserMedium                = 'Identity Protection: user at medium risk'
         RiskyUserLow                   = 'Identity Protection: user at low risk'
         ConfirmedCompromised           = 'Identity Protection: user confirmed compromised'
+        AttackerIPs                    = 'Sign-ins or activity from addresses judged to be the attacker'
     }
 
     $Breakdown = [System.Collections.Generic.List[object]]::new()

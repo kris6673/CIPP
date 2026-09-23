@@ -112,6 +112,8 @@ Describe 'Get-CIPPBecScore' {
             @{ Key = 'RiskState'; Value = [pscustomobject]@{ Listed = $true; RiskState = 'atRisk'; RiskLevel = 'high' }; Expected = 4; Signal = 'RiskyUserHigh' }
             @{ Key = 'RiskState'; Value = [pscustomobject]@{ Listed = $true; RiskState = 'atRisk'; RiskLevel = 'medium' }; Expected = 2; Signal = 'RiskyUserMedium' }
             @{ Key = 'RiskState'; Value = [pscustomobject]@{ Listed = $true; RiskState = 'confirmedCompromised'; RiskLevel = 'high' }; Expected = 5; Signal = 'ConfirmedCompromised' }
+            # an attacker address that only failed to sign in, or a suspicious one, does not count
+            @{ Key = 'IPVerdicts'; Value = @([pscustomobject]@{ Verdict = 'LikelyAttacker'; SuccessfulSignIns = 1; Activities = 0 }, [pscustomobject]@{ Verdict = 'Compromised'; SuccessfulSignIns = 0; Activities = 0 }, [pscustomobject]@{ Verdict = 'Suspicious'; SuccessfulSignIns = 3; Activities = 2 }); Expected = 4; Signal = 'AttackerIPs' }
         )
         foreach ($Case in $Cases) {
             $Score = Get-CIPPBecScore -Results (New-Results @{ $Case.Key = $Case.Value }) -Heuristics $script:Heuristics

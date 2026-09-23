@@ -10,9 +10,9 @@ BeforeAll {
 Describe 'Get-CIPPBecRunSteps' {
     It 'defines the twelve phases of the investigation in order, with the score last' {
         $Steps = @(Get-CIPPBecRunSteps)
-        $Steps.Key | Should -Be @('AuditLog', 'SignIns', 'MailboxRules', 'SentMail', 'Tenant', 'MailboxInventory', 'Grants', 'TransportRules', 'ReceivedMail', 'Directory', 'Activity', 'Score')
+        $Steps.Key | Should -Be @('AuditLog', 'SignIns', 'MailboxRules', 'SentMail', 'Tenant', 'MailboxInventory', 'Grants', 'TransportRules', 'ReceivedMail', 'Directory', 'Activity', 'IPAnalysis', 'Score')
         $Steps | ForEach-Object { $_.Title | Should -Not -BeNullOrEmpty }
-        @($Steps.Key | Select-Object -Unique).Count | Should -Be 12 -Because 'keys index the steps'
+        @($Steps.Key | Select-Object -Unique).Count | Should -Be 13 -Because 'keys index the steps'
     }
 }
 
@@ -39,7 +39,7 @@ Describe 'New-CIPPBecRunRequest' {
         $script:Jobs[0].JobId | Should -Be $Prepared.CaseId -Because 'the page polls progress by case id'
         $script:Jobs[0].Names | Should -Be @('victim@contoso.com')
         $script:Jobs[0].Source | Should -Be 'BEC'
-        @($script:Jobs[0].StepTitles).Count | Should -Be 12
+        @($script:Jobs[0].StepTitles).Count | Should -Be 13
         $Prepared.Item.FunctionName | Should -Be 'BECRun'
         $Prepared.Item.UserID | Should -Be 'u1'
         $Prepared.Item.userName | Should -Be 'victim@contoso.com'

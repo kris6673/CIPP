@@ -42,7 +42,8 @@
       "RiskyUserHigh": 4,
       "RiskyUserMedium": 2,
       "RiskyUserLow": 1,
-      "ConfirmedCompromised": 5
+      "ConfirmedCompromised": 5,
+      "AttackerIPs": 4
     }
   },
   "inboxRules": {
@@ -140,5 +141,46 @@
       "Calendar",
       "Inbox"
     ]
+  },
+  "baseline": {
+    "days": 30
+  },
+  "ipVerdict": {
+    "thresholds": {
+      "likelyAttacker": 6,
+      "suspicious": 3,
+      "likelyUser": -3
+    },
+    "minBaselineSignIns": 10,
+    "regularShare": 0.05,
+    "regularDays": 3,
+    "knownAsnShare": 0.2,
+    "knownLocationShare": 0.1,
+    "serviceAsnRegex": "(?i)microsoft",
+    "scriptedUserAgentRegex": "(?i)(python|axios|curl|okhttp|go-http-client|node-fetch|powershell|libwww|java/|httpclient|postman)",
+    "weights": {
+      "flaggedAction": 4,
+      "flaggedActionExtraKind": 1,
+      "hostingOrProxy": 3,
+      "foreign": 2,
+      "newToUser": 2,
+      "newNetwork": 1,
+      "newLocation": 1,
+      "riskySignIn": 3,
+      "riskySignInLow": 1,
+      "scriptedClient": 3,
+      "widerAttack": 2,
+      "sharedSession": 3,
+      "blockListHint": 2,
+      "baselineRegular": -4,
+      "baselineSeen": -2,
+      "knownNetwork": -1,
+      "knownLocation": -1,
+      "compliantDevice": -2,
+      "colleagues": -2,
+      "trustedNamedLocation": -4,
+      "allowListHint": -1,
+      "onlyFailedSignIns": -3
+    }
   }
 }
