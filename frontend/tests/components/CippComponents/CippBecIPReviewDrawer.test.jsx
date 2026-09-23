@@ -156,6 +156,42 @@ describe('CippBecIPReviewDrawer', () => {
     ])
   }, 30000)
 
+  it('needs at least one address away from Auto before it re-runs', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(
+      <CippBecIPReviewDrawer
+        tenantFilter="contoso.com"
+        caseId="BEC-1"
+        becData={{ IPVerdicts: becData.IPVerdicts, IPOverrides: [] }}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: /review ips/i }))
+    const run = await screen.findByRole('button', {
+      name: /re-run with these verdicts/i,
+    })
+    expect(run).toBeDisabled()
+    expect(
+      screen.getByText(/set at least one address to safe or compromised/i)
+    ).toBeInTheDocument()
+    await user.click(screen.getAllByRole('combobox', { name: /verdict/i })[1])
+    await user.click(await screen.findByRole('option', { name: 'Safe' }))
+    await waitFor(() => expect(run).toBeEnabled())
+    expect(
+      screen.queryByText(/set at least one address to safe or compromised/i)
+    ).not.toBeInTheDocument()
+  }, 30000)
+
+  it('explains that verdicts already applied to the case need no re-run', async () => {
+    const user = userEvent.setup()
+    await open(user)
+    expect(
+      screen.getByRole('button', { name: /re-run with these verdicts/i })
+    ).toBeDisabled()
+    expect(
+      screen.getByText(/already applied to this case/i)
+    ).toBeInTheDocument()
+  }, 30000)
+
   it('hides the remember switch without the settings permission', async () => {
     const user = userEvent.setup()
     await open(user)

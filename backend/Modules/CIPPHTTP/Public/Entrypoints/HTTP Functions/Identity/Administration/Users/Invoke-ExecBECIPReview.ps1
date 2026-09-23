@@ -37,8 +37,12 @@ function Invoke-ExecBECIPReview {
         $Run = Get-CIPPBecReport -TenantFilter $TenantFilter -CaseId $CaseId -IncludeResults
         if (-not $Run) { $StatusCode = [HttpStatusCode]::NotFound; throw "Case $CaseId was not found in $TenantFilter" }
         if ($Run.Status -ne 'Completed') { $StatusCode = [HttpStatusCode]::BadRequest; throw "Case $CaseId has not completed yet" }
-        # A re-run only makes sense when a verdict changed: the same overrides (or none, again) and no
-        # accounts to correlate would recompute the same case.
+        # Auto is what the case already ran with: a re-run needs at least one address set to Safe or
+        # Compromised (or accounts to correlate), and a set that differs from the one already applied.
+        if (@($Overrides).Count -eq 0 -and $CorrelateUserIds.Count -eq 0) {
+            $StatusCode = [HttpStatusCode]::BadRequest
+            throw 'Set at least one address to Safe or Compromised before re-running'
+        }
         $Signature = { param($Set) (@($Set | ForEach-Object { "$(ConvertTo-CIPPIPRange -Value ([string]($_.IP ?? $_.Range)))|$($_.Verdict)" }) | Sort-Object) -join ';' }
         if ($CorrelateUserIds.Count -eq 0 -and (& $Signature @($Overrides)) -eq (& $Signature @($Run.Results.IPOverrides | Where-Object { $_ }))) {
             $StatusCode = [HttpStatusCode]::BadRequest

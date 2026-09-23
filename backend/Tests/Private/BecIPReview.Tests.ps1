@@ -161,7 +161,11 @@ Describe 'Invoke-ExecBECIPReview' {
         $Same.StatusCode | Should -Be 400
         $Same.Body.Results[0].resultText | Should -Match 'Nothing changed'
         Mock Get-CIPPBecReport { [pscustomobject]@{ Status = 'Completed'; Results = [pscustomobject]@{ IPOverrides = @() } } }
-        (Invoke-ExecBECIPReview -Request (New-Request @{ tenantFilter = 'contoso.com'; CaseId = 'BEC-1'; Overrides = @([pscustomobject]@{ IP = '198.51.100.7'; Verdict = 'Auto' }) }) -TriggerMetadata $null).StatusCode | Should -Be 400 -Because 'all Auto is the default'
+        $AllAuto = Invoke-ExecBECIPReview -Request (New-Request @{ tenantFilter = 'contoso.com'; CaseId = 'BEC-1'; Overrides = @([pscustomobject]@{ IP = '198.51.100.7'; Verdict = 'Auto' }) }) -TriggerMetadata $null
+        $AllAuto.StatusCode | Should -Be 400 -Because 'all Auto is what the case already ran with'
+        $AllAuto.Body.Results[0].resultText | Should -Match 'at least one address'
+        Mock Get-CIPPBecReport { [pscustomobject]@{ Status = 'Completed'; Results = [pscustomobject]@{ IPOverrides = @([pscustomobject]@{ Range = '198.51.100.7'; Verdict = 'Safe' }) } } }
+        (Invoke-ExecBECIPReview -Request (New-Request @{ tenantFilter = 'contoso.com'; CaseId = 'BEC-1'; Overrides = @([pscustomobject]@{ IP = '198.51.100.7'; Verdict = 'Auto' }) }) -TriggerMetadata $null).StatusCode | Should -Be 400 -Because 'going back to all Auto is not a re-run either'
         Should -Invoke Start-CIPPBecIPReviewJob -Times 0
         (Invoke-ExecBECIPReview -Request (New-Request @{ tenantFilter = 'contoso.com'; CaseId = 'BEC-1'; CorrelateUsers = @('c1') }) -TriggerMetadata $null).StatusCode | Should -Be 200 -Because 'correlating accounts is a change'
     }

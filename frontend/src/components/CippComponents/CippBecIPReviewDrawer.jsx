@@ -199,6 +199,16 @@ export const CippBecIPReviewDrawer = ({
       .sort()
       .join(';')
   const changed = signature(overrides) !== signature(stored)
+  // Auto is what the case already ran with, so a re-run needs at least one address set away from it,
+  // and a set that differs from the one already applied.
+  const anyDecided = verdicts.some(
+    (v, index) => (valueOf(choices[index]?.Verdict) || 'Auto') !== 'Auto'
+  )
+  const runBlockedReason = !anyDecided
+    ? 'Set at least one address to Safe or Compromised to re-run.'
+    : !changed
+      ? 'These verdicts are already applied to this case.'
+      : null
 
   const reviewCall = ApiPostCall({})
   const trustCall = ApiPostCall({ relatedQueryKeys: ['ListIPWhitelist'] })
@@ -280,14 +290,24 @@ export const CippBecIPReviewDrawer = ({
                   />
                 )}
               </Box>
-              <Button
-                variant="contained"
-                startIcon={<CippIcons.PlayArrow />}
-                onClick={handleRun}
-                disabled={reviewCall.isPending || !changed}
+              <Stack
+                alignItems={{ xs: 'stretch', sm: 'flex-end' }}
+                spacing={0.5}
               >
-                Re-run with these verdicts
-              </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<CippIcons.PlayArrow />}
+                  onClick={handleRun}
+                  disabled={reviewCall.isPending || !!runBlockedReason}
+                >
+                  Re-run with these verdicts
+                </Button>
+                {runBlockedReason && (
+                  <Typography variant="caption" color="text.secondary">
+                    {runBlockedReason}
+                  </Typography>
+                )}
+              </Stack>
             </Stack>
           </Stack>
         }
@@ -295,9 +315,9 @@ export const CippBecIPReviewDrawer = ({
         <Stack spacing={1.5}>
           <Alert severity="info">
             Set an address to Safe or Compromised to decide it for this case;
-            Auto keeps the calculated verdict. Change at least one verdict to
-            re-run: the re-run replaces the verdicts, the attacker activity, the
-            delegated mailboxes and the score.
+            Auto keeps the calculated verdict the case already ran with. The
+            re-run replaces the verdicts, the attacker activity, the delegated
+            mailboxes and the score.
           </Alert>
           {verdicts.length === 0 && (
             <Typography variant="body2" color="text.secondary">
