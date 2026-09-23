@@ -23,6 +23,11 @@ function Invoke-ExecGetBecReportPdf {
         # The stored run to render. A caseId names it directly; a userId picks the user's newest completed run.
         $CaseId = $Request.Query.caseId ?? $Request.Body.caseId
         $UserId = $Request.Query.userId ?? $Request.Body.userId
+        # 'full' (default) = every page; 'summary' = the executive lead only, for a C-suite reader
+        $Variant = switch ([string]($Request.Query.variant ?? $Request.Body.variant)) {
+            'summary' { 'summary' }
+            default { 'full' }
+        }
         if ([string]::IsNullOrWhiteSpace($TenantFilter) -or ([string]::IsNullOrWhiteSpace($CaseId) -and [string]::IsNullOrWhiteSpace($UserId))) {
             return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = 'A tenantFilter and either a caseId or a userId are required' })
         }
@@ -69,10 +74,10 @@ function Invoke-ExecGetBecReportPdf {
             Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First 1
         $UserData = [pscustomobject]@{ displayName = $DisplayName; userPrincipalName = $UserName; id = $Run.UserId }
 
-        $Report = Build-CippBecReportTree -UserData $UserData -BecData $BecData -TenantName $TenantName
+        $Report = Build-CippBecReportTree -UserData $UserData -BecData $BecData -TenantName $TenantName -Variant $Variant
 
         $Bytes = ConvertTo-CippReportPdf -Blocks $Report.Blocks -Variables $Report.Variables -TenantName $TenantName -TenantFilter $TenantFilter -ReportName 'BEC Analysis Report'
-        $FileName = ("BEC_Report_$DisplayName" -replace '[^a-zA-Z0-9_\-]', '_') + '.pdf'
+        $FileName = ("BEC_$(if ($Variant -eq 'summary') { 'Summary' } else { 'Report' })_$DisplayName" -replace '[^a-zA-Z0-9_\-]', '_') + '.pdf'
         return ([HttpResponseContext]@{
                 StatusCode  = [HttpStatusCode]::OK
                 ContentType = 'application/pdf'
