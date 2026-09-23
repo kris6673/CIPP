@@ -18,6 +18,20 @@ const clean = (value) => {
   const text = String(value ?? '').trim()
   return text.length > 0 ? text : null
 }
+// One host is one source: audit-log addresses carry the client port ("203.0.113.10:51234",
+// "[2001:db8::1]:443"), which differs per connection and would split a host into several graph hubs.
+// Same normalisation as the backend's ConvertTo-CIPPBecHostAddress; cases collected before the
+// backend applied it still hold ported addresses, so the client strips them too.
+export const hostIp = (value) => {
+  const text = clean(value)
+  if (!text) return null
+  return text
+    .replace(
+      /^(\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+\]|[0-9a-fA-F:]+)(?::\d+)?$/,
+      '$1'
+    )
+    .replace(/[[\]]/g, '')
+}
 const joinDetail = (...parts) => parts.filter(Boolean).join(' · ')
 // One event per sent message reads well for a handful; a mass mailing (a thousand onward phishes)
 // buries every other event, so past this many rows the sends fold into one event per hour and source.
@@ -62,7 +76,7 @@ const auditObjective = (activity) => {
   return 'persistence'
 }
 
-const signInIp = (s) => clean(s.IPAddress || s.ipAddress || s.ClientIP)
+const signInIp = (s) => hostIp(s.IPAddress || s.ipAddress || s.ClientIP)
 const signInApp = (s) =>
   clean(s.AppDisplayName || s.appDisplayName || s.ClientAppUsed)
 const signInLocation = (s) =>
@@ -123,7 +137,7 @@ export function buildBecTimeline(becData, windowDays = 7, accountUpn = null) {
       objective: 'exfil',
       severity: 'info',
       label: 'Sent mail',
-      ip: clean(message.FromIP),
+      ip: hostIp(message.FromIP),
       target: clean(message.Subject),
       recipient: clean(message.RecipientAddress),
       // The recipient is an account the compromised mailbox reached — onward/lateral phishing.
@@ -136,7 +150,7 @@ export function buildBecTimeline(becData, windowDays = 7, accountUpn = null) {
       if (!date) return
       const hour = new Date(date)
       hour.setUTCMinutes(0, 0, 0)
-      const ip = clean(message.FromIP)
+      const ip = hostIp(message.FromIP)
       const key = `${hour.getTime()}|${ip || ''}`
       if (!buckets.has(key)) buckets.set(key, { date: hour, ip, rows: [] })
       buckets.get(key).rows.push(message)
@@ -197,7 +211,7 @@ export function buildBecTimeline(becData, windowDays = 7, accountUpn = null) {
         objective: auditObjective(audit.Activity),
         severity: 'medium',
         label: audit.Activity || 'Directory change',
-        ip: clean(audit.ClientIP),
+        ip: hostIp(audit.ClientIP),
         actor: shortUpn(audit.ActorResolved || audit.InitiatedBy),
         partner: isBecPartnerActor(audit),
       })),
@@ -208,7 +222,7 @@ export function buildBecTimeline(becData, windowDays = 7, accountUpn = null) {
       objective: 'persistence',
       severity: 'high',
       label: change.Operation || 'Inbox rule change',
-      ip: clean(change.ClientIP),
+      ip: hostIp(change.ClientIP),
       target: clean(change.RuleName),
       foreign: change.ForeignLocation === true,
       partner: isBecPartnerActor(change),
@@ -220,7 +234,7 @@ export function buildBecTimeline(becData, windowDays = 7, accountUpn = null) {
       objective: 'mailflow',
       severity: change.TargetsSuspect ? 'high' : 'medium',
       label: change.Operation || 'Mailbox permission change',
-      ip: clean(change.ClientIP),
+      ip: hostIp(change.ClientIP),
       targetsSuspect: !!change.TargetsSuspect,
       partner: isBecPartnerActor(change),
       // The counterparty, whichever isn't the victim: the grantee (Trustee) of a delegation first, then
@@ -240,7 +254,7 @@ export function buildBecTimeline(becData, windowDays = 7, accountUpn = null) {
       severity: 'medium',
       label: change.Operation || 'Safelist change',
       partner: isBecPartnerActor(change),
-      ip: clean(change.ClientIP),
+      ip: hostIp(change.ClientIP),
     })),
     ...arr(becData.SharingChanges).map((change) => ({
       key: 'sharing',
@@ -252,7 +266,7 @@ export function buildBecTimeline(becData, windowDays = 7, accountUpn = null) {
         : 'medium',
       label: change.Operation || 'Sharing change',
       partner: isBecPartnerActor(change),
-      ip: clean(change.ClientIP),
+      ip: hostIp(change.ClientIP),
       target: clean(change.FileName),
       affects: otherAccount(
         change.SharedWith,

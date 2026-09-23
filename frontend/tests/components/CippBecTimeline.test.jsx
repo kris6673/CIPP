@@ -1,6 +1,7 @@
 import {
   buildBecTimeline,
   buildBecCorrelationGraph,
+  hostIp,
 } from '../../src/utils/bec-timeline'
 import { CippBecTimelineCustom } from '../../src/components/CippComponents/CippBecTimelineCustom'
 import { CippBecCorrelationGraph } from '../../src/components/CippComponents/CippBecCorrelationGraph'
@@ -107,6 +108,72 @@ describe('buildBecCorrelationGraph', () => {
           SAMPLE_BEC.userData.userPrincipalName.toLowerCase()
       )
     ).toBe(false)
+  })
+})
+
+describe('hostIp', () => {
+  it('drops the client port and IPv6 brackets but leaves bare addresses alone', () => {
+    expect(hostIp('115.70.126.106:12767')).toBe('115.70.126.106')
+    expect(hostIp('115.70.126.106')).toBe('115.70.126.106')
+    expect(hostIp('[2001:db8::1]:443')).toBe('2001:db8::1')
+    expect(hostIp('[2001:db8::1]')).toBe('2001:db8::1')
+    expect(hostIp('2001:db8::1')).toBe('2001:db8::1')
+    expect(hostIp('  ')).toBeNull()
+    expect(hostIp(null)).toBeNull()
+  })
+})
+
+describe('source IP consolidation', () => {
+  // Cases collected before the backend stripped ports still store audit-log addresses with them.
+  const at = (hoursAgo) =>
+    new Date(Date.now() - hoursAgo * 3600000).toISOString()
+  const legacyCase = {
+    InboxRuleChanges: [
+      {
+        Date: at(5),
+        Operation: 'New-InboxRule',
+        ClientIP: '115.70.126.106:12767',
+        RuleName: 'a',
+      },
+      {
+        Date: at(4),
+        Operation: 'Set-InboxRule',
+        ClientIP: '115.70.126.106:13577',
+        RuleName: 'a',
+      },
+    ],
+    MailboxPermissionChanges: [
+      {
+        Date: at(3),
+        Operation: 'Add-MailboxPermission',
+        ClientIP: '[2001:db8::1]:443',
+        Trustee: 'x@contoso.com',
+      },
+      {
+        Date: at(2),
+        Operation: 'Add-MailboxPermission',
+        ClientIP: '[2001:db8::1]:51000',
+        Trustee: 'x@contoso.com',
+      },
+    ],
+  }
+
+  it('gives every event the bare host address', () => {
+    const { events } = buildBecTimeline(legacyCase, 7, 'victim@contoso.com')
+    expect(events.map((e) => e.ip)).toEqual([
+      '115.70.126.106',
+      '115.70.126.106',
+      '2001:db8::1',
+      '2001:db8::1',
+    ])
+  })
+
+  it('draws one graph hub per host, not one per connection', () => {
+    const graph = buildBecCorrelationGraph(legacyCase, 7, 'victim@contoso.com')
+    expect(graph.hubs.map((h) => [h.ip, h.events.length]).sort()).toEqual([
+      ['115.70.126.106', 2],
+      ['2001:db8::1', 2],
+    ])
   })
 })
 
