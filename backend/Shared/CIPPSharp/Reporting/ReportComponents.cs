@@ -349,11 +349,19 @@ namespace CIPP.Reporting
             if (!string.IsNullOrEmpty(lead) || !string.IsNullOrEmpty(accent)) y += 20;  // client title marginBottom 20
 
             // Client coverHero is the page less its 60pt padding each side; the text under the title wraps
-            // inside it. Its footer note is the last line on the cover, its line box ending at the 60pt page
-            // pad, with 32pt kept above it (client coverFooter marginTop), so a block that wraps further than
-            // the page allows drops the lines that would run into the note rather than overprint it.
+            // inside it. Its footer note is the last thing on the cover: it wraps in the same width (counting
+            // its 1pt letter spacing), its last line box ends at the 60pt page pad, and 32pt is kept above its
+            // first line (client coverFooter marginTop), so a block that wraps further than the page allows
+            // drops the lines that would run into the note rather than overprint it.
             var heroW = ctx.ContentWidth + 2 * ReportStyles.PagePadding - 2 * coverPad;
-            var noteTop = ctx.ContentHeight + ReportStyles.PagePadding - coverPad - 9 * lineBox;
+            // Branding's cover note wins and the report's own wording is the fallback (client ReportDocument),
+            // so a configured note is not silently ignored by every report that words its own. Like the client,
+            // the note is held to the footer's length once its variables are filled.
+            var note = "CONFIDENTIAL & PROPRIETARY";
+            if (!string.IsNullOrEmpty(ctx.Theme.CoverFooterText)) note = ctx.Theme.CoverFooterText;
+            else if (ctx.Variables.TryGetValue("coverfooternote", out var cfn) && !string.IsNullOrWhiteSpace(cfn)) note = cfn;
+            var noteLines = WrapLines(San(ReportTheme.ApplyFooter(note, ctx.Variables)).ToUpperInvariant(), heroW, 9, bold: false, tracking: 1);
+            var noteTop = ctx.ContentHeight + ReportStyles.PagePadding - coverPad - noteLines.Count * 9 * lineBox;
             // Draws `text` wrapped to `width` on `pitch`-point lines from the client line top `top` and returns
             // the height of the lines drawn. Each line is placed like any other cover line: react-pdf seats the
             // baseline 0.9x the size under the line top even in a taller line (the subtitle's 21pt one).
@@ -389,13 +397,8 @@ namespace CIPP.Reporting
             if (ctx.Variables.TryGetValue("covermetanote", out var cmn) && !string.IsNullOrWhiteSpace(cmn))
                 Wrapped(San(cmn), y + 8, heroW, 11, 11 * lineBox, subtitleC);
 
-            // Branding's cover note wins and the report's own wording is the fallback (client ReportDocument),
-            // so a configured note is not silently ignored by every report that words its own.
-            var note = "CONFIDENTIAL & PROPRIETARY";
-            if (!string.IsNullOrEmpty(ctx.Theme.CoverFooterText)) note = ctx.Theme.CoverFooterText;
-            else if (ctx.Variables.TryGetValue("coverfooternote", out var cfn) && !string.IsNullOrWhiteSpace(cfn)) note = cfn;
-            note = San(ReportTheme.ApplyVariables(note, ctx.Variables)).ToUpperInvariant();
-            Line(note, 0, noteTop, w, 9, ctx.Theme.Palette["footer"], OfficeTextAlignment.Center);
+            for (var i = 0; i < noteLines.Count; i++)
+                Line(noteLines[i], 0, noteTop + i * 9 * lineBox, w, 9, ctx.Theme.Palette["footer"], OfficeTextAlignment.Center);
 
             item.Drawing(dw, PdfAlign.Left);
         }
@@ -1203,11 +1206,12 @@ namespace CIPP.Reporting
         }
 
         // `text` broken into the lines WrappedLines counts: greedy word wrap, with a word wider than the
-        // column cut where it fills a line (never inside a surrogate pair).
-        internal static List<string> WrapLines(string text, double width, double size, bool bold)
+        // column cut where it fills a line (never inside a surrogate pair). `tracking` is the client's
+        // letterSpacing, which react-pdf adds after every character when it decides where a line breaks.
+        internal static List<string> WrapLines(string text, double width, double size, bool bold, double tracking = 0)
         {
             var lines = new List<string>();
-            double Em(string s) => TextEm(s, bold) * size;
+            double Em(string s) => TextEm(s, bold) * size + tracking * s.Length;
             foreach (var para in text.Replace("\r", "").Split('\n'))
             {
                 var line = string.Empty;
