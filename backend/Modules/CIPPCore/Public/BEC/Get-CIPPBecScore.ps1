@@ -72,6 +72,11 @@ function Get-CIPPBecScore {
         ConfirmedCompromised           = if ($Results.RiskState.RiskState -eq 'confirmedCompromised') { 1 } else { 0 }
         # addresses judged the attacker's (by an investigator, the CIPP list or the heuristics) that got in or acted
         AttackerIPs                    = @($Results.IPVerdicts | Where-Object { $_.Verdict -in @('Compromised', 'LikelyAttacker') -and ([int]$_.SuccessfulSignIns -gt 0 -or [int]$_.Activities -gt 0) }).Count
+        # item-level activity counts only from addresses judged the attacker's, not merely suspicious or unknown
+        AttackerMailAccess             = @($Results.AttackerMailActivity | Where-Object { $_.IPVerdict -in @('Compromised', 'LikelyAttacker') }).Count
+        AttackerFileAccess             = @($Results.AttackerFileActivity | Where-Object { $_.IPVerdict -in @('Compromised', 'LikelyAttacker') }).Count
+        AttackerForms                  = @($Results.FormsActivity | Where-Object { $_.Flagged -eq $true -and $_.IPVerdict -in @('Compromised', 'LikelyAttacker') }).Count
+        DelegatedMailboxAttackerAccess = @($Results.AttackerMailActivity | Where-Object { $_.IPVerdict -in @('Compromised', 'LikelyAttacker') -and $_.MailboxOwner -and $Results.UserPrincipalName -and $_.MailboxOwner -ne $Results.UserPrincipalName } | ForEach-Object { $_.MailboxOwner } | Select-Object -Unique).Count
     }
 
     $Descriptions = @{
@@ -106,6 +111,10 @@ function Get-CIPPBecScore {
         RiskyUserLow                   = 'Identity Protection: user at low risk'
         ConfirmedCompromised           = 'Identity Protection: user confirmed compromised'
         AttackerIPs                    = 'Sign-ins or activity from addresses judged to be the attacker'
+        AttackerMailAccess             = 'Mail opened, synced, deleted, moved or sent from an attacker address'
+        AttackerFileAccess             = 'OneDrive/SharePoint files touched from an attacker address'
+        AttackerForms                  = 'Microsoft Forms created, edited or shared from an attacker address'
+        DelegatedMailboxAttackerAccess = "Another mailbox reached through this account's delegated access from an attacker address"
     }
 
     $Breakdown = [System.Collections.Generic.List[object]]::new()

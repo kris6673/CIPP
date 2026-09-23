@@ -25,7 +25,9 @@ BeforeAll {
             [int]$OperationCount,
             [string]$Owner,
             [string]$When = '2026-08-15T09:00:00Z',
-            [switch]$LegacyIPProperty
+            [string]$SessionId,
+            [switch]$LegacyIPProperty,
+            [switch]$AccessTypeInProperties
         )
         $AuditData = [ordered]@{
             Operation        = $Operation
@@ -35,7 +37,9 @@ BeforeAll {
             LogonType        = 0
         }
         if ($LegacyIPProperty) { $AuditData.ClientIP = $ClientIP } else { $AuditData.ClientIPAddress = $ClientIP }
-        if ($AccessType) { $AuditData.MailAccessType = $AccessType }
+        if ($AccessType -and $AccessTypeInProperties) { $AuditData.OperationProperties = @([pscustomobject]@{ Name = 'MailAccessType'; Value = $AccessType }, [pscustomobject]@{ Name = 'IsThrottled'; Value = 'False' }) }
+        elseif ($AccessType) { $AuditData.MailAccessType = $AccessType }
+        if ($SessionId) { $AuditData.SessionId = $SessionId }
         if ($OperationCount) { $AuditData.OperationCount = $OperationCount }
         if ($Owner) { $AuditData.MailboxOwnerUPN = $Owner }
         [pscustomobject]@{
@@ -83,7 +87,7 @@ Describe 'Get-CIPPBecMailActivity' {
         $Result.Count | Should -Be 4
         $Result.Data.Count | Should -Be 4
         $Bind = $Result.Data[0]
-        $Bind.PSObject.Properties.Name | Should -Be @('Operation', 'ClientIP', 'ClientInfoString', 'MailAccessType', 'LogonType', 'Actor', 'MailboxOwner', 'Count', 'Records', 'FirstSeen', 'LastSeen')
+        $Bind.PSObject.Properties.Name | Should -Be @('Operation', 'ClientIP', 'ClientInfoString', 'MailAccessType', 'LogonType', 'Actor', 'MailboxOwner', 'Count', 'Records', 'FirstSeen', 'LastSeen', 'SessionIds')
         $Bind.Operation | Should -Be 'MailItemsAccessed'
         $Bind.Count | Should -Be 20 -Because 'aggregated MailItemsAccessed records contribute their OperationCount'
         $Bind.Records | Should -Be 2
@@ -202,5 +206,17 @@ Describe 'Get-CIPPBecMailActivity' {
         $Result.Data[0].ClientInfoString | Should -BeLike 'Client=REST;x*...'
         $Result.Summary.HardDeleteCount | Should -Be 0
         $Result.Summary.MailItemsAccessedCount | Should -Be 4
+    }
+
+    It 'reads the access type from OperationProperties, lists the sessions per row, and hands the raw records on' {
+        $script:UserRecords = @(
+            New-Record -Operation 'MailItemsAccessed' -AccessType 'Sync' -AccessTypeInProperties -SessionId 'S1'
+            New-Record -Operation 'MailItemsAccessed' -AccessType 'Sync' -AccessTypeInProperties -SessionId 'S2'
+            New-Record -Operation 'MailItemsAccessed' -AccessType 'Sync' -AccessTypeInProperties -SessionId 'S1'
+        )
+        $Result = Get-CIPPBecMailActivity -TenantFilter 'contoso.com' -UserPrincipalName 'victim@contoso.com' -StartDate '2026-08-14' -EndDate '2026-08-21' -Heuristics $script:Heuristics -Anchor 'victim@contoso.com'
+        $Result.Data[0].MailAccessType | Should -Be 'Sync'
+        @($Result.Data[0].SessionIds | Sort-Object) | Should -Be @('S1', 'S2')
+        $Result.Records.Count | Should -Be 3 -Because 'the attacker-activity pass reads item detail from the same search'
     }
 }

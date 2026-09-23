@@ -114,12 +114,26 @@ Describe 'Get-CIPPBecScore' {
             @{ Key = 'RiskState'; Value = [pscustomobject]@{ Listed = $true; RiskState = 'confirmedCompromised'; RiskLevel = 'high' }; Expected = 5; Signal = 'ConfirmedCompromised' }
             # an attacker address that only failed to sign in, or a suspicious one, does not count
             @{ Key = 'IPVerdicts'; Value = @([pscustomobject]@{ Verdict = 'LikelyAttacker'; SuccessfulSignIns = 1; Activities = 0 }, [pscustomobject]@{ Verdict = 'Compromised'; SuccessfulSignIns = 0; Activities = 0 }, [pscustomobject]@{ Verdict = 'Suspicious'; SuccessfulSignIns = 3; Activities = 2 }); Expected = 4; Signal = 'AttackerIPs' }
+            # item-level activity counts only from addresses judged the attacker's
+            @{ Key = 'AttackerMailActivity'; Value = @([pscustomobject]@{ IPVerdict = 'LikelyAttacker'; MailboxOwner = 'victim@contoso.com' }, [pscustomobject]@{ IPVerdict = 'Unknown'; MailboxOwner = 'victim@contoso.com' }); Expected = 3; Signal = 'AttackerMailAccess' }
+            @{ Key = 'AttackerFileActivity'; Value = @([pscustomobject]@{ IPVerdict = 'Compromised' }); Expected = 2; Signal = 'AttackerFileAccess' }
+            @{ Key = 'FormsActivity'; Value = @([pscustomobject]@{ Flagged = $true; IPVerdict = 'LikelyAttacker' }, [pscustomobject]@{ Flagged = $true; IPVerdict = 'Suspicious' }); Expected = 3; Signal = 'AttackerForms' }
         )
         foreach ($Case in $Cases) {
             $Score = Get-CIPPBecScore -Results (New-Results @{ $Case.Key = $Case.Value }) -Heuristics $script:Heuristics
             $Score.Value | Should -Be $Case.Expected -Because "$($Case.Signal) should add $($Case.Expected)"
             ($Score.Breakdown | Where-Object { $_.Signal -eq $Case.Signal }).Applied | Should -BeTrue -Because "$($Case.Signal) should be applied"
         }
+    }
+
+    It 'scores attacker access to another mailbox through delegation on top of the mail access itself' {
+        $Mail = @(
+            [pscustomobject]@{ IPVerdict = 'LikelyAttacker'; MailboxOwner = 'ceo@contoso.com' }
+            [pscustomobject]@{ IPVerdict = 'LikelyAttacker'; MailboxOwner = 'Victim@contoso.com' }
+        )
+        $Score = Get-CIPPBecScore -Results (New-Results @{ UserPrincipalName = 'victim@contoso.com'; AttackerMailActivity = $Mail }) -Heuristics $script:Heuristics
+        ($Score.Breakdown | Where-Object Signal -EQ 'DelegatedMailboxAttackerAccess').Count | Should -Be 1 -Because 'the own mailbox, in any case, is not a delegated one'
+        $Score.Value | Should -Be 6
     }
 
     It 'does not score a Defender detection that was blocked, or a dismissed risky user' {

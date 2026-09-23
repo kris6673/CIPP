@@ -8,8 +8,11 @@ function Get-CIPPBecMailActivity {
         user, plus tenant-wide SendAs/SendOnBehalf records whose mailbox owner is the user, are reduced
         to counts per Operation x ClientIP x client application x access type with first/last seen
         times. Aggregated MailItemsAccessed records contribute their OperationCount. No subjects,
-        folders or item ids are kept. MailItemsAccessed needs Purview Audit (Premium); when the log
-        does not carry it the other operations still count.
+        folders or item ids are kept in the counts. MailItemsAccessed is part of Audit (Standard) for
+        E3/E5 licences; when the log does not carry it the other operations still count. Each row also
+        lists the mailbox SessionIds it saw (one session moving between addresses is one actor), and
+        the raw records ride along on the result (Records, not stored) so the attacker-activity pass
+        can take item-level detail for the attacker's addresses without searching again.
     .PARAMETER TenantFilter
         Tenant default domain name.
     .PARAMETER UserPrincipalName
@@ -41,6 +44,7 @@ function Get-CIPPBecMailActivity {
     $HardDeleteThreshold = [int]($Heuristics.mailActivity.hardDeleteThreshold ?? 20)
 
     $Groups = @{}
+    $AllRecords = [System.Collections.Generic.List[object]]::new()
     $Errors = [System.Collections.Generic.List[string]]::new()
     $Complete = $true
     $Cap = $null
@@ -54,7 +58,8 @@ function Get-CIPPBecMailActivity {
         $ClientIP = [string](ConvertTo-CIPPBecHostAddress -Address ($AD.ClientIP ?? $AD.ClientIPAddress))
         $ClientInfo = [string]($AD.ClientInfoString ?? $AD.ClientAppId ?? $AD.ClientApplication)
         if ($ClientInfo.Length -gt 120) { $ClientInfo = $ClientInfo.Substring(0, 120) + '...' }
-        $AccessType = [string]$AD.MailAccessType
+        # real records carry the access type in OperationProperties; older payloads had it at the top
+        $AccessType = [string]($AD.MailAccessType ?? (@($AD.OperationProperties) | Where-Object { $_.Name -eq 'MailAccessType' } | Select-Object -First 1).Value)
         $Actor = [string]$AD.UserId
         $Owner = [string]($AD.MailboxOwnerUPN ?? $Actor)
         $Key = "$Operation|$ClientIP|$ClientInfo|$AccessType|$Actor|$Owner"
@@ -73,9 +78,12 @@ function Get-CIPPBecMailActivity {
                 Records          = 0
                 FirstSeen        = $When
                 LastSeen         = $When
+                SessionIds       = [System.Collections.Generic.HashSet[string]]::new()
             }
         }
         $Group = $Groups[$Key]
+        if ($AD.SessionId) { $null = $Group.SessionIds.Add([string]$AD.SessionId) }
+        $AllRecords.Add($Record)
         $Group.Count = $Group.Count + $Count
         $Group.Records = $Group.Records + 1
         if ($When) {
@@ -112,6 +120,7 @@ function Get-CIPPBecMailActivity {
     $Rows = @($Groups.Values | ForEach-Object {
             $_.FirstSeen = if ($_.FirstSeen) { $_.FirstSeen.ToString('yyyy-MM-ddTHH:mm:ssZ') } else { $null }
             $_.LastSeen = if ($_.LastSeen) { $_.LastSeen.ToString('yyyy-MM-ddTHH:mm:ssZ') } else { $null }
+            $_.SessionIds = @($_.SessionIds)
             $_
         } | Sort-Object -Property Count -Descending)
 
@@ -132,5 +141,6 @@ function Get-CIPPBecMailActivity {
 
     $Result = New-CIPPBecCollectorResult -Data $Rows -Complete ($Complete -and $Errors.Count -eq 0) -Cap $Cap -Error ($(if ($Errors.Count -gt 0) { $Errors -join '; ' } else { $null })) -Count $Rows.Count
     $Result | Add-Member -NotePropertyName 'Summary' -NotePropertyValue $Summary -Force
+    $Result | Add-Member -NotePropertyName 'Records' -NotePropertyValue $AllRecords.ToArray() -Force
     return $Result
 }

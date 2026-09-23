@@ -26,6 +26,11 @@ function Search-CIPPBecAuditLog {
         Optional record type filter (e.g. ExchangeAdmin).
     .PARAMETER ObjectIds
         Optional object id filter.
+    .PARAMETER IPAddresses
+        Optional client address filter. Takes bare addresses (a ':port' is stripped here - the service
+        rejects it) and matches records stored with a port.
+    .PARAMETER FreeText
+        Optional text the record must contain (e.g. a form id).
     .PARAMETER Anchor
         Anchor mailbox for the EXO request.
     .PARAMETER PageSize
@@ -53,6 +58,8 @@ function Search-CIPPBecAuditLog {
         [string[]]$UserIds,
         [string]$RecordType,
         [string[]]$ObjectIds,
+        [string[]]$IPAddresses,
+        [string]$FreeText,
         [string]$Anchor,
         [ValidateRange(1, 5000)][int]$PageSize = 5000,
         [ValidateRange(1, 200)][int]$MaxPages = 10,
@@ -72,6 +79,11 @@ function Search-CIPPBecAuditLog {
     if ($UserIds) { $SearchParam.UserIds = @($UserIds) }
     if ($RecordType) { $SearchParam.RecordType = $RecordType }
     if ($ObjectIds) { $SearchParam.ObjectIds = @($ObjectIds) }
+    if ($IPAddresses) {
+        $IPAddresses = @($IPAddresses | ForEach-Object { ConvertTo-CIPPBecHostAddress -Address ([string]$_) } | Where-Object { $_ } | Select-Object -Unique)
+        $SearchParam.IPAddresses = @($IPAddresses)
+    }
+    if ($FreeText) { $SearchParam.FreeText = $FreeText }
 
     $ExoParams = @{ tenantid = $TenantFilter; cmdlet = 'Search-UnifiedAuditLog'; cmdParams = $SearchParam }
     if ($Anchor) { $ExoParams.Anchor = $Anchor }
@@ -136,6 +148,8 @@ function Search-CIPPBecAuditLog {
         if ($UserIds) { $Common.UserIds = $UserIds }
         if ($RecordType) { $Common.RecordType = $RecordType }
         if ($ObjectIds) { $Common.ObjectIds = $ObjectIds }
+        if ($IPAddresses) { $Common.IPAddresses = $IPAddresses }
+        if ($FreeText) { $Common.FreeText = $FreeText }
         if ($Anchor) { $Common.Anchor = $Anchor }
 
         $Left = Search-CIPPBecAuditLog @Common -StartDate $StartDate -EndDate $Mid

@@ -762,6 +762,8 @@ function Push-BECRun {
         & $Mark 'MailActivity' $Activity
         $MailActivity = @($Activity.Data)
         $MailActivitySummary = $Activity.Summary
+        # the raw records, for the attacker-activity pass (not stored)
+        $MailRecords = @($Activity.Records | Where-Object { $_ })
 
         Write-Information 'Full scope: risk state'
         $Risk = if ($HasEntraP2) { & $Collect 'RiskState' { Get-CIPPBecRiskState -TenantFilter $TenantFilter -UserId $SuspectUser -StartDate $startDate } } else { & $Skip 'requires Entra ID P2 (Identity Protection)' }
@@ -825,6 +827,31 @@ function Push-BECRun {
             $IPVerdicts = @(); $IPBaseline = $null; $IPGuidance = @(); $IPPeers = @()
         }
         Set-CIPPBecIPVerdictStamp -Results $IPDraft -Verdicts $IPVerdicts
+
+        # What the attacker-side addresses did, item by item: mail opened/synced/deleted/moved/sent,
+        # files touched, sharing links used, Forms built - and the other mailboxes the account reaches.
+        & $Phase 'AttackerActivity' 'Reading what the attacker addresses opened, sent, downloaded and shared'
+        Write-Information 'Full scope: attacker activity'
+        $KnownSubjects = @{}
+        if ($Received.MessageIndex -is [hashtable]) { foreach ($Key in $Received.MessageIndex.Keys) { $KnownSubjects[$Key] = $Received.MessageIndex[$Key] } }
+        foreach ($Row in @($SentMessagesRaw | Where-Object { $_.MessageId })) { $KnownSubjects[[string]$Row.MessageId] = [string]$Row.Subject }
+        $Attacker = & $Collect 'AttackerActivity' { Get-CIPPBecAttackerActivity -TenantFilter $TenantFilter -UserPrincipalName $UserName -StartDate $startDate -EndDate $endDate -Heuristics $Heuristics -Verdicts $IPVerdicts -SignIns $SuspectUserSignIns -NonInteractiveSignIns $NonInteractiveSignIns -MailRecords $MailRecords -SharingChanges $SharingChanges -KnownSubjects $KnownSubjects -Anchor $UserName }
+        if ($Attacker.PSObject.Properties['Mail']) {
+            & $Mark 'AttackerMailActivity' $Attacker.Mail
+            & $Mark 'AttackerFileActivity' $Attacker.Files
+            & $Mark 'LinkUsage' $Attacker.LinkUsage
+            & $Mark 'FormsActivity' $Attacker.Forms
+            $AttackerMailActivity = @($Attacker.Mail.Data); $AttackerMailSummary = $Attacker.Mail.Summary
+            $AttackerFileActivity = @($Attacker.Files.Data); $AttackerFileSummary = $Attacker.Files.Summary
+            $LinkUsage = @($Attacker.LinkUsage.Data)
+            $FormsActivity = @($Attacker.Forms.Data); $FormsSummary = $Attacker.Forms.Summary
+        } else {
+            foreach ($Name in @('AttackerMailActivity', 'AttackerFileActivity', 'LinkUsage', 'FormsActivity')) { & $Mark $Name $Attacker }
+            $AttackerMailActivity = @(); $AttackerMailSummary = $null; $AttackerFileActivity = @(); $AttackerFileSummary = $null; $LinkUsage = @(); $FormsActivity = @(); $FormsSummary = $null
+        }
+        $Delegated = & $Collect 'DelegatedAccess' { Get-CIPPBecDelegatedAccess -TenantFilter $TenantFilter -UserPrincipalName $UserName -UserDisplayName ([string]$SuspectUserDetail.displayName) -PermissionChanges $PermissionsLog -MailActivity $MailActivity -AttackerMail $AttackerMailActivity }
+        & $Mark 'DelegatedAccess' $Delegated
+        $DelegatedAccess = @($Delegated.Data)
 
         # Geo-locate the client IPs behind rule changes, safelist changes, sharing changes, sent
         # mail and (Full scope) transport-rule changes, directory audits and mailbox activity so
@@ -903,6 +930,7 @@ function Push-BECRun {
 
         $Results = [PSCustomObject]@{
             CaseId                   = $CaseId
+            UserPrincipalName        = $UserName
             AddedApps                = @($NewSPs)
             MaliciousSPs             = @($MaliciousSPs)
             SuspectUserSignIns       = @($SuspectUserSignIns)
@@ -945,6 +973,15 @@ function Push-BECRun {
             IPGuidance               = @($IPGuidance)
             IPPeers                  = @($IPPeers)
             IPOverrides              = @()
+            # item-level detail of the attacker-side addresses, and the mailboxes the account reaches
+            AttackerMailActivity     = @($AttackerMailActivity)
+            AttackerMailSummary      = $AttackerMailSummary
+            AttackerFileActivity     = @($AttackerFileActivity)
+            AttackerFileSummary      = $AttackerFileSummary
+            LinkUsage                = @($LinkUsage)
+            FormsActivity            = @($FormsActivity)
+            FormsSummary             = $FormsSummary
+            DelegatedAccess          = @($DelegatedAccess)
             RiskState                = $RiskState
             Completeness             = [pscustomobject]$Completeness
             AnalysisWindowDays       = $WindowDays

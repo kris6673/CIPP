@@ -2,6 +2,7 @@ BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     function New-ExoRequest { param($tenantid, $cmdlet, $cmdParams, $Anchor) }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Search-CIPPBecAuditLog.ps1')
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/ConvertTo-CIPPBecHostAddress.ps1')
 
     function New-Page {
         param([int]$From, [int]$Count, [int]$Total, [string]$Prefix = 'id')
@@ -142,5 +143,20 @@ Describe 'Search-CIPPBecAuditLog' {
         $Result.Records.Count | Should -Be 1
         $Result.Records[0].AuditData | Should -BeNullOrEmpty
         $Result.Records[0].Operation | Should -Be 'Op'
+    }
+
+    It 'sends bare client addresses and free text, and keeps them on every bisected slice' {
+        Mock New-ExoRequest {
+            $script:Calls.Add($cmdParams)
+            $Minutes = [int](New-TimeSpan -Start $cmdParams.StartDate -End $cmdParams.EndDate).TotalMinutes
+            if ($Minutes -gt 61) { New-Page -From ($script:Calls.Count * 4) -Count 4 -Total 100 }
+            else { New-Page -From (5000 + 10 * $script:Calls.Count) -Count 2 -Total 2 }
+        }
+        $null = Search-CIPPBecAuditLog -TenantFilter 'contoso.com' -StartDate $script:End.AddMinutes(-120) -EndDate $script:End -PageSize 4 -MaxPages 2 -MinSliceMinutes 60 -IPAddresses @('198.51.100.7:51234', '[2001:db8::1]:443', '198.51.100.7') -FreeText 'FORM1'
+        $script:Calls.Count | Should -BeGreaterThan 2
+        foreach ($Call in $script:Calls) {
+            @($Call.IPAddresses) | Should -Be @('198.51.100.7', '2001:db8::1') -Because 'the service rejects an address with a port'
+            $Call.FreeText | Should -Be 'FORM1'
+        }
     }
 }

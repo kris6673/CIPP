@@ -43,7 +43,11 @@
       "RiskyUserMedium": 2,
       "RiskyUserLow": 1,
       "ConfirmedCompromised": 5,
-      "AttackerIPs": 4
+      "AttackerIPs": 4,
+      "AttackerMailAccess": 3,
+      "AttackerFileAccess": 2,
+      "AttackerForms": 3,
+      "DelegatedMailboxAttackerAccess": 3
     }
   },
   "inboxRules": {
@@ -117,7 +121,13 @@
       "HardDelete",
       "SoftDelete",
       "MoveToDeletedItems",
-      "Send"
+      "Send",
+      "AttachmentAccess",
+      "Move",
+      "UpdateFolderPermissions",
+      "UpdateCalendarDelegation",
+      "SearchQueryInitiatedExchange",
+      "Set-Mailbox"
     ],
     "mailboxOwnerOperations": [
       "SendAs",
@@ -182,5 +192,46 @@
       "allowListHint": -1,
       "onlyFailedSignIns": -3
     }
+  },
+  "attackerActivity": {
+    "fileOperations": [
+      "FileAccessed",
+      "FileDownloaded",
+      "FileSyncDownloadedFull",
+      "FilePreviewed",
+      "FileUploaded",
+      "FileModified",
+      "FileDeleted",
+      "FileRecycled",
+      "FileMoved",
+      "FileCopied",
+      "FileRenamed",
+      "SearchQueryPerformed"
+    ],
+    "linkUsageOperations": [
+      "AnonymousLinkUsed",
+      "CompanyLinkUsed",
+      "SecureLinkUsed",
+      "SharingInvitationAccepted"
+    ],
+    "formsResponseOperations": [
+      "CreateResponse",
+      "SubmitResponse",
+      "ViewRuntimeForm",
+      "UpdatePhishingStatus"
+    ],
+    "formsAttackerOperations": [
+      "CreateForm",
+      "EditForm",
+      "ShareForm",
+      "SendForm",
+      "AllowShareFormForCopy",
+      "AddFormCoauthor",
+      "ConnectToExcelWorkbook",
+      "ExportForm",
+      "ViewResponses",
+      "GetSummaryLink"
+    ],
+    "subjectLookbackDays": 90
   }
 }

@@ -50,9 +50,13 @@ function Get-CIPPBecReceivedMailFindings {
     $KeywordPattern = [string]$Heuristics.phishingKeywordPattern
     $Accepted = @($AcceptedDomains | Where-Object { $_ } | ForEach-Object { $_.ToLowerInvariant() } | Select-Object -Unique)
 
+    # Every received message's subject by internet message id, so the attacker-activity pass can name
+    # the messages the attacker opened without tracing them again (kept in memory, not stored).
+    $MessageIndex = @{}
     $Findings = try {
         $Trace = Get-CIPPBecMessageTrace -TenantFilter $TenantFilter -RecipientAddress $UserPrincipalName -StartDate $StartDate -EndDate $EndDate -Anchor $Anchor
         $Rows = @($Trace.Rows)
+        foreach ($Row in $Rows) { if ($Row.MessageId -and -not $MessageIndex.ContainsKey([string]$Row.MessageId)) { $MessageIndex[[string]$Row.MessageId] = [string]$Row.Subject } }
 
         # Typosquat is a property of the sender domain, so evaluate each distinct domain once.
         $DomainVerdicts = @{}
@@ -173,7 +177,8 @@ function Get-CIPPBecReceivedMailFindings {
     }
 
     return [pscustomobject]@{
-        Findings = $Findings
-        Defender = $Defender
+        Findings     = $Findings
+        Defender     = $Defender
+        MessageIndex = $MessageIndex
     }
 }
