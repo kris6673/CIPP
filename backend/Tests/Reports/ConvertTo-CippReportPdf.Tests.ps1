@@ -195,6 +195,26 @@ Describe 'Watermark layering' {
         }
     }
 
+    It 'lifts a mark written with cp1252 characters (curly quote, dash) like any other' {
+        $Mark = "O$([char]0x2019)Brien $([char]0x2014) Draft"
+        $Bytes = ConvertTo-CippReportPdf -Blocks @(@{ type = 'blank'; title = 'T'; content = '<p>x</p>' }) -Variables @{} -Branding @{ colour = '#0E4C92'; watermarkText = $Mark; watermarkEnabled = $true } -TenantName 'Contoso' -ReportName 'T'
+        $Pdf = [System.Text.Encoding]::Latin1.GetString($Bytes)
+        # WinAnsi: the right single quote is 0x92 and the em dash 0x97
+        $Pdf | Should -Match '<4F92425249454E'
+        $Streams = [regex]::Matches($Pdf, '(?s)<< /Length (\d+) >>\s*stream\n(.*?)\nendstream') | ForEach-Object { $_.Groups[2].Value }
+        $Marked = @($Streams | Where-Object { $_ -match '0\.707 0\.707 -0\.707 0\.707' })
+        $Marked.Count | Should -BeGreaterOrEqual 1
+        foreach ($Data in $Marked) { $Data.TrimEnd() | Should -Match 'Tj\s*ET\s*Q$' }
+    }
+
+    It 'prints a mark character outside WinAnsi as ? instead of failing the report' {
+        # 'L' with stroke has no WinAnsi code, and the micro sign upper-cases to the Greek capital mu
+        $Mark = "$([char]0x0141)$([char]0x00F3)d$([char]0x017A) 5 $([char]0x00B5)m"
+        $Bytes = ConvertTo-CippReportPdf -Blocks @(@{ type = 'blank'; title = 'T'; content = '<p>x</p>' }) -Variables @{} -Branding @{ colour = '#0E4C92'; watermarkText = $Mark; watermarkEnabled = $true } -TenantName 'Contoso' -ReportName 'T'
+        [System.Text.Encoding]::ASCII.GetString($Bytes[0..4]) | Should -Be '%PDF-'
+        [System.Text.Encoding]::Latin1.GetString($Bytes) | Should -Match '0\.707 0\.707 -0\.707 0\.707'
+    }
+
     It 'leaves a document without a watermark untouched' {
         $Bytes = ConvertTo-CippReportPdf -Blocks @(@{ type = 'blank'; title = 'T'; content = '<p>x</p>' }) -Variables @{} -Branding @{ colour = '#0E4C92' } -TenantName 'Contoso' -ReportName 'T'
         [System.Text.Encoding]::ASCII.GetString($Bytes[0..4]) | Should -Be '%PDF-'
@@ -244,6 +264,17 @@ Describe 'Cover footer note' {
         $Branded | Should -Match 'BRANDED\s+WORDING'
         $Branded | Should -Not -Match 'REPORT\s+WORDING'
         & $Cover @{ colour = '#0E4C92' } | Should -Match 'REPORT\s+WORDING'
+    }
+
+    It 'keeps the tenant and meta lines on a landscape cover with a logo and a two-line subtitle' {
+        # a 3:1 PNG logo: the tallest the cover draws, which leaves a landscape page the least room
+        $Logo = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAKCAYAAACjd+4vAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAfSURBVDhPY+DzmfR/IDADugC98KjFdMOjFtMNjzyLAVL6P4McNkyeAAAAAElFTkSuQmCC'
+        $Variables = @{ coversubtitle = 'A deliberately long subtitle that wraps onto a second line on the landscape cover of the report'; covermeta = '24 sharing links' }
+        $Bytes = ConvertTo-CippReportPdf -Blocks @(@{ type = 'blank'; title = 'T'; content = '<p>x</p>' }) -Variables $Variables -Branding @{ colour = '#0E4C92'; logo = $Logo } -TenantName 'Contoso Landscape Tenant' -ReportName 'Quarterly Security Review' -Landscape
+        $Cover = [OfficeIMO.Pdf.PdfReadDocument]::Open($Bytes).Pages[0].ExtractText()
+        $Cover | Should -Match 'Contoso\s+Landscape\s+Tenant'
+        $Cover | Should -Match '24\s+sharing\s+links'
+        $Cover | Should -Match 'CONFIDENTIAL'
     }
 }
 

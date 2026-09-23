@@ -350,9 +350,10 @@ namespace CIPP.Reporting
 
             // Client coverHero is the page less its 60pt padding each side; the text under the title wraps
             // inside it. Its footer note is the last thing on the cover: it wraps in the same width (counting
-            // its 1pt letter spacing), its last line box ends at the 60pt page pad, and 32pt is kept above its
-            // first line (client coverFooter marginTop), so a block that wraps further than the page allows
-            // drops the lines that would run into the note rather than overprint it.
+            // its 1pt letter spacing) and its last line box ends at the 60pt page pad. The client keeps 32pt
+            // above it (coverFooter marginTop) and spills a cover that outgrows the page onto a second one;
+            // the cover here is one fixed drawing, so the block may run into that 32pt - a landscape cover
+            // with a logo needs it for the tenant line - and only a line that would touch the note is dropped.
             var heroW = ctx.ContentWidth + 2 * ReportStyles.PagePadding - 2 * coverPad;
             // Branding's cover note wins and the report's own wording is the fallback (client ReportDocument),
             // so a configured note is not silently ignored by every report that words its own. Like the client,
@@ -370,7 +371,7 @@ namespace CIPP.Reporting
                 var drawn = 0.0;
                 foreach (var line in WrapLines(text, width, size, bold))
                 {
-                    if (top + drawn + pitch > noteTop - 32) break;
+                    if (top + drawn + pitch > noteTop - 4) break;
                     Line(line, leftPad, top + drawn, width, size, colour, OfficeTextAlignment.Left, bold);
                     drawn += pitch;
                 }
@@ -1169,6 +1170,14 @@ namespace CIPP.Reporting
         // What cp1252 puts at 0x80..0x9F (its five unassigned bytes kept as themselves), so a curly quote, dash
         // or bullet finds its WinAnsi width.
         private const string WinAnsiSpecials = "\u20AC\u0081\u201A\u0192\u201E\u2026\u2020\u2021\u02C6\u2030\u0160\u2039\u0152\u008D\u017D\u008F\u0090\u2018\u2019\u201C\u201D\u2022\u2013\u2014\u02DC\u2122\u0161\u203A\u0153\u009D\u017E\u0178";
+
+        // A character's code in WinAnsi, the standard fonts' encoding (the cp1252 specials at 0x80..0x9F, anything
+        // else its Latin-1 byte), or -1 when WinAnsi has no code for it.
+        internal static int WinAnsiCode(char ch)
+        {
+            var special = WinAnsiSpecials.IndexOf(ch);
+            return special >= 0 ? 0x80 + special : ch <= 0xFF ? ch : -1;
+        }
 
         // A run of text's advance in em.
         internal static double TextEm(string s, bool bold)

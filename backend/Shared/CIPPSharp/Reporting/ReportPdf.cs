@@ -77,7 +77,7 @@ namespace CIPP.Reporting
             // A branding logo the engine cannot embed (a PNG with a bad chunk CRC, an unsupported format)
             // only surfaces when the document is serialised, not where the logo is placed, so it must not
             // sink the report: render once more without it. Any other failure still propagates.
-            var watermark = theme.WatermarkEnabled ? ReportTheme.ApplyWatermark(theme.WatermarkText, variables).ToUpperInvariant() : string.Empty;
+            var watermark = theme.WatermarkEnabled ? DrawableMark(ReportTheme.ApplyWatermark(theme.WatermarkText, variables)) : string.Empty;
             // The client's mark is a centred text box as wide as the page, so a mark wider than that (its 4pt
             // letter spacing counted) breaks into lines. OfficeIMO draws one line: it is handed the lines joined,
             // with room behind them for the line moves LiftWatermark writes in their place.
@@ -486,8 +486,25 @@ namespace CIPP.Reporting
             }
         }
 
-        // A PDF hex string of `s` as OfficeIMO writes the standard fonts' text (one Latin-1 byte a character).
-        private static string Hex(string s) => "<" + Convert.ToHexString(Encoding.Latin1.GetBytes(s)) + ">";
+        // A PDF hex string of `s` as OfficeIMO writes the standard fonts' text: one WinAnsi byte a character, so
+        // a curly quote, dash or euro sign (0x80..0x9F) matches the bytes on the page.
+        private static string Hex(string s)
+        {
+            var bytes = new byte[s.Length];
+            for (var i = 0; i < s.Length; i++) bytes[i] = (byte)Math.Max(0, ReportComponents.WinAnsiCode(s[i]));
+            return "<" + Convert.ToHexString(bytes) + ">";
+        }
+
+        // The mark, upper-cased, in the standard Helvetica-Bold it is drawn in. A character with no WinAnsi code
+        // (from %tenantname%, or made by upper-casing, like the Greek capital mu of 'µ') fails the engine's
+        // encoding check and with it the whole report, so it prints as '?', the way the body text prints one.
+        private static string DrawableMark(string text)
+        {
+            var upper = ReportMarkdown.Sanitize(text).ToUpperInvariant();
+            var sb = new StringBuilder(upper.Length);
+            foreach (var ch in upper) sb.Append(ReportComponents.WinAnsiCode(ch) >= 0 ? ch : '?');
+            return sb.ToString();
+        }
 
         private static int IndexOf(byte[] hay, byte[] needle, int from, int to)
         {
