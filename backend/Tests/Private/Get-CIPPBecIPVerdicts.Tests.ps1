@@ -119,9 +119,12 @@ Describe 'Get-CIPPBecIPVerdicts' {
         $Rows = Get-CIPPBecIPVerdicts -NonInteractiveSignIns $SignIns -Baseline $script:Baseline -Geo $script:Geo -UsageLocation 'AU' -Heuristics $script:Heuristics -CippAppId 'cipp-app'
         $Row = Get-Row $Rows '135.119.241.152'
         $Row.Verdict | Should -Be 'Service'
-        $Row.Source | Should -Match 'CIPP application'
+        $Row.Source | Should -Match 'CIPP or partner delegated administration'
         $Mixed = @($SignIns) + @(New-SignIn -IP '135.119.241.152' -Country 'US')
         (Get-Row (Get-CIPPBecIPVerdicts -NonInteractiveSignIns $Mixed -Baseline $script:Baseline -Geo $script:Geo -UsageLocation 'AU' -Heuristics $script:Heuristics -CippAppId 'cipp-app') '135.119.241.152').Verdict | Should -Not -Be 'Service' -Because 'a sign-in by anything else there is judged'
+        # Microsoft's Partner Customer Delegated Administration app (GDAP) is a service app out of the box
+        $Gdap = @(1..2 | ForEach-Object { $S = New-SignIn -IP '135.119.241.153' -Status 'Failed' -Country 'US'; $S | Add-Member -NotePropertyName AppId -NotePropertyValue '2832473f-ec63-45fb-976f-5d45a7d4bb91'; $S })
+        (Get-Row (Get-CIPPBecIPVerdicts -NonInteractiveSignIns $Gdap -Baseline $script:Baseline -Geo $script:Geo -UsageLocation 'AU' -Heuristics $script:Heuristics -CippAppId 'cipp-app') '135.119.241.153').Verdict | Should -Be 'Service'
     }
 
     It 'classes an address seen only on CIPP or partner actions as a service' {
