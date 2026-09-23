@@ -56,15 +56,16 @@ Describe 'Invoke-CIPPBecContainment' {
         Mock Remove-CIPPBecSharingLinks { @(foreach ($Url in $ItemUrls) { [pscustomobject]@{ Target = $Url; state = 'success'; resultText = "Removed link on $Url" } }) }
     }
 
-    It 'runs the original six steps in order when no actions are selected' {
+    It 'runs the built-in default set in order when no actions are selected' {
         $Rows = Invoke-CIPPBecContainment -TenantFilter 'contoso.com' -UserId 'u1' -UserPrincipalName 'victim@contoso.com' -Confirmed
-        @($Rows.Action | Select-Object -Unique) | Should -Be @('ResetPassword', 'DisableAccount', 'RevokeSessions', 'RemoveMFA', 'DisableInboxRules', 'DisableOneDriveSharing')
+        @($Rows.Action | Select-Object -Unique) | Should -Be @('ResetPassword', 'DisableAccount', 'RevokeSessions', 'RemoveMFA', 'DisableInboxRules', 'BlockProtocols')
         Should -Invoke Set-CIPPResetPassword -Times 1
         Should -Invoke Set-CIPPSignInState -Times 1 -ParameterFilter { $AccountEnabled -eq $false }
         Should -Invoke Revoke-CIPPSessions -Times 1
         Should -Invoke Remove-CIPPUserMFA -Times 1 -ParameterFilter { -not $MethodId }
         Should -Invoke Disable-CIPPInboxRules -Times 1
-        Should -Invoke Set-CIPPOneDriveSharing -Times 1 -ParameterFilter { $SharingCapability -eq 'Disabled' }
+        Should -Invoke New-ExoRequest -Times 1 -ParameterFilter { $cmdlet -eq 'Set-CASMailbox' -and $cmdParams.EWSEnabled -eq $false -and $cmdParams.IMAPEnabled -eq $false -and $cmdParams.POPEnabled -eq $false -and $cmdParams.ActiveSyncEnabled -eq $false -and $cmdParams.SmtpClientAuthenticationDisabled -eq $true }
+        Should -Invoke Set-CIPPOneDriveSharing -Times 0
         Should -Invoke Remove-CIPPUserOAuthGrant -Times 0
         ($Rows | Where-Object { $_.Action -eq 'ResetPassword' }).copyField | Should -Be 'Hunter2!'
     }

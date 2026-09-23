@@ -85,8 +85,23 @@ const Page = () => {
   useEffect(() => {
     if (activeCaseId) setPollActive(true)
   }, [activeCaseId])
+  // A failed poll (a deleted or corrupted case answers 500 with { Error }) is a finished state:
+  // show its message and stop polling instead of refetching into a permanent "loading".
+  const poll = useMemo(
+    () =>
+      becPollingCall.data ??
+      (becPollingCall.isError
+        ? {
+            Waiting: false,
+            Error:
+              becPollingCall.error?.response?.data?.Error ||
+              becPollingCall.error?.message ||
+              'The case could not be loaded.',
+          }
+        : undefined),
+    [becPollingCall.data, becPollingCall.isError, becPollingCall.error]
+  )
   useEffect(() => {
-    const poll = becPollingCall.data
     if (!poll || !activeCaseId) return
     if (poll.Waiting) {
       setPollActive(true)
@@ -98,7 +113,7 @@ const Page = () => {
       runsCall.refetch()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [becPollingCall.data, activeCaseId])
+  }, [poll, activeCaseId])
 
   const startRunCall = ApiPostCall({
     relatedQueryKeys: [`ListBECReports-${tenant}-${userId}`],
@@ -156,7 +171,6 @@ const Page = () => {
     [router]
   )
 
-  const poll = becPollingCall.data
   const becData = poll && !poll.Waiting && !poll.Error ? poll : null
   const runState =
     !ready || runsCall.isLoading

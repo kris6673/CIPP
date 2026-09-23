@@ -5,9 +5,10 @@ function Invoke-CIPPBecContainment {
     .DESCRIPTION
         The single containment implementation shared by the ExecBECRemediate endpoint, the
         'becremediate' audit-log alert action and the scheduler. Actions come from
-        Get-CIPPBecContainmentActions; with no selection the six default steps run, which is the
-        behaviour the feature always had. Actions run in catalog order, each in its own try/catch so
-        one failure never stops the rest, and every action returns result rows
+        Get-CIPPBecContainmentActions; with no selection the default set runs (the catalog's
+        DefaultSelected flags, which the instance-wide settings can change). Actions run in catalog
+        order, each in its own try/catch so one failure never stops the rest, and every action returns
+        result rows
         ({ Action, Target, state, resultText, copyField }).
 
         Targets come from Parameters (explicit ids the operator picked), else from the run's stored
@@ -209,7 +210,7 @@ function Invoke-CIPPBecContainment {
                     }
                     'BlockProtocols' {
                         $Protocols = @((& $AsList (& $GetParam 'Protocols')) | Select-Object -Unique)
-                        if ($Protocols.Count -eq 0) { $Protocols = @('EWS', 'IMAP', 'POP', 'ActiveSync') }
+                        if ($Protocols.Count -eq 0) { $Protocols = @('EWS', 'IMAP', 'POP', 'ActiveSync', 'SmtpAuth') }
                         # Set-CASMailbox switch per protocol; SmtpAuth maps to SmtpClientAuthenticationDisabled, which is inverted.
                         $ProtocolMap = @{ EWS = 'EWSEnabled'; IMAP = 'IMAPEnabled'; POP = 'POPEnabled'; ActiveSync = 'ActiveSyncEnabled'; OWA = 'OWAEnabled'; MAPI = 'MAPIEnabled'; ECP = 'ECPEnabled'; SmtpAuth = 'SmtpClientAuthenticationDisabled' }
                         $Unknown = @($Protocols | Where-Object { -not $ProtocolMap.ContainsKey([string]$_) })

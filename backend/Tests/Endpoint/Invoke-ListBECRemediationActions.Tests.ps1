@@ -8,6 +8,8 @@ BeforeAll {
     if (-not ([System.Management.Automation.PSTypeName]'HttpStatusCode').Type) {
         $TypeAccelerators::Add('HttpStatusCode', [System.Net.HttpStatusCode])
     }
+    function Get-CIPPTable { param($TableName) @{ TableName = $TableName } }
+    function Get-CIPPAzDataTableEntity { param($TableName, $Filter) }
     # The real catalog: the endpoint is a projection of it, so the test pins what the frontend sees.
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Get-CIPPBecContainmentActions.ps1')
     $FunctionPath = Get-ChildItem -Path (Join-Path $RepoRoot 'Modules') -Recurse -Filter 'Invoke-ListBECRemediationActions.ps1' | Select-Object -First 1
@@ -51,11 +53,23 @@ Describe 'Invoke-ListBECRemediationActions' {
         ($Body | Where-Object { $_.Id -eq 'DisableAccount' }).Reversible | Should -BeTrue
     }
 
-    It 'pre-selects only the original six-step remediation and numbers the actions in dispatcher order' {
+    It 'pre-selects the built-in default set and numbers the actions in dispatcher order' {
         $Body = (Invoke-ListBECRemediationActions -Request (New-Request) -TriggerMetadata $null).Body
-        @($Body | Where-Object { $_.DefaultSelected }).Id | Should -Be @('ResetPassword', 'DisableAccount', 'RevokeSessions', 'RemoveMFA', 'DisableInboxRules', 'DisableOneDriveSharing')
+        @($Body | Where-Object { $_.DefaultSelected }).Id | Should -Be @('ResetPassword', 'DisableAccount', 'RevokeSessions', 'RemoveMFA', 'DisableInboxRules', 'BlockProtocols')
         @($Body.Id | Select-Object -Unique).Count | Should -Be 21
         @($Body.Order) | Should -Be @(1..21)
+    }
+
+    It 'replaces the built-in defaults with the instance-wide defaults saved in settings' {
+        Mock Get-CIPPAzDataTableEntity { [pscustomobject]@{ DefaultActions = '["RevokeSessions","ClearForwarding"]' } } -ParameterFilter { $Filter -match 'BecRemediation' }
+        $Body = (Invoke-ListBECRemediationActions -Request (New-Request) -TriggerMetadata $null).Body
+        @($Body | Where-Object { $_.DefaultSelected }).Id | Should -Be @('RevokeSessions', 'ClearForwarding')
+    }
+
+    It 'keeps the built-in defaults when the settings read fails' {
+        Mock Get-CIPPTable { throw 'storage down' }
+        $Body = (Invoke-ListBECRemediationActions -Request (New-Request) -TriggerMetadata $null).Body
+        @($Body | Where-Object { $_.DefaultSelected }).Count | Should -Be 6
     }
 
     It 'reports a catalog failure as a 500 with a Results message' {

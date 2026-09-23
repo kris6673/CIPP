@@ -15531,7 +15531,7 @@
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "Runs the selected containment actions (see ListBECRemediationActions) for a user. With no Actions the original six steps run: reset password, block sign-in, revoke sessions, remove MFA methods, disable inbox rules, disable OneDrive sharing. Actions marked Critical require Confirmation to equal the user's UPN. Pass CaseId to resolve default targets (flagged consents, delegations, rules, devices) from that BEC run and to record the outcome on it; Parameters carries explicit per-action targets (MfaMethodIds, GrantIds, AppRoleAssignmentIds, ServicePrincipalIds, RuleIds, Delegations, TransportRuleIds, AddInIds, Protocols, MobileDeviceIds, RegisteredDeviceIds, CAPolicy).",
+        "description": "Runs the selected containment actions (see ListBECRemediationActions) for a user. With no Actions the default set runs (the DefaultSelected actions, configurable instance-wide from CIPP settings). Actions marked Critical require Confirmation to equal the user's UPN. Pass CaseId to resolve default targets (flagged consents, delegations, rules, devices) from that BEC run and to record the outcome on it; Parameters carries explicit per-action targets (MfaMethodIds, GrantIds, AppRoleAssignmentIds, ServicePrincipalIds, RuleIds, Delegations, TransportRuleIds, AddInIds, Protocols, MobileDeviceIds, RegisteredDeviceIds, CAPolicy).",
         "requestBody": {
           "required": true,
           "content": {
@@ -15544,7 +15544,7 @@
                     "items": {
                       "$ref": "#/components/schemas/LabelValue"
                     },
-                    "description": "Action ids from ListBECRemediationActions; empty runs the default six"
+                    "description": "Action ids from ListBECRemediationActions; empty runs the default set"
                   },
                   "CaseId": {
                     "type": "string",
@@ -15616,6 +15616,76 @@
           }
         ],
         "x-cipp-role": "Identity.User.ReadWrite"
+      }
+    },
+    "/api/ExecBECRemediationDefaults": {
+      "post": {
+        "summary": "Gets or sets which BEC containment actions are selected by default.",
+        "operationId": "ExecBECRemediationDefaults",
+        "tags": [
+          "CIPP > Settings"
+        ],
+        "description": "GET with List=true returns the containment catalog (Id, Label, Description, Impact, DefaultSelected) with the instance-wide defaults applied. POST with DefaultActions saves the action ids that start selected in the BEC containment drawer and run when ExecBECRemediate is called without Actions.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "DefaultActions": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    },
+                    "description": "Containment action ids (ListBECRemediationActions) that start selected"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "List",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResults"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "CIPP.AppSettings.ReadWrite",
+        "x-cipp-any-tenant": true
       }
     },
     "/api/ExecBECReport": {
@@ -41635,13 +41705,24 @@
       }
     },
     "/api/ListBECRemediationActions": {
-      "get": {
+      "post": {
         "summary": "Lists the available Business Email Compromise containment actions.",
         "operationId": "ListBECRemediationActions",
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "Returns the catalog of containment actions ExecBECRemediate accepts - id, label, description, impact (Low/Medium/High/Critical), whether it is reversible and whether it runs by default.",
+        "description": "Returns the catalog of containment actions ExecBECRemediate accepts - id, label, description, impact (Low/Medium/High/Critical), whether it is reversible and whether it runs by default (the instance-wide defaults from CIPP settings).",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Success",
@@ -41701,7 +41782,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "Identity.User.Read",
+        "x-cipp-role": "Identity.User.ReadWrite",
         "x-cipp-any-tenant": true
       }
     },

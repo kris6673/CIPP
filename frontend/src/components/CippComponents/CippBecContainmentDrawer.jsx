@@ -173,7 +173,7 @@ export const CippBecContainmentDrawer = ({
       AddInIds: (becData?.MailboxAddIns || [])
         .filter((a) => a.Flagged)
         .map((a) => ({ label: a.DisplayName, value: a.Identity || a.AppId })),
-      Protocols: ['EWS', 'IMAP', 'POP', 'ActiveSync'].map((p) => ({
+      Protocols: ['EWS', 'IMAP', 'POP', 'ActiveSync', 'SmtpAuth'].map((p) => ({
         label: p,
         value: p,
       })),

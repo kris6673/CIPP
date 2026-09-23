@@ -3,11 +3,11 @@ function Invoke-ListBECRemediationActions {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        Identity.User.Read
+        Identity.User.ReadWrite
     .SYNOPSIS
         Lists the available Business Email Compromise containment actions.
     .DESCRIPTION
-        Returns the catalog of containment actions ExecBECRemediate accepts - id, label, description, impact (Low/Medium/High/Critical), whether it is reversible and whether it runs by default.
+        Returns the catalog of containment actions ExecBECRemediate accepts - id, label, description, impact (Low/Medium/High/Critical), whether it is reversible and whether it runs by default (the instance-wide defaults from CIPP settings).
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
