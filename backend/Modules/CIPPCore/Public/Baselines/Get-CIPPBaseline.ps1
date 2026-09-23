@@ -32,6 +32,9 @@ function Get-CIPPBaseline {
     $RolloutRows = Get-CIPPAzDataTableEntity @RolloutTable -Filter $Filter
     if (-not $RolloutRows) { return }
 
+    $RepoTable = Get-CippTable -tablename 'CommunityRepos'
+    $Repos = @(Get-CIPPAzDataTableEntity @RepoTable -Filter "PartitionKey eq 'CommunityRepos'")
+
     $DeltaTable = Get-CippTable -tablename 'Baselines'
     $StateTable = Get-CippTable -tablename 'BaselineRolloutState'
 
@@ -270,6 +273,10 @@ function Get-CIPPBaseline {
                 alertWebhookUrl    = $RolloutRow.alertWebhookUrl
                 disableAlerts      = [bool]$RolloutRow.disableAlerts
                 disableScheduledRuns = [bool]$RolloutRow.disableScheduledRuns
+                source             = $RolloutRow.Source
+                isSynced           = (![string]::IsNullOrEmpty($RolloutRow.SHA))
+                sourceUrl          = (Get-CIPPTemplateSourceUrl -Source $RolloutRow.Source -SourcePath $RolloutRow.SourcePath -Repos $Repos)
+                hasLocalChanges    = $(if ($RolloutRow.Source) { [bool]$RolloutRow.LocalChanges } else { $null })
                 standardsCount     = $UniqueStandards.Count
                 stageNames         = @($Stages.name)
                 stages             = $Stages
