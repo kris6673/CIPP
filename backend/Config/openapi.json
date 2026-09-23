@@ -12446,11 +12446,12 @@
     },
     "/api/ExecAddTrustedIP": {
       "post": {
-        "summary": "ExecAddTrustedIP",
+        "summary": "Adds IP addresses or ranges to CIPP's IP allow/block list.",
         "operationId": "ExecAddTrustedIP",
         "tags": [
           "CIPP > Settings"
         ],
+        "description": "Sets each IP address or CIDR range (IPv4 or IPv6) to Trusted, Blocked or NotTrusted (neutral) for one tenant, or for every tenant with tenantfilter=AllTenants. A tenant entry overrides an AllTenants entry for the same range, and the most specific range decides an address. The audit-log alerts treat Trusted addresses as known; the BEC investigation uses Trusted and Blocked entries as confirmed-safe and confirmed-compromised IPs.",
         "requestBody": {
           "required": false,
           "content": {
@@ -12462,10 +12463,16 @@
                     "type": "array",
                     "items": {
                       "type": "string"
-                    }
+                    },
+                    "description": "IP addresses or CIDR ranges (IPv4 or IPv6); one entry may also hold several separated by commas or spaces"
+                  },
+                  "Note": {
+                    "type": "string",
+                    "description": "Optional note shown with the entry"
                   },
                   "State": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Trusted, Blocked, or NotTrusted to make the entry neutral again"
                   }
                 }
               }
@@ -51005,7 +51012,7 @@
         "tags": [
           "CIPP > Settings"
         ],
-        "description": "Lists trusted IP addresses configured in CIPP for IP-based access control.",
+        "description": "Lists CIPP's IP allow/block list: every tenant or AllTenants entry with its address or CIDR range (Range) and state (Trusted, Blocked or NotTrusted).",
         "responses": {
           "200": {
             "description": "Success",
