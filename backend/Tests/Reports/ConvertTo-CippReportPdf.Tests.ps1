@@ -207,6 +207,14 @@ Describe 'Watermark layering' {
         foreach ($Data in $Marked) { $Data.TrimEnd() | Should -Match 'Tj\s*ET\s*Q$' }
     }
 
+    It 'stacks a mark wider than the page on full lines rather than overprinting them' {
+        $Bytes = ConvertTo-CippReportPdf -Blocks @(@{ type = 'blank'; title = 'T'; content = '<p>x</p>' }) -Variables @{} -Branding @{ colour = '#0E4C92'; watermarkText = 'Testing watermark'; watermarkEnabled = $true } -TenantName 'Contoso' -ReportName 'T'
+        $Pdf = [System.Text.Encoding]::Latin1.GetString($Bytes)
+        $Hex = { param($s) [Convert]::ToHexString([System.Text.Encoding]::ASCII.GetBytes($s)) }
+        # two lines, the second a 1.1x line (79.2pt at 72pt) under the first, not the client's 14pt
+        $Pdf | Should -Match ("<{0}> Tj\n-?[\d.]+ -79\.2 Td <{1}> Tj" -f (& $Hex 'TESTING'), (& $Hex 'WATERMARK'))
+    }
+
     It 'prints a mark character outside WinAnsi as ? instead of failing the report' {
         # 'L' with stroke has no WinAnsi code, and the micro sign upper-cases to the Greek capital mu
         $Mark = "$([char]0x0141)$([char]0x00F3)d$([char]0x017A) 5 $([char]0x00B5)m"

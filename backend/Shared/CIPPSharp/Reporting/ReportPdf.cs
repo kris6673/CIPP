@@ -433,14 +433,16 @@ namespace CIPP.Reporting
 
         /// <summary>
         /// Moves the mark whose "a b c d e f Tm" operands start at <paramref name="at"/> to the client's place.
-        /// The client centres the text's box on the page, one line box per line of the mark, and seats each
-        /// baseline 0.9x the size under its line box top; a line box is a content page's inherited 14pt line,
-        /// or a divider's natural 1.1x line. Each line is centred along the text on its own. OfficeIMO seats
-        /// the baseline half the size under the page centre, so the mark moves the difference across the
-        /// text, and 2pt back along it: the client's 4pt letter spacing also trails the last letter, which
-        /// the centring counts. A mark of several lines has its text (at <paramref name="textAt"/>) rewritten
-        /// as one line per <paramref name="lines"/> entry, each a Td move down from the last, in the room its
-        /// padding left. Left as written when the operands or the lines will not fit.
+        /// The client centres the text's box on the page and seats the baseline 0.9x the size under its line
+        /// box top; a line box is a content page's inherited 14pt line, or a divider's natural 1.1x line.
+        /// OfficeIMO seats the baseline half the size under the page centre, so the mark moves the difference
+        /// across the text, and 2pt back along it: the client's 4pt letter spacing also trails the last
+        /// letter, which the centring counts. A mark of several lines has its text (at <paramref name="textAt"/>)
+        /// rewritten as one line per <paramref name="lines"/> entry, each centred along the text on its own and
+        /// a Td move of a full 1.1x line down from the last, in the room its padding left. (The client stacks
+        /// a content page's lines on its 14pt line, so 72pt letters overprint; here they read as lines.) The
+        /// stack is centred where the one-line mark sits. Left as written when the operands or the lines will
+        /// not fit.
         /// </summary>
         private static void PlaceWatermark(byte[] pdf, int at, int end, bool divider, string watermark, IReadOnlyList<string> lines, int textAt, int textLength)
         {
@@ -449,7 +451,8 @@ namespace CIPP.Reporting
             if (operands.Length != 6
                 || !double.TryParse(operands[4], NumberStyles.Float, CultureInfo.InvariantCulture, out var e)
                 || !double.TryParse(operands[5], NumberStyles.Float, CultureInfo.InvariantCulture, out var f)) return;
-            var pitch = divider ? 1.1 * WatermarkSize : 14;
+            var lineBox = divider ? 1.1 * WatermarkSize : 14;
+            var pitch = 1.1 * WatermarkSize;
             double Width(string s) => ReportComponents.TextEm(s, bold: true) * WatermarkSize;
             string Num(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
 
@@ -465,7 +468,7 @@ namespace CIPP.Reporting
 
             // From OfficeIMO's origin to the first line's, along the text and up across it.
             var along = (Width(watermark) - Width(lines[0])) / 2 - 2;
-            var up = WatermarkSize / 2 + lines.Count * pitch / 2 - 0.9 * WatermarkSize;
+            var up = WatermarkSize / 2 + lineBox / 2 - 0.9 * WatermarkSize + (lines.Count - 1) * pitch / 2;
             // At 45 degrees the text runs along (k, k) and across it, upwards, is (-k, k) in PDF space.
             var k = Math.Sqrt(0.5);
             e += k * (along - up);
