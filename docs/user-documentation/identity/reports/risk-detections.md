@@ -21,7 +21,7 @@ The **Location** column is a button rather than plain text. Selecting it opens a
 
 ## Table Actions
 
-<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Research Compromised Account</td><td>Opens the <a data-mention href="../administration/users/user/bec.md">bec.md</a> tab for the account the detection relates to, where the usual indicators of compromise are gathered in one place.</td><td>false</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
+<table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Research Compromised Account</td><td>Opens the <a data-mention href="../administration/bec/case.md">case.md</a> tab for the account the detection relates to, where the usual indicators of compromise are gathered in one place.</td><td>false</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 {% hint style="info" %}
 Risk state is held against the user rather than the individual detection, so marking a user as safe or compromised in Entra ID Protection changes the state shown on every detection for that account. The [risky-users.md](../administration/risky-users.md "mention") page is where a user's overall risk is reviewed and dismissed.

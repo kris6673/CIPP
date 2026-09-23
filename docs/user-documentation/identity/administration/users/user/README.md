@@ -18,8 +18,8 @@ Apart from the profile photo, the MFA method controls and the role removal actio
 [onedrive-shortcuts.md](onedrive-shortcuts.md)
 {% endcontent-ref %}
 
-{% content-ref url="bec.md" %}
-[bec.md](bec.md)
+{% content-ref url="../../bec/case.md" %}
+[case.md](../../bec/case.md)
 {% endcontent-ref %}
 
 {% content-ref url="conditional-access.md" %}
