@@ -23,6 +23,9 @@ BeforeAll {
     function Set-CippBecCaseContext { param($CaseId) }
     function Get-CIPPBecReport { param($TenantFilter, $CaseId, $UserId, [switch]$IncludeResults) }
     function Set-CIPPBecReport { param($TenantFilter, $CaseId, $Properties, $Results, [switch]$Replace) }
+    function New-CIPPAsyncDeployment { param($JobId, $Names, $StepTitles, $Source, $TaskId, $TenantFilter) }
+    function Set-CIPPAsyncDeploymentStep { param($JobId, $Name, $StepIndex, $StepStatus, $Message) }
+    function Set-CIPPAsyncDeploymentStatus { param($JobId, $Name, $Status, $Logs) }
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Get-CIPPBecContainmentActions.ps1')
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/Invoke-CIPPBecContainment.ps1')
 
@@ -54,6 +57,36 @@ Describe 'Invoke-CIPPBecContainment' {
         Mock Set-CIPPBecReport { }
         Mock New-GraphGetRequest { [pscustomobject]@{ id = 'user-guid' } }
         Mock Remove-CIPPBecSharingLinks { @(foreach ($Url in $ItemUrls) { [pscustomobject]@{ Target = $Url; state = 'success'; resultText = "Removed link on $Url" } }) }
+    }
+
+    It 'reports one progress step per action, in run order, when given a DeploymentId' {
+        Mock New-CIPPAsyncDeployment { $JobId }
+        Mock Set-CIPPAsyncDeploymentStep { }
+        Mock Set-CIPPAsyncDeploymentStatus { }
+        Mock Revoke-CIPPSessions { throw 'Graph said no' }
+        $null = Invoke-CIPPBecContainment -TenantFilter 'contoso.com' -UserId 'u1' -UserPrincipalName 'victim@contoso.com' -Actions @('ClearAutoReply', 'ResetPassword', 'RevokeSessions') -Confirmed -DeploymentId 'job-1'
+        Should -Invoke New-CIPPAsyncDeployment -Times 1 -ParameterFilter { $JobId -eq 'job-1' -and $Names -contains 'victim@contoso.com' -and (@($StepTitles) -join '|') -eq 'Reset password|Revoke sessions|Turn off automatic replies' }
+        Should -Invoke Set-CIPPAsyncDeploymentStep -Times 3 -ParameterFilter { $StepStatus -eq 'running' }
+        # the step message keeps the password so a background run can still hand it to the operator
+        Should -Invoke Set-CIPPAsyncDeploymentStep -Times 1 -ParameterFilter { $StepIndex -eq 0 -and $StepStatus -eq 'succeeded' -and $Message -match 'Hunter2!' }
+        Should -Invoke Set-CIPPAsyncDeploymentStep -Times 1 -ParameterFilter { $StepIndex -eq 1 -and $StepStatus -eq 'failed' -and $Message -match 'Graph said no' }
+        Should -Invoke Set-CIPPAsyncDeploymentStep -Times 1 -ParameterFilter { $StepIndex -eq 2 -and $StepStatus -eq 'succeeded' }
+        Should -Invoke Set-CIPPAsyncDeploymentStatus -Times 1 -ParameterFilter { $Status -eq 'running' }
+        Should -Invoke Set-CIPPAsyncDeploymentStatus -Times 1 -ParameterFilter { $Status -eq 'failed' }
+    }
+
+    It 'loads the case results itself when only a CaseId is given' {
+        Mock Get-CIPPBecReport { [pscustomobject]@{ CaseId = 'BEC-1'; Containment = @(); Results = $script:Run } } -ParameterFilter { $IncludeResults.IsPresent }
+        $null = Invoke-CIPPBecContainment -TenantFilter 'contoso.com' -UserId 'u1' -UserPrincipalName 'victim@contoso.com' -Actions @('RemoveOAuthGrants') -Confirmed -CaseId 'BEC-1'
+        Should -Invoke Remove-CIPPUserOAuthGrant -Times 1 -ParameterFilter { @($GrantIds) -contains 'g-bad' -and @($AppRoleAssignmentIds) -contains 'a-bad' }
+    }
+
+    It 'touches no progress row without a DeploymentId' {
+        Mock Set-CIPPAsyncDeploymentStep { }
+        Mock Set-CIPPAsyncDeploymentStatus { }
+        $null = Invoke-CIPPBecContainment -TenantFilter 'contoso.com' -UserPrincipalName 'victim@contoso.com' -Actions @('RevokeSessions')
+        Should -Invoke Set-CIPPAsyncDeploymentStep -Times 0
+        Should -Invoke Set-CIPPAsyncDeploymentStatus -Times 0
     }
 
     It 'runs the built-in default set in order when no actions are selected' {

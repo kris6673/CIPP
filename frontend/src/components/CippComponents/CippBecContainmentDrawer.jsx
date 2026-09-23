@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
   Box,
@@ -212,6 +213,24 @@ export const CippBecContainmentDrawer = ({
     relatedQueryKeys: [`execBECCheck-polling-${caseId}`, ...relatedQueryKeys],
   })
 
+  // The run is a background task reporting per-action progress like offboarding does; once it finishes, refresh
+  // the case so the remediation history picks up the result. Memoized so CippApiResults does not
+  // re-arm the poll on every render.
+  const queryClient = useQueryClient()
+  const relatedKeysJoined = relatedQueryKeys.join('|')
+  const jobProgress = useMemo(
+    () => ({
+      idField: 'DeploymentId',
+      title: 'Remediation progress',
+      url: (id) => `/api/ListOffboardingProgress?DeploymentId=${id}`,
+      onComplete: () =>
+        [`execBECCheck-polling-${caseId}`, ...relatedKeysJoined.split('|')]
+          .filter(Boolean)
+          .forEach((key) => queryClient.invalidateQueries({ queryKey: [key] })),
+    }),
+    [caseId, relatedKeysJoined, queryClient]
+  )
+
   const values = (field) =>
     (watched?.[field] || []).map((o) =>
       o && o.value !== undefined ? o.value : o
@@ -226,6 +245,8 @@ export const CippBecContainmentDrawer = ({
       username: userPrincipalName,
       CaseId: caseId,
       Confirmation: watched?.Confirmation || '',
+      // always a background run: progress streams into the drawer like offboarding
+      Async: true,
       Actions: selectedIds,
       Parameters: {
         MfaMethodIds: values('MfaMethodIds'),
@@ -347,7 +368,7 @@ export const CippBecContainmentDrawer = ({
         size="xl"
         footer={
           <Stack spacing={2}>
-            <CippApiResults apiObject={runCall} />
+            <CippApiResults apiObject={runCall} jobProgress={jobProgress} />
             <Stack direction="row" spacing={1} justifyContent="flex-end">
               <Button
                 variant="contained"

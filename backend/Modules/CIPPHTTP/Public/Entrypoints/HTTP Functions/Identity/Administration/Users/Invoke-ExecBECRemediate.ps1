@@ -7,7 +7,7 @@ function Invoke-ExecBECRemediate {
     .SYNOPSIS
         Runs selectable Business Email Compromise containment for a user.
     .DESCRIPTION
-        Runs the selected containment actions (see ListBECRemediationActions) for a user. With no Actions the default set runs (the DefaultSelected actions, configurable instance-wide from CIPP settings). Actions marked Critical require Confirmation to equal the user's UPN. Pass CaseId to resolve default targets (flagged consents, delegations, rules, devices) from that BEC run and to record the outcome on it; Parameters carries explicit per-action targets (MfaMethodIds, GrantIds, AppRoleAssignmentIds, ServicePrincipalIds, RuleIds, Delegations, TransportRuleIds, AddInIds, Protocols, MobileDeviceIds, RegisteredDeviceIds, CAPolicy).
+        Runs the selected containment actions (see ListBECRemediationActions) for a user. With no Actions the default set runs (the DefaultSelected actions, configurable instance-wide from CIPP settings). Actions marked Critical require Confirmation to equal the user's UPN. With Async the request is validated, queued as a scheduled task that runs straight away, and answered with a DeploymentId whose per-action progress ListOffboardingProgress returns; without it the actions run inline and their results are returned. Pass CaseId to resolve default targets (flagged consents, delegations, rules, devices) from that BEC run and to record the outcome on it; Parameters carries explicit per-action targets (MfaMethodIds, GrantIds, AppRoleAssignmentIds, ServicePrincipalIds, RuleIds, Delegations, TransportRuleIds, AddInIds, Protocols, MobileDeviceIds, RegisteredDeviceIds, CAPolicy).
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -25,8 +25,11 @@ function Invoke-ExecBECRemediate {
     # the BEC run whose findings supply default targets and which records the outcome
     $CaseId = [string]$Request.Body.CaseId
     $Parameters = $Request.Body.Parameters
+    # run as a background scheduled task and report progress under the returned DeploymentId
+    $Async = [bool]$Request.Body.Async
 
     $StatusCode = [HttpStatusCode]::OK
+    $AsyncDeploymentId = $null
     $Results = try {
         if (-not $TenantFilter) { throw 'tenantFilter is required' }
         if (-not $Username) {
@@ -45,17 +48,12 @@ function Invoke-ExecBECRemediate {
             throw "Type the user's UPN ($Username) to confirm: the selected actions include Critical changes ($($Critical.Label -join ', '))"
         }
 
-        $RunResults = $null
-        if ($CaseId) {
-            try {
-                $Run = Get-CIPPBecReport -TenantFilter $TenantFilter -CaseId $CaseId -IncludeResults
-                $RunResults = $Run.Results
-            } catch {
-                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "BEC run $CaseId could not be loaded for target resolution: $($_.Exception.Message)" -Sev 'Warning'
-            }
+        $Rows = if ($Async) {
+            $AsyncDeploymentId = Start-CIPPBecContainmentJob -TenantFilter $TenantFilter -UserId $SuspectUser -UserPrincipalName $Username -Actions @($Selected.Id) -Parameters $Parameters -CaseId $CaseId -Headers $Headers -APIName $APIName
+            [pscustomobject]@{ resultText = "Queued $($Selected.Count) containment action(s) for $Username. Progress is shown below and on the scheduled task."; state = 'info' }
+        } else {
+            Invoke-CIPPBecContainment -TenantFilter $TenantFilter -UserId $SuspectUser -UserPrincipalName $Username -Actions $Actions -Parameters $Parameters -Confirmed:$ConfirmationOk -CaseId $CaseId -Headers $Headers -APIName $APIName
         }
-
-        $Rows = Invoke-CIPPBecContainment -TenantFilter $TenantFilter -UserId $SuspectUser -UserPrincipalName $Username -Actions $Actions -Parameters $Parameters -Confirmed:$ConfirmationOk -CaseId $CaseId -RunResults $RunResults -Headers $Headers -APIName $APIName
         @($Rows | ForEach-Object {
                 $Row = [ordered]@{ resultText = $_.resultText; state = $_.state; Action = $_.Action; Target = $_.Target }
                 if ($_.copyField) { $Row.copyField = $_.copyField }
@@ -70,6 +68,7 @@ function Invoke-ExecBECRemediate {
 
     return ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = [pscustomobject]@{ Results = @($Results) }
+            # DeploymentId is set only for an Async run: the id to poll with ListOffboardingProgress
+            Body       = [pscustomobject]@{ Results = @($Results); DeploymentId = $AsyncDeploymentId }
         })
 }

@@ -146,6 +146,22 @@ describe('CippBecContainmentDrawer', () => {
     expect(runMutate.mock.calls[0][0].data.Confirmation).toBe('')
   }, 30000)
 
+  it('always runs the containment as a background job', async () => {
+    const user = userEvent.setup()
+    renderDrawer()
+    await user.click(screen.getByRole('button', { name: /contain user/i }))
+    await screen.findByTestId('CippOffCanvas')
+    expect(
+      screen.queryByLabelText(/run in the background/i)
+    ).not.toBeInTheDocument()
+    await user.click(screen.getByLabelText(/reset password/i))
+    const runButton = screen.getByRole('button', { name: /run containment/i })
+    await waitFor(() => expect(runButton).toBeEnabled())
+    await user.click(runButton)
+    await waitFor(() => expect(runMutate).toHaveBeenCalledTimes(1))
+    expect(runMutate.mock.calls[0][0].data.Async).toBe(true)
+  }, 30000)
+
   it('disables the run when nothing is selected', async () => {
     const user = userEvent.setup()
     renderDrawer()

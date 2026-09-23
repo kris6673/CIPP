@@ -37,7 +37,12 @@ function Invoke-CIPPBecContainment {
     .PARAMETER CaseId
         The BEC case the containment belongs to; results are appended to its run.
     .PARAMETER RunResults
-        The run's results payload, used to resolve default targets.
+        The run's results payload, used to resolve default targets. Loaded from CaseId when omitted.
+    .PARAMETER DeploymentId
+        Live-progress job id (New-CIPPAsyncDeployment, one row named after the UPN). When set, the
+        row gets one step per selected action, updated as each runs - how a background run started
+        by ExecBECRemediate reports back. The step messages carry the unredacted result text so the
+        operator can still copy a new password; everything else stored stays redacted.
     .PARAMETER Headers
         CIPP request headers for logging.
     .PARAMETER APIName
@@ -56,6 +61,7 @@ function Invoke-CIPPBecContainment {
         [switch]$Redacted,
         [string]$CaseId,
         $RunResults,
+        [string]$DeploymentId,
         $Headers,
         [string]$APIName = 'BECRemediate'
     )
@@ -93,6 +99,25 @@ function Invoke-CIPPBecContainment {
         }
     }
 
+    if ($CaseId -and -not $RunResults) {
+        try {
+            $RunResults = (Get-CIPPBecReport -TenantFilter $TenantFilter -CaseId $CaseId -IncludeResults).Results
+        } catch {
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "BEC run $CaseId could not be loaded for target resolution: $($_.Exception.Message)" -Sev 'Warning'
+        }
+    }
+
+    # Progress reporting never stops the containment: the helpers swallow their own write failures.
+    if ($DeploymentId) {
+        try {
+            $null = New-CIPPAsyncDeployment -JobId $DeploymentId -Names @($UserPrincipalName) -StepTitles @($Selected.Label) -Source 'BECRemediation' -TenantFilter $TenantFilter
+            Set-CIPPAsyncDeploymentStatus -JobId $DeploymentId -Name $UserPrincipalName -Status 'running'
+        } catch {
+            Write-Information "BEC containment: could not create the progress row $DeploymentId`: $($_.Exception.Message)"
+        }
+    }
+    $Finished = $false
+
     Set-CippBecCaseContext -CaseId $CaseId
     try {
         if (-not $UserId -and ($Selected.Id -contains 'RemoveOAuthGrants' -or $Selected.Id -contains 'TargetedCAPolicy')) {
@@ -103,8 +128,11 @@ function Invoke-CIPPBecContainment {
             }
         }
 
-        foreach ($Action in $Selected) {
+        for ($StepIndex = 0; $StepIndex -lt $Selected.Count; $StepIndex++) {
+            $Action = $Selected[$StepIndex]
             $Id = $Action.Id
+            $RowsBefore = $Rows.Count
+            if ($DeploymentId) { Set-CIPPAsyncDeploymentStep -JobId $DeploymentId -Name $UserPrincipalName -StepIndex $StepIndex -StepStatus 'running' -Message 'In progress' }
             try {
                 switch ($Id) {
                     'ResetPassword' {
@@ -309,6 +337,12 @@ function Invoke-CIPPBecContainment {
                 & $Add $Id $UserPrincipalName 'error' "$($Action.Label) failed: $($ErrorMessage.NormalizedError)" $null
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "BEC containment action $Id failed for $UserPrincipalName`: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
             }
+            if ($DeploymentId) {
+                $StepRows = @(for ($i = $RowsBefore; $i -lt $Rows.Count; $i++) { $Rows[$i] })
+                $StepStatus = if (@($StepRows | Where-Object { $_.state -eq 'error' }).Count -gt 0) { 'failed' } else { 'succeeded' }
+                $StepMessage = if ($StepRows.Count -gt 0) { @($StepRows.resultText) -join "`n" } else { 'Done' }
+                Set-CIPPAsyncDeploymentStep -JobId $DeploymentId -Name $UserPrincipalName -StepIndex $StepIndex -StepStatus $StepStatus -Message $StepMessage
+            }
         }
 
         # Persist and log a redacted copy: the password (copyField) must never reach the logbook or the run.
@@ -331,7 +365,14 @@ function Invoke-CIPPBecContainment {
                 Write-Information "BEC containment: could not append the result to run $CaseId`: $($_.Exception.Message)"
             }
         }
+        if ($DeploymentId) {
+            $OverallStatus = if (@($Rows | Where-Object { $_.state -eq 'error' }).Count -gt 0) { 'failed' } else { 'succeeded' }
+            Set-CIPPAsyncDeploymentStatus -JobId $DeploymentId -Name $UserPrincipalName -Status $OverallStatus
+        }
+        $Finished = $true
     } finally {
+        # an unexpected throw must not leave the progress view spinning
+        if ($DeploymentId -and -not $Finished) { Set-CIPPAsyncDeploymentStatus -JobId $DeploymentId -Name $UserPrincipalName -Status 'failed' }
         Set-CippBecCaseContext -CaseId $null
     }
     return $(if ($Redacted) { $RedactedRows } else { $Rows.ToArray() })

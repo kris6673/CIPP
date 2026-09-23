@@ -15531,7 +15531,7 @@
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "Runs the selected containment actions (see ListBECRemediationActions) for a user. With no Actions the default set runs (the DefaultSelected actions, configurable instance-wide from CIPP settings). Actions marked Critical require Confirmation to equal the user's UPN. Pass CaseId to resolve default targets (flagged consents, delegations, rules, devices) from that BEC run and to record the outcome on it; Parameters carries explicit per-action targets (MfaMethodIds, GrantIds, AppRoleAssignmentIds, ServicePrincipalIds, RuleIds, Delegations, TransportRuleIds, AddInIds, Protocols, MobileDeviceIds, RegisteredDeviceIds, CAPolicy).",
+        "description": "Runs the selected containment actions (see ListBECRemediationActions) for a user. With no Actions the default set runs (the DefaultSelected actions, configurable instance-wide from CIPP settings). Actions marked Critical require Confirmation to equal the user's UPN. With Async the request is validated, queued as a scheduled task that runs straight away, and answered with a DeploymentId whose per-action progress ListOffboardingProgress returns; without it the actions run inline and their results are returned. Pass CaseId to resolve default targets (flagged consents, delegations, rules, devices) from that BEC run and to record the outcome on it; Parameters carries explicit per-action targets (MfaMethodIds, GrantIds, AppRoleAssignmentIds, ServicePrincipalIds, RuleIds, Delegations, TransportRuleIds, AddInIds, Protocols, MobileDeviceIds, RegisteredDeviceIds, CAPolicy).",
         "requestBody": {
           "required": true,
           "content": {
@@ -15545,6 +15545,10 @@
                       "$ref": "#/components/schemas/LabelValue"
                     },
                     "description": "Action ids from ListBECRemediationActions; empty runs the default set"
+                  },
+                  "Async": {
+                    "type": "boolean",
+                    "description": "run as a background scheduled task and report progress under the returned DeploymentId"
                   },
                   "CaseId": {
                     "type": "string",
@@ -54295,17 +54299,17 @@
     },
     "/api/ListOffboardingProgress": {
       "get": {
-        "summary": "Get the live progress of an offboarding job",
+        "summary": "Get the live progress of an offboarding or BEC remediation job",
         "operationId": "ListOffboardingProgress",
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "Returns the progress rows of an offboarding job started from the wizard: one row per user with\nits overall status and the status and message of every step. Same rows as ListAsyncDeployment.\nThis is a read-only GET, so it carries a read role; an offboarding operator (who holds the\nbroader user write role) can still follow and re-run their jobs.",
+        "description": "Returns the progress rows of an offboarding job started from the wizard, or of a background BEC\nremediation (ExecBECRemediate with Async): one row per user with its overall status and the\nstatus and message of every step. Same rows as ListAsyncDeployment.\nThis is a read-only GET, so it carries a read role; an offboarding operator (who holds the\nbroader user write role) can still follow and re-run their jobs.",
         "parameters": [
           {
             "name": "DeploymentId",
             "in": "query",
-            "description": "The DeploymentId handed back by ExecOffboardUser, also stored on each offboarding task",
+            "description": "The DeploymentId handed back by ExecOffboardUser (also stored on each offboarding task) or ExecBECRemediate",
             "required": true,
             "schema": {
               "type": "string"

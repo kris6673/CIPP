@@ -6,7 +6,7 @@ BeforeAll {
         $TypeAccelerators::Add('HttpStatusCode', [System.Net.HttpStatusCode])
     }
     function Invoke-CIPPBecContainment { param($TenantFilter, $UserId, $UserPrincipalName, $Actions, $Parameters, [switch]$Confirmed, $CaseId, $RunResults, $Headers, $APIName) }
-    function Get-CIPPBecReport { param($TenantFilter, $CaseId, $UserId, [switch]$IncludeResults) }
+    function Start-CIPPBecContainmentJob { param($TenantFilter, $UserId, $UserPrincipalName, $Actions, $Parameters, $CaseId, $Headers, $APIName) }
     function New-GraphGetRequest { param($uri, $tenantid, $AsApp, $noPagination) }
     function Write-LogMessage { param($message, $tenant, $API, $tenantId, $headers, $user, $sev, $LogData) }
     function Get-CippException { param($Exception) [pscustomobject]@{ NormalizedError = [string]$Exception.Exception.Message } }
@@ -28,7 +28,7 @@ BeforeAll {
 Describe 'Invoke-ExecBECRemediate' {
     BeforeEach {
         Mock Invoke-CIPPBecContainment { @([pscustomobject]@{ Action = 'RevokeSessions'; Target = 'victim@contoso.com'; state = 'success'; resultText = 'ok'; copyField = $null }) }
-        Mock Get-CIPPBecReport { [pscustomobject]@{ Results = [pscustomobject]@{ CaseId = 'BEC-1'; UserGrants = @() } } }
+        Mock Start-CIPPBecContainmentJob { 'job-1' }
         Mock Write-LogMessage { }
     }
 
@@ -53,11 +53,37 @@ Describe 'Invoke-ExecBECRemediate' {
         Should -Invoke Invoke-CIPPBecContainment -Times 1 -ParameterFilter { -not $Confirmed.IsPresent -and $Actions -contains 'ClearForwarding' }
     }
 
-    It 'accepts autocomplete-shaped action objects and loads the case run for target resolution' {
+    It 'accepts autocomplete-shaped action objects and hands the case on for target resolution' {
         $Response = Invoke-ExecBECRemediate -Request (New-Request @{ tenantFilter = 'contoso.com'; userid = 'u1'; username = 'victim@contoso.com'; Actions = @([pscustomobject]@{ value = 'RevokeSessions'; label = 'Revoke sessions' }); CaseId = 'BEC-1'; Parameters = [pscustomobject]@{ Protocols = @('IMAP') } }) -TriggerMetadata $null
         $Response.StatusCode | Should -Be 200
-        Should -Invoke Get-CIPPBecReport -Times 1 -ParameterFilter { $CaseId -eq 'BEC-1' -and $IncludeResults.IsPresent }
-        Should -Invoke Invoke-CIPPBecContainment -Times 1 -ParameterFilter { $Actions -contains 'RevokeSessions' -and $RunResults.CaseId -eq 'BEC-1' -and $Parameters.Protocols -contains 'IMAP' -and $CaseId -eq 'BEC-1' }
+        $Response.Body.DeploymentId | Should -BeNullOrEmpty -Because 'an inline run has nothing to poll'
+        Should -Invoke Invoke-CIPPBecContainment -Times 1 -ParameterFilter { $Actions -contains 'RevokeSessions' -and $Parameters.Protocols -contains 'IMAP' -and $CaseId -eq 'BEC-1' }
+    }
+
+    It 'hands an Async run to the background job with the validated selection and returns its DeploymentId' {
+        $Response = Invoke-ExecBECRemediate -Request (New-Request @{ tenantFilter = 'contoso.com'; userid = 'u1'; username = 'victim@contoso.com'; Confirmation = 'victim@contoso.com'; CaseId = 'BEC-1'; Async = $true; Parameters = [pscustomobject]@{ Protocols = @('IMAP') } }) -TriggerMetadata $null
+        $Response.StatusCode | Should -Be 200
+        $Response.Body.DeploymentId | Should -Be 'job-1'
+        $Response.Body.Results[0].state | Should -Be 'info'
+        Should -Invoke Invoke-CIPPBecContainment -Times 0
+        Should -Invoke Start-CIPPBecContainmentJob -Times 1 -ParameterFilter {
+            $TenantFilter -eq 'contoso.com' -and $UserPrincipalName -eq 'victim@contoso.com' -and $UserId -eq 'u1' -and $CaseId -eq 'BEC-1' -and
+            $Parameters.Protocols -contains 'IMAP' -and (@($Actions) -join ',') -eq 'ResetPassword,DisableAccount,RevokeSessions,RemoveMFA,DisableInboxRules,BlockProtocols'
+        }
+    }
+
+    It 'still refuses an unconfirmed Critical selection before queueing anything' {
+        $Response = Invoke-ExecBECRemediate -Request (New-Request @{ tenantFilter = 'contoso.com'; userid = 'u1'; username = 'victim@contoso.com'; Async = $true }) -TriggerMetadata $null
+        $Response.StatusCode | Should -Be 400
+        Should -Invoke Start-CIPPBecContainmentJob -Times 0
+    }
+
+    It 'reports a job that could not be queued as an error, without a DeploymentId' {
+        Mock Start-CIPPBecContainmentJob { throw "Error - The command 'Invoke-CIPPBecContainment' is not permitted to run as a scheduled task." }
+        $Response = Invoke-ExecBECRemediate -Request (New-Request @{ tenantFilter = 'contoso.com'; userid = 'u1'; username = 'victim@contoso.com'; Actions = @('RevokeSessions'); Async = $true }) -TriggerMetadata $null
+        $Response.StatusCode | Should -Be 500
+        $Response.Body.Results[0].resultText | Should -Match 'not permitted'
+        $Response.Body.DeploymentId | Should -BeNullOrEmpty
     }
 
     It 'rejects unknown actions' {
