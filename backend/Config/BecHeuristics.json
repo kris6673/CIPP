@@ -47,7 +47,8 @@
       "AttackerMailAccess": 3,
       "AttackerFileAccess": 2,
       "AttackerForms": 3,
-      "DelegatedMailboxAttackerAccess": 3
+      "DelegatedMailboxAttackerAccess": 3,
+      "OtherAccountsReached": 3
     }
   },
   "inboxRules": {

@@ -856,6 +856,11 @@ function Push-BECRun {
         $Delegated = & $Collect 'DelegatedAccess' { Get-CIPPBecDelegatedAccess -TenantFilter $TenantFilter -UserPrincipalName $UserName -UserDisplayName ([string]$SuspectUserDetail.displayName) -PermissionChanges $PermissionsLog -MailActivity $MailActivity -AttackerMail $AttackerMailActivity }
         & $Mark 'DelegatedAccess' $Delegated
         $DelegatedAccess = @($Delegated.Data)
+        # The other accounts the attacker addresses reached: tenant-wide sign-ins and audit log per address
+        $AnalysisPeers = if ($IPAnalysis.PSObject.Properties['Peers'] -and $IPAnalysis.Peers -is [hashtable]) { $IPAnalysis.Peers } else { @{} }
+        $Blast = & $Collect 'BlastRadius' { Get-CIPPBecBlastRadius -TenantFilter $TenantFilter -UserId $SuspectUser -UserPrincipalName $UserName -Verdicts $IPVerdicts -Peers $AnalysisPeers -StartDate $startDate -EndDate $endDate -Heuristics $Heuristics -Anchor $UserName }
+        & $Mark 'BlastRadius' $Blast
+        $BlastRadius = @($Blast.Data)
 
         # Geo-locate the client IPs behind rule changes, safelist changes, sharing changes, sent
         # mail and (Full scope) transport-rule changes, directory audits and mailbox activity so
@@ -987,6 +992,7 @@ function Push-BECRun {
             FormsActivity            = @($FormsActivity)
             FormsSummary             = $FormsSummary
             DelegatedAccess          = @($DelegatedAccess)
+            BlastRadius              = @($BlastRadius)
             RiskState                = $RiskState
             Completeness             = [pscustomobject]$Completeness
             AnalysisWindowDays       = $WindowDays

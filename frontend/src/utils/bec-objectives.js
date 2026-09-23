@@ -812,6 +812,24 @@ export const BEC_GROUPS = [
     blurb: 'Tenant-wide signals that outlast the one mailbox.',
     findings: [
       {
+        key: 'BlastRadius',
+        title: 'Other accounts the attacker addresses reached',
+        note: "Every sign-in (over the sign-in baseline period and the window) and every audited action (in the window) in the tenant from an address judged the attacker's (Compromised or LikelyAttacker only). A successful sign-in or any action means the account was reached; failed sign-ins alone are an attempt. Investigate starts a case for each selected account.",
+        columns: [
+          'UserPrincipalName',
+          'Reached',
+          'SuccessfulSignIns',
+          'FailedSignIns',
+          'Actions',
+          'Operations',
+          'AttackerIPs',
+          'FirstSeen',
+          'LastSeen',
+        ],
+        actions: 'investigate',
+        empty: 'No other account signed in or acted from an attacker address.',
+      },
+      {
         key: 'PartnerActions',
         title: 'Partner and CIPP actions on this account',
         // Every audited change in the case whose actor was a partner (GDAP) identity or CIPP's own
@@ -898,6 +916,7 @@ export const BEC_SIGNAL_GROUP = {
   TyposquatSenders: 'exfil',
   DefenderDetections: 'exfil',
   SuspiciousMailActivity: 'exfil',
+  OtherAccountsReached: 'blast',
   NewUsers: 'blast',
   FlaggedDirectoryAudits: 'blast',
 }
@@ -910,6 +929,7 @@ export const BEC_FINDING_MARKERS = {
   AttackerFileActivity: ['AttackerFileActivity', 'LinkUsage'],
   FormsActivity: ['FormsActivity'],
   DelegatedAccess: ['DelegatedAccess'],
+  BlastRadius: ['BlastRadius', 'IPVerdicts'],
   SuspectUserSignIns: ['SignIns'],
   NonInteractiveSignIns: ['NonInteractiveSignIns'],
   MFADevices: ['MFAMethods'],
@@ -1045,6 +1065,10 @@ export const becFindingFlags = (becData, windowDays = 7) => {
     DelegatedAccess: flag(
       a(b.DelegatedAccess).filter((r) => r.Flagged === true).length,
       'mailbox(es) the attacker used or was granted in the window'
+    ),
+    BlastRadius: flag(
+      a(b.BlastRadius).filter((r) => r.Reached === true).length,
+      'other account(s) reached from an attacker address'
     ),
     SuspectUserSignIns: flag(
       la.ForeignSuccessfulSignInCount || 0,

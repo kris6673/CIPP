@@ -242,4 +242,16 @@ describe('bec-objectives attacker group', () => {
       'DelegatedMailboxAttackerAccess',
     ].forEach((s) => expect(BEC_SIGNAL_GROUP[s]).toBe('attacker'))
   })
+
+  it('flags only the other accounts an attacker address reached, and routes the signal to the blast group', () => {
+    const flags = becFindingFlags({
+      BlastRadius: [
+        { UserPrincipalName: 'a@contoso.com', Reached: true },
+        { UserPrincipalName: 'b@contoso.com', Reached: false },
+      ],
+    })
+    expect(flags.BlastRadius.count).toBe(1)
+    expect(becFindingFlags({ BlastRadius: [] }).BlastRadius).toBeNull()
+    expect(BEC_SIGNAL_GROUP.OtherAccountsReached).toBe('blast')
+  })
 })

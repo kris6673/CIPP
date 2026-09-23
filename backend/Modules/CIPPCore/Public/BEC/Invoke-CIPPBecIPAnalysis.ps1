@@ -146,6 +146,7 @@ function Invoke-CIPPBecIPAnalysis {
             OtherUsersBefore       = [Math]::Max([int]$Merged.OtherUsersBefore, [int]$Extra.OtherUsersBefore)
             OtherUsersInWindowOnly = [Math]::Max([int]$Merged.OtherUsersInWindowOnly, [int]$Extra.OtherUsersInWindowOnly)
             Users                  = $Users
+            Accounts               = @($Merged.Accounts)
             Sampled                = [bool]$Merged.Sampled
             Error                  = $Merged.Error
         }

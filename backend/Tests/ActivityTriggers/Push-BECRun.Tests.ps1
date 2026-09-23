@@ -37,6 +37,7 @@ BeforeAll {
     # The IP analysis has its own suite; here it only has to be wired in and its verdicts stamped.
     function Get-CIPPBecAttackerActivity { param($TenantFilter, $UserPrincipalName, $StartDate, $EndDate, $Heuristics, $Verdicts, $SignIns, $NonInteractiveSignIns, $MailRecords, $SharingChanges, $KnownSubjects, $Anchor) }
     function Get-CIPPBecDelegatedAccess { param($TenantFilter, $UserPrincipalName, $UserDisplayName, $PermissionChanges, $MailActivity, $AttackerMail) }
+    function Get-CIPPBecBlastRadius { param($TenantFilter, $UserId, $UserPrincipalName, $Verdicts, $Peers, $StartDate, $EndDate, $Heuristics, $Anchor) }
     function Invoke-CIPPBecIPAnalysis { param($TenantFilter, $UserId, $UserPrincipalName, $Results, $Heuristics, $WindowStart, $UsageLocation, $Anchor, $Baseline, $KnownPeers, $Overrides, $ExtraPeers, $TechnicianIPs, [switch]$SampleColleagues) }
 
     # Real pieces under test alongside the run
@@ -144,6 +145,7 @@ Describe 'Push-BECRun' {
             [pscustomobject]@{ Mail = $Mail; Files = (Empty); LinkUsage = (Empty); Forms = $Forms; Subjects = $null }
         }
         Mock Get-CIPPBecDelegatedAccess { New-CIPPBecCollectorResult -Data @([pscustomobject]@{ Mailbox = 'ceo@contoso.com'; Flagged = $false }) }
+        Mock Get-CIPPBecBlastRadius { $script:BlastPeers = $Peers; New-CIPPBecCollectorResult -Data @([pscustomobject]@{ UserPrincipalName = 'cfo@contoso.com'; Reached = $false }) }
         Mock Get-CIPPBecMailActivity { $R = Empty; $R | Add-Member -NotePropertyName Summary -NotePropertyValue ([pscustomobject]@{ HardDeleteExceeded = $false }) -Force; $R }
         Mock Get-CIPPBecRiskState { New-CIPPBecCollectorResult -Data ([pscustomobject]@{ Listed = $false; Detections = @() }) -Count 0 }
         Mock Get-CIPPBecRogueAppFeed { [pscustomobject]@{ Apps = @{}; HuntressAvailable = $false } }
@@ -201,6 +203,9 @@ Describe 'Push-BECRun' {
         $R.UserPrincipalName | Should -Be 'victim@contoso.com'
         $R.Completeness.AttackerMailActivity.Complete | Should -BeTrue
         $R.Completeness.DelegatedAccess.Complete | Should -BeTrue
+        $R.BlastRadius[0].UserPrincipalName | Should -Be 'cfo@contoso.com'
+        $R.Completeness.BlastRadius.Complete | Should -BeTrue
+        $script:BlastPeers | Should -BeOfType [hashtable] -Because "the analysis' tenant-wide sign-in lookup is reused"
         # Quick score 21 + flagged delegation 2 + catalog grant 5 + risky transport change 4 + attacker IP 4 + attacker mail 3
         $R.Score.Value | Should -Be 39
     }

@@ -12,6 +12,7 @@ BeforeAll {
     function Invoke-CIPPBecIPAnalysis { param($TenantFilter, $UserId, $UserPrincipalName, $Results, $Heuristics, $WindowStart, $UsageLocation, $Anchor, $Baseline, $KnownPeers, $Overrides, $ExtraPeers, $TechnicianIPs) }
     function Get-CIPPBecAttackerActivity { param($TenantFilter, $UserPrincipalName, $StartDate, $EndDate, $Heuristics, $Verdicts, $SignIns, $NonInteractiveSignIns, $MailRecords, $SharingChanges, $KnownSubjects, $Anchor) }
     function Get-CIPPBecDelegatedAccess { param($TenantFilter, $UserPrincipalName, $UserDisplayName, $PermissionChanges, $MailActivity, $AttackerMail) }
+    function Get-CIPPBecBlastRadius { param($TenantFilter, $UserId, $UserPrincipalName, $Verdicts, $Peers, $StartDate, $EndDate, $Heuristics, $Anchor) }
     function Start-CIPPBecIPReviewJob { param($TenantFilter, $CaseId, $Overrides, $CorrelateUserIds, $UserPrincipalName, $Headers) }
     function New-CIPPAsyncDeployment { param($JobId, $Names, $StepTitles, $Source, $TaskId, $TenantFilter) }
     function Set-CIPPAsyncDeploymentStep { param($JobId, $Name, $StepIndex, $StepStatus, $Message) }
@@ -87,6 +88,7 @@ Describe 'Invoke-CIPPBecIPReview' {
             [pscustomobject]@{ Mail = $Mail; Files = (New-CIPPBecCollectorResult -Data @()); LinkUsage = (New-CIPPBecCollectorResult -Data @()); Forms = $Forms }
         }
         Mock Get-CIPPBecDelegatedAccess { New-CIPPBecCollectorResult -Data @() }
+        Mock Get-CIPPBecBlastRadius { $script:BlastVerdicts = $Verdicts; New-CIPPBecCollectorResult -Data @([pscustomobject]@{ UserPrincipalName = 'cfo@contoso.com'; Reached = $true }) }
         Mock New-GraphBulkRequest { @() }
         $script:Steps = [System.Collections.Generic.List[object]]::new()
         Mock Set-CIPPAsyncDeploymentStep { $script:Steps.Add(@{ Index = $StepIndex; Status = $StepStatus; Message = $Message }) }
@@ -108,6 +110,8 @@ Describe 'Invoke-CIPPBecIPReview' {
         $R = $script:Saved.Results
         $R.IPVerdicts[0].Verdict | Should -Be 'Compromised'
         $R.IPOverrides[0].Note | Should -Be 'AiTM proxy'
+        $script:BlastVerdicts[0].Verdict | Should -Be 'Compromised' -Because 'the blast radius follows the re-judged verdicts'
+        $R.BlastRadius[0].UserPrincipalName | Should -Be 'cfo@contoso.com'
         $R.SuspectUserSignIns[0].IPVerdict | Should -Be 'Compromised'
         $R.IPReviewHistory.Count | Should -Be 2
         $R.IPReviewHistory[-1].By | Should -Be 'tech@msp.com'

@@ -153,7 +153,10 @@ function Invoke-CIPPBecIPReview {
         $Delegated = Get-CIPPBecDelegatedAccess -TenantFilter $TenantFilter -UserPrincipalName $UserName -UserDisplayName ([string]$Run.DisplayName) -PermissionChanges @($Results.MailboxPermissionChanges) -MailActivity @($Activity.Data) -AttackerMail @($Attacker.Mail.Data)
         & $Mark 'DelegatedAccess' $Delegated
         & $Set 'DelegatedAccess' @($Delegated.Data)
-        & $Step 4 'succeeded' "$(@($Attacker.Mail.Data).Count) mail row(s), $(@($Attacker.Files.Data).Count) file row(s), $(@($Attacker.Forms.Data).Count) Forms action(s), $(@($Delegated.Data).Count) delegated mailbox(es)"
+        $Blast = Get-CIPPBecBlastRadius -TenantFilter $TenantFilter -UserId $UserId -UserPrincipalName $UserName -Verdicts $Verdicts -Peers $Analysis.Peers -StartDate $StartDate -EndDate $EndDate -Heuristics $Heuristics -Anchor $UserName
+        & $Mark 'BlastRadius' $Blast
+        & $Set 'BlastRadius' @($Blast.Data)
+        & $Step 4 'succeeded' "$(@($Attacker.Mail.Data).Count) mail row(s), $(@($Attacker.Files.Data).Count) file row(s), $(@($Attacker.Forms.Data).Count) Forms action(s), $(@($Delegated.Data).Count) delegated mailbox(es), $(@($Blast.Data | Where-Object { $_.Reached }).Count) other account(s) reached"
 
         $Current = 5
         & $Step 5 'running' 'In progress'

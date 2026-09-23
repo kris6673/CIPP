@@ -136,6 +136,15 @@ Describe 'Get-CIPPBecScore' {
         $Score.Value | Should -Be 6
     }
 
+    It 'counts only the other accounts an attacker address reached, not the attempts' {
+        $Blast = @([pscustomobject]@{ UserPrincipalName = 'a@contoso.com'; Reached = $true }, [pscustomobject]@{ UserPrincipalName = 'b@contoso.com'; Reached = $false })
+        $Score = Get-CIPPBecScore -Results (New-Results @{ BlastRadius = $Blast }) -Heuristics $script:Heuristics
+        $Signal = $Score.Breakdown | Where-Object Signal -EQ 'OtherAccountsReached'
+        $Signal.Count | Should -Be 1
+        $Signal.Applied | Should -BeTrue
+        $Signal.Weight | Should -Be 3
+    }
+
     It 'does not score a Defender detection that was blocked, or a dismissed risky user' {
         (Get-CIPPBecScore -Results (New-Results @{ DefenderDetections = @([pscustomobject]@{ Delivered = $false }) }) -Heuristics $script:Heuristics).Value | Should -Be 0
         (Get-CIPPBecScore -Results (New-Results @{ RiskState = [pscustomobject]@{ Listed = $true; RiskState = 'dismissed'; RiskLevel = 'high' } }) -Heuristics $script:Heuristics).Value | Should -Be 0

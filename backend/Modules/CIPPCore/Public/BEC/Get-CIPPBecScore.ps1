@@ -76,6 +76,7 @@ function Get-CIPPBecScore {
         AttackerMailAccess             = @($Results.AttackerMailActivity | Where-Object { $_.IPVerdict -in @('Compromised', 'LikelyAttacker') }).Count
         AttackerFileAccess             = @($Results.AttackerFileActivity | Where-Object { $_.IPVerdict -in @('Compromised', 'LikelyAttacker') }).Count
         AttackerForms                  = @($Results.FormsActivity | Where-Object { $_.Flagged -eq $true -and $_.IPVerdict -in @('Compromised', 'LikelyAttacker') }).Count
+        OtherAccountsReached           = @($Results.BlastRadius | Where-Object { $_.Reached -eq $true }).Count
         DelegatedMailboxAttackerAccess = @($Results.AttackerMailActivity | Where-Object { $_.IPVerdict -in @('Compromised', 'LikelyAttacker') -and $_.MailboxOwner -and $Results.UserPrincipalName -and $_.MailboxOwner -ne $Results.UserPrincipalName } | ForEach-Object { $_.MailboxOwner } | Select-Object -Unique).Count
     }
 
@@ -114,6 +115,7 @@ function Get-CIPPBecScore {
         AttackerMailAccess             = 'Mail opened, synced, deleted, moved or sent from an attacker address'
         AttackerFileAccess             = 'OneDrive/SharePoint files touched from an attacker address'
         AttackerForms                  = 'Microsoft Forms created, edited or shared from an attacker address'
+        OtherAccountsReached           = 'Another account in the tenant signed in or acted from an attacker address'
         DelegatedMailboxAttackerAccess = "Another mailbox reached through this account's delegated access from an attacker address"
     }
 

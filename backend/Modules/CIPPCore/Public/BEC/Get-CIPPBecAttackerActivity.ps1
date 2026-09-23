@@ -75,7 +75,8 @@ function Get-CIPPBecAttackerActivity {
     $HostOf = { param($Value) ConvertTo-CIPPBecHostAddress -Address ([string]$Value) }
     $VerdictOf = @{}
     foreach ($Row in @($Verdicts | Where-Object { $_ -and $_.IP })) { $VerdictOf[[string]$Row.IP] = [string]$Row.Verdict }
-    $When = { param($Value) try { if ($Value) { ([datetime]$Value).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') } else { $null } } catch { [string]$Value } }
+    # audit CreationTime is UTC without a zone: read it as UTC, not as the host's local time
+    $When = { param($Value) try { if ($Value) { $(if ($Value -is [datetime]) { if ($Value.Kind -eq 'Local') { $Value.ToUniversalTime() } else { [datetime]::SpecifyKind($Value, 'Utc') } } else { [datetime]::Parse([string]$Value, [cultureinfo]::InvariantCulture, [System.Globalization.DateTimeStyles]'AssumeUniversal,AdjustToUniversal') }).ToString('yyyy-MM-ddTHH:mm:ssZ') } else { $null } } catch { [string]$Value } }
 
     # --- tie records to addresses: tokens and Entra sessions from the sign-ins, mailbox sessions from the records ---
     $Tokens = @{}

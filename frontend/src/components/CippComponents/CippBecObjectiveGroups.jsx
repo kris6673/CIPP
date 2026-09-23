@@ -42,6 +42,20 @@ export const CippBecObjectiveGroups = ({
   const rowActions = useMemo(
     () => ({
       intune: getBecIntuneDeviceActions({ tenantFilter }),
+      // The blast radius: queue a case for each other account an attacker address reached (bulk too).
+      investigate: [
+        {
+          label: 'Investigate',
+          type: 'POST',
+          url: '/api/ExecBECBulkCheck',
+          icon: getIconByName('TravelExplore'),
+          data: { UserIds: 'UserId', tenantFilter: `!${tenantFilter}` },
+          multiPost: true,
+          confirmText:
+            'Queue a Business Email Compromise investigation for the selected account(s)? Each case appears on the Business Email Compromise page as it finishes.',
+          condition: (row) => !!row.UserId,
+        },
+      ],
       // Blocking a sender now lives in the containment drawer (tenant-wide, catalog-driven). The one
       // row action left scopes the phishing wave: it pre-fills the spread search with this message's
       // sender and subject and runs it, so "who else got this" is one click.
