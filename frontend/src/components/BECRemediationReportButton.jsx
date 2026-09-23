@@ -223,6 +223,115 @@ export const BECRemediationReportDocument = ({
   const mailActivitySummary = becData?.MailActivitySummary
   const riskState = becData?.RiskState
 
+  // The attacker's addresses and what was done from them. Only an address judged the attacker's
+  // (Compromised or LikelyAttacker) counts toward a statement; a Suspicious one is listed in the
+  // detail for review, never asserted. The item lists are capped - the evidence export has them all.
+  const isAttackerVerdict = (verdict) =>
+    verdict === 'Compromised' || verdict === 'LikelyAttacker'
+  const listNames = (names, max = 3) =>
+    names.slice(0, max).join(', ') +
+    (names.length > max ? ` and ${names.length - max} more` : '')
+  const ipVerdicts = becData?.IPVerdicts || []
+  const attackerIps = ipVerdicts.filter((v) => isAttackerVerdict(v.Verdict))
+  const reviewIps = ipVerdicts.filter(
+    (v) => isAttackerVerdict(v.Verdict) || v.Verdict === 'Suspicious'
+  )
+  const attackerCountries = [
+    ...new Set(attackerIps.map((v) => v.Country).filter(Boolean)),
+  ]
+  const attackerMail = (becData?.AttackerMailActivity || []).filter((row) =>
+    isAttackerVerdict(row.IPVerdict)
+  )
+  const attackerFiles = (becData?.AttackerFileActivity || []).filter((row) =>
+    isAttackerVerdict(row.IPVerdict)
+  )
+  const attackerForms = (becData?.FormsActivity || []).filter(
+    (row) => row.Flagged && isAttackerVerdict(row.IPVerdict)
+  )
+  const attackerFormIds = [
+    ...new Set(attackerForms.map((row) => row.FormId).filter(Boolean)),
+  ]
+  const attackerFormNames = [
+    ...new Set(attackerForms.map((row) => row.FormName).filter(Boolean)),
+  ]
+  const formsReach = (becData?.FormsSummary?.Forms || []).filter((form) =>
+    attackerFormIds.includes(form.FormId)
+  )
+  const formResponses = formsReach.reduce(
+    (sum, form) => sum + (form.Responses || 0),
+    0
+  )
+  const blastRadius = becData?.BlastRadius || []
+  const reachedAccounts = blastRadius.filter((row) => row.Reached)
+  const delegatedReached = (becData?.DelegatedAccess || []).filter(
+    (row) => row.Flagged
+  )
+  const attackerTotals = {
+    opened: new Set(
+      attackerMail
+        .filter(
+          (row) =>
+            row.Operation === 'MailItemsAccessed' && row.InternetMessageId
+        )
+        .map((row) => row.InternetMessageId)
+    ).size,
+    synced: new Set(
+      attackerMail
+        .filter(
+          (row) =>
+            row.Operation === 'MailItemsAccessed' && row.AccessType === 'Sync'
+        )
+        .map((row) => `${row.MailboxOwner}|${row.Folder}`)
+    ).size,
+    sent: attackerMail.filter((row) =>
+      ['Send', 'SendAs', 'SendOnBehalf'].includes(row.Operation)
+    ).length,
+    deleted: attackerMail.filter((row) =>
+      ['SoftDelete', 'HardDelete', 'MoveToDeletedItems'].includes(row.Operation)
+    ).length,
+    files: new Set(
+      attackerFiles.map((row) => row.Url || row.File).filter(Boolean)
+    ).size,
+    downloaded: attackerFiles.filter((row) =>
+      ['FileDownloaded', 'FileSyncDownloadedFull'].includes(row.Operation)
+    ).length,
+  }
+  // plain-English counts for the statements a non-technical reader sees
+  const count = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
+  const attackerDid = [
+    attackerTotals.opened > 0 &&
+      `opened ${count(attackerTotals.opened, 'email')}`,
+    attackerTotals.synced > 0 &&
+      `copied ${count(attackerTotals.synced, 'mail folder')} to a desktop client`,
+    attackerTotals.sent > 0 && `sent ${count(attackerTotals.sent, 'email')}`,
+    attackerTotals.deleted > 0 &&
+      `deleted ${count(attackerTotals.deleted, 'email')}`,
+    attackerTotals.files > 0 &&
+      `opened ${count(attackerTotals.files, 'file')}${
+        attackerTotals.downloaded
+          ? ` (${count(attackerTotals.downloaded, 'download')})`
+          : ''
+      }`,
+  ].filter(Boolean)
+  const attackerReach = [
+    reachedAccounts.length > 0 &&
+      `${count(reachedAccounts.length, 'other account')} signed into or used from the same addresses (${listNames(reachedAccounts.map((row) => row.UserPrincipalName))})`,
+    delegatedReached.length > 0 &&
+      `${count(delegatedReached.length, 'other mailbox', 'other mailboxes')} reached through this account's access (${listNames(delegatedReached.map((row) => row.Mailbox))})`,
+    attackerFormIds.length > 0 &&
+      `${count(attackerFormIds.length, 'Microsoft Form')} created from those addresses (a common phishing lure)${formResponses ? `, with ${count(formResponses, 'response')}` : ''}`,
+  ].filter(Boolean)
+  // the three strongest reasons behind a verdict, or the list/investigator that decided it
+  const verdictWhy = (v) =>
+    v.Source && v.Source !== 'Heuristics'
+      ? v.Source
+      : (v.Reasons || [])
+          .filter((reason) => reason.Weight > 0)
+          .sort((a, b) => b.Weight - a.Weight)
+          .slice(0, 3)
+          .map((reason) => reason.Text)
+          .join('; ')
+
   // ============================================================================================
   // Executive intelligence. A results roll-up, a findings-by-objective breakdown, evidence-driven
   // priority actions and a chronological timeline — all derived from the same becData the detailed
@@ -240,6 +349,23 @@ export const BECRemediationReportDocument = ({
   // Every check as one row — flagged (with a high-risk sub-count) or clear — so the summary page
   // carries the whole result set at a glance, not only the four headline stats.
   const summaryData = [
+    {
+      area: 'Attacker network addresses',
+      count: attackerIps.length,
+      danger: attackerIps.filter(
+        (v) => v.SuccessfulSignIns > 0 || v.Activities > 0
+      ).length,
+    },
+    {
+      area: 'Mail, files & forms touched by the attacker',
+      count: attackerMail.length + attackerFiles.length + attackerForms.length,
+      danger: attackerFormIds.length,
+    },
+    {
+      area: 'Other accounts & mailboxes reached',
+      count: blastRadius.length + delegatedReached.length,
+      danger: reachedAccounts.length,
+    },
     {
       area: 'Inbox rules & changes',
       count: stats.newRules + stats.ruleChanges,
@@ -360,6 +486,10 @@ export const BECRemediationReportDocument = ({
       tag: 'Critical',
       text: 'Block sign-in for the account until the mailbox and identity are confirmed clean.',
     },
+    reachedAccounts.length > 0 && {
+      tag: 'Critical',
+      text: `Secure the ${reachedAccounts.length} other account(s) reached from the attacker's addresses (${listNames(reachedAccounts.map((row) => row.UserPrincipalName))}): reset, revoke sessions and investigate each one.`,
+    },
     (flaggedGrants.length > 0 || stats.maliciousApps > 0) && {
       tag: 'Critical',
       text: `Revoke ${flaggedGrants.length + stats.maliciousApps} risky application consent(s)${consentNames || rogueAppNames ? ` (${consentNames || rogueAppNames})` : ''} — consent survives a password reset.`,
@@ -367,6 +497,18 @@ export const BECRemediationReportDocument = ({
     stats.maliciousApps > 0 && {
       tag: 'Critical',
       text: `Disable the catalog-matched rogue application(s)${rogueAppNames ? ` (${rogueAppNames})` : ''} tenant-wide.`,
+    },
+    attackerIps.length > 0 && {
+      tag: 'High',
+      text: `Block the ${attackerIps.length} attacker address(es) (${listNames(attackerIps.map((v) => v.IP))}) tenant-wide so they cannot be used against any other account.`,
+    },
+    attackerFormIds.length > 0 && {
+      tag: 'High',
+      text: `Remove the ${attackerFormIds.length} Microsoft Form(s) built from the attacker's addresses${attackerFormNames.length ? ` (${listNames(attackerFormNames)})` : ''} and warn anyone who responded.`,
+    },
+    delegatedReached.length > 0 && {
+      tag: 'High',
+      text: `Check the ${delegatedReached.length} other mailbox(es) reached through this account (${listNames(delegatedReached.map((row) => row.Mailbox))}) for rules, forwarding and sent mail.`,
     },
     (stats.newRules > 0 || stats.ruleChanges > 0) && {
       tag: 'High',
@@ -430,6 +572,16 @@ export const BECRemediationReportDocument = ({
       `Unauthorized access is confirmed — ${
         stats.foreignSuccessfulSignIns + foreignNonInteractive.length
       } successful sign-in(s) came from outside the account's assigned location.`,
+    attackerIps.length > 0 &&
+      `${count(attackerIps.length, 'network address', 'network addresses')}${
+        attackerCountries.length ? ` in ${listNames(attackerCountries)}` : ''
+      } ${attackerIps.length === 1 ? 'was' : 'were'} identified as the attacker's${
+        attackerDid.length
+          ? `; from there the attacker ${listNames(attackerDid, 5)}`
+          : ''
+      }.`,
+    attackerReach.length > 0 &&
+      `The attack reached beyond this account: ${listNames(attackerReach, 3)}.`,
     riskState?.Listed &&
       `Microsoft Identity Protection currently flags this account as at risk${
         riskState.RiskLevel ? ` (${riskState.RiskLevel} risk)` : ''
@@ -800,6 +952,217 @@ export const BECRemediationReportDocument = ({
           findings at a glance, the priority actions, the timeline and what was remediated, and no more. */}
       {!isSummary && (
         <>
+          {/* ATTACKER ADDRESSES & ACTIVITY PAGE - capped lists; the evidence export has every row */}
+          {ipVerdicts.length > 0 && (
+            <ContentPage
+              title="Attacker Addresses & Activity"
+              subtitle="Where the attacker connected from, and what was done from there"
+            >
+              <Section title="Attacker and Suspicious Addresses">
+                <Paragraph>
+                  Every address seen on this account was judged from the
+                  user&apos;s sign-in history, network and location, the IP
+                  allow and block lists, and the other accounts using it.
+                  Addresses judged the attacker&apos;s drive the findings below;
+                  suspicious ones are listed for review only.
+                </Paragraph>
+                {reviewIps.length > 0 ? (
+                  <DataTable
+                    columns={[
+                      { header: 'Address', key: 'IP', width: 2, bold: true },
+                      {
+                        header: 'Verdict',
+                        key: 'verdict',
+                        width: 2,
+                        colour: (row) =>
+                          isAttackerVerdict(row.Verdict)
+                            ? '#C53030'
+                            : '#B7791F',
+                      },
+                      { header: 'Location', key: 'location', width: 2 },
+                      { header: 'Sign-ins', key: 'signIns', width: 1 },
+                      { header: 'Why', key: 'why', width: 4 },
+                    ]}
+                    rows={reviewIps.map((v) => ({
+                      ...v,
+                      verdict: v.Verdict.replace(/([a-z])([A-Z])/g, '$1 $2'),
+                      location:
+                        [v.City, v.Country].filter(Boolean).join(', ') ||
+                        'Unknown',
+                      signIns: `${v.SuccessfulSignIns || 0} ok / ${v.FailedSignIns || 0} failed`,
+                      why: verdictWhy(v),
+                    }))}
+                    limit={15}
+                  />
+                ) : (
+                  <ClearBox title="✔️ No address was judged the attacker's">
+                    None of the {ipVerdicts.length} address(es) seen on this
+                    account was judged to be the attacker&apos;s or suspicious.
+                  </ClearBox>
+                )}
+              </Section>
+
+              {attackerMail.length + attackerFiles.length > 0 && (
+                <Section title="What Was Done From the Attacker's Addresses">
+                  <StatRow
+                    stats={[
+                      { value: attackerTotals.opened, label: 'Emails Opened' },
+                      { value: attackerTotals.sent, label: 'Emails Sent' },
+                      {
+                        value: attackerTotals.deleted,
+                        label: 'Emails Deleted',
+                      },
+                      { value: attackerTotals.files, label: 'Files Opened' },
+                    ]}
+                  />
+                  {attackerMail.length > 0 && (
+                    <DataTable
+                      columns={[
+                        { header: 'When', key: 'when', width: 2, bold: true },
+                        { header: 'Action', key: 'action', width: 2 },
+                        { header: 'Mailbox', key: 'mailbox', width: 2 },
+                        { header: 'Item', key: 'item', width: 4 },
+                      ]}
+                      rows={attackerMail.map((row) => ({
+                        ...row,
+                        when: formatDate(row.When),
+                        action: row.AccessType
+                          ? `${row.Operation} (${row.AccessType})`
+                          : row.Operation,
+                        item: row.Subject || row.Folder || row.Detail,
+                        mailbox:
+                          !row.MailboxOwner ||
+                          row.MailboxOwner.toLowerCase() ===
+                            (userData?.userPrincipalName || '').toLowerCase()
+                            ? 'This mailbox'
+                            : row.MailboxOwner,
+                      }))}
+                      limit={10}
+                    />
+                  )}
+                  {attackerFiles.length > 0 && (
+                    <DataTable
+                      columns={[
+                        { header: 'When', key: 'when', width: 2, bold: true },
+                        { header: 'Action', key: 'Operation', width: 2 },
+                        { header: 'File', key: 'file', width: 3 },
+                        { header: 'Site', key: 'Site', width: 3 },
+                      ]}
+                      rows={attackerFiles.map((row) => ({
+                        ...row,
+                        when: formatDate(row.When),
+                        file: row.File || row.Url,
+                      }))}
+                      limit={10}
+                    />
+                  )}
+                  <Note>
+                    The first items of each kind are shown; the complete item
+                    list is in the case&apos;s evidence export.
+                  </Note>
+                </Section>
+              )}
+
+              {blastRadius.length > 0 && (
+                <Section title="Other Accounts Reached">
+                  <Paragraph>
+                    Accounts elsewhere in the organization that signed in or
+                    acted from the attacker&apos;s addresses. A successful
+                    sign-in or any recorded action means the account was
+                    reached; failed sign-ins alone are an attempt.
+                  </Paragraph>
+                  <DataTable
+                    columns={[
+                      {
+                        header: 'Account',
+                        key: 'UserPrincipalName',
+                        width: 3,
+                        bold: true,
+                      },
+                      {
+                        header: 'Status',
+                        key: 'status',
+                        width: 1,
+                        colour: (row) => (row.Reached ? '#C53030' : '#B7791F'),
+                      },
+                      { header: 'Sign-ins', key: 'signIns', width: 2 },
+                      { header: 'Actions', key: 'Operations', width: 3 },
+                      { header: 'Last seen', key: 'lastSeen', width: 2 },
+                    ]}
+                    rows={blastRadius.map((row) => ({
+                      ...row,
+                      status: row.Reached ? 'Reached' : 'Attempted',
+                      signIns: `${row.SuccessfulSignIns || 0} ok / ${row.FailedSignIns || 0} failed`,
+                      Operations: row.Operations || '-',
+                      lastSeen: formatDate(row.LastSeen),
+                    }))}
+                    limit={15}
+                  />
+                </Section>
+              )}
+
+              {delegatedReached.length > 0 && (
+                <Section title="Other Mailboxes Reached Through This Account">
+                  <DataTable
+                    columns={[
+                      {
+                        header: 'Mailbox',
+                        key: 'Mailbox',
+                        width: 3,
+                        bold: true,
+                      },
+                      { header: 'Access', key: 'AccessRights', width: 3 },
+                      { header: 'Opened', key: 'AttackerOpened', width: 1 },
+                      { header: 'Synced', key: 'AttackerSynced', width: 1 },
+                      { header: 'Sent', key: 'AttackerSent', width: 1 },
+                    ]}
+                    rows={delegatedReached}
+                    limit={10}
+                  />
+                </Section>
+              )}
+
+              {attackerFormIds.length > 0 && (
+                <Section title="Microsoft Forms From the Attacker's Addresses">
+                  <Paragraph>
+                    Forms built or shared from the attacker&apos;s addresses,
+                    and how far they reached. A form asking for a password is a
+                    phishing page hosted on Microsoft&apos;s own domain.
+                  </Paragraph>
+                  <DataTable
+                    columns={[
+                      { header: 'Form', key: 'name', width: 4, bold: true },
+                      { header: 'Responses', key: 'Responses', width: 1 },
+                      {
+                        header: 'Anonymous',
+                        key: 'AnonymousResponses',
+                        width: 1,
+                      },
+                      { header: 'Views', key: 'Views', width: 1 },
+                      { header: 'Phishing flag', key: 'flagged', width: 2 },
+                    ]}
+                    rows={
+                      formsReach.length > 0
+                        ? formsReach.map((form) => ({
+                            ...form,
+                            name: form.FormName || form.FormId,
+                            flagged: form.PhishingFlagged ? 'Yes' : 'No',
+                          }))
+                        : attackerFormNames.map((name) => ({
+                            name,
+                            Responses: '-',
+                            AnonymousResponses: '-',
+                            Views: '-',
+                            flagged: '-',
+                          }))
+                    }
+                    limit={10}
+                  />
+                </Section>
+              )}
+            </ContentPage>
+          )}
+
           {/* UNDERSTANDING BEC PAGE */}
           <ContentPage
             title="Understanding Business Email Compromise"
