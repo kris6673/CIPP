@@ -8,7 +8,8 @@ function Get-CIPPBecIPVerdicts {
         - Compromised / Safe: an investigator override for this case, else CIPP's IP allow/block list
           (Blocked / Trusted). These decide outright.
         - Service: a Microsoft network address the user never signed in from (Exchange and other
-          services act from their own addresses), or one seen only on CIPP or partner actions. An
+          services act from their own addresses), one whose sign-ins are all the CIPP application's
+          own (its service account refreshing tokens), or one seen only on CIPP or partner actions. An
           address the user signed in from is scored normally even on Microsoft's network - attackers
           rent Azure machines.
         - LikelyAttacker / Suspicious / Unknown / LikelyUser: the heuristic score against the
@@ -42,6 +43,8 @@ function Get-CIPPBecIPVerdicts {
         The user's usage location (two-letter country).
     .PARAMETER Heuristics
         The BEC heuristics object (ipVerdict section).
+    .PARAMETER CippAppId
+        The CIPP application id; sign-ins by it are CIPP's own.
     .FUNCTIONALITY
         Internal
     #>
@@ -56,7 +59,8 @@ function Get-CIPPBecIPVerdicts {
         [hashtable]$Peers = @{},
         [hashtable]$Geo = @{},
         [string]$UsageLocation,
-        $Heuristics
+        $Heuristics,
+        [string]$CippAppId = $env:ApplicationID
     )
 
     $Cfg = $Heuristics.ipVerdict
@@ -86,7 +90,7 @@ function Get-CIPPBecIPVerdicts {
                 IP = $IP; SignIns = 0; NonInteractive = 0; Successful = 0; Failed = 0; FirstSeen = $null; LastSeen = $null
                 Country = $null; City = $null; ASN = $null; Risk = 'none'; Scripted = $false; Compliant = $false
                 Kinds = [System.Collections.Generic.HashSet[string]]::new(); FlaggedKinds = [System.Collections.Generic.HashSet[string]]::new()
-                Events = 0; ActorKinds = [System.Collections.Generic.HashSet[string]]::new(); Sessions = [System.Collections.Generic.HashSet[string]]::new()
+                Events = 0; ActorKinds = [System.Collections.Generic.HashSet[string]]::new(); Sessions = [System.Collections.Generic.HashSet[string]]::new(); CippSignIns = 0
             }
         }
         $IPs[$IP]
@@ -105,6 +109,7 @@ function Get-CIPPBecIPVerdicts {
             if (-not $IP) { continue }
             $Entry = & $Touch $IP
             if ($Set.Interactive) { $Entry.SignIns++ } else { $Entry.NonInteractive++ }
+            if ($CippAppId -and [string]$SignIn.AppId -eq $CippAppId) { $Entry.CippSignIns++ }
             if ($SignIn.Status -eq 'Success') { $Entry.Successful++ } else { $Entry.Failed++ }
             & $Seen $Entry $SignIn.CreatedDateTime
             if (-not $Entry.Country -and $SignIn.Country) { $Entry.Country = [string]$SignIn.Country; $Entry.City = [string]$SignIn.City }
@@ -241,6 +246,10 @@ function Get-CIPPBecIPVerdicts {
         }
         $SignInCount = $Row.Entry.SignIns + $Row.Entry.NonInteractive
         if ($SignInCount -eq 0 -and $Row.ASName -match $ServiceAsn) { return [pscustomobject]@{ Verdict = 'Service'; Source = "Microsoft service address ($($Row.ASName))" } }
+        $OnlyServiceActors = @($Row.Entry.ActorKinds | Where-Object { $_ -notin $ServiceActors }).Count -eq 0
+        if ($SignInCount -gt 0 -and $Row.Entry.CippSignIns -eq $SignInCount -and $OnlyServiceActors) {
+            return [pscustomobject]@{ Verdict = 'Service'; Source = 'Sign-ins by the CIPP application (its own service account)' }
+        }
         if ($SignInCount -eq 0 -and $Row.Entry.ActorKinds.Count -gt 0 -and @($Row.Entry.ActorKinds | Where-Object { $_ -notin $ServiceActors }).Count -eq 0) {
             return [pscustomobject]@{ Verdict = 'Service'; Source = 'Only CIPP or partner actions' }
         }

@@ -114,6 +114,16 @@ Describe 'Get-CIPPBecIPVerdicts' {
         ((Get-Row $Rows '192.0.2.50').Reasons | Where-Object Code -EQ 'BlockHint').Weight | Should -Be 2
     }
 
+    It "classes an address whose sign-ins are all the CIPP application's own as a service" {
+        $SignIns = @(1..3 | ForEach-Object { $S = New-SignIn -IP '135.119.241.152' -Status 'Failed' -Country 'US'; $S | Add-Member -NotePropertyName AppId -NotePropertyValue 'cipp-app'; $S })
+        $Rows = Get-CIPPBecIPVerdicts -NonInteractiveSignIns $SignIns -Baseline $script:Baseline -Geo $script:Geo -UsageLocation 'AU' -Heuristics $script:Heuristics -CippAppId 'cipp-app'
+        $Row = Get-Row $Rows '135.119.241.152'
+        $Row.Verdict | Should -Be 'Service'
+        $Row.Source | Should -Match 'CIPP application'
+        $Mixed = @($SignIns) + @(New-SignIn -IP '135.119.241.152' -Country 'US')
+        (Get-Row (Get-CIPPBecIPVerdicts -NonInteractiveSignIns $Mixed -Baseline $script:Baseline -Geo $script:Geo -UsageLocation 'AU' -Heuristics $script:Heuristics -CippAppId 'cipp-app') '135.119.241.152').Verdict | Should -Not -Be 'Service' -Because 'a sign-in by anything else there is judged'
+    }
+
     It 'classes an address seen only on CIPP or partner actions as a service' {
         $Row = Get-Row (Get-Verdicts -Events @([pscustomobject]@{ IP = '20.1.2.3'; Kind = 'Mailbox permission change'; Flagged = $true; ActorKind = 'CIPP' })) '20.1.2.3'
         $Row.Verdict | Should -Be 'Service'

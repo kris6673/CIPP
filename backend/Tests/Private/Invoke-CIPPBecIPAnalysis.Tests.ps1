@@ -3,6 +3,8 @@ BeforeAll {
     function Get-CIPPBecIPGuidance { param($TenantFilter, $Anchor) }
     function Get-CIPPBecSignInBaseline { param($TenantFilter, $UserId, $StartDate, $EndDate) }
     function Get-CIPPBecIPPeers { param($TenantFilter, $UserId, $IPs, $StartDate, $WindowStart) }
+    function Get-CIPPBecColleagueSample { param($TenantFilter, $ExcludeUserId, $StartDate, $Count) }
+    function Get-CIPPBecCorrelatedUserPeers { param($TenantFilter, $UserIds, $IPs, $StartDate, $WindowStart) }
     function Get-CIPPGeoIPLocationBatch { param([string[]]$IPs) }
     function Get-NormalizedError { param($message) $message }
     foreach ($File in @('Authentication/ConvertTo-CIPPIPRange.ps1', 'Authentication/Test-IpInRange.ps1', 'Authentication/Resolve-CIPPIPAllowBlockList.ps1', 'BEC/ConvertTo-CIPPBecHostAddress.ps1', 'BEC/New-CIPPBecCollectorResult.ps1', 'BEC/Get-CIPPBecIPVerdicts.ps1', 'BEC/ConvertTo-CIPPBecIPEvents.ps1', 'BEC/Invoke-CIPPBecIPAnalysis.ps1')) {
@@ -54,6 +56,18 @@ Describe 'Invoke-CIPPBecIPAnalysis' {
         $Peer.OtherUsersBefore | Should -Be 3
         $Peer.Users | Should -Contain 'colleague@contoso.com'
         $Peer.Users | Should -Contain 'x@contoso.com'
+    }
+
+    It 'samples colleagues only when asked, and never counts the same colleague twice' {
+        Mock Get-CIPPBecColleagueSample { @('c1', 'c2') }
+        Mock Get-CIPPBecCorrelatedUserPeers { @{ '198.51.100.7' = [pscustomobject]@{ IP = '198.51.100.7'; OtherUsersBefore = 1; OtherUsersInWindowOnly = 2; Users = @('x@contoso.com') } } }
+        $null = Invoke-Analysis
+        Should -Invoke Get-CIPPBecColleagueSample -Times 0
+        $Analysis = Invoke-Analysis -Extra @{ SampleColleagues = $true }
+        Should -Invoke Get-CIPPBecCorrelatedUserPeers -Times 1 -ParameterFilter { @($UserIds) -join ',' -eq 'c1,c2' -and @($IPs) -contains '198.51.100.7' }
+        $Peer = $Analysis.Peers['198.51.100.7']
+        $Peer.OtherUsersInWindowOnly | Should -Be 2 -Because 'x@contoso.com is found by both lookups'
+        $Peer.OtherUsersBefore | Should -Be 1
     }
 
     It 'still judges from what it has when the baseline and peer lookups fail' {

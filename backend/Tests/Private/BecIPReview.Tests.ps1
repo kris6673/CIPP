@@ -155,6 +155,17 @@ Describe 'Invoke-ExecBECIPReview' {
         Should -Invoke Start-CIPPBecIPReviewJob -Times 1 -ParameterFilter { @($Overrides).Count -eq 1 -and $Overrides[0].IP -eq '198.51.100.0/24' -and $Overrides[0].Verdict -eq 'Compromised' -and (@($CorrelateUserIds) -join ',') -eq 'c1' -and $UserPrincipalName -eq 'victim@contoso.com' }
     }
 
+    It 'refuses a re-run when no verdict changed and no account is to be correlated' {
+        Mock Get-CIPPBecReport { [pscustomobject]@{ Status = 'Completed'; Results = [pscustomobject]@{ IPOverrides = @([pscustomobject]@{ Range = '198.51.100.0/24'; Verdict = 'Compromised'; Note = 'old note' }) } } }
+        $Same = Invoke-ExecBECIPReview -Request (New-Request @{ tenantFilter = 'contoso.com'; CaseId = 'BEC-1'; Overrides = @([pscustomobject]@{ IP = '198.51.100.0/24'; Verdict = 'Compromised'; Note = 'reworded' }) }) -TriggerMetadata $null
+        $Same.StatusCode | Should -Be 400
+        $Same.Body.Results[0].resultText | Should -Match 'Nothing changed'
+        Mock Get-CIPPBecReport { [pscustomobject]@{ Status = 'Completed'; Results = [pscustomobject]@{ IPOverrides = @() } } }
+        (Invoke-ExecBECIPReview -Request (New-Request @{ tenantFilter = 'contoso.com'; CaseId = 'BEC-1'; Overrides = @([pscustomobject]@{ IP = '198.51.100.7'; Verdict = 'Auto' }) }) -TriggerMetadata $null).StatusCode | Should -Be 400 -Because 'all Auto is the default'
+        Should -Invoke Start-CIPPBecIPReviewJob -Times 0
+        (Invoke-ExecBECIPReview -Request (New-Request @{ tenantFilter = 'contoso.com'; CaseId = 'BEC-1'; CorrelateUsers = @('c1') }) -TriggerMetadata $null).StatusCode | Should -Be 200 -Because 'correlating accounts is a change'
+    }
+
     It 'rejects an invalid address or verdict, an unknown case and an unfinished one without queueing' {
         (Invoke-ExecBECIPReview -Request (New-Request @{ tenantFilter = 'contoso.com'; CaseId = 'BEC-1'; Overrides = @([pscustomobject]@{ IP = 'example.com'; Verdict = 'Safe' }) }) -TriggerMetadata $null).StatusCode | Should -Be 400
         (Invoke-ExecBECIPReview -Request (New-Request @{ tenantFilter = 'contoso.com'; CaseId = 'BEC-1'; Overrides = @([pscustomobject]@{ IP = '198.51.100.7'; Verdict = 'Maybe' }) }) -TriggerMetadata $null).StatusCode | Should -Be 400

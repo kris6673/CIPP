@@ -37,7 +37,7 @@ BeforeAll {
     # The IP analysis has its own suite; here it only has to be wired in and its verdicts stamped.
     function Get-CIPPBecAttackerActivity { param($TenantFilter, $UserPrincipalName, $StartDate, $EndDate, $Heuristics, $Verdicts, $SignIns, $NonInteractiveSignIns, $MailRecords, $SharingChanges, $KnownSubjects, $Anchor) }
     function Get-CIPPBecDelegatedAccess { param($TenantFilter, $UserPrincipalName, $UserDisplayName, $PermissionChanges, $MailActivity, $AttackerMail) }
-    function Invoke-CIPPBecIPAnalysis { param($TenantFilter, $UserId, $UserPrincipalName, $Results, $Heuristics, $WindowStart, $UsageLocation, $Anchor, $Baseline, $KnownPeers, $Overrides, $ExtraPeers) }
+    function Invoke-CIPPBecIPAnalysis { param($TenantFilter, $UserId, $UserPrincipalName, $Results, $Heuristics, $WindowStart, $UsageLocation, $Anchor, $Baseline, $KnownPeers, $Overrides, $ExtraPeers, [switch]$SampleColleagues) }
 
     # Real pieces under test alongside the run
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/ConvertTo-CIPPBecHostAddress.ps1')

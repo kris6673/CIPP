@@ -34,9 +34,16 @@ function Invoke-ExecBECIPReview {
         # Object ids of other accounts whose sign-ins to correlate with the case's addresses
         $CorrelateUserIds = foreach ($User in $Request.Body.CorrelateUsers) { [string]($User.value ?? $User) }
         $CorrelateUserIds = @($CorrelateUserIds | Where-Object { $_ } | Select-Object -Unique)
-        $Run = Get-CIPPBecReport -TenantFilter $TenantFilter -CaseId $CaseId
+        $Run = Get-CIPPBecReport -TenantFilter $TenantFilter -CaseId $CaseId -IncludeResults
         if (-not $Run) { $StatusCode = [HttpStatusCode]::NotFound; throw "Case $CaseId was not found in $TenantFilter" }
         if ($Run.Status -ne 'Completed') { $StatusCode = [HttpStatusCode]::BadRequest; throw "Case $CaseId has not completed yet" }
+        # A re-run only makes sense when a verdict changed: the same overrides (or none, again) and no
+        # accounts to correlate would recompute the same case.
+        $Signature = { param($Set) (@($Set | ForEach-Object { "$(ConvertTo-CIPPIPRange -Value ([string]($_.IP ?? $_.Range)))|$($_.Verdict)" }) | Sort-Object) -join ';' }
+        if ($CorrelateUserIds.Count -eq 0 -and (& $Signature @($Overrides)) -eq (& $Signature @($Run.Results.IPOverrides | Where-Object { $_ }))) {
+            $StatusCode = [HttpStatusCode]::BadRequest
+            throw 'Nothing changed: set at least one address to a different verdict before re-running'
+        }
 
         $DeploymentId = Start-CIPPBecIPReviewJob -TenantFilter $TenantFilter -CaseId $CaseId -Overrides @($Overrides) -CorrelateUserIds $CorrelateUserIds -UserPrincipalName ([string]$Run.UserPrincipalName) -Headers $Headers
         [pscustomobject]@{ resultText = "Re-judging the IP addresses of case $CaseId with $(@($Overrides).Count) override(s) and $($CorrelateUserIds.Count) correlated account(s). Progress is shown below."; state = 'info' }

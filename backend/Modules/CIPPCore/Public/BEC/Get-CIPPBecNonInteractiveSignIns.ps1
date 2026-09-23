@@ -59,6 +59,7 @@ function Get-CIPPBecNonInteractiveSignIns {
             # tie audited mailbox and file actions back to this token and session
             SessionId           = $SignIn.sessionId
             UniqueTokenId       = $SignIn.uniqueTokenIdentifier
+            AppId               = $SignIn.appId
             ForeignLocation     = $Foreign
         }
     }

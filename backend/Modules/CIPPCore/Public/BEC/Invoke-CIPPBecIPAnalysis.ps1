@@ -10,7 +10,9 @@ function Invoke-CIPPBecIPAnalysis {
         3. Geo for every address (cached by the geo helper), so hosting and proxy networks are known.
         4. A first verdict pass, then the tenant-wide "who else signed in from here" lookup for every
            address that is not already settled (Safe, Service or LikelyUser) - re-using peers already
-           looked up for this case - and the final verdict pass with the peers included.
+           looked up for this case - and, with -SampleColleagues, the sign-ins of a random sample of
+           recently active colleagues across the case's addresses (shared offices and VPNs show up
+           there), then the final verdict pass with all of it included.
         Returns { Baseline, Guidance, Peers, PeersResult, Geo, Verdicts, Events } where Baseline,
         Guidance and PeersResult are collector results for the completeness markers.
     .PARAMETER TenantFilter
@@ -37,6 +39,9 @@ function Invoke-CIPPBecIPAnalysis {
         This case's investigator overrides.
     .PARAMETER ExtraPeers
         Hashtable of peer evidence gathered for users the investigator chose to correlate, merged in.
+    .PARAMETER SampleColleagues
+        Correlate a random sample of recently active colleagues (the first run; a review re-uses the
+        peers stored on the case, which already include them).
     .FUNCTIONALITY
         Internal
     #>
@@ -53,7 +58,8 @@ function Invoke-CIPPBecIPAnalysis {
         $Baseline,
         [object[]]$KnownPeers = @(),
         [object[]]$Overrides = @(),
-        [hashtable]$ExtraPeers = @{}
+        [hashtable]$ExtraPeers = @{},
+        [switch]$SampleColleagues
     )
 
     $BaselineDays = [int]($Heuristics.baseline.days ?? 30)
@@ -109,7 +115,21 @@ function Invoke-CIPPBecIPAnalysis {
             $PeerError = "Other-account lookup failed: $((Get-NormalizedError -message $_.Exception.Message))"
         }
     }
-    # Correlated users chosen by the investigator add to (never replace) the tenant-wide evidence
+    if ($SampleColleagues) {
+        try {
+            $Colleagues = @(Get-CIPPBecColleagueSample -TenantFilter $TenantFilter -ExcludeUserId $UserId -StartDate $WindowStart -Count ([int]($Heuristics.baseline.colleagueSample ?? 8)))
+            if ($Colleagues.Count -gt 0) {
+                $Sampled = Get-CIPPBecCorrelatedUserPeers -TenantFilter $TenantFilter -UserIds $Colleagues -IPs @($Preliminary.IP) -StartDate $BaselineStart -WindowStart $WindowStart
+                foreach ($Key in $Sampled.Keys) {
+                    if ($ExtraPeers.ContainsKey($Key)) { continue }
+                    $ExtraPeers[$Key] = $Sampled[$Key]
+                }
+            }
+        } catch {
+            $PeerError = (@($PeerError, "Colleague sample failed: $((Get-NormalizedError -message $_.Exception.Message))") | Where-Object { $_ }) -join '; '
+        }
+    }
+    # Correlated users (chosen, or sampled above) add to - never replace - the tenant-wide evidence
     foreach ($Key in $ExtraPeers.Keys) {
         $Extra = $ExtraPeers[$Key]
         if (-not $Peers.ContainsKey($Key)) { $Peers[$Key] = $Extra; continue }
@@ -118,8 +138,9 @@ function Invoke-CIPPBecIPAnalysis {
         $Peers[$Key] = [pscustomobject]@{
             IP                     = $Key
             OtherUsers             = $Users.Count
-            OtherUsersBefore       = [int]$Merged.OtherUsersBefore + [int]$Extra.OtherUsersBefore
-            OtherUsersInWindowOnly = [int]$Merged.OtherUsersInWindowOnly + [int]$Extra.OtherUsersInWindowOnly
+            # the same colleague can be found by both lookups: take the larger count, never the sum
+            OtherUsersBefore       = [Math]::Max([int]$Merged.OtherUsersBefore, [int]$Extra.OtherUsersBefore)
+            OtherUsersInWindowOnly = [Math]::Max([int]$Merged.OtherUsersInWindowOnly, [int]$Extra.OtherUsersInWindowOnly)
             Users                  = $Users
             Sampled                = [bool]$Merged.Sampled
             Error                  = $Merged.Error

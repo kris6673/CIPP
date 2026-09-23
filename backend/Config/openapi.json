@@ -15531,6 +15531,105 @@
         "x-cipp-role": "Identity.User.Read"
       }
     },
+    "/api/ExecBECIPReview": {
+      "post": {
+        "summary": "Re-judges the IP addresses of a BEC case with the investigator's overrides and chosen accounts.",
+        "operationId": "ExecBECIPReview",
+        "tags": [
+          "Identity > Administration > Users"
+        ],
+        "description": "Validates the request and queues a background re-run of the case's address-dependent sections: the investigator's overrides (an address or CIDR range marked Safe or Compromised, with an optional note) become the case's complete override set, the sign-ins of the chosen accounts are correlated with the case's addresses, the address lists are re-read, and mailbox activity, IP verdicts, attacker activity, delegated mailboxes and the score are recomputed for the original window. Returns a DeploymentId whose per-step progress ListOffboardingProgress returns. To make a verdict permanent for the tenant, add the address to CIPP's IP allow/block list (ExecAddTrustedIP).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "CaseId": {
+                    "type": "string",
+                    "description": "The BEC case (run) to review"
+                  },
+                  "CorrelateUsers": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LabelValue"
+                    },
+                    "description": "Object ids of other accounts whose sign-ins to correlate with the case's addresses"
+                  },
+                  "Overrides": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "IP": {
+                          "type": "string"
+                        },
+                        "Note": {
+                          "type": "string"
+                        },
+                        "Verdict": {
+                          "$ref": "#/components/schemas/LabelValue"
+                        }
+                      }
+                    },
+                    "description": "The complete set of overrides for the case: an address or CIDR range, Safe or Compromised, and a note. Auto drops the override."
+                  },
+                  "tenantFilter": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Derived from the fields the endpoint selects onto each record. The response may carry more; these are the ones known to exist.",
+                  "properties": {
+                    "resultText": {
+                      "x-cipp-field-source": "backend"
+                    },
+                    "state": {
+                      "x-cipp-field-source": "backend"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Identity.User.ReadWrite"
+      }
+    },
     "/api/ExecBECRemediate": {
       "post": {
         "summary": "Runs selectable Business Email Compromise containment for a user.",

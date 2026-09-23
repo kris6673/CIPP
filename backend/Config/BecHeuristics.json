@@ -153,7 +153,8 @@
     ]
   },
   "baseline": {
-    "days": 30
+    "days": 30,
+    "colleagueSample": 8
   },
   "ipVerdict": {
     "thresholds": {

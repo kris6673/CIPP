@@ -184,7 +184,9 @@ function Push-BECRun {
                 @{ Name = 'OperatingSystem'; Expression = { $_.deviceDetail.operatingSystem } },
                 @{ Name = 'Browser'; Expression = { $_.deviceDetail.browser } },
                 @{ Name = 'SessionId'; Expression = { $_.sessionId } },
-                @{ Name = 'UniqueTokenId'; Expression = { $_.uniqueTokenIdentifier } })
+                @{ Name = 'UniqueTokenId'; Expression = { $_.uniqueTokenIdentifier } },
+                # the CIPP application's own sign-ins (its service account) are not the user's or an attacker's
+                @{ Name = 'AppId'; Expression = { $_.appId } })
             & $Mark 'SignIns' ([pscustomobject]@{ Complete = $true; Cap = $null; Error = $null; Count = $SuspectUserSignIns.Count })
         } catch {
             $SuspectUserSignIns = @()
@@ -812,7 +814,7 @@ function Push-BECRun {
             SentMessageAnalysis      = $SentMessageAnalysis
             MailActivity             = @($MailActivity)
         }
-        $IPAnalysis = & $Collect 'IPAnalysis' { Invoke-CIPPBecIPAnalysis -TenantFilter $TenantFilter -UserId $SuspectUser -UserPrincipalName $UserName -Results $IPDraft -Heuristics $Heuristics -WindowStart $startDate -UsageLocation $UsageLocation -Anchor $UserName }
+        $IPAnalysis = & $Collect 'IPAnalysis' { Invoke-CIPPBecIPAnalysis -TenantFilter $TenantFilter -UserId $SuspectUser -UserPrincipalName $UserName -Results $IPDraft -Heuristics $Heuristics -WindowStart $startDate -UsageLocation $UsageLocation -Anchor $UserName -SampleColleagues }
         if ($IPAnalysis.PSObject.Properties['Verdicts']) {
             & $Mark 'SignInBaseline' $IPAnalysis.Baseline
             & $Mark 'IPGuidance' $IPAnalysis.Guidance
