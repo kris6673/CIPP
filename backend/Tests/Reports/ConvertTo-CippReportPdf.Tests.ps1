@@ -272,4 +272,15 @@ Describe 'Table empty state' {
         $Text = ([OfficeIMO.Pdf.PdfReadDocument]::Open($Bytes).Pages | ForEach-Object { $_.ExtractText() }) -join "`n"
         $Text | Should -Match 'PLAN\s+SEATS\s+Nothing to list\.'
     }
+
+    It 'falls back to the client DataTable''s own wording, and leaves a markdown table without one' {
+        $Blocks = @(
+            @{ type = 'richtable'; columns = @(@{ header = 'Plan'; key = 'p' }); rows = @(); limit = 10 }
+            @{ type = 'database'; title = 'Header only'; format = 'text'; content = "| Name | UPN |`n|---|---|" }
+        )
+        $Bytes = ConvertTo-CippReportPdf -Blocks $Blocks -Variables @{} -Branding @{ colour = '#0E4C92' } -TenantName 'Contoso' -ReportName 'T'
+        $Text = ([OfficeIMO.Pdf.PdfReadDocument]::Open($Bytes).Pages | ForEach-Object { $_.ExtractText() }) -join "`n"
+        $Text | Should -Match 'PLAN\s+Nothing to report\.'
+        ([regex]::Matches($Text, 'Nothing to report')).Count | Should -Be 1
+    }
 }

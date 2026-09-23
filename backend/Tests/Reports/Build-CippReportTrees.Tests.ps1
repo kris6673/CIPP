@@ -62,6 +62,16 @@ Describe 'Report tree builders' {
         Test-Report $r 'Email Traffic Review'
     }
 
+    It 'Permissions and ShadowAI: word their empty tables the way the client does' {
+        $Permissions = Build-CippPermissionsReportTree -Data @{ TenantName = 'Contoso'; summary = @{}; assignments = @() }
+        @($Permissions.Blocks | Where-Object type -EQ 'richtable').emptyText | Should -Be @('No libraries hold their own permissions.')
+        $ShadowAI = Build-CippShadowAIReportTree -Data @{ TenantName = 'Contoso'; summary = @{}; detectedApps = @(); consentedApps = @(); topTools = @(); byRisk = @() }
+        @($ShadowAI.Blocks | Where-Object type -EQ 'richtable').emptyText | Should -Be @(
+            'No AI software was detected on managed devices during the last inventory sync.'
+            'No AI applications were found in Entra ID.'
+        )
+    }
+
     It 'ShadowAI: merges sanctioned tools across both sources and renders' {
         $r = Build-CippShadowAIReportTree -Data @{
             TenantName    = 'Contoso'

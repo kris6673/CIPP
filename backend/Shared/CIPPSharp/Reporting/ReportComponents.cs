@@ -537,7 +537,8 @@ namespace CIPP.Reporting
         /// field (Compliant=green, Review=red, ...); a <c>bold</c> column draws its value bold. Header band
         /// in the brand table colour, uppercase; striped body rows; rows beyond <c>limit</c> drop to a note.
         /// With no rows, <c>emptyText</c> is drawn inside the border as one full-width italic row (client
-        /// DataTable emptyText: 8pt faint italic, padding 12); without it the table is a bare header.
+        /// DataTable emptyText: 8pt faint italic, padding 12); without it the table is a bare header, as a
+        /// markdown or HTML table is (client renderTable has no empty state).
         /// </summary>
         public static void RichTable(ReportContext ctx, PdfContentBuilder item, List<object?> columns, List<object?> rows, int limit, string? emptyText = null)
         {
@@ -2016,7 +2017,8 @@ namespace CIPP.Reporting
                     StatRow(ctx, item, block.ListOf("stats") ?? new List<object?>());
                     break;
                 case "richtable":
-                    RichTable(ctx, item, block.ListOf("columns") ?? new List<object?>(), block.ListOf("rows") ?? new List<object?>(), (int)(block.Num("limit") ?? ParseNumber(block.Str("limit")) ?? 0), block.Str("emptyText"));
+                    // The client DataTable always has an empty state: its emptyText, else 'Nothing to report.'.
+                    RichTable(ctx, item, block.ListOf("columns") ?? new List<object?>(), block.ListOf("rows") ?? new List<object?>(), (int)(block.Num("limit") ?? ParseNumber(block.Str("limit")) ?? 0), block.Str("emptyText") ?? "Nothing to report.");
                     break;
                 case "richbullets":
                     RichBullets(ctx, item, block.ListOf("items") ?? new List<object?>());

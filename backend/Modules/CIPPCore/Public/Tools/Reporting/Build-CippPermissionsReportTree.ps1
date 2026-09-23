@@ -108,7 +108,7 @@ function Build-CippPermissionsReportTree {
 
     # -- Appendix --
     $blocks.Add((New-CippReportPage -Title 'Appendix: Detached Library Permissions' -Subtitle 'Assignments on libraries that no longer inherit from their site'))
-    $blocks.Add((New-CippReportTable -Limit 40 -Columns @(@{ header = 'Site'; key = 'site'; width = 1.8 }, @{ header = 'Library'; key = 'library'; width = 1.6 }, @{ header = 'Principal'; key = 'principal'; width = 2.2 }, @{ header = 'Permission'; key = 'level'; width = 1.2 }) -Rows @($libRows | ForEach-Object { @{ site = (& $siteLabel $_); library = $_.libraryTitle; principal = ($_.title ?? $_.email ?? $_.loginName); level = $_.permissionLevel } })))
+    $blocks.Add((New-CippReportTable -Limit 40 -EmptyText 'No libraries hold their own permissions.' -Columns @(@{ header = 'Site'; key = 'site'; width = 1.8 }, @{ header = 'Library'; key = 'library'; width = 1.6 }, @{ header = 'Principal'; key = 'principal'; width = 2.2 }, @{ header = 'Permission'; key = 'level'; width = 1.2 }) -Rows @($libRows | ForEach-Object { @{ site = (& $siteLabel $_); library = $_.libraryTitle; principal = ($_.title ?? $_.email ?? $_.loginName); level = $_.permissionLevel } })))
 
     @{
         Blocks    = @($blocks)

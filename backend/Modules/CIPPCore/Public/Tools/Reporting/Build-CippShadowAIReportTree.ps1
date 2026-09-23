@@ -113,7 +113,7 @@ function Build-CippShadowAIReportTree {
         $blocks.Add((New-CippReportPage -Title 'AI Software on Managed Devices' -Subtitle 'AI applications found in the Intune software inventory'))
         $detNote = if ($detected.Count -gt $detectedRows.Count) { ", showing the top $($detectedRows.Count) of $($detected.Count) entries" } else { '' }
         $blocks.Add((New-CippReportParagraph -Text "The following AI applications were detected in the software inventory of managed devices$detNote. Device counts indicate how widely each application has spread through the environment."))
-        $blocks.Add((New-CippReportTable -Limit $detectedRows.Count -Columns @(
+        $blocks.Add((New-CippReportTable -Limit $detectedRows.Count -EmptyText 'No AI software was detected on managed devices during the last inventory sync.' -Columns @(
                     @{ header = 'Application'; key = 'application'; width = 4; bold = $true }, @{ header = 'AI Tool'; key = 'aiTool'; width = 3 }, @{ header = 'Category'; key = 'category'; width = 3 }
                     @{ header = 'Risk'; key = 'risk'; width = 2; colourField = 'riskColour' }, @{ header = 'Status'; key = 'status'; width = 2.5 }, @{ header = 'Devices'; key = 'deviceCount'; width = 1.5 }
                 ) -Rows @($detectedRows | ForEach-Object { @{ application = $_.application; aiTool = $_.aiTool; category = $_.category; risk = $_.risk; riskColour = (RiskColour $_.risk); status = $_.status; deviceCount = "$($_.deviceCount)" } })))
@@ -124,7 +124,7 @@ function Build-CippShadowAIReportTree {
         $blocks.Add((New-CippReportPage -Title 'AI Applications in Entra ID' -Subtitle 'AI services with a footprint in your identity platform'))
         $conNote = if ($consented.Count -gt $consentedRows.Count) { ", showing the top $($consentedRows.Count) of $($consented.Count) entries" } else { '' }
         $blocks.Add((New-CippReportParagraph -Text "The following AI services are registered as applications in the tenant, including any permissions users have consented to$conNote. The consent date shows when each service first gained a foothold in the environment."))
-        $blocks.Add((New-CippReportTable -Limit $consentedRows.Count -Columns @(
+        $blocks.Add((New-CippReportTable -Limit $consentedRows.Count -EmptyText 'No AI applications were found in Entra ID.' -Columns @(
                     @{ header = 'Application'; key = 'application'; width = 4; bold = $true }, @{ header = 'AI Tool'; key = 'aiTool'; width = 3 }
                     @{ header = 'Risk'; key = 'risk'; width = 2; colourField = 'riskColour' }, @{ header = 'Status'; key = 'status'; width = 2.5 }, @{ header = 'Users (7d)'; key = 'activeUsersLast7Days'; width = 2 }, @{ header = 'First Consented'; key = 'firstConsented'; width = 2.5 }
                 ) -Rows @($consentedRows | ForEach-Object { @{ application = $_.application; aiTool = $_.aiTool; risk = $_.risk; riskColour = (RiskColour $_.risk); status = $_.status; activeUsersLast7Days = "$($_.activeUsersLast7Days)"; firstConsented = $(if ($_.firstConsentedDateTime) { ([datetime]$_.firstConsentedDateTime).ToString('M/d/yyyy') } else { 'Unknown' }) } })))
