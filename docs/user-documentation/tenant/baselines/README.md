@@ -40,7 +40,7 @@ Four tiles across the top of the page summarise the whole fleet.
 
 ## Fleet Compliance Trend
 
-Plots both compliance figures over time, so you can see whether the estate is improving. Trend data appears after the first baseline has run.
+Plots both compliance figures over the last 14 days, so you can see whether the estate is improving. Trend data appears after the first baseline has run.
 
 ## Deviation States
 
