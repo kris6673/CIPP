@@ -93,8 +93,10 @@ export const CippBecCorrelationGraph = ({
         eventCentre.set(event.id, blockTop + eventIndex * ROW + EVENT_H / 2)
       })
       const hubCentre = blockTop + ((count - 1) * ROW + EVENT_H) / 2
+      // an address judged the attacker's is flagged like a foreign one, even at home
+      const flaggedHub = cluster.foreign || cluster.attacker
       const hubColour = cluster.ip
-        ? cluster.foreign
+        ? flaggedHub
           ? theme.palette.error.main
           : theme.palette.text.secondary
         : theme.palette.text.disabled
@@ -119,8 +121,8 @@ export const CippBecCorrelationGraph = ({
         ),
         y1Ref: 'account',
         toY: hubCentre,
-        stroke: cluster.foreign ? theme.palette.error.main : neutralStroke,
-        width: cluster.foreign ? 2 : 1,
+        stroke: flaggedHub ? theme.palette.error.main : neutralStroke,
+        width: flaggedHub ? 2 : 1,
       })
 
       cluster.events.forEach((event) => {
@@ -252,7 +254,8 @@ export const CippBecCorrelationGraph = ({
         <Typography variant="caption" color="text.secondary">
           The account fans out to each source it acted from, each source to what
           was done from it, and those actions out to the other accounts they
-          reached. Red = foreign source; ringed = likely start of compromise.
+          reached. Red = foreign or attacker source; ringed = likely start of
+          compromise.
         </Typography>
         {Object.entries(BEC_OBJECTIVE_LABEL).map(([key, label]) => (
           <Chip
@@ -330,7 +333,7 @@ export const CippBecCorrelationGraph = ({
             if (node.kind === 'hub') {
               const { cluster, colour } = node
               const title = cluster.ip
-                ? `${cluster.ip}${cluster.location ? ` · ${cluster.location}` : ''}${cluster.foreign ? ' · foreign source' : ''}`
+                ? `${cluster.ip}${cluster.location ? ` · ${cluster.location}` : ''}${cluster.verdict ? ` · verdict: ${cluster.verdict}` : ''}${cluster.foreign ? ' · foreign source' : ''}`
                 : 'Events with no recorded source IP'
               return (
                 <Tooltip key={node.id} title={title} placement="top">
@@ -349,9 +352,10 @@ export const CippBecCorrelationGraph = ({
                       textAlign: 'center',
                       border: '2px solid',
                       borderColor: colour,
-                      bgcolor: cluster.foreign
-                        ? alpha(theme.palette.error.main, 0.08)
-                        : 'background.paper',
+                      bgcolor:
+                        cluster.foreign || cluster.attacker
+                          ? alpha(theme.palette.error.main, 0.08)
+                          : 'background.paper',
                     }}
                   >
                     <Typography

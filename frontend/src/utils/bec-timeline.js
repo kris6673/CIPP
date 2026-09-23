@@ -125,8 +125,134 @@ export function buildBecTimeline(becData, windowDays = 7, accountUpn = null) {
     return parsed && parsed >= analysisStart
   }
 
+  // The verdict behind each address (IP analysis), so every event says whose it was and the graph can
+  // mark an attacker source even when it is in the user's own country.
+  const verdictByIp = new Map(
+    arr(becData.IPVerdicts)
+      .filter((row) => row && row.IP)
+      .map((row) => [hostIp(row.IP), row.Verdict])
+  )
+  const isAttackerVerdict = (verdict) =>
+    verdict === 'Compromised' || verdict === 'LikelyAttacker'
+
+  // What the attacker-side addresses did, folded to one event per hour, address and kind of action -
+  // a mailbox sync or a scripted download is hundreds of rows that would bury everything else.
+  const MAIL_ACTION = {
+    MailItemsAccessed: { objective: 'exfil', verb: 'message(s) opened' },
+    AttachmentAccess: { objective: 'exfil', verb: 'attachment(s) read' },
+    SoftDelete: { objective: 'persistence', verb: 'item(s) deleted' },
+    HardDelete: { objective: 'persistence', verb: 'item(s) purged' },
+    MoveToDeletedItems: { objective: 'persistence', verb: 'item(s) deleted' },
+    Move: { objective: 'persistence', verb: 'item(s) moved' },
+    Send: { objective: 'exfil', verb: 'message(s) sent' },
+    SendAs: { objective: 'exfil', verb: 'message(s) sent as another mailbox' },
+    SendOnBehalf: { objective: 'exfil', verb: 'message(s) sent on behalf' },
+    SearchQueryInitiatedExchange: {
+      objective: 'exfil',
+      verb: 'mailbox search(es)',
+    },
+  }
+  const FILE_ACTION = {
+    FileDownloaded: 'file(s) downloaded',
+    FileSyncDownloadedFull: 'file(s) synced down',
+    FileAccessed: 'file(s) opened',
+    FilePreviewed: 'file(s) previewed',
+    FileUploaded: 'file(s) uploaded',
+    FileDeleted: 'file(s) deleted',
+    FileRecycled: 'file(s) deleted',
+    SearchQueryPerformed: 'SharePoint search(es)',
+  }
+  const foldActivity = (rows, keyOf, build) => {
+    const buckets = new Map()
+    rows.forEach((row) => {
+      const date = toDate(row.When)
+      if (!date) return
+      const hour = new Date(date)
+      hour.setUTCMinutes(0, 0, 0)
+      const ip = hostIp(row.IP)
+      const key = `${hour.getTime()}|${ip || ''}|${keyOf(row)}`
+      if (!buckets.has(key)) buckets.set(key, { date, ip, rows: [] })
+      buckets.get(key).rows.push(row)
+    })
+    return [...buckets.values()].map(build)
+  }
+  const topOf = (rows, field) => {
+    const counts = new Map()
+    rows.forEach((row) => {
+      const value = clean(row[field])
+      if (value) counts.set(value, (counts.get(value) || 0) + 1)
+    })
+    return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || null
+  }
+  const attackerMailEvents = foldActivity(
+    arr(becData.AttackerMailActivity),
+    (row) => `${row.Operation}|${row.AccessType === 'Sync' ? 'sync' : ''}`,
+    ({ date, ip, rows }) => {
+      const first = rows[0]
+      const sync = first.AccessType === 'Sync'
+      const action = MAIL_ACTION[first.Operation] || {
+        objective: 'persistence',
+        verb: `${first.Operation} event(s)`,
+      }
+      const verdict = first.IPVerdict || verdictByIp.get(ip) || null
+      return {
+        key: 'attackermail',
+        date,
+        category: 'attackermail',
+        objective: sync ? 'exfil' : action.objective,
+        severity: isAttackerVerdict(verdict) ? 'high' : 'medium',
+        label: sync
+          ? `${rows.length} folder(s) synced to a desktop client`
+          : `${rows.length} ${action.verb}`,
+        ip,
+        verdict,
+        target: sync
+          ? topOf(rows, 'Folder')
+          : topOf(rows, 'Subject') || topOf(rows, 'Folder'),
+        affects: otherAccount(first.MailboxOwner),
+        count: rows.length,
+      }
+    }
+  )
+  const attackerFileEvents = foldActivity(
+    arr(becData.AttackerFileActivity),
+    (row) => row.Operation,
+    ({ date, ip, rows }) => {
+      const first = rows[0]
+      const verdict = first.IPVerdict || verdictByIp.get(ip) || null
+      return {
+        key: 'attackerfile',
+        date,
+        category: 'attackerfile',
+        objective: 'exfil',
+        severity: isAttackerVerdict(verdict) ? 'high' : 'medium',
+        label: `${rows.length} ${FILE_ACTION[first.Operation] || `${first.Operation} event(s)`}`,
+        ip,
+        verdict,
+        target: topOf(rows, 'File'),
+        count: rows.length,
+      }
+    }
+  )
+  const formsEvents = arr(becData.FormsActivity)
+    .filter((row) => row.Flagged === true)
+    .map((row) => ({
+      key: 'forms',
+      date: toDate(row.When),
+      category: 'forms',
+      objective: 'blast',
+      severity: isAttackerVerdict(row.IPVerdict) ? 'high' : 'medium',
+      label: `Form: ${row.Operation}`,
+      ip: hostIp(row.IP),
+      verdict: row.IPVerdict,
+      target: clean(row.FormName),
+    }))
+
+  // Foreign sign-ins, and sign-ins from an address judged the attacker's even when it is at home.
   const foreignSignIns = arr(becData.SuspectUserSignIns).filter(
-    (signIn) => signIn.ForeignLocation === true
+    (signIn) =>
+      signIn.ForeignLocation === true ||
+      isAttackerVerdict(verdictByIp.get(signInIp(signIn)))
   )
 
   const sentEvents = (messages) => {
@@ -353,12 +479,17 @@ export function buildBecTimeline(becData, windowDays = 7, accountUpn = null) {
       label: 'Password changed',
       target: clean(user.displayName || user.userPrincipalName),
     })),
+    ...attackerMailEvents,
+    ...attackerFileEvents,
+    ...formsEvents,
   ].filter((event) => event.date)
 
   const events = raw
     .sort((a, b) => a.date - b.date)
     .map((event, index) => ({
       ...event,
+      verdict:
+        event.verdict || (event.ip ? verdictByIp.get(event.ip) : null) || null,
       id: `${event.key}-${index}`,
       ts: event.date.getTime(),
       // A single human-readable line for the timeline view, from whatever this event carries.
@@ -390,17 +521,30 @@ export function buildBecTimeline(becData, windowDays = 7, accountUpn = null) {
   // Start of compromise: the earliest event evidencing unauthorised access or a foothold — a
   // successful foreign sign-in first, then an attacker-registered method / consent / rule, then the
   // earliest high-severity event, then simply the earliest event.
+  // Start of compromise: the first thing that shows someone else in THIS account - never a
+  // tenant-wide event (users created or passwords changed elsewhere in the tenant), and never simply
+  // the earliest event: with no evidence there is no marker rather than a wrong one.
+  //  1. the first successful sign-in from an address judged the attacker's, then anything else it did;
+  //  2. the first successful foreign sign-in;
+  //  3. the first high-severity foothold on the account (method, consent, rule, device).
+  const TENANT_WIDE = new Set(['user', 'password'])
+  const onAccount = events.filter((event) => !TENANT_WIDE.has(event.category))
   const startOfCompromise =
-    events.find(
+    onAccount.find(
+      (event) =>
+        event.category === 'signin' &&
+        event.severity === 'high' &&
+        isAttackerVerdict(event.verdict)
+    ) ||
+    onAccount.find((event) => isAttackerVerdict(event.verdict)) ||
+    onAccount.find(
       (event) => event.category === 'signin' && event.severity === 'high'
     ) ||
-    events.find(
+    onAccount.find(
       (event) =>
         event.severity === 'high' &&
         (event.objective === 'access' || event.objective === 'persistence')
     ) ||
-    events.find((event) => event.severity === 'high') ||
-    events[0] ||
     null
 
   return { events, startOfCompromise }
@@ -434,6 +578,8 @@ export function buildBecCorrelationGraph(
   const byIp = new Map()
   const orphans = []
 
+  const attackerVerdict = (verdict) =>
+    verdict === 'Compromised' || verdict === 'LikelyAttacker'
   events.forEach((event) => {
     if (event.ip) {
       if (!byIp.has(event.ip)) {
@@ -441,12 +587,16 @@ export function buildBecCorrelationGraph(
           ip: event.ip,
           location: event.location || null,
           foreign: event.category === 'signin' || event.foreign || false,
+          verdict: event.verdict || null,
+          attacker: attackerVerdict(event.verdict),
           events: [],
         })
       }
       const hub = byIp.get(event.ip)
       hub.events.push(event)
       if (event.location && !hub.location) hub.location = event.location
+      if (event.verdict && !hub.verdict) hub.verdict = event.verdict
+      if (attackerVerdict(event.verdict)) hub.attacker = true
       if (event.foreign || event.category === 'signin') hub.foreign = true
     } else {
       orphans.push(event)

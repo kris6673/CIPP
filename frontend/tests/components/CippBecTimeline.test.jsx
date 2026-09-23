@@ -205,3 +205,117 @@ describe('CippBecCorrelationGraph', () => {
     ).toBe(true)
   })
 })
+
+describe('start of compromise and attacker activity', () => {
+  const at = (hoursAgo) =>
+    new Date(Date.now() - hoursAgo * 3600000).toISOString()
+
+  it('never marks a tenant-wide event, and marks nothing without evidence', () => {
+    const { events, startOfCompromise } = buildBecTimeline(
+      {
+        NewUsers: [
+          {
+            createdDateTime: at(90),
+            displayName: 'test',
+            userPrincipalName: 'test@contoso.com',
+          },
+        ],
+        ChangedPasswords: [
+          { lastPasswordChangeDateTime: at(90), displayName: 'test' },
+        ],
+      },
+      7,
+      'victim@contoso.com'
+    )
+    expect(events.length).toBe(2)
+    expect(startOfCompromise).toBeNull()
+  })
+
+  it('starts at the first successful sign-in from an attacker address, even at home', () => {
+    const { events, startOfCompromise } = buildBecTimeline(
+      {
+        IPVerdicts: [{ IP: '198.51.100.7', Verdict: 'LikelyAttacker' }],
+        SuspectUserSignIns: [
+          {
+            CreatedDateTime: at(10),
+            Status: 'Success',
+            IPAddress: '198.51.100.7',
+            Country: 'AU',
+            ForeignLocation: false,
+          },
+          {
+            CreatedDateTime: at(20),
+            Status: 'Success',
+            IPAddress: '203.0.113.10',
+            Country: 'AU',
+            ForeignLocation: false,
+          },
+        ],
+        NewUsers: [{ createdDateTime: at(90), displayName: 'test' }],
+      },
+      7,
+      'victim@contoso.com'
+    )
+    expect(events.filter((e) => e.category === 'signin')).toHaveLength(1)
+    expect(startOfCompromise.category).toBe('signin')
+    expect(startOfCompromise.verdict).toBe('LikelyAttacker')
+  })
+
+  it('folds attacker mail and file activity per hour and address, and marks the attacker hub', () => {
+    const when = at(5)
+    const becData = {
+      IPVerdicts: [{ IP: '198.51.100.7', Verdict: 'Compromised' }],
+      AttackerMailActivity: [
+        {
+          When: when,
+          Operation: 'MailItemsAccessed',
+          AccessType: 'Bind',
+          Subject: 'Invoice',
+          IP: '198.51.100.7',
+          IPVerdict: 'Compromised',
+          MailboxOwner: 'victim@contoso.com',
+        },
+        {
+          When: when,
+          Operation: 'MailItemsAccessed',
+          AccessType: 'Bind',
+          Subject: 'Invoice',
+          IP: '198.51.100.7',
+          IPVerdict: 'Compromised',
+          MailboxOwner: 'victim@contoso.com',
+        },
+        {
+          When: when,
+          Operation: 'MailItemsAccessed',
+          AccessType: 'Sync',
+          Folder: '\Inbox',
+          IP: '198.51.100.7',
+          IPVerdict: 'Compromised',
+          MailboxOwner: 'ceo@contoso.com',
+        },
+      ],
+      AttackerFileActivity: [
+        {
+          When: when,
+          Operation: 'FileDownloaded',
+          File: 'payroll.xlsx',
+          IP: '198.51.100.7',
+          IPVerdict: 'Compromised',
+        },
+      ],
+    }
+    const { events } = buildBecTimeline(becData, 7, 'victim@contoso.com')
+    const opened = events.find((e) => e.label === '2 message(s) opened')
+    expect(opened.target).toBe('Invoice')
+    expect(opened.severity).toBe('high')
+    const synced = events.find((e) => e.label.includes('synced'))
+    expect(synced.affects).toBe('ceo@contoso.com')
+    expect(events.find((e) => e.label === '1 file(s) downloaded').target).toBe(
+      'payroll.xlsx'
+    )
+    const graph = buildBecCorrelationGraph(becData, 7, 'victim@contoso.com')
+    const hub = graph.hubs.find((h) => h.ip === '198.51.100.7')
+    expect(hub.attacker).toBe(true)
+    expect(hub.verdict).toBe('Compromised')
+  })
+})

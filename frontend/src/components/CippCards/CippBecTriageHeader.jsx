@@ -6,6 +6,7 @@ import { CippIcons } from '../../utils/icon-registry'
 import CippButtonCard from './CippButtonCard'
 import { BECRemediationReportButton } from '../BECRemediationReportButton'
 import { CippBecContainmentDrawer } from '../CippComponents/CippBecContainmentDrawer'
+import { CippBecIPReviewDrawer } from '../CippComponents/CippBecIPReviewDrawer'
 import { CippBecEvidenceExportButton } from '../CippComponents/CippBecEvidenceExportButton'
 import {
   becLevelColor,
@@ -134,6 +135,13 @@ export const CippBecTriageHeader = ({
           >
             Run new investigation
           </Button>
+          {becData && (
+            <CippBecIPReviewDrawer
+              tenantFilter={tenantFilter}
+              caseId={caseId}
+              becData={becData}
+            />
+          )}
           {becData && (
             <CippBecContainmentDrawer
               userPrincipalName={upn}

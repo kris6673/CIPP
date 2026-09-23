@@ -1,4 +1,11 @@
-import { BEC_GROUPS, becPartnerActions } from '../../src/utils/bec-objectives'
+import {
+  BEC_FINDING_MARKERS,
+  BEC_GROUPS,
+  BEC_SIGNAL_GROUP,
+  becFindingFlags,
+  becGroupFlagged,
+  becPartnerActions,
+} from '../../src/utils/bec-objectives'
 
 const finding = (key) =>
   BEC_GROUPS.flatMap((group) => group.findings).find((f) => f.key === key)
@@ -152,5 +159,87 @@ describe('becPartnerActions', () => {
       Detail: 'Partner rule',
       Country: 'GB',
     })
+  })
+})
+
+describe('bec-objectives attacker group', () => {
+  const becData = {
+    IPVerdicts: [
+      { IP: '198.51.100.7', Verdict: 'LikelyAttacker' },
+      { IP: '192.0.2.44', Verdict: 'Unknown' },
+      { IP: '203.0.113.10', Verdict: 'LikelyUser' },
+    ],
+    IPBaseline: { Successful: 40 },
+    IPOverrides: [{ Range: '198.51.100.0/24', Verdict: 'Compromised' }],
+    AttackerMailActivity: [
+      {
+        Operation: 'MailItemsAccessed',
+        AccessType: 'Bind',
+        IPVerdict: 'LikelyAttacker',
+      },
+      {
+        Operation: 'MailItemsAccessed',
+        AccessType: 'Sync',
+        IPVerdict: 'Unknown',
+      },
+    ],
+    AttackerMailSummary: {
+      MessagesOpened: 1,
+      FoldersSynced: 1,
+      Deleted: 0,
+      Moved: 0,
+      Sent: 0,
+      AttachmentsRead: 0,
+      Searches: 0,
+      OtherMailboxes: 0,
+      SubjectsUnresolved: 0,
+      Unattributed: 2,
+    },
+    FormsActivity: [
+      { Operation: 'CreateForm', Flagged: true, IPVerdict: 'Suspicious' },
+    ],
+    DelegatedAccess: [
+      { Mailbox: 'ceo@contoso.com', Flagged: true },
+      { Mailbox: 'hr@contoso.com', Flagged: false },
+    ],
+  }
+
+  it('is the first group, and every finding in it has coverage markers', () => {
+    expect(BEC_GROUPS[0].id).toBe('attacker')
+    BEC_GROUPS[0].findings.forEach((f) =>
+      expect(BEC_FINDING_MARKERS[f.key]?.length).toBeGreaterThan(0)
+    )
+  })
+
+  it('flags only what the attacker addresses did, and counts forms and mailboxes as flagged by the backend', () => {
+    const flags = becFindingFlags(becData, 7)
+    expect(flags.IPVerdicts.count).toBe(1)
+    expect(flags.AttackerMailActivity.count).toBe(1)
+    expect(flags.AttackerFileActivity).toBeNull()
+    expect(flags.FormsActivity.count).toBe(1)
+    expect(flags.DelegatedAccess.count).toBe(1)
+    expect(becGroupFlagged(becData, 7).attacker).toBe(4)
+  })
+
+  it('summarises the verdicts and the mail, and lists the synced folders on their own', () => {
+    expect(finding('IPVerdicts').summary(becData)).toMatch(
+      /3 address\(es\): 0 confirmed compromised, 1 likely attacker.*40 successful sign-in.*1 investigator override/
+    )
+    expect(finding('AttackerMailActivity').summary(becData)).toMatch(
+      /1 message\(s\) opened, 1 folder\(s\) synced whole.*2 mailbox record\(s\) carried no address/
+    )
+    expect(
+      finding('AttackerMailActivity').sections[0].rows(becData)
+    ).toHaveLength(1)
+  })
+
+  it('routes the attacker score signals to the group', () => {
+    ;[
+      'AttackerIPs',
+      'AttackerMailAccess',
+      'AttackerFileAccess',
+      'AttackerForms',
+      'DelegatedMailboxAttackerAccess',
+    ].forEach((s) => expect(BEC_SIGNAL_GROUP[s]).toBe('attacker'))
   })
 })

@@ -128,7 +128,204 @@ export const becPartnerActions = (b) => {
 export const joinList = (value) =>
   Array.isArray(value) ? value.join(', ') : (value ?? '')
 
+// Verdicts on the attacker side of the line - the addresses whose activity is detailed item by item.
+export const BEC_ATTACKER_VERDICTS = [
+  'Compromised',
+  'LikelyAttacker',
+  'Suspicious',
+  'Unknown',
+]
+const isAttackerIp = (verdict) =>
+  verdict === 'Compromised' || verdict === 'LikelyAttacker'
+
 export const BEC_GROUPS = [
+  {
+    id: 'attacker',
+    title: 'Attacker IPs & activity',
+    icon: 'GppBad',
+    blurb:
+      "Which addresses are the attacker, and item by item what they opened, sent, downloaded, shared and built from this account. Activity from the user's own addresses stays as counts.",
+    findings: [
+      {
+        key: 'IPVerdicts',
+        title: 'IP addresses behind this case',
+        columns: [
+          'IP',
+          'Verdict',
+          'Score',
+          'ReasonText',
+          'Source',
+          'Country',
+          'City',
+          'ASName',
+          'SuccessfulSignIns',
+          'NonInteractiveSignIns',
+          'FailedSignIns',
+          'Activities',
+          'BaselineShare',
+          'OtherUsersBefore',
+          'OtherUsersInWindowOnly',
+          'FirstSeen',
+          'LastSeen',
+        ],
+        summary: (b) => {
+          const rows = arr(b.IPVerdicts)
+          if (rows.length === 0) return null
+          const count = (v) => rows.filter((r) => r.Verdict === v).length
+          const base = b.IPBaseline
+          return (
+            `${rows.length} address(es): ${count('Compromised')} confirmed compromised, ${count('LikelyAttacker')} likely attacker, ${count('Suspicious')} suspicious, ${count('Unknown')} unknown, ${count('LikelyUser')} likely the user, ${count('Safe')} confirmed safe, ${count('Service')} Microsoft or CIPP service.` +
+            (base
+              ? ` Judged against ${base.Successful} successful sign-in(s) before the window.`
+              : ' No sign-in baseline was available, so nothing was judged as new to the user.') +
+            (arr(b.IPOverrides).length
+              ? ` ${arr(b.IPOverrides).length} investigator override(s) applied.`
+              : '')
+          )
+        },
+        empty: 'No addresses were seen in the window.',
+      },
+      {
+        key: 'AttackerMailActivity',
+        title: 'Mail the attacker touched',
+        columns: [
+          'When',
+          'Operation',
+          'AccessType',
+          'Subject',
+          'Folder',
+          'Detail',
+          'MailboxOwner',
+          'IP',
+          'IPVerdict',
+          'IPSource',
+          'Client',
+        ],
+        summary: (b) => {
+          const s = b.AttackerMailSummary
+          if (!s) return null
+          return (
+            `${s.MessagesOpened} message(s) opened, ${s.FoldersSynced} folder(s) synced whole, ${s.Deleted} deleted, ${s.Moved} moved, ${s.Sent} sent, ${s.AttachmentsRead} attachment(s) read, ${s.Searches} mailbox search(es)` +
+            (s.OtherMailboxes
+              ? `, across ${s.OtherMailboxes} other mailbox(es)`
+              : '') +
+            ' from attacker-side addresses.' +
+            (s.SubjectsUnresolved
+              ? ` ${s.SubjectsUnresolved} opened message(s) are older than the message trace and are shown by id only.`
+              : '') +
+            (s.Unattributed
+              ? ` ${s.Unattributed} mailbox record(s) carried no address and could not be tied to a sign-in.`
+              : '')
+          )
+        },
+        sections: [
+          {
+            title: 'Folders synced whole by a desktop client',
+            rows: (b) =>
+              arr(b.AttackerMailActivity).filter(
+                (r) => r.AccessType === 'Sync'
+              ),
+            columns: [
+              'When',
+              'Folder',
+              'ItemCount',
+              'MailboxOwner',
+              'IP',
+              'Client',
+            ],
+          },
+        ],
+        empty:
+          'Nothing was read, deleted, moved or sent from an attacker-side address.',
+      },
+      {
+        key: 'AttackerFileActivity',
+        title: 'Files the attacker touched',
+        columns: [
+          'When',
+          'Operation',
+          'File',
+          'Site',
+          'Destination',
+          'SearchQuery',
+          'IP',
+          'IPVerdict',
+          'UserAgent',
+          'App',
+        ],
+        summary: (b) => {
+          const s = b.AttackerFileSummary
+          if (!s) return null
+          return `${s.Files} file(s): ${s.Downloaded} downloaded, ${s.Accessed} opened or previewed, ${s.Uploaded} uploaded, ${s.Deleted} deleted, ${s.Searches} search(es) from attacker-side addresses.`
+        },
+        sections: [
+          {
+            title: 'Sharing links created in the window, and who opened them',
+            rows: (b) => arr(b.LinkUsage),
+            columns: [
+              'When',
+              'Operation',
+              'File',
+              'OpenedBy',
+              'IP',
+              'UserAgent',
+            ],
+          },
+        ],
+        empty:
+          'No OneDrive or SharePoint files were touched from an attacker-side address.',
+      },
+      {
+        key: 'FormsActivity',
+        title: 'Microsoft Forms',
+        columns: [
+          'When',
+          'Operation',
+          'FormName',
+          'Flagged',
+          'IP',
+          'IPVerdict',
+          'UserType',
+          'Detail',
+        ],
+        summary: (b) => {
+          const s = b.FormsSummary
+          if (!s || !s.FlaggedActions) return null
+          return `${s.FlaggedActions} form action(s) from attacker-side addresses - a form built from a compromised account is a common credential-phishing lure.`
+        },
+        sections: [
+          {
+            title: 'Reach of the forms built from attacker-side addresses',
+            rows: (b) => arr(b.FormsSummary?.Forms),
+            columns: [
+              'FormName',
+              'Responses',
+              'AnonymousResponses',
+              'Views',
+              'PhishingFlagged',
+            ],
+          },
+        ],
+        empty: 'No Microsoft Forms activity by this account.',
+      },
+      {
+        key: 'DelegatedAccess',
+        title: 'Other mailboxes this account reaches',
+        columns: [
+          'Mailbox',
+          'AccessRights',
+          'KnownFrom',
+          'GrantedInWindow',
+          'DelegateActivity',
+          'AttackerOpened',
+          'AttackerSynced',
+          'AttackerSent',
+          'LastAttackerActivity',
+        ],
+        empty: 'This account has no delegated access to other mailboxes.',
+      },
+    ],
+  },
   {
     id: 'access',
     title: 'Access & identity',
@@ -143,6 +340,7 @@ export const BEC_GROUPS = [
           'AppDisplayName',
           'Status',
           'IPAddress',
+          'IPVerdict',
           'Country',
           'City',
           'ForeignLocation',
@@ -157,6 +355,7 @@ export const BEC_GROUPS = [
           'ResourceDisplayName',
           'Status',
           'IPAddress',
+          'IPVerdict',
           'Country',
           'City',
           'IncomingTokenType',
@@ -577,6 +776,7 @@ export const BEC_GROUPS = [
           'Operation',
           'Count',
           'ClientIP',
+          'IPVerdict',
           'Country',
           'ForeignLocation',
           'ClientInfoString',
@@ -665,6 +865,11 @@ export const BEC_GROUPS = [
 
 // Score signal -> objective group, so a fired signal in the triage spine jumps to its evidence.
 export const BEC_SIGNAL_GROUP = {
+  AttackerIPs: 'attacker',
+  AttackerMailAccess: 'attacker',
+  AttackerFileAccess: 'attacker',
+  AttackerForms: 'attacker',
+  DelegatedMailboxAttackerAccess: 'attacker',
   NewRules: 'persistence',
   InboxRuleChanges: 'persistence',
   SuspiciousRules: 'persistence',
@@ -700,6 +905,11 @@ export const BEC_SIGNAL_GROUP = {
 // Completeness marker key(s) each finding depends on, so the UI can show a check that could not run
 // (missing licence/permission) as "skipped" — never as a clean pass. Keyed by the finding's becData key.
 export const BEC_FINDING_MARKERS = {
+  IPVerdicts: ['SignInBaseline', 'IPGuidance', 'IPPeers', 'IPVerdicts'],
+  AttackerMailActivity: ['AttackerMailActivity', 'MailActivity'],
+  AttackerFileActivity: ['AttackerFileActivity', 'LinkUsage'],
+  FormsActivity: ['FormsActivity'],
+  DelegatedAccess: ['DelegatedAccess'],
   SuspectUserSignIns: ['SignIns'],
   NonInteractiveSignIns: ['NonInteractiveSignIns'],
   MFADevices: ['MFAMethods'],
@@ -816,6 +1026,26 @@ export const becFindingFlags = (becData, windowDays = 7) => {
     mailboxStateReasons.push('an automatic reply is enabled')
 
   return {
+    IPVerdicts: flag(
+      a(b.IPVerdicts).filter((v) => isAttackerIp(v.Verdict)).length,
+      'address(es) judged to be the attacker'
+    ),
+    AttackerMailActivity: flag(
+      a(b.AttackerMailActivity).filter((r) => isAttackerIp(r.IPVerdict)).length,
+      'mail item(s) touched from an attacker address'
+    ),
+    AttackerFileActivity: flag(
+      a(b.AttackerFileActivity).filter((r) => isAttackerIp(r.IPVerdict)).length,
+      'file action(s) from an attacker address'
+    ),
+    FormsActivity: flag(
+      a(b.FormsActivity).filter((r) => r.Flagged === true).length,
+      'form action(s) from an attacker-side address'
+    ),
+    DelegatedAccess: flag(
+      a(b.DelegatedAccess).filter((r) => r.Flagged === true).length,
+      'mailbox(es) the attacker used or was granted in the window'
+    ),
     SuspectUserSignIns: flag(
       la.ForeignSuccessfulSignInCount || 0,
       `successful sign-in(s) from outside ${la.UsageLocation || 'the usage location'}`
