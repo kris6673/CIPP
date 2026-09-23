@@ -14,8 +14,14 @@
 //   loop       renders for --seconds (default 30) so a profiler can attach, e.g.
 //              dotnet-trace collect --format speedscope -- dotnet bin/Release/net8.0/PdfBench.dll loop --seconds 30
 //   concurrent --parallel N renders at once for --seconds, like several API workers in one process:
-//              throughput, latency, peak heap and working set
-// Every mode takes --filter <substring> to pick reports.
+//              throughput, latency, peak heap and working set (--gcinfo prints the GC configuration in effect)
+//   cverify    --parallel N threads render in shuffled orders and check every output against the baseline hashes;
+//              the gate for any change that shares state between renders (a cache)
+//   retained   live and committed heap after each of --rounds passes: memory a change keeps between renders
+//   cold       time of the Nth pass in a fresh process (--at 1,2,3,5,10,30,100), for first-render cost after a restart
+// Every mode takes --filter <substring> (or --exclude a,b) to pick reports. bench reports CPU cycles (Mcyc), which
+// hold up when the machine is busy; wall-clock times do not. -p:KitDir=<a copy of Reporting\> benches a report-kit
+// change without touching the tree.
 //
 // Production runs the kit on .NET 8 with workstation GC (the Craft image: DOTNET_gcServer=0, GCConserveMemory=7,
 // a heap hard limit), so this targets net8.0. Keep it there: .NET 9+ compresses with zlib-ng, which changes the
@@ -33,6 +39,7 @@ var opts = Options.Parse(args);
 var root = AppContext.BaseDirectory;
 var projectDir = FindProjectDir();
 var fixtures = Fixture.LoadAll(Path.Combine(projectDir, "fixtures"), opts.Get("filter"));
+if (opts.Get("exclude") is { } ex) fixtures = fixtures.Where(f => !ex.Split(',').Any(x => f.Name.Contains(x, StringComparison.OrdinalIgnoreCase))).ToList();
 if (fixtures.Count == 0) { Console.Error.WriteLine("No fixtures matched."); return 1; }
 Console.WriteLine($"OfficeIMO.Pdf {Fixture.EngineVersion()} | {System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription} | {fixtures.Count} reports");
 
@@ -44,7 +51,10 @@ switch (opts.Mode)
     case "alloc": return Modes.Alloc(fixtures, opts);
     case "loop": return Modes.Loop(fixtures, opts);
     case "concurrent": return Modes.Concurrent(fixtures, opts);
-    default: Console.Error.WriteLine($"Unknown mode '{opts.Mode}'. Modes: bench, verify, write, alloc, loop, concurrent."); return 1;
+    case "retained": return Modes.Retained(fixtures, opts);
+    case "cold": return Modes.Cold(fixtures, opts);
+    case "cverify": return Modes.ConcurrentVerify(fixtures, opts, projectDir);
+    default: Console.Error.WriteLine($"Unknown mode '{opts.Mode}'. Modes: bench, verify, write, alloc, loop, concurrent, cverify, retained, cold."); return 1;
 }
 
 static string FindProjectDir()
@@ -102,7 +112,7 @@ sealed class Options
 }
 
 sealed record Result(string Name, int Pages, long Bytes, string Sha256, bool Deterministic, double MedianMs, double MinMs,
-    double AllocMB, double Gen0, double Gen1, double Gen2, double PeakHeapMB);
+    double AllocMB, double Gen0, double Gen1, double Gen2, double PeakHeapMB, double CpuMs = 0);
 
 static class Modes
 {
@@ -118,27 +128,31 @@ static class Modes
             var sha = Fixture.Sha(bytes);
             var deterministic = true;
             var times = new List<double>();
+            var cpus = new List<double>();
+            var proc = Process.GetCurrentProcess();
             long alloc = 0; int g0 = 0, g1 = 0, g2 = 0;
             for (var i = 0; i < iterations; i++)
             {
                 GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
                 int c0 = GC.CollectionCount(0), c1 = GC.CollectionCount(1), c2 = GC.CollectionCount(2);
                 var a0 = GC.GetTotalAllocatedBytes(true);
+                var cpu0 = Cycles.Now();
                 var sw = Stopwatch.StartNew();
                 bytes = f.Render();
                 sw.Stop();
+                cpus.Add((Cycles.Now() - cpu0) / 1e6);
                 alloc += GC.GetTotalAllocatedBytes(true) - a0;
                 g0 += GC.CollectionCount(0) - c0; g1 += GC.CollectionCount(1) - c1; g2 += GC.CollectionCount(2) - c2;
                 times.Add(sw.Elapsed.TotalMilliseconds);
                 deterministic &= Fixture.Sha(bytes) == sha;
             }
-            times.Sort();
+            times.Sort(); cpus.Sort();
             var r = new Result(f.Name, Fixture.Pages(bytes), bytes.Length, sha, deterministic, times[times.Count / 2], times[0],
-                alloc / (double)iterations / 1048576, g0 / (double)iterations, g1 / (double)iterations, g2 / (double)iterations, PeakHeapMB(f));
+                alloc / (double)iterations / 1048576, g0 / (double)iterations, g1 / (double)iterations, g2 / (double)iterations, PeakHeapMB(f), cpus[cpus.Count / 2]);
             results.Add(r);
-            Console.WriteLine($"{r.Name,-26} {r.Pages,5} {r.Bytes / 1024,7} {r.MedianMs,10:F1} {r.MinMs,8:F1} {r.AllocMB,9:F1} {r.Gen0,6:F1} {r.Gen1,6:F1} {r.Gen2,6:F1} {r.PeakHeapMB,8:F1}{(r.Deterministic ? "" : "  NONDETERMINISTIC")}");
+            Console.WriteLine($"{r.Name,-26} {r.Pages,5} {r.Bytes / 1024,7} {r.MedianMs,10:F1} {r.MinMs,8:F1} {r.AllocMB,9:F1} {r.Gen0,6:F1} {r.Gen1,6:F1} {r.Gen2,6:F1} {r.PeakHeapMB,8:F1} Mcyc {r.CpuMs,7:F1}{(r.Deterministic ? "" : "  NONDETERMINISTIC")}");
         }
-        Console.WriteLine($"{"TOTAL",-26} {results.Sum(r => r.Pages),5} {results.Sum(r => r.Bytes) / 1024,7} {results.Sum(r => r.MedianMs),10:F1} {results.Sum(r => r.MinMs),8:F1} {results.Sum(r => r.AllocMB),9:F1} {results.Sum(r => r.Gen0),6:F1} {results.Sum(r => r.Gen1),6:F1} {results.Sum(r => r.Gen2),6:F1} {results.Max(r => r.PeakHeapMB),8:F1}");
+        Console.WriteLine($"{"TOTAL",-26} {results.Sum(r => r.Pages),5} {results.Sum(r => r.Bytes) / 1024,7} {results.Sum(r => r.MedianMs),10:F1} {results.Sum(r => r.MinMs),8:F1} {results.Sum(r => r.AllocMB),9:F1} {results.Sum(r => r.Gen0),6:F1} {results.Sum(r => r.Gen1),6:F1} {results.Sum(r => r.Gen2),6:F1} {results.Max(r => r.PeakHeapMB),8:F1} Mcyc {results.Sum(r => r.CpuMs),7:F1}");
 
         if (opts.Get("save") is { } save)
         {
@@ -245,16 +259,71 @@ static class Modes
         return 0;
     }
 
+    // Live heap after full GCs between rounds of the corpus: memory a render leaves behind (static caches).
+    public static int Retained(List<Fixture> fixtures, Options opts)
+    {
+        int rounds = opts.Int("rounds", 10);
+        GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
+        var start = GC.GetTotalMemory(true);
+        Console.WriteLine($"before any render: {start / 1048576.0:F1} MB");
+        for (var r = 1; r <= rounds; r++)
+        {
+            foreach (var f in fixtures) f.Render();
+            GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect(2, GCCollectionMode.Forced, true, true);
+            var info = GC.GetGCMemoryInfo();
+            Console.WriteLine($"round {r,3}: live {GC.GetTotalMemory(true) / 1048576.0,7:F1} MB | committed {info.TotalCommittedBytes / 1048576.0,7:F1} MB | fragmented {info.FragmentedBytes / 1048576.0,6:F1} MB | ws {Process.GetCurrentProcess().WorkingSet64 / 1048576.0,6:F0} MB");
+        }
+        return 0;
+    }
+
+    // Time of the Nth render in a fresh process (JIT tiers), for each N in --at (default 1,2,3,5,10,30,100).
+    public static int Cold(List<Fixture> fixtures, Options opts)
+    {
+        var at = (opts.Get("at") ?? "1,2,3,5,10,30,100").Split(',').Select(int.Parse).ToHashSet();
+        var max = at.Max();
+        var total = Stopwatch.StartNew();
+        for (var n = 1; n <= max; n++)
+        {
+            var sw = Stopwatch.StartNew(); var c0 = Cycles.Now();
+            foreach (var f in fixtures) f.Render();
+            if (at.Contains(n)) Console.WriteLine($"pass {n,4}: {sw.Elapsed.TotalMilliseconds,8:F1} ms {(Cycles.Now() - c0) / 1e6,8:F0} Mcyc (cumulative {total.Elapsed.TotalMilliseconds:F0} ms)");
+        }
+        return 0;
+    }
+
+    // --parallel threads render the fixtures in shuffled orders at once and check every output against
+    // baseline.sha256.json: the gate for a shared cache (a render must not see another's state).
+    public static int ConcurrentVerify(List<Fixture> fixtures, Options opts, string projectDir)
+    {
+        int parallel = opts.Int("parallel", 8), rounds = opts.Int("rounds", 3);
+        var baseline = JsonSerializer.Deserialize<SortedDictionary<string, string>>(File.ReadAllText(Path.Combine(projectDir, "baseline.sha256.json")))!;
+        var bad = new ConcurrentBag<string>(); var count = 0;
+        var threads = Enumerable.Range(0, parallel).Select(w => new Thread(() =>
+        {
+            var rng = new Random(w);
+            for (var r = 0; r < rounds; r++)
+                foreach (var f in fixtures.OrderBy(_ => rng.Next()))
+                {
+                    if (Fixture.Sha(f.Render()) != baseline[f.Name]) bad.Add(f.Name);
+                    Interlocked.Increment(ref count);
+                }
+        })).ToList();
+        threads.ForEach(t => t.Start()); threads.ForEach(t => t.Join());
+        Console.WriteLine(bad.IsEmpty ? $"{count} concurrent renders, all identical" : $"{bad.Count} of {count} CHANGED: {string.Join(", ", bad.Distinct())}");
+        return bad.IsEmpty ? 0 : 1;
+    }
+
     public static int Concurrent(List<Fixture> fixtures, Options opts)
     {
         int parallel = opts.Int("parallel", 4), seconds = opts.Int("seconds", 20);
+        if (opts.Flag("gcinfo")) Console.WriteLine($"gc: server={System.Runtime.GCSettings.IsServerGC} latency={System.Runtime.GCSettings.LatencyMode} " + string.Join(" ", GC.GetConfigurationVariables().Where(kv => kv.Key is "ConcurrentGC" or "GCConserveMem" or "GCHeapHardLimit").Select(kv => $"{kv.Key}={kv.Value}")));
         foreach (var f in fixtures) f.Render();
         GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
         var baseline = GC.GetTotalMemory(true);
         long peak = baseline;
         var latencies = new ConcurrentBag<double>();
         var stop = Stopwatch.StartNew();
-        int c2 = GC.CollectionCount(2);
+        int c2 = GC.CollectionCount(2), c1 = GC.CollectionCount(1), c0 = GC.CollectionCount(0); var pause0 = GC.GetTotalPauseDuration();
         var a0 = GC.GetTotalAllocatedBytes(true);
         var sampling = true;
         var sampler = new Thread(() => { while (Volatile.Read(ref sampling)) { var m = GC.GetTotalMemory(false); if (m > peak) peak = m; Thread.Sleep(1); } }) { IsBackground = true };
@@ -275,7 +344,7 @@ static class Modes
         var elapsed = stop.Elapsed.TotalSeconds;
         var sorted = latencies.OrderBy(x => x).ToList();
         Console.WriteLine($"{parallel} parallel: {sorted.Count} renders in {elapsed:F1}s = {sorted.Count / elapsed:F1}/s | latency p50 {sorted[sorted.Count / 2]:F0} ms p95 {sorted[(int)(sorted.Count * 0.95)]:F0} ms");
-        Console.WriteLine($"allocation {(GC.GetTotalAllocatedBytes(true) - a0) / 1048576.0 / elapsed:F0} MB/s | gen2 {GC.CollectionCount(2) - c2} | peak heap growth {(peak - baseline) / 1048576.0:F0} MB | peak working set {Process.GetCurrentProcess().PeakWorkingSet64 / 1048576.0:F0} MB");
+        Console.WriteLine($"allocation {(GC.GetTotalAllocatedBytes(true) - a0) / 1048576.0 / elapsed:F0} MB/s | gen0 {GC.CollectionCount(0) - c0} gen1 {GC.CollectionCount(1) - c1} gen2 {GC.CollectionCount(2) - c2} pause {(GC.GetTotalPauseDuration() - pause0).TotalMilliseconds:F0} ms | peak heap growth {(peak - baseline) / 1048576.0:F0} MB | peak working set {Process.GetCurrentProcess().PeakWorkingSet64 / 1048576.0:F0} MB");
         return 0;
     }
 }
@@ -299,4 +368,11 @@ sealed class AllocListener : EventListener
         var large = Convert.ToInt32(e.Payload[names.IndexOf("AllocationKind")]) == 1;
         ByType.AddOrUpdate(type, large ? (0, amount) : (amount, 0), (_, v) => large ? (v.Small, v.Large + amount) : (v.Small + amount, v.Large));
     }
+}
+
+static class Cycles
+{
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")] static extern bool QueryProcessCycleTime(IntPtr h, out ulong c);
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")] static extern IntPtr GetCurrentProcess();
+    public static double Now() { QueryProcessCycleTime(GetCurrentProcess(), out var c); return c; }
 }
