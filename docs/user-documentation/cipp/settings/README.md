@@ -4,7 +4,7 @@ description: View and amend the settings for your CIPP instance.
 
 # Application Settings
 
-The General tab of the application settings brings together the instance-wide controls for your CIPP deployment: version information, password generation, DNS resolution, caching, backups, retention periods, and JIT admin limits. Each card operates independently and saves on its own, so there is no single submit action for the page.
+The General tab of the application settings brings together the instance-wide controls for your CIPP deployment: version information, password generation, DNS resolution, caching, backups, retention periods, JIT admin limits, and the default BEC containment actions. Each card operates independently and saves on its own, so there is no single submit action for the page.
 
 ## Version
 
@@ -109,6 +109,12 @@ Select **Save Settings** to apply. The limit applies globally across all tenants
 {% hint style="info" %}
 Custom values must be valid ISO 8601 durations, so use forms such as `PT1H`, `P1D` or `P28D`. An invalid value prevents the card from saving.
 {% endhint %}
+
+## BEC Remediation Defaults
+
+Shows how many of the business email compromise containment actions are switched on by default, for example **6 of 21 actions on by default**. The defaults decide which actions start selected when a compromised user is contained, and which run when a user is contained automatically.
+
+Selecting **Configure** opens the [bec-remediation.md](bec-remediation.md "mention") page, where each action is switched on or off.
 
 ## Other Settings Tabs
 
