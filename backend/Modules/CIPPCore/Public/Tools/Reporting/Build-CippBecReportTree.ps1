@@ -286,35 +286,57 @@ function Build-CippBecReportTree {
     $consentNames = (@($flaggedGrants | ForEach-Object { if ($_.ClientDisplayName) { $_.ClientDisplayName } else { $_.ClientAppId } } | Where-Object { $_ } | Select-Object -First 3)) -join ', '
 
     $tailoredActions = @(
-        if ($isHighOrMed) { @{ tag = 'Critical'; text = "Reset $(if ($upn) { $upn } else { 'the user' })'s password and revoke all active sessions to cut off any current attacker access." } }
-        if ($threatLevel -eq 'High') { @{ tag = 'Critical'; text = 'Block sign-in for the account until the mailbox and identity are confirmed clean.' } }
+        if ($isHighOrMed) { @{ ids = @('ResetPassword', 'RevokeSessions'); tag = 'Critical'; text = "Reset $(if ($upn) { $upn } else { 'the user' })'s password and revoke all active sessions to cut off any current attacker access." } }
+        if ($threatLevel -eq 'High') { @{ ids = @('DisableAccount'); tag = 'Critical'; text = 'Block sign-in for the account until the mailbox and identity are confirmed clean.' } }
         if ($reachedAccounts.Count -gt 0) { @{ tag = 'Critical'; text = "Secure the $($reachedAccounts.Count) other account(s) reached from the attacker's addresses ($(ListNames @($reachedAccounts | ForEach-Object { $_.UserPrincipalName }))): reset, revoke sessions and investigate each one." } }
         if ($flaggedGrants.Count -gt 0 -or $stats.maliciousApps -gt 0) {
             $names = if ($consentNames) { $consentNames } elseif ($rogueAppNames) { $rogueAppNames } else { '' }
-            @{ tag = 'Critical'; text = "Revoke $($flaggedGrants.Count + $stats.maliciousApps) risky application consent(s)$(if ($names) { " ($names)" }) - consent survives a password reset." }
+            @{ ids = @('RemoveOAuthGrants'); tag = 'Critical'; text = "Revoke $($flaggedGrants.Count + $stats.maliciousApps) risky application consent(s)$(if ($names) { " ($names)" }) - consent survives a password reset." }
         }
-        if ($stats.maliciousApps -gt 0) { @{ tag = 'Critical'; text = "Disable the catalog-matched rogue application(s)$(if ($rogueAppNames) { " ($rogueAppNames)" }) tenant-wide." } }
+        if ($stats.maliciousApps -gt 0) { @{ ids = @('DisableServicePrincipals'); tag = 'Critical'; text = "Disable the catalog-matched rogue application(s)$(if ($rogueAppNames) { " ($rogueAppNames)" }) tenant-wide." } }
         if ($attackerIps.Count -gt 0) { @{ tag = 'High'; text = "Block the $($attackerIps.Count) attacker address(es) ($(ListNames @($attackerIps | ForEach-Object { $_.IP }))) tenant-wide so they cannot be used against any other account." } }
         if ($attackerFormIds.Count -gt 0) { @{ tag = 'High'; text = "Remove the $($attackerFormIds.Count) Microsoft Form(s) built from the attacker's addresses$(if ($attackerFormNames.Count) { " ($(ListNames $attackerFormNames))" }) and warn anyone who responded: confirm phishing and delete each one from its Microsoft Defender alert, or, after the password reset, delete it in Microsoft Forms as the account." } }
         if ($delegatedReached.Count -gt 0) { @{ tag = 'High'; text = "Check the $($delegatedReached.Count) other mailbox(es) reached through this account ($(ListNames @($delegatedReached | ForEach-Object { $_.Mailbox }))) for rules, forwarding and sent mail." } }
-        if ($stats.newRules -gt 0 -or $stats.ruleChanges -gt 0) { @{ tag = 'High'; text = "Disable the $($stats.newRules + $stats.ruleChanges) suspicious inbox rule(s)/change(s)$(if ($ruleNames) { " ($ruleNames)" }) that hide replies or auto-forward mail." } }
-        if ($hasForwarding) { @{ tag = 'High'; text = "Clear mailbox forwarding$(if ($forwardingAddress) { " to $forwardingAddress" }), which silently copies mail out of the tenant." } }
-        if ($flaggedDelegations.Count -gt 0) { @{ tag = 'High'; text = "Remove $($flaggedDelegations.Count) flagged mailbox delegation(s) - a delegate keeps access after a reset." } }
-        if ($stats.anonymousLinks -gt 0 -or $stats.sharingChanges -gt 0) { @{ tag = 'High'; text = "Remove the $($stats.sharingChanges) sharing-link change(s)$(if ($stats.anonymousLinks) { ", including $($stats.anonymousLinks) 'anyone' link(s)" }) and disable OneDrive sharing - anonymous links expose data past any reset." } }
+        if ($stats.newRules -gt 0 -or $stats.ruleChanges -gt 0) { @{ ids = @('DisableInboxRules'); tag = 'High'; text = "Disable the $($stats.newRules + $stats.ruleChanges) suspicious inbox rule(s)/change(s)$(if ($ruleNames) { " ($ruleNames)" }) that hide replies or auto-forward mail." } }
+        if ($hasForwarding) { @{ ids = @('ClearForwarding'); tag = 'High'; text = "Clear mailbox forwarding$(if ($forwardingAddress) { " to $forwardingAddress" }), which silently copies mail out of the tenant." } }
+        if ($flaggedDelegations.Count -gt 0) { @{ ids = @('RemoveDelegations'); tag = 'High'; text = "Remove $($flaggedDelegations.Count) flagged mailbox delegation(s) - a delegate keeps access after a reset." } }
+        if ($stats.anonymousLinks -gt 0 -or $stats.sharingChanges -gt 0) { @{ ids = @('RemoveSharingLinks'); tag = 'High'; text = "Remove the $($stats.sharingChanges) sharing-link change(s)$(if ($stats.anonymousLinks) { ", including $($stats.anonymousLinks) 'anyone' link(s)" }) and disable OneDrive sharing - anonymous links expose data past any reset." } }
         if ($stats.massMailFlagged) { @{ tag = 'High'; text = "The mailbox sent a mass-mail campaign ($($stats.sentTotalMessages) message(s) to $($stats.sentTotalRecipients) recipient(s)). Scope the wave and warn recipients before anything is purged." } }
         if ($stats.foreignSuccessfulSignIns -gt 0) { @{ tag = 'High'; text = "$($stats.foreignSuccessfulSignIns) successful sign-in(s) from outside the assigned usage location confirm access - treat the account as compromised." } }
-        if (($flaggedTransportRules.Count + $flaggedTransportChanges.Count) -gt 0) { @{ tag = 'High'; text = "Review and disable $($flaggedTransportRules.Count + $flaggedTransportChanges.Count) tenant transport rule(s) changed in the window - these affect every mailbox." } }
-        if ($stats.recentMfaDevices -gt 0) { @{ tag = 'Medium'; text = "Remove $($stats.recentMfaDevices) MFA method(s) registered during the window, then re-register trusted ones." } }
-        if ($recentRegisteredDevices.Count -gt 0) { @{ tag = 'Medium'; text = "Disable $($recentRegisteredDevices.Count) device(s) registered during the window so they cannot satisfy device-based Conditional Access." } }
+        if (($flaggedTransportRules.Count + $flaggedTransportChanges.Count) -gt 0) { @{ ids = @('DisableTransportRules'); tag = 'High'; text = "Review and disable $($flaggedTransportRules.Count + $flaggedTransportChanges.Count) tenant transport rule(s) changed in the window - these affect every mailbox." } }
+        if ($stats.recentMfaDevices -gt 0) { @{ ids = @('RemoveMFA'); tag = 'Medium'; text = "Remove $($stats.recentMfaDevices) MFA method(s) registered during the window, then re-register trusted ones." } }
+        if ($recentRegisteredDevices.Count -gt 0) { @{ ids = @('DisableRegisteredDevices|RemoveRegisteredDevices'); tag = 'Medium'; text = "Disable $($recentRegisteredDevices.Count) device(s) registered during the window so they cannot satisfy device-based Conditional Access." } }
         if ($stats.safelistChanges -gt 0) { @{ tag = 'Medium'; text = "Review $($stats.safelistChanges) trusted-sender / safelist change(s) that would let an attacker's future mail skip filtering." } }
-        if ($flaggedAddIns.Count -gt 0) { @{ tag = 'Medium'; text = "Disable $($flaggedAddIns.Count) flagged mailbox add-in(s)." } }
+        if ($flaggedAddIns.Count -gt 0) { @{ ids = @('DisableMailboxAddIns'); tag = 'Medium'; text = "Disable $($flaggedAddIns.Count) flagged mailbox add-in(s)." } }
     )
     $priorityActions = if ($tailoredActions.Count -gt 0) { $tailoredActions } else {
         @(@{ tag = 'Monitor'; text = 'No specific indicators require remediation. Continue monitoring the account for 30 days and keep MFA enforced as a precaution.' })
     }
+    # Containment already run, by action id: when it last completed. The latest run that included an
+    # action decides - completed only when none of its results in that run was an error.
+    $completedAt = @{}
+    foreach ($entry in @($bec.Run.Containment | Where-Object { $_ } | Sort-Object -Property { ToDate $_.At })) {
+        foreach ($group in @($entry.Results | Where-Object { $_ -and $_.Action } | Group-Object -Property { "$($_.Action)" })) {
+            $failed = @($group.Group | Where-Object { "$($_.state)" -eq 'error' }).Count -gt 0
+            $completedAt[$group.Name] = if ($failed) { $null } else { ToDate $entry.At }
+        }
+    }
+    # when every id an action needs ('A|B' = either) has completed, the latest of those times
+    function CompletedAt([string[]]$Ids) {
+        if (-not $Ids) { return $null }
+        $times = foreach ($id in $Ids) {
+            $at = @($id -split '\|' | ForEach-Object { $completedAt[$_] } | Where-Object { $_ } | Sort-Object -Descending)[0]
+            if (-not $at) { return $null }
+            $at
+        }
+        @($times | Sort-Object -Descending)[0]
+    }
     $priorityRows = @($priorityActions | ForEach-Object {
             $tone = switch ($_.tag) { 'Critical' { 'fail' } 'High' { 'fail' } 'Medium' { 'warn' } default { 'pass' } }
-            @{ tag = $_.tag; text = $_.text; tone = $tone }
+            # The C-suite summary says which actions are already done instead of listing every result;
+            # the full report keeps the action list as is and the detailed Remediation Taken table.
+            $done = if ($isSummary) { CompletedAt $_.ids } else { $null }
+            @{ tag = $_.tag; text = $(if ($done) { "$($_.text)`nCompleted $(FmtDate $done)" } else { $_.text }); tone = $tone }
         })
 
     # -- impact findings (the plain-terms outcome; mirrors impactFindings) --
@@ -618,7 +640,7 @@ function Build-CippBecReportTree {
         $b.Add((New-CippReportClearBox -Title '[Pass] No timestamped events in the window' -Content 'None of the checks returned a dated event inside the analysis window. This usually means no changes were made to the account in the period, not that data was missing.'))
     }
 
-    if ($remediationRows.Count -gt 0) {
+    if ($remediationRows.Count -gt 0 -and -not $isSummary) {
         $b.Add((New-CippReportHeading -Title 'Remediation Taken'))
         $b.Add((New-CippReportParagraph -Text 'The containment actions already run for this account during the investigation, and their result for each target.'))
         $b.Add((New-CippReportTable -Columns @(

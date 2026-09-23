@@ -139,6 +139,28 @@ Describe 'Report tree builders' {
         Test-Report $Full 'Security Incident Report'
         Test-Report $Summary 'Security Incident Report'
     }
+
+    It 'BEC: the C-suite summary marks recommended actions completed by containment instead of listing every result' {
+        $BecData = @{
+            ExtractedAt = '2026-09-01T00:00:00Z'
+            Score       = @{ Value = 19; Level = 'High' }
+            NewRules    = @(@{ Name = 'Hide' })
+            Run         = @{ Containment = @(
+                    @{ At = '2026-09-01T10:00:00Z'; Results = @(@{ Action = 'ResetPassword'; state = 'success' }, @{ Action = 'RevokeSessions'; state = 'success' }, @{ Action = 'DisableInboxRules'; state = 'error' }) }
+                    @{ At = '2026-09-01T11:00:00Z'; Results = @(@{ Action = 'DisableAccount'; state = 'success' }) }
+                ) }
+        }
+        $Rows = { param($r) @(($r.Blocks | Where-Object { $_.type -eq 'richtable' -and $_.columns[0].header -eq 'Priority' }).rows) }
+        $Summary = Build-CippBecReportTree -TenantName 'Contoso' -UserData @{ userPrincipalName = 'alice@contoso.com' } -BecData $BecData -Variant summary
+        $Actions = & $Rows $Summary
+        ($Actions | Where-Object { $_.text -like 'Reset *' }).text | Should -Match "`nCompleted "
+        ($Actions | Where-Object { $_.text -like 'Block sign-in*' }).text | Should -Match "`nCompleted "
+        ($Actions | Where-Object { $_.text -like 'Disable the * suspicious inbox rule*' }).text | Should -Not -Match 'Completed' -Because 'an action with an error is not completed'
+        ($Summary.Blocks | Where-Object { $_.type -eq 'blank' -and $_.title -eq 'Remediation Taken' }) | Should -BeNullOrEmpty
+        $Full = Build-CippBecReportTree -TenantName 'Contoso' -UserData @{ userPrincipalName = 'alice@contoso.com' } -BecData $BecData
+        (& $Rows $Full).text -match 'Completed' | Should -BeNullOrEmpty -Because 'the full report keeps the detailed table instead'
+        ($Full.Blocks | Where-Object { $_.type -eq 'blank' -and $_.title -eq 'Remediation Taken' }) | Should -Not -BeNullOrEmpty
+    }
 }
 
 Describe 'License report tree' {
