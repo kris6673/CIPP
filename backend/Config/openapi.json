@@ -23585,6 +23585,10 @@
                   },
                   "userName": {
                     "type": "string"
+                  },
+                  "variant": {
+                    "type": "string",
+                    "description": "'full' (default) = every page; 'summary' = the executive lead only, for a C-suite reader"
                   }
                 },
                 "required": [
@@ -23627,6 +23631,15 @@
           {
             "name": "userName",
             "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "variant",
+            "in": "query",
+            "description": "'full' (default) = every page; 'summary' = the executive lead only, for a C-suite reader",
             "required": false,
             "schema": {
               "type": "string"
