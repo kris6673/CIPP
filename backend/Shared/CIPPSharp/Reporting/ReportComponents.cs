@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
 using OfficeIMO.Drawing;
 using OfficeIMO.Pdf;
 
@@ -43,12 +44,34 @@ namespace CIPP.Reporting
             var stock = ReportImagesPathPattern.Match(s);
             if (stock.Success) return ReportImage(stock.Groups[1].Value);
 
+            // A branding logo or uploaded cover is the same data URL on every render for a tenant, so it is
+            // decoded (and an SVG rasterised) once, and every render hands OfficeIMO the same array - which
+            // also lets OfficeIMO's per-array prepared-image cache hit across renders. Keyed by the data URL
+            // itself: a lookup is a fast string hash and compare, where a digest of a large upload is not.
+            var key = s;
+            if (DecodedImageCache.TryGetValue(key, out var cached)) return cached;
             var comma = s.IndexOf("base64,", StringComparison.OrdinalIgnoreCase);
             if (comma >= 0) s = s.Substring(comma + "base64,".Length);
-            byte[] bytes;
-            try { bytes = Convert.FromBase64String(s.Trim()); } catch { return null; }
-            return NormaliseImage(bytes);
+            byte[]? bytes;
+            try { bytes = NormaliseImage(Convert.FromBase64String(s.Trim())); } catch { bytes = null; }
+            // ponytail: clear-on-overflow, not LRU; a byte budget keeps a burst of distinct brandings bounded.
+            // An entry bigger than a quarter of the budget (an upload of roughly 3 MB, counting its data URL)
+            // is not kept, so one huge image cannot clear everything else for itself. Each cached array also
+            // keeps OfficeIMO's prepared copy of it alive, so what this retains is a few times the budget.
+            var size = 2L * key.Length + (bytes?.Length ?? 0);
+            if (size > DecodedImageCacheBudget / 4) return bytes;
+            if (Interlocked.Add(ref decodedImageCacheBytes, size) > DecodedImageCacheBudget)
+            {
+                DecodedImageCache.Clear();
+                Interlocked.Exchange(ref decodedImageCacheBytes, size);
+            }
+            DecodedImageCache[key] = bytes;
+            return bytes;
         }
+
+        private const long DecodedImageCacheBudget = 32L * 1024 * 1024;
+        private static long decodedImageCacheBytes;
+        private static readonly ConcurrentDictionary<string, byte[]?> DecodedImageCache = new(StringComparer.Ordinal);
 
         // Every raster OfficeIMO decodes (PNG, JPEG, GIF, BMP, TIFF, WebP) is handed to it as-is. An SVG
         // is only accepted by the drawing API, not by flow images or page backgrounds, so it is rasterised
@@ -774,6 +797,13 @@ namespace CIPP.Reporting
         private static IEnumerable<EmojiSegment> SegmentEmoji(string text)
         {
             var list = new List<EmojiSegment>();
+            // Most copy has no character above U+00FF, so no emoji: one text segment, without walking it
+            // cluster by cluster (a string per character).
+            if (!text.AsSpan().ContainsAnyExceptInRange('\0', 'ÿ'))
+            {
+                if (text.Length > 0) list.Add(new EmojiSegment { Kind = EmojiSegKind.Text, Text = text });
+                return list;
+            }
             var sb = new System.Text.StringBuilder();
             void FlushText() { if (sb.Length > 0) { list.Add(new EmojiSegment { Kind = EmojiSegKind.Text, Text = sb.ToString() }); sb.Clear(); } }
             var e = System.Globalization.StringInfo.GetTextElementEnumerator(text);

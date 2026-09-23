@@ -96,6 +96,10 @@ namespace CIPP.Reporting
         /// <summary>Hex, hsl() (or the default brand colour when unparseable) as 0-255 channels.</summary>
         public static (int r, int g, int b) ToRgb(string? hex)
         {
+            // The canonical #RRGGBB every palette entry and constant already is, parsed without the regexes.
+            if (hex is { Length: 7 } && hex[0] == '#'
+                && int.TryParse(hex.AsSpan(1), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out var rgb))
+                return ((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
             var hsl = TryHslToRgb(hex);
             if (hsl.HasValue) return hsl.Value;
             var normalised = NormaliseHex(hex) ?? DefaultBrandColour;

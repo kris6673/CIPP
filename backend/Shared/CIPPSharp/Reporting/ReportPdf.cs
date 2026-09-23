@@ -191,22 +191,29 @@ namespace CIPP.Reporting
         private static PdfOptions BuildOptions()
         {
             var options = new PdfOptions();
-            var font = ReportMarkdown.EmojiFontBytes.Value;
-            var coverage = ReportMarkdown.EmojiCoverage;
-            if (font is { Length: > 0 } && coverage.Count > 0)
+            if (EmojiFallbacks.Value is { } fallbacks)
             {
-                // OfficeIMO embeds only the glyphs a given report actually uses, compressed, so a report
-                // gains a few KB, not the whole ~800 KB font. The fallback is scoped to exactly the code
-                // points the font carries above U+00FF (the Latin-1 glyphs it also holds exist only so
-                // OfficeIMO's greedy neighbour-of-an-emoji fallback never lands on an uncovered character),
-                // so ordinary text always stays in the standard font.
-                var ranges = new OfficeIMO.Drawing.OfficeFontUnicodeRangeSet(CoverageRanges(coverage));
                 options.CompressEmbeddedFonts = true;
-                options.EmbeddedFontFallbacks = new PdfEmbeddedFontFallbackSet(
-                    new[] { new PdfEmbeddedFontFallbackCandidate("CippReportEmoji", font, ranges) });
+                options.EmbeddedFontFallbacks = fallbacks;
             }
             return options;
         }
+
+        // Built once per process: a candidate copies the ~800 KB font, and OfficeIMO keeps the parsed font per
+        // candidate, so a candidate made per render copied and re-parsed the whole font on every render.
+        // OfficeIMO embeds only the glyphs a given report actually uses, compressed, so a report
+        // gains a few KB, not the whole ~800 KB font. The fallback is scoped to exactly the code
+        // points the font carries above U+00FF (the Latin-1 glyphs it also holds exist only so
+        // OfficeIMO's greedy neighbour-of-an-emoji fallback never lands on an uncovered character),
+        // so ordinary text always stays in the standard font.
+        private static readonly Lazy<PdfEmbeddedFontFallbackSet?> EmojiFallbacks = new(() =>
+        {
+            var font = ReportMarkdown.EmojiFontBytes.Value;
+            var coverage = ReportMarkdown.EmojiCoverage;
+            if (font is not { Length: > 0 } || coverage.Count == 0) return null;
+            var ranges = new OfficeIMO.Drawing.OfficeFontUnicodeRangeSet(CoverageRanges(coverage));
+            return new PdfEmbeddedFontFallbackSet(new[] { new PdfEmbeddedFontFallbackCandidate("CippReportEmoji", font, ranges) });
+        });
 
         // The coverage set compressed into [start,end] ranges for the fallback scope. The emoji blocks are
         // scattered, so this coalesces across the smallest gaps until within OfficeIMO's 1..128-range limit.
@@ -420,10 +427,10 @@ namespace CIPP.Reporting
                 PlaceWatermark(pdf, rotationAt, blockEnd, divider, watermark, lines, at, marker.Length);
 
                 var block = pdf[blockStart..blockEnd];
-                var tail = pdf[blockEnd..dataEnd];
-                // Same length: the block's trailing newline becomes the separator in front of it.
-                Buffer.BlockCopy(tail, 0, pdf, blockStart, tail.Length);
-                var moved = blockStart + tail.Length;
+                // Same length: the block's trailing newline becomes the separator in front of it. The tail
+                // slides down in place (an overlapping span copy is a memmove).
+                pdf.AsSpan(blockEnd, dataEnd - blockEnd).CopyTo(pdf.AsSpan(blockStart));
+                var moved = blockStart + dataEnd - blockEnd;
                 pdf[moved] = (byte)'\n';
                 Buffer.BlockCopy(block, 0, pdf, moved + 1, block.Length - 1);
                 at = dataEnd;
@@ -509,27 +516,18 @@ namespace CIPP.Reporting
             return sb.ToString();
         }
 
+        // The first `needle` wholly inside [from, to), or -1.
         private static int IndexOf(byte[] hay, byte[] needle, int from, int to)
         {
-            for (var i = Math.Max(0, from); i <= to - needle.Length; i++)
-            {
-                var j = 0;
-                while (j < needle.Length && hay[i + j] == needle[j]) j++;
-                if (j == needle.Length) return i;
-            }
-            return -1;
+            from = Math.Max(0, from);
+            if (to - from < needle.Length) return -1;
+            var i = hay.AsSpan(from, to - from).IndexOf(needle);
+            return i < 0 ? -1 : from + i;
         }
 
+        // The last `needle` wholly before `before`, or -1.
         private static int LastIndexOf(byte[] hay, byte[] needle, int before)
-        {
-            for (var i = Math.Min(before, hay.Length) - needle.Length; i >= 0; i--)
-            {
-                var j = 0;
-                while (j < needle.Length && hay[i + j] == needle[j]) j++;
-                if (j == needle.Length) return i;
-            }
-            return -1;
-        }
+            => before < 0 ? -1 : hay.AsSpan(0, Math.Min(before, hay.Length)).LastIndexOf(needle);
 
         private sealed class PageGroup
         {
@@ -573,7 +571,8 @@ namespace CIPP.Reporting
             if (string.IsNullOrWhiteSpace(json)) return dict;
             try
             {
-                var root = JsonDocument.Parse(json).RootElement;
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
                 if (root.ValueKind == JsonValueKind.Object)
                     foreach (var p in root.EnumerateObject())
                         if (p.Value.ValueKind == JsonValueKind.String) dict[p.Name] = p.Value.GetString()!;
