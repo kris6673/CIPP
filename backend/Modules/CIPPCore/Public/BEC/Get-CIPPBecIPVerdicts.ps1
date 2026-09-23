@@ -10,8 +10,7 @@ function Get-CIPPBecIPVerdicts {
         - Service: a Microsoft network address the user never signed in from (Exchange and other
           services act from their own addresses), one whose sign-ins are all by a service
           application (CIPP's own, or Microsoft's Partner Customer Delegated Administration - see
-          ipVerdict.serviceAppIds), one seen only on CIPP or partner actions, or the address of a
-          technician who ran or reviewed the investigation (from the request headers). An
+          ipVerdict.serviceAppIds), or one seen only on CIPP or partner actions. An
           address the user signed in from is scored normally even on Microsoft's network - attackers
           rent Azure machines.
         - LikelyAttacker / Suspicious / Unknown / LikelyUser: the heuristic score against the
@@ -21,7 +20,9 @@ function Get-CIPPBecIPVerdicts {
         sign-in baseline, a risky sign-in, a scripted client, or other accounts appearing on it only
         during the window; they lower it for an address, network or location the user regularly used
         before the window, a compliant device, colleagues on it before the window, a trusted named
-        location, or an address with only failed sign-ins (spray noise, which is also capped at
+        location, the address of a technician who ran or reviewed the investigation (most likely the
+        partner's own, so a strong start towards trusted - but still judged, since a technician's
+        address can be shared or wrong), or an address with only failed sign-ins (spray noise, which is also capped at
         Suspicious). A final pass lifts addresses that share an Entra or mailbox session with a
         likely-attacker address, because one session moving between addresses is one actor.
     .PARAMETER SignIns
@@ -236,6 +237,8 @@ function Get-CIPPBecIPVerdicts {
                 & $Add 'BlockHint' (& $Weight 'blockListHint' 2) $Hint.Source
             }
         }
+        $Technician = $Technicians[$IP]
+        if ($Technician) { & $Add 'TechnicianAddress' (& $Weight 'technicianAddress' -4) "The address of the technician who ran or reviewed this case$(if ($Technician.By) { " ($($Technician.By))" }) - most likely the partner's" }
         $OnlyFailed = ($Entry.SignIns + $Entry.NonInteractive) -gt 0 -and $Entry.Successful -eq 0 -and $Entry.Events -eq 0
         if ($OnlyFailed) { & $Add 'OnlyFailed' (& $Weight 'onlyFailedSignIns' -3) 'Only failed sign-ins (password spray or lockout noise)' }
 
@@ -256,8 +259,6 @@ function Get-CIPPBecIPVerdicts {
         if ($Listed) {
             return [pscustomobject]@{ Verdict = $(if ($Listed.State -eq 'Blocked') { 'Compromised' } else { 'Safe' }); Source = "$($Listed.Source) ($($Listed.Range))" }
         }
-        $Technician = $Technicians[$Row.IP]
-        if ($Technician) { return [pscustomobject]@{ Verdict = 'Service'; Source = "The technician's own address$(if ($Technician.By) { " ($($Technician.By))" }) - not the user or the attacker" } }
         $SignInCount = $Row.Entry.SignIns + $Row.Entry.NonInteractive
         if ($SignInCount -eq 0 -and $Row.ASName -match $ServiceAsn) { return [pscustomobject]@{ Verdict = 'Service'; Source = "Microsoft service address ($($Row.ASName))" } }
         $OnlyServiceActors = @($Row.Entry.ActorKinds | Where-Object { $_ -notin $ServiceActors }).Count -eq 0

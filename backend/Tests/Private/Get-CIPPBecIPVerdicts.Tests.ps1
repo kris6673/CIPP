@@ -127,12 +127,16 @@ Describe 'Get-CIPPBecIPVerdicts' {
         (Get-Row (Get-CIPPBecIPVerdicts -NonInteractiveSignIns $Gdap -Baseline $script:Baseline -Geo $script:Geo -UsageLocation 'AU' -Heuristics $script:Heuristics -CippAppId 'cipp-app') '135.119.241.153').Verdict | Should -Be 'Service'
     }
 
-    It 'classes the address of the technician who ran the case as a service, after explicit decisions' {
+    It 'gives the address of the technician who ran the case a trusted start, but still judges it' {
         $Tech = @([pscustomobject]@{ IP = '192.0.2.77'; By = 'tech@msp.com' })
+        $AtHome = Get-Row (Get-CIPPBecIPVerdicts -SignIns @(New-SignIn -IP '192.0.2.77:50000' -Country 'AU') -Baseline $script:Baseline -Geo $script:Geo -UsageLocation 'AU' -Heuristics $script:Heuristics -TechnicianIPs $Tech) '192.0.2.77'
+        $AtHome.Verdict | Should -Be 'LikelyUser'
+        $AtHome.Source | Should -Be 'Heuristics'
+        ($AtHome.Reasons | Where-Object Code -EQ 'TechnicianAddress').Text | Should -Match 'tech@msp.com'
         $SignIns = @(New-SignIn -IP '192.0.2.77:50000' -Country 'NG')
         $Row = Get-Row (Get-CIPPBecIPVerdicts -SignIns $SignIns -Baseline $script:Baseline -Geo $script:Geo -UsageLocation 'AU' -Heuristics $script:Heuristics -TechnicianIPs $Tech) '192.0.2.77'
-        $Row.Verdict | Should -Be 'Service'
-        $Row.Source | Should -Match "technician's own address \(tech@msp.com\)"
+        $Row.Verdict | Should -Not -Be 'Service' -Because 'a technician address is a head start, not a pass'
+        $Row.Score | Should -BeLessThan (Get-Row (Get-CIPPBecIPVerdicts -SignIns $SignIns -Baseline $script:Baseline -Geo $script:Geo -UsageLocation 'AU' -Heuristics $script:Heuristics) '192.0.2.77').Score
         $Overridden = Get-CIPPBecIPVerdicts -SignIns $SignIns -Baseline $script:Baseline -Geo $script:Geo -UsageLocation 'AU' -Heuristics $script:Heuristics -TechnicianIPs $Tech -Overrides @([pscustomobject]@{ Range = '192.0.2.77'; Verdict = 'Compromised' })
         (Get-Row $Overridden '192.0.2.77').Verdict | Should -Be 'Compromised' -Because 'an investigator decision still wins'
     }

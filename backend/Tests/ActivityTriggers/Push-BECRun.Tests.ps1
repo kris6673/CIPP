@@ -186,7 +186,7 @@ Describe 'Push-BECRun' {
         $script:IPAnalysisInput.SuspectUserSignIns[0].IPAddress | Should -Be '203.0.113.10'
         $R.IPVerdicts[0].Verdict | Should -Be 'LikelyAttacker'
         $R.IPBaseline.Successful | Should -Be 12
-        $script:IPAnalysisTechnicians[0].IP | Should -Be '192.0.2.77' -Because 'the technician who started the run is never the user or the attacker'
+        $script:IPAnalysisTechnicians[0].IP | Should -Be '192.0.2.77' -Because 'the technician who started the run gets a trusted start'
         $R.IPTechnicians[0].By | Should -Be 'tech@msp.com'
         $R.InboxRuleChanges[0].IPVerdict | Should -Be 'LikelyAttacker'
         $R.SuspectUserSignIns[0].IPVerdict | Should -Be 'LikelyAttacker'

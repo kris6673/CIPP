@@ -190,6 +190,7 @@
       "compliantDevice": -2,
       "colleagues": -2,
       "trustedNamedLocation": -4,
+      "technicianAddress": -4,
       "allowListHint": -1,
       "onlyFailedSignIns": -3
     },
