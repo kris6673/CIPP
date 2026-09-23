@@ -190,13 +190,15 @@ Describe 'Watermark layering' {
             $Data.TrimEnd() | Should -Match "$([regex]::Escape($Marker))\s*ET\s*Q$"
             ([regex]::Matches($Data, '> Tj|\) Tj') | Select-Object -Last 1).Value | Should -Be '> Tj'
             $Data.LastIndexOf(' re') | Should -BeLessThan $Data.IndexOf($Marker)
+            # rising left to right like the client's rotate(-45deg), the divider's tag angle written back
+            $Data | Should -Match '0\.707 0\.707 -0\.707 0\.707 [\d.]+ [\d.]+ +Tm'
         }
     }
 
     It 'leaves a document without a watermark untouched' {
         $Bytes = ConvertTo-CippReportPdf -Blocks @(@{ type = 'blank'; title = 'T'; content = '<p>x</p>' }) -Variables @{} -Branding @{ colour = '#0E4C92' } -TenantName 'Contoso' -ReportName 'T'
         [System.Text.Encoding]::ASCII.GetString($Bytes[0..4]) | Should -Be '%PDF-'
-        [System.Text.Encoding]::Latin1.GetString($Bytes) | Should -Not -Match '0\.707 -0\.707 0\.707 0\.707'
+        [System.Text.Encoding]::Latin1.GetString($Bytes) | Should -Not -Match '0\.707 0\.707 -0\.707 0\.707'
     }
 }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using OfficeIMO;
@@ -139,7 +140,7 @@ namespace CIPP.Reporting
                             // The client's watermarkTextOnDark: the same mark in the divider's text colour and a
                             // little stronger, since an 8% brand-colour mark disappears on a dark page.
                             if (!string.IsNullOrEmpty(watermark))
-                                p.Watermark(watermark.ToUpperInvariant(), fontSize: 72, color: ReportComponents.Pdf(ctx.Theme.OnInfographic), opacity: 0.12, rotationAngle: -45, bold: true);
+                                p.Watermark(watermark.ToUpperInvariant(), fontSize: WatermarkSize, color: ReportComponents.Pdf(ctx.Theme.OnInfographic), opacity: 0.12, rotationAngle: DividerWatermarkAngle, bold: true);
                             p.Content(cc => cc.Item(i => ReportComponents.RenderHeroDrawing(ctx, i, group.Block!)));
                         });
                         continue;
@@ -355,25 +356,33 @@ namespace CIPP.Reporting
             }
             // Named on purpose: OfficeIMO's positional order is (text, fontSize, colour, opacity, angle), so
             // Watermark(text, 0.08, colour) asks for a 0.08pt watermark - drawn, but invisible. The values
-            // mirror the client's watermarkText style: 72pt bold, uppercase, 8% opacity, rotated -45deg.
+            // mirror the client's watermarkText style: 72pt bold, uppercase, 8% opacity.
             if (!string.IsNullOrEmpty(watermark))
-                p.Watermark(watermark.ToUpperInvariant(), fontSize: 72, color: ReportComponents.Pdf(ctx.Theme.Palette["watermark"]), opacity: 0.08, rotationAngle: -45, bold: true);
+                p.Watermark(watermark.ToUpperInvariant(), fontSize: WatermarkSize, color: ReportComponents.Pdf(ctx.Theme.Palette["watermark"]), opacity: 0.08, rotationAngle: WatermarkAngle, bold: true);
         }
+
+        // The client's mark is rotated -45deg in CSS, rising from bottom left to top right; OfficeIMO turns a
+        // positive angle counter-clockwise, so the same mark is +45 here. The divider's is asked for at 45.05
+        // (the same to the eye) only so LiftWatermark can tell it from a content page's - the client sets the
+        // two on different lines - and is written back at exactly 45.
+        private const double WatermarkSize = 72, WatermarkAngle = 45, DividerWatermarkAngle = 45.05;
+        private static readonly byte[] WatermarkRotation = Encoding.ASCII.GetBytes("0.707 0.707 -0.707 0.707");
+        private static readonly byte[] DividerWatermarkRotation = Encoding.ASCII.GetBytes("0.706 0.708 -0.708 0.706");
 
         /// <summary>
         /// OfficeIMO paints a page watermark before anything else on the page, so every card, panel and
         /// image covers it, where the client reports drew it over the content. The PDF it writes is
         /// classic - no object or cross-reference streams - with uncompressed content streams, so the
         /// watermark's operator block (a self-contained q ... Q group, recognised by its text and its
-        /// -45 degree text matrix) is moved to the end of each page's content stream in place: the same
-        /// bytes in a different order, so no length or offset in the file changes. A stream the block
-        /// cannot be found in is left as written.
+        /// 45 degree text matrix) is moved to the end of each page's content stream in place: the same
+        /// bytes in a different order, so no length or offset in the file changes. On the way its text
+        /// matrix is rewritten, space-padded to the same length, to put the mark where the client's is
+        /// (<see cref="PlaceWatermark"/>). A stream the block cannot be found in is left as written.
         /// </summary>
         internal static byte[] LiftWatermark(byte[] pdf, string watermark)
         {
             if (string.IsNullOrEmpty(watermark)) return pdf;
             var marker = Encoding.ASCII.GetBytes("<" + Convert.ToHexString(Encoding.Latin1.GetBytes(watermark.ToUpperInvariant())) + "> Tj");
-            var rotation = Encoding.ASCII.GetBytes("0.707 -0.707 0.707 0.707");
             var streamTag = Encoding.ASCII.GetBytes("stream\n");
             var lengthTag = Encoding.ASCII.GetBytes("/Length ");
             var open = Encoding.ASCII.GetBytes("q\n");
@@ -396,7 +405,11 @@ namespace CIPP.Reporting
                 var closeAt = IndexOf(pdf, close, at, dataEnd);
                 if (blockStart < dataStart || closeAt < 0) { at = dataEnd; continue; }
                 var blockEnd = closeAt + close.Length;
-                if (IndexOf(pdf, rotation, blockStart, blockEnd) < 0) { at = dataEnd; continue; }
+                var rotationAt = IndexOf(pdf, WatermarkRotation, blockStart, blockEnd);
+                var divider = rotationAt < 0;
+                if (divider) rotationAt = IndexOf(pdf, DividerWatermarkRotation, blockStart, blockEnd);
+                if (rotationAt < 0) { at = dataEnd; continue; }
+                PlaceWatermark(pdf, rotationAt, blockEnd, divider);
 
                 var block = pdf[blockStart..blockEnd];
                 var tail = pdf[blockEnd..dataEnd];
@@ -408,6 +421,38 @@ namespace CIPP.Reporting
                 at = dataEnd;
             }
             return pdf;
+        }
+
+        /// <summary>
+        /// Moves the mark whose "a b c d e f Tm" operands start at <paramref name="at"/> to the client's place.
+        /// The client centres the text's line box on the page and seats the baseline 0.9x the size under the
+        /// box top; the box is a content page's inherited 14pt line, or a divider's natural 1.1x line.
+        /// OfficeIMO seats the baseline half the size under the page centre, so the mark moves the
+        /// difference across the text, and 2pt back along it: the client's 4pt letter spacing also trails
+        /// the last letter, which the centring counts. Left as written when the operands will not fit.
+        /// </summary>
+        private static void PlaceWatermark(byte[] pdf, int at, int end, bool divider)
+        {
+            var tm = IndexOf(pdf, Encoding.ASCII.GetBytes(" Tm"), at, end);
+            var operands = tm < 0 ? Array.Empty<string>() : Encoding.ASCII.GetString(pdf, at, tm - at).Split(' ');
+            if (operands.Length != 6
+                || !double.TryParse(operands[4], NumberStyles.Float, CultureInfo.InvariantCulture, out var e)
+                || !double.TryParse(operands[5], NumberStyles.Float, CultureInfo.InvariantCulture, out var f)) return;
+            var across = 0.9 * WatermarkSize - (divider ? 1.1 * WatermarkSize : 14) / 2 - WatermarkSize / 2;
+            const double back = 2;
+            // At 45 degrees the text runs along (k, k) and across it, downwards, is (k, -k) in PDF space.
+            var k = Math.Sqrt(0.5);
+            e += k * (across - back);
+            f -= k * (across + back);
+            foreach (var format in new[] { "0.##", "0" })
+            {
+                var text = Encoding.ASCII.GetBytes(Encoding.ASCII.GetString(WatermarkRotation) + " "
+                    + e.ToString(format, CultureInfo.InvariantCulture) + " " + f.ToString(format, CultureInfo.InvariantCulture));
+                if (text.Length > tm - at) continue;
+                Buffer.BlockCopy(text, 0, pdf, at, text.Length);
+                Array.Fill(pdf, (byte)' ', at + text.Length, tm - at - text.Length);
+                return;
+            }
         }
 
         private static int IndexOf(byte[] hay, byte[] needle, int from, int to)
