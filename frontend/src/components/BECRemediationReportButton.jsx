@@ -439,9 +439,10 @@ export const BECRemediationReportDocument = ({
   // the same flag predicates the case workspace uses, so the report and the page agree.
   const objectiveFlagged = becGroupFlagged(becData, windowDays)
   const objectiveBreakdown = BEC_GROUPS.map((group) => ({
-    label: BEC_OBJECTIVE_LABEL[group.id],
+    // the attacker group is not a timeline objective, so it has no entry in the objective maps
+    label: BEC_OBJECTIVE_LABEL[group.id] || group.title,
     value: objectiveFlagged[group.id] || 0,
-    colour: BEC_OBJECTIVE_COLOR[group.id],
+    colour: BEC_OBJECTIVE_COLOR[group.id] || '#C53030',
   }))
   const objectiveMax = Math.max(
     ...objectiveBreakdown.map((entry) => entry.value),
