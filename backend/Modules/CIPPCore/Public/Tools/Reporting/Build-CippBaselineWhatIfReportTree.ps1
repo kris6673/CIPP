@@ -8,9 +8,12 @@ function Build-CippBaselineWhatIfReportTree {
         rollout waves still to come and the agreed exceptions - plus everything the simulated baselines
         would add. Nothing is changed by producing it. Returns @{ Blocks; Variables }.
 
-        Every helper mirrors the client document's semantics (JS truthiness, `??`, case-sensitive
-        matching, template-literal stringification), so the report reads the same whether the inputs
-        are hashtables (the branding preview sample) or PSCustomObjects (the live endpoint).
+        Every helper mirrors the client document's semantics (JS truthiness, `??`, template-literal
+        stringification), so the report reads the same whether the inputs are hashtables (the branding
+        preview sample) or PSCustomObjects (the live endpoint). Keys match case-sensitively like a JS
+        object's: a PSCustomObject's properties are compared with -ceq, and a hashtable matches with its
+        own comparer - ConvertFrom-Json -AsHashtable's is case-sensitive, an @{} literal's is not, so a
+        caller keying a lookup by data values builds it with an ordinal comparer.
     .PARAMETER Data
         TenantName; tenant (rows[] from Get-CIPPBaselineAlignment); stageStates[]; assignedTemplates[]
         and simulatedTemplates[] (baselines as Get-CIPPBaseline -ResolveIdentityLabels returns them);
@@ -25,19 +28,21 @@ function Build-CippBaselineWhatIfReportTree {
     function isObj($v) { $v -is [System.Collections.IDictionary] -or $v -is [System.Management.Automation.PSCustomObject] }
     function isArr($v) { $v -is [System.Collections.IList] }
     # A property of a hashtable or PSCustomObject, else $null - a string or array never
-    # member-enumerates (JS `x?.key`).
+    # member-enumerates (JS `x?.key`). PSObject.Properties[$k] ignores case, so the name is
+    # compared with -ceq as a JS key would be.
     function pv($o, [string]$k) {
         if ($o -is [System.Collections.IDictionary]) { return , $o[$k] }
         if ($o -is [System.Management.Automation.PSCustomObject]) {
-            $p = $o.PSObject.Properties[$k]
-            if ($p) { return , $p.Value }
+            foreach ($p in $o.PSObject.Properties) { if ($p.Name -ceq $k) { return , $p.Value } }
         }
         $null
     }
     # JS `o[k] !== undefined`: a present null counts as present.
     function has($o, [string]$k) {
         if ($o -is [System.Collections.IDictionary]) { return ([System.Collections.IDictionary]$o).Contains($k) }
-        if ($o -is [System.Management.Automation.PSCustomObject]) { return $null -ne $o.PSObject.Properties[$k] }
+        if ($o -is [System.Management.Automation.PSCustomObject]) {
+            foreach ($p in $o.PSObject.Properties) { if ($p.Name -ceq $k) { return $true } }
+        }
         $false
     }
     function keysOf($o) {

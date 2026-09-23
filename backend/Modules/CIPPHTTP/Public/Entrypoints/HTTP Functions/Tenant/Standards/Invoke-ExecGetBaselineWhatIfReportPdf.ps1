@@ -71,8 +71,9 @@ function Invoke-ExecGetBaselineWhatIfReportPdf {
 
         # Stored CA/Intune templates keyed by template id: standards not checked yet and simulated
         # baselines carry only the template id, so the stored template supplies the policy content.
-        $CaByGuid = @{}
-        $IntuneByGuid = @{}
+        # Ordinal, as the client's lookup objects are: an @{} literal would match an id of another case.
+        $CaByGuid = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::Ordinal)
+        $IntuneByGuid = [System.Collections.Generic.Dictionary[string, object]]::new([System.StringComparer]::Ordinal)
         if (@($Rows | Where-Object { $_.status -eq 'No Data' }).Count -gt 0 -or $SimulatedTemplates.Count -gt 0) {
             $TemplatesTable = Get-CippTable -tablename 'templates'
             foreach ($Template in @(Get-CIPPAzDataTableEntity @TemplatesTable -Filter "PartitionKey eq 'CATemplate'")) {

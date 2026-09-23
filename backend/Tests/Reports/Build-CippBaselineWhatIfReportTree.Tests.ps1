@@ -194,6 +194,24 @@ Describe 'Build-CippBaselineWhatIfReportTree' {
         (ConvertTo-Json -InputObject $FromObject -Depth 20 -Compress) | Should -Be (ConvertTo-Json -InputObject $FromHashtable -Depth 20 -Compress)
     }
 
+    It 'matches keys case-sensitively like the client, for PSCustomObject and hashtable input alike' {
+        # The live value names its key in another case than the baseline does, so nothing projects onto
+        # the baseline's keys and the whole value is shown - under its own name, not the variable's label.
+        $Sample = $script:Sparse.Clone()
+        $Sample.tenant = @{ rows = @($script:Sparse.tenant.rows) + @(
+                @{ standardName = 'SomeExo'; standardLabel = 'Some EXO setting'; status = 'Drift'; templateId = 'tpl-min'; expectedValue = @{ enabled = $true }; currentValue = [ordered]@{ Enabled = $false; Other = 1 } }
+            )
+        }
+        $Sample.catalog = @($script:Sparse.catalog) + @(@{ name = 'SomeExo'; label = 'Some EXO setting'; expected = @{ enabled = '%Enabled%' }; variables = @{ Enabled = @{ label = 'Turn it on' } } })
+        $Json = ConvertTo-Json -InputObject $Sample -Depth 30
+        foreach ($Parsed in @(($Json | ConvertFrom-Json -AsHashtable), ($Json | ConvertFrom-Json))) {
+            $Row = (Get-After (Build-CippBaselineWhatIfReportTree -Data (ConvertTo-ReportData $Parsed)) 'Settings We Will Change' 'richtable').rows |
+                Where-Object setting -EQ 'Some EXO setting'
+            $Row.today | Should -Be "Enabled: Off`nOther: 1"
+            $Row.change | Should -Be 'Turn it on: On'
+        }
+    }
+
     It 'drops the already-in-place page and the rollout section when toggled off, keeping the exceptions' {
         $r = Build-Sample @{ sectionConfig = @{ alreadyAligned = $false; rolloutStages = $false } }
         Get-PageTitle $r | Should -Be @('Executive Summary', 'Policies We Will Deploy', 'Settings We Will Change', 'Rollout Plan')
