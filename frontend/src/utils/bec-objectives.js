@@ -306,6 +306,21 @@ export const BEC_GROUPS = [
             ],
           },
         ],
+        // No API removes or disables one form, so the remedy is guidance, shown when a form was flagged.
+        remediation: {
+          text: 'No API can remove a single form. If Microsoft flagged it as phishing, open its alert in Microsoft Defender (Incidents & alerts > Alerts), choose Review this form, then Confirm phishing and Delete form. Otherwise, after the password reset, sign in to Microsoft Forms as the account and delete the form (or turn off Accept responses), and warn anyone who responded.',
+          links: [
+            {
+              label: 'Defender alerts',
+              href: (tenantFilter) =>
+                `https://security.microsoft.com/alerts?tid=${tenantFilter}`,
+            },
+            {
+              label: 'Microsoft Forms',
+              href: () => 'https://forms.office.com',
+            },
+          ],
+        },
         empty: 'No Microsoft Forms activity by this account.',
       },
       {

@@ -254,4 +254,14 @@ describe('bec-objectives attacker group', () => {
     expect(becFindingFlags({ BlastRadius: [] }).BlastRadius).toBeNull()
     expect(BEC_SIGNAL_GROUP.OtherAccountsReached).toBe('blast')
   })
+
+  it('guides the Forms remediation to the Defender alerts of the tenant, since no API removes one form', () => {
+    const forms = BEC_GROUPS.flatMap((g) => g.findings).find(
+      (f) => f.key === 'FormsActivity'
+    )
+    expect(forms.remediation.text).toMatch(/Confirm phishing/)
+    expect(forms.remediation.links[0].href('contoso.com')).toBe(
+      'https://security.microsoft.com/alerts?tid=contoso.com'
+    )
+  })
 })

@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useState } from 'react'
 import { Box, Stack } from '@mui/system'
-import { Alert, Button, Chip, Typography } from '@mui/material'
+import { Alert, Button, Chip, Link, Typography } from '@mui/material'
 import CippButtonCard from '../CippCards/CippButtonCard'
 import { CippDataTable } from '../CippTable/CippDataTable'
 import { PropertyList } from '../property-list'
@@ -360,6 +360,23 @@ export const CippBecObjectiveGroups = ({
           >
             {finding.note}
           </Typography>
+        )}
+        {fl && finding.remediation && (
+          <Alert severity="warning" sx={{ mt: 1 }}>
+            {finding.remediation.text}
+            {finding.remediation.links?.map((link) => (
+              <Fragment key={link.label}>
+                {' '}
+                <Link
+                  href={link.href(tenantFilter)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {link.label}
+                </Link>
+              </Fragment>
+            ))}
+          </Alert>
         )}
         {cov.state === 'skipped' &&
           (cov.allBlocked ? (

@@ -504,7 +504,7 @@ export const BECRemediationReportDocument = ({
     },
     attackerFormIds.length > 0 && {
       tag: 'High',
-      text: `Remove the ${attackerFormIds.length} Microsoft Form(s) built from the attacker's addresses${attackerFormNames.length ? ` (${listNames(attackerFormNames)})` : ''} and warn anyone who responded.`,
+      text: `Remove the ${attackerFormIds.length} Microsoft Form(s) built from the attacker's addresses${attackerFormNames.length ? ` (${listNames(attackerFormNames)})` : ''} and warn anyone who responded: confirm phishing and delete each one from its Microsoft Defender alert, or, after the password reset, delete it in Microsoft Forms as the account.`,
     },
     delegatedReached.length > 0 && {
       tag: 'High',
