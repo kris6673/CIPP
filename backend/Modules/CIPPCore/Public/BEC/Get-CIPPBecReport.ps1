@@ -47,7 +47,8 @@ function Get-CIPPBecReport {
     foreach ($Row in $Rows) {
         foreach ($JsonProp in @('Containment')) {
             if ($Row.PSObject.Properties[$JsonProp] -and $Row.$JsonProp -is [string] -and $Row.$JsonProp) {
-                try { $Row.$JsonProp = $Row.$JsonProp | ConvertFrom-Json -ErrorAction Stop } catch { Write-Verbose "BEC run $($Row.RowKey): $JsonProp is not valid JSON, leaving it as text" }
+                # @() because ConvertFrom-Json unrolls a JSON array: a one-entry history would come back as a bare object
+                try { $Row.$JsonProp = @($Row.$JsonProp | ConvertFrom-Json -ErrorAction Stop) } catch { Write-Verbose "BEC run $($Row.RowKey): $JsonProp is not valid JSON, leaving it as text" }
             }
         }
         $Row | Add-Member -NotePropertyName 'CaseId' -NotePropertyValue $Row.RowKey -Force

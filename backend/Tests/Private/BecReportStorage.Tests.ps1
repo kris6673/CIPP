@@ -72,6 +72,9 @@ Describe 'Get-CIPPBecReport' {
         $Rows[0].CaseId | Should -Be 'BEC-20260805000000-bbbbbb'
         $Rows[1].Tenant | Should -Be 'contoso.com'
         $Rows[1].Containment[0].Actions | Should -Be @('ResetPassword')
+        # ConvertFrom-Json unrolls a JSON array; a one-entry history must still be a list for the case page
+        $Rows[1].Containment -is [array] | Should -BeTrue
+        @($Rows[1].Containment).Count | Should -Be 1
     }
 
     It 'narrows to one user and scans every tenant for AllTenants' {
