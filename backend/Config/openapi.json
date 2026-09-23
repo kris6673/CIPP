@@ -23422,7 +23422,7 @@
         "tags": [
           "Tenant > Standards"
         ],
-        "description": "Server-renders the Baseline What-If report as application/pdf bytes: what applying the\nconfigured standards would change for a tenant today, what each planned stage will change,\noptionally what assigning one more baseline would roll out, and the agreed exceptions. Reads\nthe same alignment payload the Baselines page shows (Get-CIPPBaselineAlignment), composes it\nthrough the shared CIPPSharp component kit (Build-CippBaselineWhatIfReportTree) and returns\nthe finished PDF. Nothing is changed by producing it.",
+        "description": "Server-renders the Security Baseline report for a tenant as application/pdf bytes: where the\nassigned baselines stand today, what is already in place, the Conditional Access and Intune\npolicies and the settings the baseline will change (what each does, its value today, the value\nit will be set to and why), the rollout waves still to come and the agreed exceptions - plus,\noptionally, everything one or more simulated (not yet assigned) baselines would add. Reads the\nsame alignment, baseline and catalog data the Baselines page shows, composes it through the\nshared CIPPSharp component kit (Build-CippBaselineWhatIfReportTree) and returns the finished\nPDF. Nothing is changed by producing it.",
         "requestBody": {
           "required": true,
           "content": {
@@ -23430,12 +23430,33 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "simulatedTemplateId": {
+                  "brandingPresetId": {
                     "type": "string",
-                    "description": "Optional: the GUID of a baseline not assigned to the tenant, to preview what assigning it would roll out stage by stage."
+                    "description": "Optional. The branding preset to render with; an unknown id falls back to the default branding."
+                  },
+                  "sectionConfig": {
+                    "type": "object",
+                    "properties": {
+                      "alreadyAligned": {
+                        "type": "string",
+                        "description": "Optional. Show the \"What Is Already In Place\" page (deployed policies and enforced settings, with their values). A boolean; defaults to true."
+                      },
+                      "rolloutStages": {
+                        "type": "string",
+                        "description": "Optional. Show the \"How The Rollout Works\" section (the remaining waves and when they arrive). A boolean; defaults to true."
+                      }
+                    },
+                    "description": "Optional. Show the \"What Is Already In Place\" page (deployed policies and enforced settings, with their values). A boolean; defaults to true."
+                  },
+                  "simulatedTemplateIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
                   },
                   "tenantFilter": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Required. The tenant (default domain) to report on."
                   }
                 },
                 "required": [
@@ -23447,9 +23468,9 @@
         },
         "parameters": [
           {
-            "name": "simulatedTemplateId",
+            "name": "brandingPresetId",
             "in": "query",
-            "description": "Optional: the GUID of a baseline not assigned to the tenant, to preview what assigning it would roll out stage by stage.",
+            "description": "Optional. The branding preset to render with; an unknown id falls back to the default branding.",
             "required": false,
             "schema": {
               "type": "string"
@@ -23466,7 +23487,48 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                  "description": "Derived from the fields written into the storage table it reads. Fields taken from the storage writers may be omitted by this endpoint, and the response may carry computed fields not listed here.",
+                  "properties": {
+                    "ETag": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "GUID": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "JSON": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Package": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "PartitionKey": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Permissions": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "RowKey": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "SHA": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Source": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "TemplateName": {
+                      "x-cipp-field-source": "storage"
+                    },
+                    "Timestamp": {
+                      "type": "string",
+                      "x-cipp-field-source": "storage"
+                    },
+                    "UpdatedBy": {
+                      "x-cipp-field-source": "storage"
+                    }
+                  }
                 }
               }
             }
@@ -23722,6 +23784,190 @@
           }
         ],
         "x-cipp-role": "Tenant.Standards.Read"
+      }
+    },
+    "/api/ExecGetLicenseReportPdf": {
+      "post": {
+        "summary": "ExecGetLicenseReportPdf",
+        "operationId": "ExecGetLicenseReportPdf",
+        "tags": [
+          "Tenant > Reports"
+        ],
+        "description": "Server-renders the License Optimisation report as application/pdf bytes. Runs the same license\nrecommendation analysis the License Optimization page reads through ListLicenseRecommendations\n(Get-CIPPLicenseRecommendation, with the page's currency, thresholds and recommendation switches)\nand composes it through the shared CIPPSharp kit (Build-CippLicenseReportTree) - the server-side\nreplacement for the client react-pdf LicenseReportButton.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "brandingPresetId": {
+                    "type": "string",
+                    "description": "The branding preset to render against (the Licensing Report default from the branding settings), else the global branding."
+                  },
+                  "currency": {
+                    "type": "string",
+                    "description": "Currency the money figures are resolved in: a three-letter ISO code such as USD or EUR. Defaults to USD."
+                  },
+                  "inactiveDays": {
+                    "type": "string",
+                    "description": "Days without a sign-in after which a licensed person counts as inactive (1-365). Defaults to 90."
+                  },
+                  "protectSecurityFeatures": {
+                    "type": "string"
+                  },
+                  "recommendDowngrades": {
+                    "type": "string"
+                  },
+                  "recommendTerms": {
+                    "type": "string"
+                  },
+                  "recommendUpgrades": {
+                    "type": "string"
+                  },
+                  "sections": {
+                    "type": "object",
+                    "properties": {
+                      "downgrades": {
+                        "type": "boolean"
+                      },
+                      "method": {
+                        "type": "boolean"
+                      },
+                      "reclaim": {
+                        "type": "boolean"
+                      },
+                      "spend": {
+                        "type": "boolean"
+                      },
+                      "terms": {
+                        "type": "boolean"
+                      },
+                      "upgrades": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  "tenantFilter": {
+                    "type": "string",
+                    "description": "The tenant to report on. A single tenant; AllTenants is not supported."
+                  },
+                  "tenureMonths": {
+                    "type": "string",
+                    "description": "Months a seat must have been held by the same person to count as stable for a yearly commitment (1-36). Defaults to 6."
+                  }
+                },
+                "required": [
+                  "tenantFilter"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "brandingPresetId",
+            "in": "query",
+            "description": "The branding preset to render against (the Licensing Report default from the branding settings), else the global branding.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "currency",
+            "in": "query",
+            "description": "Currency the money figures are resolved in: a three-letter ISO code such as USD or EUR. Defaults to USD.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "inactiveDays",
+            "in": "query",
+            "description": "Days without a sign-in after which a licensed person counts as inactive (1-365). Defaults to 90.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "protectSecurityFeatures",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recommendDowngrades",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recommendTerms",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recommendUpgrades",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/tenantFilter"
+          },
+          {
+            "name": "tenureMonths",
+            "in": "query",
+            "description": "Months a seat must have been held by the same person to count as stable for a yearly commitment (1-36). Defaults to 6.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Not described statically: this endpoint returns the upstream response as-is, so its fields are determined by the upstream API rather than by CIPP. Call the endpoint to see the actual shape, or add a response schema in backend/Config/openapi-overrides."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing bearer token"
+          },
+          "403": {
+            "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-cipp-role": "Tenant.Directory.Read"
       }
     },
     "/api/ExecGetLocalAdminPassword": {
@@ -24009,7 +24255,7 @@
         "tags": [
           "Tools > Report-Builder"
         ],
-        "description": "Returns the server-rendered PDF for a generated Report Builder report as application/pdf bytes.\nBacks both the in-app preview (shown in an iframe) and the download button on the view page.\n404 when the report has no rendered PDF (generated before server-side rendering, or its render\nfailed).",
+        "description": "Returns the server-rendered PDF for a generated Report Builder report as application/pdf bytes.\nBacks both the in-app preview (shown in an iframe) and the download button on the view page.\n404 when the report has no rendered PDF (generated before server-side rendering, or its render\nfailed), and also when the report belongs to a tenant the caller cannot access.",
         "parameters": [
           {
             "name": "id",
@@ -24063,7 +24309,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "CIPP.Core.Read",
+        "x-cipp-role": "CIPP.ReportBuilder.Read",
         "x-cipp-any-tenant": true
       }
     },
@@ -30652,7 +30898,7 @@
                   },
                   "reportType": {
                     "type": "string",
-                    "description": "Which report to preview: executive, reportBuilder, shadowAI, bec, becSummary, sharing, permissions or mailFlow."
+                    "description": "Which report to preview: executive, reportBuilder, shadowAI, bec, becSummary, sharing, permissions, mailFlow, licensing or baseline."
                   },
                   "tenantFilter": {
                     "type": "string",
@@ -30767,7 +31013,7 @@
             "bearerAuth": []
           }
         ],
-        "x-cipp-role": "CIPP.Core.ReadWrite"
+        "x-cipp-role": "CIPP.ReportBuilder.ReadWrite"
       }
     },
     "/api/ExecQuarantineManagement": {
