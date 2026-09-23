@@ -37,7 +37,7 @@ BeforeAll {
     # The IP analysis has its own suite; here it only has to be wired in and its verdicts stamped.
     function Get-CIPPBecAttackerActivity { param($TenantFilter, $UserPrincipalName, $StartDate, $EndDate, $Heuristics, $Verdicts, $SignIns, $NonInteractiveSignIns, $MailRecords, $SharingChanges, $KnownSubjects, $Anchor) }
     function Get-CIPPBecDelegatedAccess { param($TenantFilter, $UserPrincipalName, $UserDisplayName, $PermissionChanges, $MailActivity, $AttackerMail) }
-    function Invoke-CIPPBecIPAnalysis { param($TenantFilter, $UserId, $UserPrincipalName, $Results, $Heuristics, $WindowStart, $UsageLocation, $Anchor, $Baseline, $KnownPeers, $Overrides, $ExtraPeers, [switch]$SampleColleagues) }
+    function Invoke-CIPPBecIPAnalysis { param($TenantFilter, $UserId, $UserPrincipalName, $Results, $Heuristics, $WindowStart, $UsageLocation, $Anchor, $Baseline, $KnownPeers, $Overrides, $ExtraPeers, $TechnicianIPs, [switch]$SampleColleagues) }
 
     # Real pieces under test alongside the run
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/ConvertTo-CIPPBecHostAddress.ps1')
@@ -124,6 +124,7 @@ Describe 'Push-BECRun' {
         Mock Get-CIPPBecNonInteractiveSignIns { Empty }
         Mock Invoke-CIPPBecIPAnalysis {
             $script:IPAnalysisInput = $Results
+            $script:IPAnalysisTechnicians = $TechnicianIPs
             [pscustomobject]@{
                 Baseline    = New-CIPPBecCollectorResult -Data ([pscustomobject]@{ Successful = 12 }) -Count 12
                 Guidance    = New-CIPPBecCollectorResult -Data @()
@@ -150,7 +151,7 @@ Describe 'Push-BECRun' {
     }
 
     It 'runs every collector (a legacy Scope on the queue item is ignored), flattens their data and scores the signals' {
-        Push-BECRun -Item ($script:Item + @{ Scope = 'Quick' })
+        Push-BECRun -Item ($script:Item + @{ Scope = 'Quick'; RequestedFromIP = '192.0.2.77'; RequestedBy = 'tech@msp.com' })
         foreach ($Collector in 'Get-CIPPBecMailboxInventory', 'Get-CIPPBecUserGrants', 'Get-CIPPBecTransportRules', 'Get-CIPPBecReceivedMailFindings', 'Get-CIPPBecDirectoryAudits', 'Get-CIPPBecRegisteredDevices', 'Get-CIPPBecNonInteractiveSignIns', 'Get-CIPPBecMailActivity', 'Get-CIPPBecRiskState') {
             Should -Invoke $Collector -Times 1 -Because "$Collector runs on Full scope"
         }
@@ -185,6 +186,8 @@ Describe 'Push-BECRun' {
         $script:IPAnalysisInput.SuspectUserSignIns[0].IPAddress | Should -Be '203.0.113.10'
         $R.IPVerdicts[0].Verdict | Should -Be 'LikelyAttacker'
         $R.IPBaseline.Successful | Should -Be 12
+        $script:IPAnalysisTechnicians[0].IP | Should -Be '192.0.2.77' -Because 'the technician who started the run is never the user or the attacker'
+        $R.IPTechnicians[0].By | Should -Be 'tech@msp.com'
         $R.InboxRuleChanges[0].IPVerdict | Should -Be 'LikelyAttacker'
         $R.SuspectUserSignIns[0].IPVerdict | Should -Be 'LikelyAttacker'
         $R.Completeness.SignInBaseline.Complete | Should -BeTrue

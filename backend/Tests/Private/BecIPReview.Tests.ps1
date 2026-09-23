@@ -9,7 +9,7 @@ BeforeAll {
     function Get-CIPPBecReport { param($TenantFilter, $CaseId, [switch]$IncludeResults) }
     function Set-CIPPBecReport { param($TenantFilter, $CaseId, $Properties, $Results) }
     function Get-CIPPBecMailActivity { param($TenantFilter, $UserPrincipalName, $StartDate, $EndDate, $Heuristics, $Anchor) }
-    function Invoke-CIPPBecIPAnalysis { param($TenantFilter, $UserId, $UserPrincipalName, $Results, $Heuristics, $WindowStart, $UsageLocation, $Anchor, $Baseline, $KnownPeers, $Overrides, $ExtraPeers) }
+    function Invoke-CIPPBecIPAnalysis { param($TenantFilter, $UserId, $UserPrincipalName, $Results, $Heuristics, $WindowStart, $UsageLocation, $Anchor, $Baseline, $KnownPeers, $Overrides, $ExtraPeers, $TechnicianIPs) }
     function Get-CIPPBecAttackerActivity { param($TenantFilter, $UserPrincipalName, $StartDate, $EndDate, $Heuristics, $Verdicts, $SignIns, $NonInteractiveSignIns, $MailRecords, $SharingChanges, $KnownSubjects, $Anchor) }
     function Get-CIPPBecDelegatedAccess { param($TenantFilter, $UserPrincipalName, $UserDisplayName, $PermissionChanges, $MailActivity, $AttackerMail) }
     function Start-CIPPBecIPReviewJob { param($TenantFilter, $CaseId, $Overrides, $CorrelateUserIds, $UserPrincipalName, $Headers) }
@@ -72,7 +72,7 @@ Describe 'Invoke-CIPPBecIPReview' {
         Mock Set-CIPPBecReport { $script:Saved = @{ Results = $Results; Properties = $Properties } }
         Mock Get-CIPPBecMailActivity { $R = New-CIPPBecCollectorResult -Data @([pscustomobject]@{ Operation = 'MailItemsAccessed'; ClientIP = '198.51.100.7'; Count = 4 }); $R | Add-Member -NotePropertyName Summary -NotePropertyValue ([pscustomobject]@{ Records = 4 }) -Force; $R | Add-Member -NotePropertyName Records -NotePropertyValue @([pscustomobject]@{ AuditData = [pscustomobject]@{ Operation = 'MailItemsAccessed' } }) -Force; $R }
         Mock Invoke-CIPPBecIPAnalysis {
-            $script:AnalysisArgs = @{ Overrides = $Overrides; Baseline = $Baseline; KnownPeers = $KnownPeers; ExtraPeers = $ExtraPeers; WindowStart = $WindowStart }
+            $script:AnalysisArgs = @{ Overrides = $Overrides; Baseline = $Baseline; KnownPeers = $KnownPeers; ExtraPeers = $ExtraPeers; WindowStart = $WindowStart; TechnicianIPs = $TechnicianIPs }
             [pscustomobject]@{
                 Baseline = New-CIPPBecCollectorResult -Data $Baseline; Guidance = New-CIPPBecCollectorResult -Data @(); PeersResult = New-CIPPBecCollectorResult -Data @()
                 Peers = @{}; Geo = @{}; Events = @()
@@ -96,7 +96,7 @@ Describe 'Invoke-CIPPBecIPReview' {
     }
 
     It 're-judges with the overrides, the stored baseline and peers, and replaces only the address-dependent sections' {
-        $Headers = @{ 'x-ms-client-principal' = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('{"userDetails":"tech@msp.com"}')) }
+        $Headers = @{ 'x-ms-client-principal' = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('{"userDetails":"tech@msp.com"}')); 'x-forwarded-for' = '192.0.2.77:51000, 10.0.0.1' }
         $Message = Invoke-CIPPBecIPReview -TenantFilter 'contoso.com' -CaseId 'BEC-1' -Overrides @([pscustomobject]@{ IP = '198.51.100.0/24'; Verdict = 'Compromised'; Note = 'AiTM proxy' }, [pscustomobject]@{ IP = '203.0.113.10'; Verdict = 'Auto' }) -DeploymentId 'job-1' -Headers $Headers
         $Message | Should -Match 'threat level'
         @($script:AnalysisArgs.Overrides).Count | Should -Be 1 -Because 'Auto means no override'
@@ -111,6 +111,10 @@ Describe 'Invoke-CIPPBecIPReview' {
         $R.SuspectUserSignIns[0].IPVerdict | Should -Be 'Compromised'
         $R.IPReviewHistory.Count | Should -Be 2
         $R.IPReviewHistory[-1].By | Should -Be 'tech@msp.com'
+        # the reviewer's address (first x-forwarded-for hop, port stripped) joins the case's technicians
+        $script:AnalysisArgs.TechnicianIPs[0].IP | Should -Be '192.0.2.77'
+        $script:AnalysisArgs.TechnicianIPs[0].By | Should -Be 'tech@msp.com'
+        $R.IPTechnicians[0].IP | Should -Be '192.0.2.77'
         $R.Completeness.SignIns.Complete | Should -BeTrue -Because 'sections the review does not touch keep their markers'
         $R.Completeness.AttackerMailActivity.Complete | Should -BeTrue
         $script:Saved.Properties.Level | Should -Not -BeNullOrEmpty

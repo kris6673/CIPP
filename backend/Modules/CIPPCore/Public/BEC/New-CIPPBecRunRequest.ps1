@@ -20,6 +20,9 @@ function New-CIPPBecRunRequest {
         Who asked for the run.
     .PARAMETER QueueId
         Optional CIPP queue entry id (bulk runs).
+    .PARAMETER RequestedFromIP
+        The requesting technician's address (first x-forwarded-for hop). The run treats it as the
+        technician's, never the user's or the attacker's.
     .FUNCTIONALITY
         Internal
     #>
@@ -30,7 +33,8 @@ function New-CIPPBecRunRequest {
         [string]$UserPrincipalName,
         [string]$DisplayName,
         [string]$RequestedBy = 'CIPP',
-        [string]$QueueId
+        [string]$QueueId,
+        [string]$RequestedFromIP
     )
 
     # The UPN drives every mailbox-scoped collector and the audit-record attribution in the run; a blank
@@ -59,6 +63,7 @@ function New-CIPPBecRunRequest {
         }
         if ($DisplayName) { $Properties.DisplayName = $DisplayName }
         if ($QueueId) { $Properties.QueueId = $QueueId }
+        if ($RequestedFromIP) { $Properties.RequestedFromIP = $RequestedFromIP }
         $null = Set-CIPPBecReport -TenantFilter $TenantFilter -CaseId $CaseId -Replace -Properties $Properties
         # The progress job: every step pending, row status queued, until Push-BECRun takes over.
         $null = New-CIPPAsyncDeployment -JobId $CaseId -Names @($Name) -StepTitles @((Get-CIPPBecRunSteps).Title) -Source 'BEC' -TenantFilter $TenantFilter
@@ -71,6 +76,7 @@ function New-CIPPBecRunRequest {
         userName     = [string]$UserPrincipalName
         CaseId       = $CaseId
     }
+    if ($RequestedFromIP) { $Item.RequestedFromIP = $RequestedFromIP; $Item.RequestedBy = $RequestedBy }
     if ($QueueId) {
         $Item.QueueId = $QueueId
         $Item.QueueName = "BEC investigation $Name"

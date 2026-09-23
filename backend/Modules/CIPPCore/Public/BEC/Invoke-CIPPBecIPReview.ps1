@@ -67,6 +67,14 @@ function Invoke-CIPPBecIPReview {
         $StartDate = $EndDate.AddDays(-$WindowDays)
         $BaselineStart = $StartDate.AddDays(-[int]($Heuristics.baseline.days ?? 30))
         $UsageLocation = [string]$Results.LocationAnalysis.UsageLocation
+        # the technicians who ran or reviewed the case: the reviewer's own address (first x-forwarded-for
+        # hop of the stored request headers) joins the ones already on the case
+        $ReviewerIP = ConvertTo-CIPPBecHostAddress -Address ([string](([string]$Headers.'x-forwarded-for' -split ',')[0])).Trim()
+        $ReviewerName = if ($Headers -and $Headers.'x-ms-client-principal') { try { ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails } catch { $null } } else { $null }
+        $TechnicianIPs = @(
+            @($Results.IPTechnicians | Where-Object { $_ -and $_.IP })
+            if ($ReviewerIP -and $ReviewerIP -notin @($Results.IPTechnicians.IP)) { [pscustomobject]@{ IP = $ReviewerIP; By = [string]$ReviewerName } }
+        )
         $CaseOverrides = @(foreach ($Override in @($Overrides | Where-Object { $_ })) {
                 $Verdict = [string]($Override.Verdict.value ?? $Override.Verdict)
                 if ($Verdict -notin @('Safe', 'Compromised')) { continue }
@@ -113,7 +121,7 @@ function Invoke-CIPPBecIPReview {
 
         $Current = 3
         & $Step 3 'running' 'In progress'
-        $Analysis = Invoke-CIPPBecIPAnalysis -TenantFilter $TenantFilter -UserId $UserId -UserPrincipalName $UserName -Results $Results -Heuristics $Heuristics -WindowStart $StartDate -UsageLocation $UsageLocation -Anchor $UserName -Baseline $Results.IPBaseline -KnownPeers @($Results.IPPeers) -Overrides $CaseOverrides -ExtraPeers $ExtraPeers
+        $Analysis = Invoke-CIPPBecIPAnalysis -TenantFilter $TenantFilter -UserId $UserId -UserPrincipalName $UserName -Results $Results -Heuristics $Heuristics -WindowStart $StartDate -UsageLocation $UsageLocation -Anchor $UserName -Baseline $Results.IPBaseline -KnownPeers @($Results.IPPeers) -Overrides $CaseOverrides -ExtraPeers $ExtraPeers -TechnicianIPs $TechnicianIPs
         & $Mark 'SignInBaseline' $Analysis.Baseline
         & $Mark 'IPGuidance' $Analysis.Guidance
         & $Mark 'IPPeers' $Analysis.PeersResult
@@ -123,6 +131,7 @@ function Invoke-CIPPBecIPReview {
         & $Set 'IPGuidance' @($Analysis.Guidance.Data)
         & $Set 'IPPeers' @($Analysis.Peers.Values)
         & $Set 'IPOverrides' @($CaseOverrides)
+        & $Set 'IPTechnicians' @($TechnicianIPs)
         Set-CIPPBecIPVerdictStamp -Results $Results -Verdicts $Verdicts
         $Attackers = @($Verdicts | Where-Object { $_.Verdict -in @('Compromised', 'LikelyAttacker') }).Count
         & $Step 3 'succeeded' "$($Verdicts.Count) address(es): $Attackers attacker, $(@($Verdicts | Where-Object { $_.Verdict -in @('Suspicious', 'Unknown') }).Count) suspicious or unknown"

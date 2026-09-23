@@ -102,7 +102,9 @@ function Invoke-ExecBECCheck {
         } elseif ($Start) {
             if (-not $UserId) { throw 'userid is required' }
             $RequestedBy = try { ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails } catch { 'CIPP' }
-            $Prepared = New-CIPPBecRunRequest -TenantFilter $TenantFilter -UserId $UserId -UserPrincipalName $UserName -RequestedBy ([string]$RequestedBy)
+            # the technician's own address (first x-forwarded-for hop) is never the user's or the attacker's
+            $RequestedFromIP = ConvertTo-CIPPBecHostAddress -Address ([string](([string]$Headers.'x-forwarded-for' -split ',')[0])).Trim()
+            $Prepared = New-CIPPBecRunRequest -TenantFilter $TenantFilter -UserId $UserId -UserPrincipalName $UserName -RequestedBy ([string]$RequestedBy) -RequestedFromIP ([string]$RequestedFromIP)
             $InputObject = [PSCustomObject]@{
                 OrchestratorName = 'BECRunOrchestrator'
                 Batch            = @($Prepared.Item)

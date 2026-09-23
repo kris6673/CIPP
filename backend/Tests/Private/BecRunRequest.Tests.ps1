@@ -7,6 +7,17 @@ BeforeAll {
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/BEC/New-CIPPBecRunRequest.ps1')
 }
 
+Describe 'New-CIPPBecRunRequest requester address' {
+    It 'records the address of the requesting technician on the case and the run item' {
+        Mock Set-CIPPBecReport { $script:RequestProperties = $Properties }
+        Mock New-CIPPAsyncDeployment { $JobId }
+        $Prepared = New-CIPPBecRunRequest -TenantFilter 'contoso.com' -UserId 'u1' -UserPrincipalName 'victim@contoso.com' -RequestedBy 'tech@msp.com' -RequestedFromIP '192.0.2.77'
+        $Prepared.Item.RequestedFromIP | Should -Be '192.0.2.77'
+        $Prepared.Item.RequestedBy | Should -Be 'tech@msp.com'
+        $script:RequestProperties.RequestedFromIP | Should -Be '192.0.2.77'
+    }
+}
+
 Describe 'Get-CIPPBecRunSteps' {
     It 'defines the twelve phases of the investigation in order, with the score last' {
         $Steps = @(Get-CIPPBecRunSteps)

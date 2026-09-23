@@ -39,6 +39,8 @@ function Invoke-CIPPBecIPAnalysis {
         This case's investigator overrides.
     .PARAMETER ExtraPeers
         Hashtable of peer evidence gathered for users the investigator chose to correlate, merged in.
+    .PARAMETER TechnicianIPs
+        The addresses of the technicians who ran or reviewed the case ({ IP, By }).
     .PARAMETER SampleColleagues
         Correlate a random sample of recently active colleagues (the first run; a review re-uses the
         peers stored on the case, which already include them).
@@ -59,6 +61,7 @@ function Invoke-CIPPBecIPAnalysis {
         [object[]]$KnownPeers = @(),
         [object[]]$Overrides = @(),
         [hashtable]$ExtraPeers = @{},
+        [object[]]$TechnicianIPs = @(),
         [switch]$SampleColleagues
     )
 
@@ -98,6 +101,7 @@ function Invoke-CIPPBecIPAnalysis {
         Geo                   = $Geo
         UsageLocation         = $UsageLocation
         Heuristics            = $Heuristics
+        TechnicianIPs         = @($TechnicianIPs)
     }
     $Preliminary = @(Get-CIPPBecIPVerdicts @VerdictParams -Peers $ExtraPeers)
 

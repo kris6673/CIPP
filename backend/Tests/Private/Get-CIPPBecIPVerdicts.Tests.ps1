@@ -127,6 +127,16 @@ Describe 'Get-CIPPBecIPVerdicts' {
         (Get-Row (Get-CIPPBecIPVerdicts -NonInteractiveSignIns $Gdap -Baseline $script:Baseline -Geo $script:Geo -UsageLocation 'AU' -Heuristics $script:Heuristics -CippAppId 'cipp-app') '135.119.241.153').Verdict | Should -Be 'Service'
     }
 
+    It 'classes the address of the technician who ran the case as a service, after explicit decisions' {
+        $Tech = @([pscustomobject]@{ IP = '192.0.2.77'; By = 'tech@msp.com' })
+        $SignIns = @(New-SignIn -IP '192.0.2.77:50000' -Country 'NG')
+        $Row = Get-Row (Get-CIPPBecIPVerdicts -SignIns $SignIns -Baseline $script:Baseline -Geo $script:Geo -UsageLocation 'AU' -Heuristics $script:Heuristics -TechnicianIPs $Tech) '192.0.2.77'
+        $Row.Verdict | Should -Be 'Service'
+        $Row.Source | Should -Match "technician's own address \(tech@msp.com\)"
+        $Overridden = Get-CIPPBecIPVerdicts -SignIns $SignIns -Baseline $script:Baseline -Geo $script:Geo -UsageLocation 'AU' -Heuristics $script:Heuristics -TechnicianIPs $Tech -Overrides @([pscustomobject]@{ Range = '192.0.2.77'; Verdict = 'Compromised' })
+        (Get-Row $Overridden '192.0.2.77').Verdict | Should -Be 'Compromised' -Because 'an investigator decision still wins'
+    }
+
     It 'classes an address seen only on CIPP or partner actions as a service' {
         $Row = Get-Row (Get-Verdicts -Events @([pscustomobject]@{ IP = '20.1.2.3'; Kind = 'Mailbox permission change'; Flagged = $true; ActorKind = 'CIPP' })) '20.1.2.3'
         $Row.Verdict | Should -Be 'Service'

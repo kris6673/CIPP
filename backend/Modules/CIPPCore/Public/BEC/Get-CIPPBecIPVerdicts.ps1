@@ -10,7 +10,8 @@ function Get-CIPPBecIPVerdicts {
         - Service: a Microsoft network address the user never signed in from (Exchange and other
           services act from their own addresses), one whose sign-ins are all by a service
           application (CIPP's own, or Microsoft's Partner Customer Delegated Administration - see
-          ipVerdict.serviceAppIds), or one seen only on CIPP or partner actions. An
+          ipVerdict.serviceAppIds), one seen only on CIPP or partner actions, or the address of a
+          technician who ran or reviewed the investigation (from the request headers). An
           address the user signed in from is scored normally even on Microsoft's network - attackers
           rent Azure machines.
         - LikelyAttacker / Suspicious / Unknown / LikelyUser: the heuristic score against the
@@ -44,6 +45,8 @@ function Get-CIPPBecIPVerdicts {
         The user's usage location (two-letter country).
     .PARAMETER Heuristics
         The BEC heuristics object (ipVerdict section).
+    .PARAMETER TechnicianIPs
+        Addresses of the technicians who ran or reviewed the case ({ IP, By }).
     .PARAMETER CippAppId
         The CIPP application id; sign-ins by it (and by ipVerdict.serviceAppIds) are service sign-ins.
     .FUNCTIONALITY
@@ -61,6 +64,7 @@ function Get-CIPPBecIPVerdicts {
         [hashtable]$Geo = @{},
         [string]$UsageLocation,
         $Heuristics,
+        [object[]]$TechnicianIPs = @(),
         [string]$CippAppId = $env:ApplicationID
     )
 
@@ -152,6 +156,11 @@ function Get-CIPPBecIPVerdicts {
             [pscustomobject]@{ Range = $_.Range; Prefix = $_.Prefix; State = $_.Verdict; Scope = $_.Scope; Source = $_.Source; Note = $_.Note }
         })
     $Hints = @($Guidance | Where-Object { $_ -and $_.Strength -eq 'Hint' })
+    $Technicians = @{}
+    foreach ($Tech in @($TechnicianIPs | Where-Object { $_ -and $_.IP })) {
+        $TechIP = & $HostOf $Tech.IP
+        if ($TechIP -and -not $Technicians.ContainsKey($TechIP)) { $Technicians[$TechIP] = $Tech }
+    }
     $CaseEntries = @($Overrides | Where-Object { $_ -and $_.Range } | ForEach-Object {
             $Range = try { ConvertTo-CIPPIPRange -Value ([string]$_.Range) } catch { $null }
             if ($Range) {
@@ -247,6 +256,8 @@ function Get-CIPPBecIPVerdicts {
         if ($Listed) {
             return [pscustomobject]@{ Verdict = $(if ($Listed.State -eq 'Blocked') { 'Compromised' } else { 'Safe' }); Source = "$($Listed.Source) ($($Listed.Range))" }
         }
+        $Technician = $Technicians[$Row.IP]
+        if ($Technician) { return [pscustomobject]@{ Verdict = 'Service'; Source = "The technician's own address$(if ($Technician.By) { " ($($Technician.By))" }) - not the user or the attacker" } }
         $SignInCount = $Row.Entry.SignIns + $Row.Entry.NonInteractive
         if ($SignInCount -eq 0 -and $Row.ASName -match $ServiceAsn) { return [pscustomobject]@{ Verdict = 'Service'; Source = "Microsoft service address ($($Row.ASName))" } }
         $OnlyServiceActors = @($Row.Entry.ActorKinds | Where-Object { $_ -notin $ServiceActors }).Count -eq 0

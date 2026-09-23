@@ -36,6 +36,8 @@ function Invoke-ExecBECBulkCheck {
         }
 
         $RequestedBy = try { ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails } catch { 'CIPP' }
+        # the technician's own address (first x-forwarded-for hop) is never the user's or the attacker's
+        $RequestedFromIP = ConvertTo-CIPPBecHostAddress -Address ([string](([string]$Headers.'x-forwarded-for' -split ',')[0])).Trim()
         $Queue = New-CippQueueEntry -Name "BEC investigation - $TenantFilter" -Link "/identity/reports/bec-reports?tenantFilter=$TenantFilter" -Reference "bec-$TenantFilter-$([guid]::NewGuid().ToString('N'))" -TotalTasks $UserIds.Count
         $Batch = [System.Collections.Generic.List[object]]::new()
         $Cases = [System.Collections.Generic.List[object]]::new()
@@ -45,7 +47,7 @@ function Invoke-ExecBECBulkCheck {
                 $Cases.Add([pscustomobject]@{ UserId = $UserId; UserPrincipalName = $null; CaseId = $null; Error = 'User not found' })
                 continue
             }
-            $Prepared = New-CIPPBecRunRequest -TenantFilter $TenantFilter -UserId ([string]$User.id) -UserPrincipalName ([string]$User.userPrincipalName) -DisplayName ([string]$User.displayName) -RequestedBy ([string]$RequestedBy) -QueueId ([string]$Queue.RowKey)
+            $Prepared = New-CIPPBecRunRequest -TenantFilter $TenantFilter -UserId ([string]$User.id) -UserPrincipalName ([string]$User.userPrincipalName) -DisplayName ([string]$User.displayName) -RequestedBy ([string]$RequestedBy) -QueueId ([string]$Queue.RowKey) -RequestedFromIP ([string]$RequestedFromIP)
             $Batch.Add($Prepared.Item)
             $Cases.Add([pscustomobject]@{ UserId = [string]$User.id; UserPrincipalName = [string]$User.userPrincipalName; CaseId = $Prepared.CaseId })
         }

@@ -814,7 +814,9 @@ function Push-BECRun {
             SentMessageAnalysis      = $SentMessageAnalysis
             MailActivity             = @($MailActivity)
         }
-        $IPAnalysis = & $Collect 'IPAnalysis' { Invoke-CIPPBecIPAnalysis -TenantFilter $TenantFilter -UserId $SuspectUser -UserPrincipalName $UserName -Results $IPDraft -Heuristics $Heuristics -WindowStart $startDate -UsageLocation $UsageLocation -Anchor $UserName -SampleColleagues }
+        # the technician who started the run: their address is theirs, not the user's or the attacker's
+        $TechnicianIPs = @(if ($Item.RequestedFromIP) { [pscustomobject]@{ IP = [string]$Item.RequestedFromIP; By = [string]$Item.RequestedBy } })
+        $IPAnalysis = & $Collect 'IPAnalysis' { Invoke-CIPPBecIPAnalysis -TenantFilter $TenantFilter -UserId $SuspectUser -UserPrincipalName $UserName -Results $IPDraft -Heuristics $Heuristics -WindowStart $startDate -UsageLocation $UsageLocation -Anchor $UserName -SampleColleagues -TechnicianIPs $TechnicianIPs }
         if ($IPAnalysis.PSObject.Properties['Verdicts']) {
             & $Mark 'SignInBaseline' $IPAnalysis.Baseline
             & $Mark 'IPGuidance' $IPAnalysis.Guidance
@@ -975,6 +977,7 @@ function Push-BECRun {
             IPGuidance               = @($IPGuidance)
             IPPeers                  = @($IPPeers)
             IPOverrides              = @()
+            IPTechnicians            = @($TechnicianIPs)
             # item-level detail of the attacker-side addresses, and the mailboxes the account reaches
             AttackerMailActivity     = @($AttackerMailActivity)
             AttackerMailSummary      = $AttackerMailSummary
