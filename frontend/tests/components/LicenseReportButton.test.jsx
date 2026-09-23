@@ -1,304 +1,182 @@
-import { pdf } from '@react-pdf/renderer'
-import {
-  LicenseReportDocument,
-  DEFAULT_LICENSE_REPORT_SECTIONS,
-} from '../../src/components/CippPdf/LicenseReportButton'
+import React from 'react'
+import { screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { renderWithProviders, settingsWith } from '../test-utils'
+import { api, getResult } from '../mocks/api-call'
+import { LicenseReportButton } from '../../src/components/CippPdf/LicenseReportButton'
 
-// Real render, not a stub: the point is that the document survives react-pdf's layout pass. A JSX
-// error in a report only surfaces there, so a shallow render would assert nothing useful.
-const renderToBlob = (node) => pdf(node).toBlob()
+vi.mock('../../src/api/ApiCall', async () =>
+  (await import('../mocks/api-call')).apiCallMock()
+)
 
-const baseProps = {
-  brandingSettings: {},
-  tenantName: 'Contoso Ltd',
-  generatedOn: 'January 1, 2026',
-  variables: {},
-}
+// The report is rendered server-side: the dialog POSTs the page's analysis settings, the section
+// switches and the branding default for this report type to ExecGetLicenseReportPdf, and shows the
+// returned PDF in an iframe.
+const TENANT = 'contoso.onmicrosoft.com'
 
-// The shape ListLicenseRecommendations returns, populated so every section has something to draw.
-const SAMPLE_REPORT = {
+// The ListLicenseRecommendations Results the page holds; the button only reads its Summary.
+const REPORT = {
   Summary: {
-    Tenant: 'contoso.com',
-    Currency: 'USD',
-    ReportPeriodDays: 90,
-    InactiveDays: 90,
-    TenureMonths: 6,
-    ProtectSecurityFeatures: true,
-    MonthlySpend: 1840,
-    AssignedSeats: 96,
-    TotalSeats: 110,
-    LicensedUsers: 96,
-    ReclaimableMonthly: 294,
-    ReclaimableSeats: 14,
-    DowngradeMonthly: 150,
-    DowngradeSeats: 15,
-    ConsolidationMonthly: 9,
-    TermMonthly: 44.8,
-    ProtectInvestmentMonthly: 120,
-    ProtectSeats: 15,
-    TotalPotentialMonthly: 497.8,
-    TotalPotentialAnnual: 5973.6,
-    MonthlyCommitmentUplift: 0.2,
-    AnonymizedReports: false,
+    Tenant: TENANT,
+    Currency: 'EUR',
+    MonthlySpend: 2433.75,
+    TotalPotentialMonthly: 838.3,
     DataAvailable: true,
   },
-  Optimization: {
-    Opportunities: [
-      {
-        Tier: 'UnassignedSeats',
-        FindingLabel: 'Unassigned',
-        License: 'Microsoft 365 Business Premium',
-        Seats: 8,
-        MonthlySaving: 176,
-        PriceKnown: true,
-      },
-      {
-        Tier: 'DisabledAccount',
-        FindingLabel: 'Disabled user',
-        License: 'Microsoft 365 Business Standard',
-        Seats: 3,
-        MonthlySaving: 42,
-        PriceKnown: true,
-      },
-      {
-        Tier: 'Inactive',
-        FindingLabel: 'Inactive 90d+',
-        License: 'Microsoft 365 Business Basic',
-        Seats: 3,
-        MonthlySaving: 21,
-        PriceKnown: true,
-      },
-      {
-        Tier: 'Overlap',
-        FindingLabel: 'Redundant',
-        License: 'Exchange Online (Plan 1)',
-        Seats: 2,
-        MonthlySaving: 8,
-        PriceKnown: true,
-      },
-      {
-        Tier: 'Downgrade',
-        FindingLabel: 'Mailbox-only',
-        License: 'Microsoft 365 E3',
-        Seats: 1,
-        MonthlySaving: 0,
-        PriceKnown: true,
-      },
-    ],
-  },
-  Downgrades: [
-    {
-      FromLicense: 'Microsoft 365 Business Standard',
-      FromSkuId: 'f245ecc8-75af-4f8e-b61f-27d8114de5f3',
-      ToLicense: 'Microsoft 365 Business Basic',
-      ToSkuId: '3b555118-da6a-4418-894f-7df1e2096870',
-      Action: 'Downgrade',
-      Seats: 10,
-      UnitCost: 14,
-      TargetCost: 7,
-      UnitSaving: 7,
-      MonthlySaving: 70,
-      Keeps: [
-        'Email and calendar',
-        'Teams chat and meetings',
-        'File storage and sharing',
-      ],
-      Loses: ['Office desktop apps'],
-      Users: [{ userPrincipalName: 'a@contoso.com', displayName: 'A' }],
-    },
-    {
-      FromLicense: 'Microsoft Copilot for Microsoft 365',
-      FromSkuId: '639dec6b-bb19-468b-871c-c5c441c4b0cb',
-      ToLicense: 'No license',
-      ToSkuId: null,
-      Action: 'Remove',
-      Seats: 5,
-      UnitCost: 30,
-      TargetCost: 0,
-      UnitSaving: 30,
-      MonthlySaving: 150,
-      Keeps: [],
-      Loses: ['Microsoft 365 Copilot'],
-      Users: [],
-    },
-  ],
-  Upgrades: [
-    {
-      Type: 'Consolidate',
-      FromLicenses: [
-        'Microsoft 365 Apps for Business',
-        'Microsoft 365 Business Basic',
-      ],
-      ToLicense: 'Microsoft 365 Business Standard',
-      Seats: 3,
-      UnitCost: 17,
-      TargetCost: 14,
-      UnitDelta: -3,
-      MonthlyDelta: -9,
-      Gains: [],
-      Users: [],
-    },
-    {
-      Type: 'Protect',
-      FromLicenses: ['Microsoft 365 Business Standard'],
-      ToLicense: 'Microsoft 365 Business Premium',
-      Seats: 15,
-      UnitCost: 14,
-      TargetCost: 22,
-      UnitDelta: 8,
-      MonthlyDelta: 120,
-      Gains: [
-        'Device management',
-        'Advanced sign-in security',
-        'Device threat protection',
-      ],
-      Users: [],
-    },
-  ],
-  Terms: [
-    {
-      License: 'Microsoft 365 Business Premium',
-      AssignedSeats: 60,
-      TotalSeats: 68,
-      StableSeats: 52,
-      MonthlySeats: 30,
-      YearlySeats: 38,
-      TermKnown: true,
-      RecommendedAnnual: 52,
-      RecommendedMonthly: 8,
-      ConvertibleSeats: 14,
-      UnitCost: 22,
-      MonthlySaving: 61.6,
-      LockedUnusedSeats: 0,
-      NextRenewalDays: 120,
-      PriceKnown: true,
-    },
-    {
-      License: 'Microsoft 365 Business Basic',
-      AssignedSeats: 10,
-      TotalSeats: 14,
-      StableSeats: 9,
-      MonthlySeats: 0,
-      YearlySeats: 14,
-      TermKnown: true,
-      RecommendedAnnual: 9,
-      RecommendedMonthly: 1,
-      ConvertibleSeats: 0,
-      UnitCost: 7,
-      MonthlySaving: 0,
-      LockedUnusedSeats: 4,
-      NextRenewalDays: 45,
-      PriceKnown: true,
-    },
-    {
-      License: 'Power BI Pro',
-      AssignedSeats: 4,
-      TotalSeats: 4,
-      StableSeats: 4,
-      MonthlySeats: 0,
-      YearlySeats: 0,
-      TermKnown: false,
-      RecommendedAnnual: 4,
-      RecommendedMonthly: 0,
-      ConvertibleSeats: null,
-      UnitCost: 14,
-      MonthlySaving: 0,
-      LockedUnusedSeats: 0,
-      NextRenewalDays: null,
-      PriceKnown: true,
-    },
-  ],
-  Products: [
-    {
-      License: 'Microsoft 365 Business Premium',
-      TotalSeats: 68,
-      AssignedSeats: 60,
-      UnusedSeats: 8,
-      UnitCost: 22,
-      MonthlySpend: 1320,
-      PriceKnown: true,
-    },
-    {
-      License: 'Microsoft 365 Business Standard',
-      TotalSeats: 20,
-      AssignedSeats: 20,
-      UnusedSeats: 0,
-      UnitCost: 14,
-      MonthlySpend: 280,
-      PriceKnown: true,
-    },
-    {
-      License: 'Microsoft 365 Business Basic',
-      TotalSeats: 14,
-      AssignedSeats: 10,
-      UnusedSeats: 4,
-      UnitCost: 7,
-      MonthlySpend: 70,
-      PriceKnown: true,
-    },
-    {
-      License: 'Power BI Pro',
-      TotalSeats: 4,
-      AssignedSeats: 4,
-      UnusedSeats: 0,
-      UnitCost: 14,
-      MonthlySpend: 56,
-      PriceKnown: true,
-    },
-    {
-      License: 'Microsoft Fabric (Free)',
-      TotalSeats: 4,
-      AssignedSeats: 2,
-      UnusedSeats: 2,
-      UnitCost: null,
-      MonthlySpend: null,
-      PriceKnown: false,
-    },
-  ],
-  Capabilities: [
-    { id: 'email', label: 'Email and calendar', measurable: true },
-    { id: 'desktopApps', label: 'Office desktop apps', measurable: true },
-    { id: 'deviceManagement', label: 'Device management', measurable: false },
-  ],
 }
 
-describe('LicenseReportDocument', () => {
-  it('renders the sample data to a PDF', async () => {
-    const blob = await renderToBlob(
-      <LicenseReportDocument {...baseProps} report={SAMPLE_REPORT} />
-    )
+// The page's apiData: the same settings its table request carries.
+const SETTINGS = {
+  currency: 'EUR',
+  inactiveDays: 30,
+  tenureMonths: 12,
+  recommendDowngrades: true,
+  recommendUpgrades: false,
+  recommendTerms: true,
+  protectSecurityFeatures: false,
+}
 
-    expect(blob.size).toBeGreaterThan(1000)
-  }, 30000)
+const branding = getResult({
+  data: { colour: '#0E4C92', reportDefaults: { licensing: 'preset-7' } },
+})
 
-  it('renders with no data at all, so an empty tenant still produces a report', async () => {
-    const blob = await renderToBlob(
-      <LicenseReportDocument {...baseProps} report={{}} />
-    )
+let fetchMock
+beforeEach(() => {
+  api.get = (opts) =>
+    opts.url === '/api/ListBrandingSettings' ? branding : getResult()
+  fetchMock = vi.fn(() =>
+    Promise.resolve({
+      ok: true,
+      blob: () =>
+        Promise.resolve(new Blob(['%PDF-'], { type: 'application/pdf' })),
+    })
+  )
+  vi.stubGlobal('fetch', fetchMock)
+  URL.createObjectURL = vi.fn(() => 'blob:license-report')
+  URL.revokeObjectURL = vi.fn()
+})
 
-    expect(blob.size).toBeGreaterThan(1000)
-  }, 30000)
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+})
 
-  it('renders the anonymised-report path with every optional section switched off', async () => {
-    const sections = Object.fromEntries(
-      Object.keys(DEFAULT_LICENSE_REPORT_SECTIONS).map((key) => [key, false])
-    )
-    const report = {
-      ...SAMPLE_REPORT,
-      Summary: {
-        ...SAMPLE_REPORT.Summary,
-        AnonymizedReports: true,
-        ProtectSecurityFeatures: false,
+const renderButton = (props = {}) =>
+  renderWithProviders(
+    <LicenseReportButton
+      report={REPORT}
+      tenantName={TENANT}
+      settings={SETTINGS}
+      {...props}
+    />,
+    { settings: settingsWith({ currentTenant: TENANT }) }
+  )
+
+const openDialog = async () => {
+  await userEvent.click(screen.getByRole('button', { name: /client report/i }))
+  return screen.findByRole('dialog')
+}
+
+const lastRequest = () => {
+  const [url, init] = fetchMock.mock.calls.at(-1)
+  return { url, body: JSON.parse(init.body) }
+}
+
+describe('LicenseReportButton', () => {
+  it('renders nothing on the server until the dialog is opened', async () => {
+    renderButton()
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    await openDialog()
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+  })
+
+  it("sends the page's analysis settings, every section and the licensing branding default", async () => {
+    renderButton()
+    await openDialog()
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+
+    const { url, body } = lastRequest()
+    expect(url).toBe('/api/ExecGetLicenseReportPdf')
+    expect(body).toEqual({
+      tenantFilter: TENANT,
+      ...SETTINGS,
+      sections: {
+        spend: true,
+        reclaim: true,
+        downgrades: true,
+        upgrades: true,
+        terms: true,
+        method: true,
       },
-    }
-    const blob = await renderToBlob(
-      <LicenseReportDocument
-        {...baseProps}
-        report={report}
-        sections={{ ...sections, downgrades: true }}
-      />
-    )
+      brandingPresetId: 'preset-7',
+    })
+  })
 
-    expect(blob.size).toBeGreaterThan(1000)
-  }, 30000)
+  it('re-renders without a section once its switch is turned off', async () => {
+    renderButton()
+    await openDialog()
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+
+    const card = screen.getByText('Cheaper plans').closest('.MuiPaper-root')
+    await userEvent.click(within(card).getByRole('switch'))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    expect(lastRequest().body.sections).toMatchObject({
+      downgrades: false,
+      spend: true,
+    })
+  })
+
+  it("downloads the rendered PDF under the tenant's name and today's date", async () => {
+    const saved = []
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(
+      function () {
+        saved.push({ href: this.href, download: this.download })
+      }
+    )
+    renderButton()
+    await openDialog()
+    const download = screen.getByRole('button', { name: /download pdf/i })
+    await waitFor(() => expect(download).toBeEnabled())
+
+    await userEvent.click(download)
+
+    const today = new Date().toISOString().split('T')[0]
+    expect(saved).toEqual([
+      {
+        href: 'blob:license-report',
+        download: `Licensing_Report_${TENANT}_${today}.pdf`,
+      },
+    ])
+  })
+
+  it('explains a failed render instead of showing an empty preview', async () => {
+    fetchMock.mockImplementation(() =>
+      Promise.resolve({ ok: false, status: 500 })
+    )
+    renderButton()
+    await openDialog()
+
+    expect(
+      await screen.findByText(/the report could not be generated/i)
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /download pdf/i })).toBeDisabled()
+  })
+
+  it('stays disabled for a tenant with no license data, and while the page refetches', () => {
+    const { unmount } = renderButton({
+      report: { Summary: { ...REPORT.Summary, DataAvailable: false } },
+    })
+    expect(
+      screen.getByRole('button', { name: /client report/i })
+    ).toBeDisabled()
+    unmount()
+
+    renderButton({ disabled: true })
+    expect(
+      screen.getByRole('button', { name: /client report/i })
+    ).toBeDisabled()
+  })
 })
