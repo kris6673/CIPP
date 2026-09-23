@@ -48,6 +48,18 @@ function Build-CippBecReportTree {
     }
     function CleanStr($v) { $t = "$v".Trim(); if ($t.Length -gt 0) { $t } else { $null } }
     function JoinDetail { param([object[]]$Parts) (@($Parts | ForEach-Object { CleanStr $_ } | Where-Object { $_ })) -join ' - ' }
+    # one host is one source: audit addresses carry a per-connection port (mirrors the client hostIp)
+    function HostIp($v) {
+        $t = CleanStr $v
+        if (-not $t) { return $null }
+        ($t -replace '^(\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+\]|[0-9a-fA-F:]+)(?::\d+)?$', '$1') -replace '[\[\]]', ''
+    }
+    function ListNames([object[]]$Names, [int]$Max = 3) {
+        $All = @($Names | Where-Object { $_ })
+        (@($All | Select-Object -First $Max) -join ', ') + $(if ($All.Count -gt $Max) { " and $($All.Count - $Max) more" } else { '' })
+    }
+    # plain-English counts for the statements a non-technical reader sees
+    function Plural([int]$N, [string]$One, [string]$Many) { if (-not $Many) { $Many = "${One}s" }; "$N $(if ($N -eq 1) { $One } else { $Many })" }
 
     # analysis window: windowDays before extraction (mirrors becWindowStart)
     $extractedAt = ToDate $bec.ExtractedAt
@@ -119,6 +131,52 @@ function Build-CippBecReportTree {
     $mailActivitySummary = $bec.MailActivitySummary
     $riskState = $bec.RiskState
 
+    # The attacker's addresses and what was done from them. Only an address judged the attacker's
+    # (Compromised or LikelyAttacker) counts toward a statement; a Suspicious one is listed in the
+    # detail for review, never asserted. The item lists are capped - the evidence export has them all.
+    $attackerVerdicts = @('Compromised', 'LikelyAttacker')
+    $ipVerdicts = @($bec.IPVerdicts | Where-Object { $_ -and $_.IP })
+    $verdictByIp = @{}
+    foreach ($v in $ipVerdicts) { $verdictByIp[(HostIp $v.IP)] = "$($v.Verdict)" }
+    $attackerIps = @($ipVerdicts | Where-Object { $_.Verdict -in $attackerVerdicts })
+    $reviewIps = @($ipVerdicts | Where-Object { $_.Verdict -in $attackerVerdicts -or $_.Verdict -eq 'Suspicious' })
+    $attackerCountries = @($attackerIps | ForEach-Object { $_.Country } | Where-Object { $_ } | Select-Object -Unique)
+    $attackerMail = @($bec.AttackerMailActivity | Where-Object { $_ -and $_.IPVerdict -in $attackerVerdicts })
+    $attackerFiles = @($bec.AttackerFileActivity | Where-Object { $_ -and $_.IPVerdict -in $attackerVerdicts })
+    $attackerForms = @($bec.FormsActivity | Where-Object { $_ -and $_.Flagged -eq $true -and $_.IPVerdict -in $attackerVerdicts })
+    $attackerFormIds = @($attackerForms | ForEach-Object { $_.FormId } | Where-Object { $_ } | Select-Object -Unique)
+    $attackerFormNames = @($attackerForms | ForEach-Object { $_.FormName } | Where-Object { $_ } | Select-Object -Unique)
+    $formsReach = @($bec.FormsSummary.Forms | Where-Object { $_ -and $_.FormId -in $attackerFormIds })
+    $formResponses = (@($formsReach | ForEach-Object { AsInt $_.Responses }) | Measure-Object -Sum).Sum
+    $blastRadius = @($bec.BlastRadius | Where-Object { $_ })
+    $reachedAccounts = @($blastRadius | Where-Object { $_.Reached -eq $true })
+    $delegatedReached = @($bec.DelegatedAccess | Where-Object { $_ -and $_.Flagged -eq $true })
+    $attackerTotals = @{
+        opened     = @($attackerMail | Where-Object { $_.Operation -eq 'MailItemsAccessed' -and $_.InternetMessageId } | ForEach-Object { $_.InternetMessageId } | Select-Object -Unique).Count
+        synced     = @($attackerMail | Where-Object { $_.Operation -eq 'MailItemsAccessed' -and $_.AccessType -eq 'Sync' } | ForEach-Object { "$($_.MailboxOwner)|$($_.Folder)" } | Select-Object -Unique).Count
+        sent       = @($attackerMail | Where-Object { $_.Operation -in @('Send', 'SendAs', 'SendOnBehalf') }).Count
+        deleted    = @($attackerMail | Where-Object { $_.Operation -in @('SoftDelete', 'HardDelete', 'MoveToDeletedItems') }).Count
+        files      = @($attackerFiles | ForEach-Object { if ($_.Url) { $_.Url } else { $_.File } } | Where-Object { $_ } | Select-Object -Unique).Count
+        downloaded = @($attackerFiles | Where-Object { $_.Operation -in @('FileDownloaded', 'FileSyncDownloadedFull') }).Count
+    }
+    $attackerDid = @(
+        if ($attackerTotals.opened) { "opened $(Plural $attackerTotals.opened 'email')" }
+        if ($attackerTotals.synced) { "copied $(Plural $attackerTotals.synced 'mail folder') to a desktop client" }
+        if ($attackerTotals.sent) { "sent $(Plural $attackerTotals.sent 'email')" }
+        if ($attackerTotals.deleted) { "deleted $(Plural $attackerTotals.deleted 'email')" }
+        if ($attackerTotals.files) { "opened $(Plural $attackerTotals.files 'file')$(if ($attackerTotals.downloaded) { " ($(Plural $attackerTotals.downloaded 'download'))" })" }
+    )
+    $attackerReach = @(
+        if ($reachedAccounts.Count) { "$(Plural $reachedAccounts.Count 'other account') signed into or used from the same addresses ($(ListNames @($reachedAccounts | ForEach-Object { $_.UserPrincipalName })))" }
+        if ($delegatedReached.Count) { "$(Plural $delegatedReached.Count 'other mailbox' 'other mailboxes') reached through this account's access ($(ListNames @($delegatedReached | ForEach-Object { $_.Mailbox })))" }
+        if ($attackerFormIds.Count) { "$(Plural $attackerFormIds.Count 'Microsoft Form') created from those addresses (a common phishing lure)$(if ($formResponses) { ", with $(Plural $formResponses 'response')" })" }
+    )
+    # the three strongest reasons behind a verdict, or the list/investigator that decided it
+    function VerdictWhy($v) {
+        if ($v.Source -and $v.Source -ne 'Heuristics') { return "$($v.Source)" }
+        (@($v.Reasons | Where-Object { (AsInt $_.Weight) -gt 0 } | Sort-Object -Property @{ Expression = { AsInt $_.Weight }; Descending = $true } -Stable | Select-Object -First 3 | ForEach-Object { $_.Text })) -join '; '
+    }
+
     $forwardingAddress = if ($bec.MailboxState.ForwardingSmtpAddress) { "$($bec.MailboxState.ForwardingSmtpAddress)" } elseif ($bec.MailboxState.ForwardingAddress) { "$($bec.MailboxState.ForwardingAddress)" } else { $null }
     $hasForwarding = [bool]($bec.MailboxState.HasForwarding -or $forwardingAddress)
 
@@ -130,6 +188,12 @@ function Build-CippBecReportTree {
     # workspace uses - becFindingFlags / becGroupFlagged). Only the per-finding counts feed the bars.
     # ============================================================================================
     $flagCounts = @{
+        IPVerdicts               = $attackerIps.Count
+        AttackerMailActivity     = $attackerMail.Count
+        AttackerFileActivity     = $attackerFiles.Count
+        FormsActivity            = Cnt @($bec.FormsActivity | Where-Object { $_.Flagged -eq $true })
+        DelegatedAccess          = $delegatedReached.Count
+        BlastRadius              = $reachedAccounts.Count
         SuspectUserSignIns       = AsInt $loc.ForeignSuccessfulSignInCount
         NonInteractiveSignIns    = Cnt @($bec.NonInteractiveSignIns | Where-Object { $_.ForeignLocation -eq $true -and $_.Status -eq 'Success' })
         MFADevices               = $stats.recentMfaDevices
@@ -153,13 +217,15 @@ function Build-CippBecReportTree {
         DirectoryAudits          = $flaggedAudits.Count
     }
     $groupKeys = [ordered]@{
+        attacker    = @('IPVerdicts', 'AttackerMailActivity', 'AttackerFileActivity', 'FormsActivity', 'DelegatedAccess')
         access      = @('SuspectUserSignIns', 'NonInteractiveSignIns', 'MFADevices', 'RiskState', 'RegisteredDevices', 'IntuneDevices')
         persistence = @('NewRules', 'Delegations', 'UserGrants', 'MailboxAddIns', 'AddedApps')
         mailflow    = @('MailboxState', 'TrustedSenders', 'TransportRuleChanges', 'MailboxPermissionChanges')
         exfil       = @('SentMessages', 'SharingChanges', 'MailActivity', 'ReceivedMailFindings')
-        blast       = @('PartnerActions', 'NewUsers', 'ChangedPasswords', 'DirectoryAudits')
+        blast       = @('BlastRadius', 'PartnerActions', 'NewUsers', 'ChangedPasswords', 'DirectoryAudits')
     }
     $objectiveMeta = @{
+        attacker    = @{ label = 'Attacker IPs & activity'; colour = '#C53030' }
         access      = @{ label = 'Access'; colour = '#3182CE' }
         persistence = @{ label = 'Persistence'; colour = '#805AD5' }
         mailflow    = @{ label = 'Mail flow'; colour = '#DD6B20' }
@@ -177,6 +243,9 @@ function Build-CippBecReportTree {
     # Results roll-up: every check as one row, flagged (with a high-risk sub-count) or clear.
     # ============================================================================================
     $summarySource = @(
+        @{ area = 'Attacker network addresses'; count = $attackerIps.Count; danger = @($attackerIps | Where-Object { (AsInt $_.SuccessfulSignIns) -gt 0 -or (AsInt $_.Activities) -gt 0 }).Count }
+        @{ area = 'Mail, files & forms touched by the attacker'; count = ($attackerMail.Count + $attackerFiles.Count + $attackerForms.Count); danger = $attackerFormIds.Count }
+        @{ area = 'Other accounts & mailboxes reached'; count = ($blastRadius.Count + $delegatedReached.Count); danger = $reachedAccounts.Count }
         @{ area = 'Inbox rules & changes'; count = ($stats.newRules + $stats.ruleChanges) }
         @{ area = 'Mailbox delegations'; count = $flaggedDelegations.Count }
         @{ area = 'Application consents'; count = $flaggedGrants.Count; danger = $flaggedGrants.Count }
@@ -219,11 +288,15 @@ function Build-CippBecReportTree {
     $tailoredActions = @(
         if ($isHighOrMed) { @{ tag = 'Critical'; text = "Reset $(if ($upn) { $upn } else { 'the user' })'s password and revoke all active sessions to cut off any current attacker access." } }
         if ($threatLevel -eq 'High') { @{ tag = 'Critical'; text = 'Block sign-in for the account until the mailbox and identity are confirmed clean.' } }
+        if ($reachedAccounts.Count -gt 0) { @{ tag = 'Critical'; text = "Secure the $($reachedAccounts.Count) other account(s) reached from the attacker's addresses ($(ListNames @($reachedAccounts | ForEach-Object { $_.UserPrincipalName }))): reset, revoke sessions and investigate each one." } }
         if ($flaggedGrants.Count -gt 0 -or $stats.maliciousApps -gt 0) {
             $names = if ($consentNames) { $consentNames } elseif ($rogueAppNames) { $rogueAppNames } else { '' }
             @{ tag = 'Critical'; text = "Revoke $($flaggedGrants.Count + $stats.maliciousApps) risky application consent(s)$(if ($names) { " ($names)" }) - consent survives a password reset." }
         }
         if ($stats.maliciousApps -gt 0) { @{ tag = 'Critical'; text = "Disable the catalog-matched rogue application(s)$(if ($rogueAppNames) { " ($rogueAppNames)" }) tenant-wide." } }
+        if ($attackerIps.Count -gt 0) { @{ tag = 'High'; text = "Block the $($attackerIps.Count) attacker address(es) ($(ListNames @($attackerIps | ForEach-Object { $_.IP }))) tenant-wide so they cannot be used against any other account." } }
+        if ($attackerFormIds.Count -gt 0) { @{ tag = 'High'; text = "Remove the $($attackerFormIds.Count) Microsoft Form(s) built from the attacker's addresses$(if ($attackerFormNames.Count) { " ($(ListNames $attackerFormNames))" }) and warn anyone who responded: confirm phishing and delete each one from its Microsoft Defender alert, or, after the password reset, delete it in Microsoft Forms as the account." } }
+        if ($delegatedReached.Count -gt 0) { @{ tag = 'High'; text = "Check the $($delegatedReached.Count) other mailbox(es) reached through this account ($(ListNames @($delegatedReached | ForEach-Object { $_.Mailbox }))) for rules, forwarding and sent mail." } }
         if ($stats.newRules -gt 0 -or $stats.ruleChanges -gt 0) { @{ tag = 'High'; text = "Disable the $($stats.newRules + $stats.ruleChanges) suspicious inbox rule(s)/change(s)$(if ($ruleNames) { " ($ruleNames)" }) that hide replies or auto-forward mail." } }
         if ($hasForwarding) { @{ tag = 'High'; text = "Clear mailbox forwarding$(if ($forwardingAddress) { " to $forwardingAddress" }), which silently copies mail out of the tenant." } }
         if ($flaggedDelegations.Count -gt 0) { @{ tag = 'High'; text = "Remove $($flaggedDelegations.Count) flagged mailbox delegation(s) - a delegate keeps access after a reset." } }
@@ -247,6 +320,8 @@ function Build-CippBecReportTree {
     # -- impact findings (the plain-terms outcome; mirrors impactFindings) --
     $impactFindings = @(
         if ($stats.foreignSuccessfulSignIns -gt 0 -or $foreignNonInteractive.Count -gt 0) { "Unauthorized access is confirmed - $($stats.foreignSuccessfulSignIns + $foreignNonInteractive.Count) successful sign-in(s) came from outside the account's assigned location." }
+        if ($attackerIps.Count -gt 0) { "$(Plural $attackerIps.Count 'network address' 'network addresses')$(if ($attackerCountries.Count) { " in $(ListNames $attackerCountries)" }) $(if ($attackerIps.Count -eq 1) { 'was' } else { 'were' }) identified as the attacker's$(if ($attackerDid.Count) { "; from there the attacker $(ListNames $attackerDid 5)" })." }
+        if ($attackerReach.Count -gt 0) { "The attack reached beyond this account: $(ListNames $attackerReach 3)." }
         if ($riskState.Listed) { "Microsoft Identity Protection currently flags this account as at risk$(if ($riskState.RiskLevel) { " ($($riskState.RiskLevel) risk)" })." }
         if ($hasForwarding) { "Incoming mail is being copied out of the organization$(if ($forwardingAddress) { " to $forwardingAddress" }), so the attacker keeps reading it even after a reset." }
         if ($stats.newRules -gt 0 -or $stats.ruleChanges -gt 0) { "$($stats.newRules + $stats.ruleChanges) inbox rule(s) or change(s) hide, delete or redirect the user's mail." }
@@ -262,11 +337,12 @@ function Build-CippBecReportTree {
     # ============================================================================================
     $partnerKinds = @('Partner', 'OtherPartner', 'CIPP')
     $rawEvents = [System.Collections.Generic.List[object]]::new()
-    foreach ($s in @($bec.SuspectUserSignIns | Where-Object { $_.ForeignLocation -eq $true })) {
+    # foreign sign-ins, and sign-ins from an address judged the attacker's even when it is at home
+    foreach ($s in @($bec.SuspectUserSignIns | Where-Object { $_ -and ($_.ForeignLocation -eq $true -or (($SignInIp = HostIp (@($_.IPAddress, $_.ipAddress, $_.ClientIP) | Where-Object { $_ } | Select-Object -First 1)) -and $verdictByIp[$SignInIp] -in $attackerVerdicts)) })) {
         $rawEvents.Add(@{
                 date     = ToDate (@($s.CreatedDateTime, $s.createdDateTime, $s.Timestamp) | Where-Object { $_ } | Select-Object -First 1)
                 label    = "Sign-in $(if ($s.Status -eq 'Success') { 'success' } else { "($(if ($s.Status) { $s.Status } else { 'attempt' }))" })"
-                ip       = CleanStr (@($s.IPAddress, $s.ClientIP) | Where-Object { $_ } | Select-Object -First 1)
+                ip       = HostIp (@($s.IPAddress, $s.ClientIP) | Where-Object { $_ } | Select-Object -First 1)
                 app      = CleanStr (@($s.AppDisplayName, $s.ClientAppUsed) | Where-Object { $_ } | Select-Object -First 1)
                 location = CleanStr ((@($s.City, $s.Country) | Where-Object { $_ }) -join ', ')
             })
@@ -275,7 +351,7 @@ function Build-CippBecReportTree {
         $rawEvents.Add(@{
                 date    = ToDate $a.ActivityDateTime
                 label   = if ($a.Activity) { "$($a.Activity)" } else { 'Directory change' }
-                ip      = CleanStr $a.ClientIP
+                ip      = HostIp $a.ClientIP
                 actor   = CleanStr (@($a.ActorResolved, $a.InitiatedBy) | Where-Object { $_ } | Select-Object -First 1)
                 partner = ($partnerKinds -contains "$($a.ActorKind)")
             })
@@ -284,7 +360,7 @@ function Build-CippBecReportTree {
         $rawEvents.Add(@{
                 date    = ToDate $c.Date
                 label   = if ($c.Operation) { "$($c.Operation)" } else { 'Inbox rule change' }
-                ip      = CleanStr $c.ClientIP
+                ip      = HostIp $c.ClientIP
                 target  = CleanStr $c.RuleName
                 foreign = ($c.ForeignLocation -eq $true)
                 partner = ($partnerKinds -contains "$($c.ActorKind)")
@@ -294,7 +370,7 @@ function Build-CippBecReportTree {
         $rawEvents.Add(@{
                 date           = ToDate $c.Date
                 label          = if ($c.Operation) { "$($c.Operation)" } else { 'Mailbox permission change' }
-                ip             = CleanStr $c.ClientIP
+                ip             = HostIp $c.ClientIP
                 targetsSuspect = [bool]$c.TargetsSuspect
                 partner        = ($partnerKinds -contains "$($c.ActorKind)")
             })
@@ -303,7 +379,7 @@ function Build-CippBecReportTree {
         $rawEvents.Add(@{
                 date    = ToDate $c.Date
                 label   = if ($c.Operation) { "$($c.Operation)" } else { 'Safelist change' }
-                ip      = CleanStr $c.ClientIP
+                ip      = HostIp $c.ClientIP
                 partner = ($partnerKinds -contains "$($c.ActorKind)")
             })
     }
@@ -311,7 +387,7 @@ function Build-CippBecReportTree {
         $rawEvents.Add(@{
                 date    = ToDate $c.Date
                 label   = if ($c.Operation) { "$($c.Operation)" } else { 'Sharing change' }
-                ip      = CleanStr $c.ClientIP
+                ip      = HostIp $c.ClientIP
                 target  = CleanStr $c.FileName
                 partner = ($partnerKinds -contains "$($c.ActorKind)")
             })
@@ -323,7 +399,7 @@ function Build-CippBecReportTree {
             $rawEvents.Add(@{
                     date      = ToDate $m.Received
                     label     = 'Sent mail'
-                    ip        = CleanStr $m.FromIP
+                    ip        = HostIp $m.FromIP
                     target    = CleanStr $m.Subject
                     recipient = CleanStr $m.RecipientAddress
                 })
@@ -334,7 +410,7 @@ function Build-CippBecReportTree {
             $d = ToDate $m.Received
             if (-not $d) { continue }
             $hour = $d.Date.AddHours($d.Hour)
-            $ip = CleanStr $m.FromIP
+            $ip = HostIp $m.FromIP
             $key = '{0:o}|{1}' -f $hour, $ip
             if (-not $buckets.ContainsKey($key)) { $buckets[$key] = @{ date = $hour; ip = $ip; rows = [System.Collections.Generic.List[object]]::new() } }
             $buckets[$key].rows.Add($m)
@@ -384,6 +460,55 @@ function Build-CippBecReportTree {
     }
     foreach ($u in @($bec.ChangedPasswords)) {
         $rawEvents.Add(@{ date = ToDate $u.lastPasswordChangeDateTime; label = 'Password changed'; target = CleanStr (@($u.displayName, $u.userPrincipalName) | Where-Object { $_ } | Select-Object -First 1) })
+    }
+
+    # What the attacker-side addresses did, folded to one event per hour, address and kind of action -
+    # a mailbox sync or a scripted download is hundreds of rows that would bury everything else.
+    $mailVerb = @{
+        MailItemsAccessed = 'message(s) opened'; AttachmentAccess = 'attachment(s) read'; SoftDelete = 'item(s) deleted'
+        HardDelete = 'item(s) purged'; MoveToDeletedItems = 'item(s) deleted'; Move = 'item(s) moved'; Send = 'message(s) sent'
+        SendAs = 'message(s) sent as another mailbox'; SendOnBehalf = 'message(s) sent on behalf'; SearchQueryInitiatedExchange = 'mailbox search(es)'
+    }
+    $fileVerb = @{
+        FileDownloaded = 'file(s) downloaded'; FileSyncDownloadedFull = 'file(s) synced down'; FileAccessed = 'file(s) opened'
+        FilePreviewed = 'file(s) previewed'; FileUploaded = 'file(s) uploaded'; FileDeleted = 'file(s) deleted'; FileRecycled = 'file(s) deleted'
+        SearchQueryPerformed = 'SharePoint search(es)'
+    }
+    function TopOf($Rows, [string]$Field) {
+        (@($Rows | ForEach-Object { CleanStr $_.$Field } | Where-Object { $_ }) | Group-Object | Sort-Object -Property Count -Descending -Stable | Select-Object -First 1).Name
+    }
+    function FoldActivity($Rows, [scriptblock]$KeyOf) {
+        $buckets = [ordered]@{}
+        foreach ($row in @($Rows | Where-Object { $_ })) {
+            $d = ToDate $row.When
+            if (-not $d) { continue }
+            $u = $d.ToUniversalTime()
+            $ip = HostIp $row.IP
+            $key = '{0:yyyyMMddHH}|{1}|{2}' -f $u, $ip, (& $KeyOf $row)
+            if (-not $buckets.Contains($key)) { $buckets[$key] = @{ date = $d; ip = $ip; rows = [System.Collections.Generic.List[object]]::new() } }
+            $buckets[$key].rows.Add($row)
+        }
+        @($buckets.Values)
+    }
+    foreach ($bucket in (FoldActivity $bec.AttackerMailActivity { param($row) "$($row.Operation)|$(if ($row.AccessType -eq 'Sync') { 'sync' })" })) {
+        $first = $bucket.rows[0]
+        $n = $bucket.rows.Count
+        if ($first.AccessType -eq 'Sync') {
+            $rawEvents.Add(@{ date = $bucket.date; ip = $bucket.ip; label = "$n folder(s) synced to a desktop client"; target = (TopOf $bucket.rows 'Folder') })
+        } else {
+            $verb = if ($mailVerb[[string]$first.Operation]) { $mailVerb[[string]$first.Operation] } else { "$($first.Operation) event(s)" }
+            $target = TopOf $bucket.rows 'Subject'
+            if (-not $target) { $target = TopOf $bucket.rows 'Folder' }
+            $rawEvents.Add(@{ date = $bucket.date; ip = $bucket.ip; label = "$n $verb"; target = $target })
+        }
+    }
+    foreach ($bucket in (FoldActivity $bec.AttackerFileActivity { param($row) "$($row.Operation)" })) {
+        $first = $bucket.rows[0]
+        $verb = if ($fileVerb[[string]$first.Operation]) { $fileVerb[[string]$first.Operation] } else { "$($first.Operation) event(s)" }
+        $rawEvents.Add(@{ date = $bucket.date; ip = $bucket.ip; label = "$($bucket.rows.Count) $verb"; target = (TopOf $bucket.rows 'File') })
+    }
+    foreach ($f in @($bec.FormsActivity | Where-Object { $_.Flagged -eq $true })) {
+        $rawEvents.Add(@{ date = ToDate $f.When; ip = HostIp $f.IP; label = "Form: $($f.Operation)"; target = CleanStr $f.FormName })
     }
 
     $sortedEvents = @($rawEvents | Where-Object { $_.date } | Sort-Object -Property date)
@@ -522,6 +647,123 @@ function Build-CippBecReportTree {
         $b.Add((New-CippReportAlertBox -Lines -Title "[!] $($incompleteCollectors.Count) check(s) returned partial data" -Content ((@($incompleteCollectors | ForEach-Object { "$($_.Name): $(if ($_.Value.Error) { $_.Value.Error } else { "capped at $($_.Value.Cap)" })" })) -join "`n")))
     }
     $b.Add((New-CippReportInfoBox -Title 'Assigned Usage Location' -Content $(if ($usageLoc) { "$usageLoc" } else { 'Not assigned - sign-ins and activity could not be compared against an expected country' })))
+
+    # === ATTACKER ADDRESSES & ACTIVITY - capped lists; the evidence export has every row ===
+    if ($ipVerdicts.Count -gt 0) {
+        $b.Add((New-CippReportPage -Title 'Attacker Addresses & Activity' -Subtitle 'Where the attacker connected from, and what was done from there'))
+        $b.Add((New-CippReportHeading -Title 'Attacker and Suspicious Addresses'))
+        $b.Add((New-CippReportParagraph -Text "Every address seen on this account was judged from the user's sign-in history, network and location, the IP allow and block lists, and the other accounts using it. Addresses judged the attacker's drive the findings below; suspicious ones are listed for review only."))
+        if ($reviewIps.Count -gt 0) {
+            $b.Add((New-CippReportTable -Columns @(
+                        @{ header = 'Address'; key = 'ip'; width = 2; bold = $true }
+                        @{ header = 'Verdict'; key = 'verdict'; width = 2; toneField = 'tone' }
+                        @{ header = 'Location'; key = 'location'; width = 2 }
+                        @{ header = 'Sign-ins'; key = 'signIns'; width = 1 }
+                        @{ header = 'Why'; key = 'why'; width = 4 }
+                    ) -Rows @($reviewIps | ForEach-Object {
+                        $place = (@($_.City, $_.Country) | Where-Object { $_ }) -join ', '
+                        @{
+                            ip       = "$($_.IP)"
+                            verdict  = ("$($_.Verdict)" -creplace '([a-z])([A-Z])', '$1 $2')
+                            tone     = $(if ($_.Verdict -in $attackerVerdicts) { 'fail' } else { 'warn' })
+                            location = $(if ($place) { $place } else { 'Unknown' })
+                            signIns  = "$(AsInt $_.SuccessfulSignIns) ok / $(AsInt $_.FailedSignIns) failed"
+                            why      = (VerdictWhy $_)
+                        }
+                    }) -Limit 15))
+        } else {
+            $b.Add((New-CippReportClearBox -Title "[Pass] No address was judged the attacker's" -Content "None of the $($ipVerdicts.Count) address(es) seen on this account was judged to be the attacker's or suspicious."))
+        }
+
+        if (($attackerMail.Count + $attackerFiles.Count) -gt 0) {
+            $b.Add((New-CippReportHeading -Title "What Was Done From the Attacker's Addresses"))
+            $b.Add((New-CippReportStatRow -Stats @(
+                        @{ value = "$($attackerTotals.opened)"; label = 'Emails Opened' }
+                        @{ value = "$($attackerTotals.sent)"; label = 'Emails Sent' }
+                        @{ value = "$($attackerTotals.deleted)"; label = 'Emails Deleted' }
+                        @{ value = "$($attackerTotals.files)"; label = 'Files Opened' }
+                    )))
+            if ($attackerMail.Count -gt 0) {
+                $b.Add((New-CippReportTable -Columns @(
+                            @{ header = 'When'; key = 'when'; width = 2; bold = $true }
+                            @{ header = 'Action'; key = 'action'; width = 2 }
+                            @{ header = 'Mailbox'; key = 'mailbox'; width = 2 }
+                            @{ header = 'Item'; key = 'item'; width = 4 }
+                        ) -Rows @($attackerMail | ForEach-Object {
+                            @{
+                                when    = (FmtDate $_.When)
+                                action  = $(if ($_.AccessType) { "$($_.Operation) ($($_.AccessType))" } else { "$($_.Operation)" })
+                                mailbox = $(if (-not $_.MailboxOwner -or "$($_.MailboxOwner)" -ieq "$upn") { 'This mailbox' } else { "$($_.MailboxOwner)" })
+                                item    = "$(@($_.Subject, $_.Folder, $_.Detail) | Where-Object { $_ } | Select-Object -First 1)"
+                            }
+                        }) -Limit 10))
+            }
+            if ($attackerFiles.Count -gt 0) {
+                $b.Add((New-CippReportTable -Columns @(
+                            @{ header = 'When'; key = 'when'; width = 2; bold = $true }
+                            @{ header = 'Action'; key = 'action'; width = 2 }
+                            @{ header = 'File'; key = 'file'; width = 3 }
+                            @{ header = 'Site'; key = 'site'; width = 3 }
+                        ) -Rows @($attackerFiles | ForEach-Object {
+                            @{ when = (FmtDate $_.When); action = "$($_.Operation)"; file = $(if ($_.File) { "$($_.File)" } else { "$($_.Url)" }); site = "$($_.Site)" }
+                        }) -Limit 10))
+            }
+            $b.Add((New-CippReportNote -Text "The first items of each kind are shown; the complete item list is in the case's evidence export."))
+        }
+
+        if ($blastRadius.Count -gt 0) {
+            $b.Add((New-CippReportHeading -Title 'Other Accounts Reached'))
+            $b.Add((New-CippReportParagraph -Text "Accounts elsewhere in the organization that signed in or acted from the attacker's addresses. A successful sign-in or any recorded action means the account was reached; failed sign-ins alone are an attempt."))
+            $b.Add((New-CippReportTable -Columns @(
+                        @{ header = 'Account'; key = 'account'; width = 3; bold = $true }
+                        @{ header = 'Status'; key = 'status'; width = 1; toneField = 'tone' }
+                        @{ header = 'Sign-ins'; key = 'signIns'; width = 2 }
+                        @{ header = 'Actions'; key = 'operations'; width = 3 }
+                        @{ header = 'Last seen'; key = 'lastSeen'; width = 2 }
+                    ) -Rows @($blastRadius | ForEach-Object {
+                        @{
+                            account    = "$($_.UserPrincipalName)"
+                            status     = $(if ($_.Reached -eq $true) { 'Reached' } else { 'Attempted' })
+                            tone       = $(if ($_.Reached -eq $true) { 'fail' } else { 'warn' })
+                            signIns    = "$(AsInt $_.SuccessfulSignIns) ok / $(AsInt $_.FailedSignIns) failed"
+                            operations = $(if ($_.Operations) { "$($_.Operations)" } else { '-' })
+                            lastSeen   = (FmtDate $_.LastSeen)
+                        }
+                    }) -Limit 15))
+        }
+
+        if ($delegatedReached.Count -gt 0) {
+            $b.Add((New-CippReportHeading -Title 'Other Mailboxes Reached Through This Account'))
+            $b.Add((New-CippReportTable -Columns @(
+                        @{ header = 'Mailbox'; key = 'mailbox'; width = 3; bold = $true }
+                        @{ header = 'Access'; key = 'access'; width = 3 }
+                        @{ header = 'Opened'; key = 'opened'; width = 1 }
+                        @{ header = 'Synced'; key = 'synced'; width = 1 }
+                        @{ header = 'Sent'; key = 'sent'; width = 1 }
+                    ) -Rows @($delegatedReached | ForEach-Object {
+                        @{ mailbox = "$($_.Mailbox)"; access = "$($_.AccessRights)"; opened = "$(AsInt $_.AttackerOpened)"; synced = "$(AsInt $_.AttackerSynced)"; sent = "$(AsInt $_.AttackerSent)" }
+                    }) -Limit 10))
+        }
+
+        if ($attackerFormIds.Count -gt 0) {
+            $b.Add((New-CippReportHeading -Title "Microsoft Forms From the Attacker's Addresses"))
+            $b.Add((New-CippReportParagraph -Text "Forms built or shared from the attacker's addresses, and how far they reached. A form asking for a password is a phishing page hosted on Microsoft's own domain. No API removes a single form: confirm phishing and delete it from its Microsoft Defender alert, or, after the password reset, delete it in Microsoft Forms as the account."))
+            $formRows = if ($formsReach.Count -gt 0) {
+                @($formsReach | ForEach-Object {
+                        @{ name = $(if ($_.FormName) { "$($_.FormName)" } else { "$($_.FormId)" }); responses = "$(AsInt $_.Responses)"; anonymous = "$(AsInt $_.AnonymousResponses)"; views = "$(AsInt $_.Views)"; flagged = $(if ($_.PhishingFlagged -eq $true) { 'Yes' } else { 'No' }) }
+                    })
+            } else {
+                @($attackerFormNames | ForEach-Object { @{ name = "$_"; responses = '-'; anonymous = '-'; views = '-'; flagged = '-' } })
+            }
+            $b.Add((New-CippReportTable -Columns @(
+                        @{ header = 'Form'; key = 'name'; width = 4; bold = $true }
+                        @{ header = 'Responses'; key = 'responses'; width = 1 }
+                        @{ header = 'Anonymous'; key = 'anonymous'; width = 1 }
+                        @{ header = 'Views'; key = 'views'; width = 1 }
+                        @{ header = 'Phishing flag'; key = 'flagged'; width = 2 }
+                    ) -Rows @($formRows) -Limit 10))
+        }
+    }
 
     # === PAGE 2: UNDERSTANDING BEC ===
     $b.Add((New-CippReportPage -Title 'Understanding Business Email Compromise' -Subtitle 'What is BEC and why does it matter?'))

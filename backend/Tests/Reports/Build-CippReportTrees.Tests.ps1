@@ -116,6 +116,29 @@ Describe 'Report tree builders' {
         $r.Variables.footerlabel | Should -Be 'Contoso - BEC Analysis Report for Alice'
         Test-Report $r 'Security Incident Report'
     }
+
+    It 'BEC: carries the attacker addresses, what was done from them and the reach beyond the account, condensed in the summary' {
+        $Sample = Get-Content (Join-Path $RepoRoot 'Config/ReportSamples/bec.json') -Raw | ConvertFrom-Json
+        $Full = Build-CippBecReportTree -TenantName 'Contoso' -UserData $Sample.userData -BecData $Sample.becData
+        $Summary = Build-CippBecReportTree -TenantName 'Contoso' -UserData $Sample.userData -BecData $Sample.becData -Variant summary
+        $Found = @(($Summary.Blocks | Where-Object { $_.type -eq 'richbullets' } | Select-Object -First 1).items.text)
+        $Found | Should -Contain "1 network address in NG was identified as the attacker's; from there the attacker opened 1 email, sent 1 email, opened 1 file (1 download)."
+        ($Found -like 'The attack reached beyond this account: 1 other account signed into or used from the same addresses (finance.lead@example.com)*').Count | Should -Be 1
+        $Actions = @(($Summary.Blocks | Where-Object { $_.type -eq 'richtable' -and $_.columns[0].header -eq 'Priority' }).rows)
+        ($Actions | Where-Object { $_.text -like 'Secure the 1 other account(s)*' }).tag | Should -Be 'Critical'
+        ($Actions | Where-Object { $_.text -like 'Remove the 1 Microsoft Form(s)*' }).text | Should -Match 'Microsoft Defender alert'
+        $Objectives = ($Summary.Blocks | Where-Object { $_.type -eq 'progress' } | Select-Object -First 1).items
+        $Objectives[0].label | Should -Be 'Attacker IPs & activity'
+        $Timeline = @(($Summary.Blocks | Where-Object { $_.type -eq 'richtable' -and $_.columns[1].header -eq 'Event' }).rows)
+        ($Timeline | Where-Object { $_.event -eq '1 message(s) opened' }).detail | Should -Be 'Invoice 4471 - updated bank details - 198.51.100.23'
+        ($Summary.Blocks | Where-Object { $_.type -eq 'page' -and $_.title -eq 'Attacker Addresses & Activity' }) | Should -BeNullOrEmpty -Because 'the C-suite summary stops after the executive lead'
+        ($Full.Blocks | Where-Object { $_.type -eq 'page' -and $_.title -eq 'Attacker Addresses & Activity' }) | Should -Not -BeNullOrEmpty
+        $IpTable = $Full.Blocks | Where-Object { $_.type -eq 'richtable' -and $_.columns[0].header -eq 'Address' }
+        @($IpTable.rows).Count | Should -Be 1 -Because 'only attacker and suspicious addresses are listed'
+        $IpTable.rows[0].why | Should -Be 'Proxy/VPN network; Outside the usage location; Never used by the user'
+        Test-Report $Full 'Security Incident Report'
+        Test-Report $Summary 'Security Incident Report'
+    }
 }
 
 Describe 'License report tree' {

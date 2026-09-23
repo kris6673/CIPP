@@ -212,6 +212,132 @@
       "ForeignSharingChangeCount": 1,
       "ForeignSentMessageCount": 1,
       "Note": null
-    }
+    },
+    "UserPrincipalName": "sample.user@example.com",
+    "IPVerdicts": [
+      {
+        "IP": "198.51.100.23",
+        "Verdict": "LikelyAttacker",
+        "Score": 9,
+        "Source": "Heuristics",
+        "Reasons": [
+          {
+            "Code": "HostingOrProxy",
+            "Weight": 3,
+            "Text": "Proxy/VPN network"
+          },
+          {
+            "Code": "Foreign",
+            "Weight": 2,
+            "Text": "Outside the usage location"
+          },
+          {
+            "Code": "NewToUser",
+            "Weight": 2,
+            "Text": "Never used by the user"
+          }
+        ],
+        "Country": "NG",
+        "City": "Lagos",
+        "SuccessfulSignIns": 3,
+        "FailedSignIns": 1,
+        "Activities": 12
+      },
+      {
+        "IP": "203.0.113.10",
+        "Verdict": "LikelyUser",
+        "Score": -5,
+        "Source": "Heuristics",
+        "Reasons": [],
+        "Country": "US",
+        "City": "Chicago",
+        "SuccessfulSignIns": 40,
+        "FailedSignIns": 0,
+        "Activities": 3
+      }
+    ],
+    "AttackerMailActivity": [
+      {
+        "When": "2026-08-04T02:10:00Z",
+        "Operation": "MailItemsAccessed",
+        "AccessType": "Bind",
+        "Folder": "Inbox",
+        "Subject": "Invoice 4471 - updated bank details",
+        "InternetMessageId": "<a1@example.com>",
+        "MailboxOwner": "sample.user@example.com",
+        "IP": "198.51.100.23",
+        "IPVerdict": "LikelyAttacker"
+      },
+      {
+        "When": "2026-08-04T02:20:00Z",
+        "Operation": "Send",
+        "Folder": "Sent Items",
+        "Subject": "RE: Invoice 4471",
+        "InternetMessageId": "<a2@example.com>",
+        "MailboxOwner": "sample.user@example.com",
+        "IP": "198.51.100.23",
+        "IPVerdict": "LikelyAttacker"
+      }
+    ],
+    "AttackerFileActivity": [
+      {
+        "When": "2026-08-04T02:30:00Z",
+        "Operation": "FileDownloaded",
+        "File": "Payroll 2026.xlsx",
+        "Url": "https://example.sharepoint.com/sites/finance/Payroll 2026.xlsx",
+        "Site": "https://example.sharepoint.com/sites/finance",
+        "IP": "198.51.100.23",
+        "IPVerdict": "LikelyAttacker"
+      }
+    ],
+    "FormsActivity": [
+      {
+        "When": "2026-08-04T03:00:00Z",
+        "Operation": "CreateForm",
+        "FormName": "Microsoft 365 account verification",
+        "FormId": "form-1",
+        "IP": "198.51.100.23",
+        "IPVerdict": "LikelyAttacker",
+        "Flagged": true
+      }
+    ],
+    "FormsSummary": {
+      "FlaggedActions": 1,
+      "Forms": [
+        {
+          "FormId": "form-1",
+          "FormName": "Microsoft 365 account verification",
+          "Responses": 4,
+          "AnonymousResponses": 4,
+          "Views": 37,
+          "PhishingFlagged": false
+        }
+      ]
+    },
+    "DelegatedAccess": [
+      {
+        "Mailbox": "accounts@example.com",
+        "AccessRights": "FullAccess",
+        "KnownFrom": "Permission cache",
+        "AttackerOpened": 6,
+        "AttackerSynced": 0,
+        "AttackerSent": 0,
+        "Flagged": true
+      }
+    ],
+    "BlastRadius": [
+      {
+        "UserPrincipalName": "finance.lead@example.com",
+        "UserId": "22222222-2222-2222-2222-222222222222",
+        "Reached": true,
+        "AttackerIPs": "198.51.100.23",
+        "SuccessfulSignIns": 1,
+        "FailedSignIns": 2,
+        "Actions": 4,
+        "Operations": "MailItemsAccessed x4",
+        "FirstSeen": "2026-08-04T04:00:00Z",
+        "LastSeen": "2026-08-04T04:20:00Z"
+      }
+    ]
   }
 }
