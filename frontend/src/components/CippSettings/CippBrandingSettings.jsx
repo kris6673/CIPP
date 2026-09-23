@@ -89,7 +89,7 @@ const FOOTER_TOOLTIP =
   "Text shown at the bottom of every report page. Type % for CIPP's variables, plus %reportname% and %reportdate% which reports add. Report templates can override this or switch it off individually.";
 
 const WATERMARK_TOOLTIP =
-  "Diagonal text drawn faintly across every page of a report, cover included. Type % for CIPP's variables (e.g. %tenantname%), or a static mark such as DRAFT. Typing text is enough to show it; the toggle only exists to switch it off without losing the wording.";
+  "Diagonal text drawn faintly across every page of a report except the cover. Type % for CIPP's variables (e.g. %tenantname%), or a static mark such as DRAFT. Typing text is enough to show it; the toggle only exists to switch it off without losing the wording.";
 
 const REPORT_DEFAULTS_TOOLTIP =
   "Which preset each report reaches for when nothing else says otherwise. A report template with its own preset still wins over this, and this still wins over the default branding above.";
@@ -1411,8 +1411,6 @@ const CippBrandingSettings = () => {
                     colour={brandColour}
                     secondaryColour={formControl.watch("secondaryColour")}
                     coverFooterText={formControl.watch("coverFooterText")}
-                    watermarkText={formControl.watch("watermarkText")}
-                    watermarkEnabled={formControl.watch("watermarkEnabled")}
                     logo={logoPreview}
                     coverImage={coverPreview}
                     coverImageId={coverPreview ? coverImageId : null}

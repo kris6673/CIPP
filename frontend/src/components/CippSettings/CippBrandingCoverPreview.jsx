@@ -1,7 +1,7 @@
 import { Box, Typography } from "@mui/material";
 import { resolveCoverImage } from "../CippPdf/resolveCoverImage";
 import { createReportStyles } from "../CippPdf/reportPdfStyles";
-import { applyFooterText, applyWatermarkText, createReportTheme } from "../CippPdf/reportTheme";
+import { applyFooterText, createReportTheme } from "../CippPdf/reportTheme";
 import {
   SAMPLE_BEC,
   SAMPLE_LICENSING,
@@ -207,8 +207,6 @@ const CippBrandingCoverPreview = ({
   colour,
   secondaryColour,
   coverFooterText,
-  watermarkText,
-  watermarkEnabled,
   logo,
   coverImage,
   coverImageId,
@@ -219,8 +217,6 @@ const CippBrandingCoverPreview = ({
     colour,
     secondaryColour,
     coverFooterText,
-    watermarkText,
-    watermarkEnabled,
   });
   const styles = createReportStyles(theme);
   const preset =
@@ -239,7 +235,6 @@ const CippBrandingCoverPreview = ({
     reportname: preset.reportName,
     reportdate: currentDate,
   };
-  const watermarkLabel = applyWatermarkText(theme.watermark.text, previewVariables);
   const coverFooterLabel = applyFooterText(
     theme.coverFooterText || preset.footer,
     previewVariables
@@ -315,38 +310,6 @@ const CippBrandingCoverPreview = ({
           {currentDate}
         </Typography>
       </Box>
-
-      {/* Same rule as the PDF: over the artwork and the text, at the same low opacity. */}
-      {theme.watermark.enabled && (
-        <Box
-          data-testid="cover-watermark"
-          sx={{
-            position: "absolute",
-            inset: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            pointerEvents: "none",
-            zIndex: 2,
-          }}
-        >
-          <Box
-            component="span"
-            sx={{
-              fontSize: { xs: 44, md: 64 },
-              fontWeight: "bold",
-              color: theme.primary,
-              opacity: 0.08,
-              textTransform: "uppercase",
-              letterSpacing: 4,
-              transform: "rotate(-45deg)",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {watermarkLabel}
-          </Box>
-        </Box>
-      )}
 
       <Box sx={{ position: "relative", zIndex: 1, flex: 1, pt: 6 }}>
         <Box
