@@ -205,6 +205,8 @@
     * [Manage Baselines](user-documentation/tenant/baselines/templates.md)
     * [Add or Edit Baseline](user-documentation/tenant/baselines/template.md)
   * [Security Simulations](user-documentation/tenant/security-simulator/README.md)
+    * [Sign-in Situations](user-documentation/tenant/security-simulator/situations.md)
+    * [CA Gap Analysis](user-documentation/tenant/security-simulator/conditional-access.md)
   * [Standards & Drift](user-documentation/tenant/standards/README.md)
     * [Standards & Drift Alignment](user-documentation/tenant/standards/alignment/README.md)
       * [Templates](user-documentation/tenant/standards/alignment/templates/README.md)
