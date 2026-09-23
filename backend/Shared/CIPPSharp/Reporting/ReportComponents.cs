@@ -670,6 +670,9 @@ namespace CIPP.Reporting
             style.CellPaddingTop = 7.3;
             style.CellPaddingBottom = 5.7;
             style.SpacingAfter = noteFollows ? 4 : 16;
+            // The client's header repeats on each page and its rows move whole, so a table starts on the page
+            // as soon as the header and one row fit there (OfficeIMO's default waits for two).
+            style.MinimumBodyRowsOnFirstPage = 1;
             var line = Pdf(ReportColours.Line);
             style.CellPaddings = new Dictionary<(int, int), PdfCellPadding>();
             style.CellBorders = new Dictionary<(int, int), PdfCellBorder>();
