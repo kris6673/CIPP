@@ -299,6 +299,11 @@ Describe 'Invoke-ExecGetBaselineWhatIfReportPdf' {
             }
         }
 
+        It 'simulates a baseline named more than once only once' {
+            (Invoke-Report @{ tenantFilter = 'contoso.onmicrosoft.com'; simulatedTemplateIds = @('tpl-zero-trust', 'tpl-core', 'tpl-zero-trust') }).StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
+            Should -Invoke ConvertTo-CippReportPdf -Times 1 -Exactly -ParameterFilter { $Variables.covermetanote -eq 'Includes a simulation of: Zero Trust' }
+        }
+
         It 'ignores the id of a baseline that is already assigned' {
             (Invoke-Report @{ tenantFilter = 'contoso.onmicrosoft.com'; simulatedTemplateIds = @('tpl-core') }).StatusCode | Should -Be ([System.Net.HttpStatusCode]::OK)
             Should -Invoke ConvertTo-CippReportPdf -Times 1 -Exactly -ParameterFilter { -not $Variables.Contains('covermetanote') }

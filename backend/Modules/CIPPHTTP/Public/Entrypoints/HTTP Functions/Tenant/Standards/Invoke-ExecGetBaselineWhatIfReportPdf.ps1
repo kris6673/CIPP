@@ -42,10 +42,11 @@ function Invoke-ExecGetBaselineWhatIfReportPdf {
         }
 
         # Optional. The GUIDs of baselines NOT assigned to the tenant, whose additions are shown in the
-        # report as planned changes, in the order given. Ids of assigned baselines are ignored.
+        # report as planned changes, in the order given; a repeated id counts once. Ids of assigned
+        # baselines are ignored.
         $SimulatedTemplateIds = [System.Collections.Generic.List[string]]::new()
         foreach ($Id in $Request.Body.simulatedTemplateIds) {
-            if (-not [string]::IsNullOrWhiteSpace([string]$Id)) { $SimulatedTemplateIds.Add([string]$Id) }
+            if (-not [string]::IsNullOrWhiteSpace([string]$Id) -and -not $SimulatedTemplateIds.Contains([string]$Id)) { $SimulatedTemplateIds.Add([string]$Id) }
         }
 
         # Optional. The branding preset to render with; an unknown id falls back to the default branding.
