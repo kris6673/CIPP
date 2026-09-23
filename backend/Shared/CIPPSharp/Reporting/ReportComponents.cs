@@ -1127,9 +1127,11 @@ namespace CIPP.Reporting
         private const double StatLine = 14;
         private const double StatLeading = (ReportStyles.StatNumber * 1.15 + 7 + 0.9 * (ReportStyles.StatLabel - ReportStyles.StatNumber)) / ReportStyles.StatNumber;
 
-        // Helvetica and Helvetica-Bold advance widths (per 1000 em) for ' '..'~', the metrics OfficeIMO lays the
-        // standard font out with (the oblique faces share them); a no-break space is a space, the bullet 350,
-        // and anything else counts as a digit-wide 556 (the Latin-1 currency signs are).
+        // Helvetica and Helvetica-Bold advance widths (per 1000 em) for the WinAnsi code points ' '..U+00FF, the
+        // metrics OfficeIMO lays the standard font out with (the oblique faces share them): ASCII, then 0x7F-0x9F
+        // (the cp1252 specials, which TextEm reaches through WinAnsiSpecials), then Latin-1. The accented
+        // capitals are as wide as their base letters (up to 778), so pricing them at a flat 556 let a cover line
+        // be packed past its box and cut off mid-word. Anything outside WinAnsi still counts as a digit-wide 556.
         private static readonly int[] HelveticaWidths =
         {
             278, 278, 355, 556, 556, 889, 667, 191, 333, 333, 389, 584, 278, 333, 278, 278, 556, 556, 556, 556,
@@ -1137,6 +1139,13 @@ namespace CIPP.Reporting
             722, 278, 500, 667, 556, 833, 722, 778, 667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 278,
             278, 278, 469, 556, 333, 556, 556, 500, 556, 556, 278, 556, 556, 222, 222, 500, 222, 833, 556, 556,
             556, 556, 333, 500, 278, 556, 500, 722, 500, 500, 500, 334, 260, 334, 584,
+            556, 556, 556, 222, 556, 333, 1000, 556, 556, 333, 1000, 667, 333, 1000, 556, 611, 556, 556, 222, 222,
+            333, 333, 350, 556, 1000, 333, 1000, 500, 333, 944, 556, 500, 667, 278, 333, 556, 556, 556, 556, 260,
+            556, 333, 737, 370, 556, 584, 333, 737, 333, 400, 584, 333, 333, 333, 556, 537, 278, 333, 333, 365,
+            556, 834, 834, 834, 611, 667, 667, 667, 667, 667, 667, 1000, 722, 667, 667, 667, 667, 278, 278, 278,
+            278, 722, 722, 778, 778, 778, 778, 778, 584, 778, 722, 722, 722, 722, 667, 667, 611, 556, 556, 556,
+            556, 556, 556, 889, 500, 556, 556, 556, 556, 278, 278, 278, 278, 556, 556, 556, 556, 556, 556, 556,
+            584, 611, 556, 556, 556, 556, 500, 556, 500,
         };
         private static readonly int[] HelveticaBoldWidths =
         {
@@ -1145,13 +1154,29 @@ namespace CIPP.Reporting
             722, 278, 556, 722, 611, 833, 722, 778, 667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 333,
             278, 333, 584, 556, 333, 556, 611, 556, 611, 556, 333, 611, 611, 278, 278, 556, 278, 889, 611, 611,
             611, 611, 389, 556, 333, 611, 556, 778, 556, 556, 500, 389, 280, 389, 584,
+            556, 556, 556, 278, 556, 500, 1000, 556, 556, 333, 1000, 667, 333, 1000, 556, 611, 556, 556, 278, 278,
+            500, 500, 350, 556, 1000, 333, 1000, 556, 333, 944, 556, 500, 667, 278, 333, 556, 556, 556, 556, 280,
+            556, 333, 737, 370, 556, 584, 333, 737, 333, 400, 584, 333, 333, 333, 611, 556, 278, 333, 333, 365,
+            556, 834, 834, 834, 611, 722, 722, 722, 722, 722, 722, 1000, 722, 667, 667, 667, 667, 278, 278, 278,
+            278, 722, 722, 778, 778, 778, 778, 778, 584, 778, 722, 722, 722, 722, 667, 667, 611, 556, 556, 556,
+            556, 556, 556, 889, 556, 556, 556, 556, 556, 278, 278, 278, 278, 611, 611, 611, 611, 611, 611, 611,
+            584, 611, 611, 611, 611, 611, 556, 611, 556,
         };
+
+        // What cp1252 puts at 0x80..0x9F (its five unassigned bytes kept as themselves), so a curly quote, dash
+        // or bullet finds its WinAnsi width.
+        private const string WinAnsiSpecials = "\u20AC\u0081\u201A\u0192\u201E\u2026\u2020\u2021\u02C6\u2030\u0160\u2039\u0152\u008D\u017D\u008F\u0090\u2018\u2019\u201C\u201D\u2022\u2013\u2014\u02DC\u2122\u0161\u203A\u0153\u009D\u017E\u0178";
 
         // A run of text's advance in em.
         internal static double TextEm(string s, bool bold)
         {
             var widths = bold ? HelveticaBoldWidths : HelveticaWidths;
-            return s.Sum(ch => (ch >= ' ' && ch <= '~' ? widths[ch - ' '] : ch == '\u00A0' ? 278 : ch == '\u2022' ? 350 : 556) / 1000.0);
+            return s.Sum(ch =>
+            {
+                var special = WinAnsiSpecials.IndexOf(ch);
+                var code = special >= 0 ? 0x80 + special : ch;
+                return (code >= ' ' && code <= 0xFF ? widths[code - ' '] : 556) / 1000.0;
+            });
         }
 
         // How many lines `text` takes in a column `width` points wide: each '\n' line word-wrapped greedily,
