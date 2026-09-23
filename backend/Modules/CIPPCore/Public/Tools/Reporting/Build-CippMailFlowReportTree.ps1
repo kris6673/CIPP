@@ -116,11 +116,11 @@ function Build-CippMailFlowReportTree {
         Variables = @{
             coverlabel         = 'Email Traffic Review'
             coversubtitle      = "Where email at $($Data.TenantName) came from over the last $days days, how much of it was delivered, and what was stopped before it reached a mailbox."
-            covermeta          = ('{0:N0} messages / {1}% delivered / {2:N0} threats caught' -f $totalMail, $goodPct, $threats)
+            covermeta          = ("{0:N0} messages $([char]0x00B7) {1}% delivered $([char]0x00B7) {2:N0} threats caught" -f $totalMail, $goodPct, $threats)
             covermetanote      = "Mail hygiene: $hygiene"
-            coverfooternote    = 'Confidential - For Internal Use Only'
+            coverfooternote    = "Confidential $([char]0x2014) For Internal Use Only"
             coverfallbackimage = '/reportImages/city.jpg'
-            footerlabel        = "$($Data.TenantName) - Mail Flow"
+            footerlabel        = "$($Data.TenantName) $([char]0x2014) Mail Flow"
         }
     }
 }

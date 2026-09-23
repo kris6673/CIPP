@@ -128,11 +128,11 @@ function Build-CippSharingReportTree {
         Variables = @{
             coverlabel         = 'Data Sharing Review'
             coversubtitle      = "What has been shared out of SharePoint and OneDrive at $($Data.TenantName), who it reaches, and which of those shares are worth acting on."
-            covermeta          = ('{0} sharing links / {1} items / {2} external recipients' -f (nz $summary.totalLinks), (nz $summary.itemsShared), (nz $summary.externalRecipients))
+            covermeta          = ("{0} sharing links $([char]0x00B7) {1} items $([char]0x00B7) {2} external recipients" -f (nz $summary.totalLinks), (nz $summary.itemsShared), (nz $summary.externalRecipients))
             covermetanote      = "Sharing exposure: $exposure"
-            coverfooternote    = 'Confidential - For Internal Use Only'
+            coverfooternote    = "Confidential $([char]0x2014) For Internal Use Only"
             coverfallbackimage = '/reportImages/glasses.jpg'
-            footerlabel        = "$($Data.TenantName) - SharePoint & OneDrive Sharing"
+            footerlabel        = "$($Data.TenantName) $([char]0x2014) SharePoint & OneDrive Sharing"
         }
     }
 }

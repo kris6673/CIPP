@@ -115,11 +115,11 @@ function Build-CippPermissionsReportTree {
         Variables = @{
             coverlabel         = 'Access Review'
             coversubtitle      = "Who is structurally allowed into SharePoint sites and document libraries at $($Data.TenantName), and where that access reaches further than intended."
-            covermeta          = ('{0} sites / {1} libraries / {2} permission assignments' -f (nz $summary.sitesScanned), (nz $summary.librariesScanned), (nz $summary.totalAssignments))
+            covermeta          = ("{0} sites $([char]0x00B7) {1} libraries $([char]0x00B7) {2} permission assignments" -f (nz $summary.sitesScanned), (nz $summary.librariesScanned), (nz $summary.totalAssignments))
             covermetanote      = "Permission exposure: $exposure"
-            coverfooternote    = 'Confidential - For Internal Use Only'
+            coverfooternote    = "Confidential $([char]0x2014) For Internal Use Only"
             coverfallbackimage = '/reportImages/soc.jpg'
-            footerlabel        = "$($Data.TenantName) - SharePoint Permissions"
+            footerlabel        = "$($Data.TenantName) $([char]0x2014) SharePoint Permissions"
         }
     }
 }

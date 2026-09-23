@@ -51,7 +51,7 @@ Describe 'Report tree builders' {
             daily      = @(@{ date = '2026-09-01'; GoodMail = 90; EmailPhish = 10 })
             topSenders = @(@{ name = 'a@contoso.com'; count = 5 })
         }
-        $r.Variables.covermeta | Should -Be '100 messages / 90% delivered / 10 threats caught'
+        $r.Variables.covermeta | Should -Be ("100 messages {0} 90% delivered {0} 10 threats caught" -f [char]0x00B7)
         $r.Variables.covermetanote | Should -Be 'Mail hygiene: Attention Needed'
         Test-Report $r 'Email Traffic Review'
     }

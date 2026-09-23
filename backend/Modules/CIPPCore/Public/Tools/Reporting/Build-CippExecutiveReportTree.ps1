@@ -198,7 +198,6 @@ function Build-CippExecutiveReportTree {
             coveraccent        = 'Summary'
             covertenant        = [string]$tenant
             coversubtitle      = "Security & Compliance Assessment for $tenant"
-            coverfooternote    = 'Confidential - For Internal Use Only'
             coverfallbackimage = '/reportImages/soc.jpg'
             footerlabel        = "$tenant - Executive Summary"
         }

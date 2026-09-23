@@ -154,7 +154,6 @@ function Build-CippShadowAIReportTree {
         Variables = @{
             coverlabel         = 'AI Risk Assessment'
             coversubtitle      = 'Discovery and risk assessment of AI tools in use across managed devices and cloud applications.'
-            coverfooternote    = 'Confidential - For Internal Use Only'
             coverfallbackimage = '/reportImages/city.jpg'
             footerlabel        = "$($Data.TenantName) - Shadow AI Report"
         }
