@@ -77,8 +77,13 @@ namespace CIPP.Reporting
             // A branding logo the engine cannot embed (a PNG with a bad chunk CRC, an unsupported format)
             // only surfaces when the document is serialised, not where the logo is placed, so it must not
             // sink the report: render once more without it. Any other failure still propagates.
-            var watermark = theme.WatermarkEnabled ? ReportTheme.ApplyWatermark(theme.WatermarkText, variables) : string.Empty;
-            byte[] Finish(PdfDocument doc) => chrome ? LiftWatermark(doc.ToBytes(), watermark) : doc.ToBytes();
+            var watermark = theme.WatermarkEnabled ? ReportTheme.ApplyWatermark(theme.WatermarkText, variables).ToUpperInvariant() : string.Empty;
+            // The client's mark is a centred text box as wide as the page, so a mark wider than that (its 4pt
+            // letter spacing counted) breaks into lines. OfficeIMO draws one line: it is handed the lines joined,
+            // with room behind them for the line moves LiftWatermark writes in their place.
+            var markLines = ReportComponents.WrapLines(watermark, ReportStyles.ContentWidth(pageSize, landscape) + 2 * ReportStyles.PagePadding, WatermarkSize, bold: true, tracking: 4);
+            if (markLines.Count > 1) watermark = string.Join(" ", markLines) + new string(' ', MarkLineRoom * (markLines.Count - 1));
+            byte[] Finish(PdfDocument doc) => chrome ? LiftWatermark(doc.ToBytes(), watermark, markLines) : doc.ToBytes();
             try { return Finish(Compose(Context(logo), groups, chrome, watermark)); }
             catch when (logo is not null) { return Finish(Compose(Context(null), groups, chrome, watermark)); }
         }
@@ -366,6 +371,9 @@ namespace CIPP.Reporting
         // (the same to the eye) only so LiftWatermark can tell it from a content page's - the client sets the
         // two on different lines - and is written back at exactly 45.
         private const double WatermarkSize = 72, WatermarkAngle = 45, DividerWatermarkAngle = 45.05;
+        // Spaces added to a multi-line mark per extra line: 32 bytes of hex, where a line move ("-123.45 -79.2 Td"
+        // and the line's own "<...> Tj" framing, less the space it replaces) needs about 22.
+        private const int MarkLineRoom = 16;
         private static readonly byte[] WatermarkRotation = Encoding.ASCII.GetBytes("0.707 0.707 -0.707 0.707");
         private static readonly byte[] DividerWatermarkRotation = Encoding.ASCII.GetBytes("0.706 0.708 -0.708 0.706");
 
@@ -379,10 +387,10 @@ namespace CIPP.Reporting
         /// matrix is rewritten, space-padded to the same length, to put the mark where the client's is
         /// (<see cref="PlaceWatermark"/>). A stream the block cannot be found in is left as written.
         /// </summary>
-        internal static byte[] LiftWatermark(byte[] pdf, string watermark)
+        internal static byte[] LiftWatermark(byte[] pdf, string watermark, IReadOnlyList<string> lines)
         {
             if (string.IsNullOrEmpty(watermark)) return pdf;
-            var marker = Encoding.ASCII.GetBytes("<" + Convert.ToHexString(Encoding.Latin1.GetBytes(watermark.ToUpperInvariant())) + "> Tj");
+            var marker = Encoding.ASCII.GetBytes(Hex(watermark) + " Tj");
             var streamTag = Encoding.ASCII.GetBytes("stream\n");
             var lengthTag = Encoding.ASCII.GetBytes("/Length ");
             var open = Encoding.ASCII.GetBytes("q\n");
@@ -409,7 +417,7 @@ namespace CIPP.Reporting
                 var divider = rotationAt < 0;
                 if (divider) rotationAt = IndexOf(pdf, DividerWatermarkRotation, blockStart, blockEnd);
                 if (rotationAt < 0) { at = dataEnd; continue; }
-                PlaceWatermark(pdf, rotationAt, blockEnd, divider);
+                PlaceWatermark(pdf, rotationAt, blockEnd, divider, watermark, lines, at, marker.Length);
 
                 var block = pdf[blockStart..blockEnd];
                 var tail = pdf[blockEnd..dataEnd];
@@ -425,35 +433,61 @@ namespace CIPP.Reporting
 
         /// <summary>
         /// Moves the mark whose "a b c d e f Tm" operands start at <paramref name="at"/> to the client's place.
-        /// The client centres the text's line box on the page and seats the baseline 0.9x the size under the
-        /// box top; the box is a content page's inherited 14pt line, or a divider's natural 1.1x line.
-        /// OfficeIMO seats the baseline half the size under the page centre, so the mark moves the
-        /// difference across the text, and 2pt back along it: the client's 4pt letter spacing also trails
-        /// the last letter, which the centring counts. Left as written when the operands will not fit.
+        /// The client centres the text's box on the page, one line box per line of the mark, and seats each
+        /// baseline 0.9x the size under its line box top; a line box is a content page's inherited 14pt line,
+        /// or a divider's natural 1.1x line. Each line is centred along the text on its own. OfficeIMO seats
+        /// the baseline half the size under the page centre, so the mark moves the difference across the
+        /// text, and 2pt back along it: the client's 4pt letter spacing also trails the last letter, which
+        /// the centring counts. A mark of several lines has its text (at <paramref name="textAt"/>) rewritten
+        /// as one line per <paramref name="lines"/> entry, each a Td move down from the last, in the room its
+        /// padding left. Left as written when the operands or the lines will not fit.
         /// </summary>
-        private static void PlaceWatermark(byte[] pdf, int at, int end, bool divider)
+        private static void PlaceWatermark(byte[] pdf, int at, int end, bool divider, string watermark, IReadOnlyList<string> lines, int textAt, int textLength)
         {
             var tm = IndexOf(pdf, Encoding.ASCII.GetBytes(" Tm"), at, end);
             var operands = tm < 0 ? Array.Empty<string>() : Encoding.ASCII.GetString(pdf, at, tm - at).Split(' ');
             if (operands.Length != 6
                 || !double.TryParse(operands[4], NumberStyles.Float, CultureInfo.InvariantCulture, out var e)
                 || !double.TryParse(operands[5], NumberStyles.Float, CultureInfo.InvariantCulture, out var f)) return;
-            var across = 0.9 * WatermarkSize - (divider ? 1.1 * WatermarkSize : 14) / 2 - WatermarkSize / 2;
-            const double back = 2;
-            // At 45 degrees the text runs along (k, k) and across it, downwards, is (k, -k) in PDF space.
+            var pitch = divider ? 1.1 * WatermarkSize : 14;
+            double Width(string s) => ReportComponents.TextEm(s, bold: true) * WatermarkSize;
+            string Num(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
+
+            byte[]? text = null;
+            if (lines.Count > 1)
+            {
+                var sb = new StringBuilder(Hex(lines[0]) + " Tj");
+                for (var i = 1; i < lines.Count; i++)
+                    sb.Append('\n').Append(Num((Width(lines[i - 1]) - Width(lines[i])) / 2)).Append(' ').Append(Num(-pitch)).Append(" Td ").Append(Hex(lines[i])).Append(" Tj");
+                text = Encoding.ASCII.GetBytes(sb.ToString());
+                if (text.Length > textLength) return;
+            }
+
+            // From OfficeIMO's origin to the first line's, along the text and up across it.
+            var along = (Width(watermark) - Width(lines[0])) / 2 - 2;
+            var up = WatermarkSize / 2 + lines.Count * pitch / 2 - 0.9 * WatermarkSize;
+            // At 45 degrees the text runs along (k, k) and across it, upwards, is (-k, k) in PDF space.
             var k = Math.Sqrt(0.5);
-            e += k * (across - back);
-            f -= k * (across + back);
+            e += k * (along - up);
+            f += k * (along + up);
             foreach (var format in new[] { "0.##", "0" })
             {
-                var text = Encoding.ASCII.GetBytes(Encoding.ASCII.GetString(WatermarkRotation) + " "
+                var matrix = Encoding.ASCII.GetBytes(Encoding.ASCII.GetString(WatermarkRotation) + " "
                     + e.ToString(format, CultureInfo.InvariantCulture) + " " + f.ToString(format, CultureInfo.InvariantCulture));
-                if (text.Length > tm - at) continue;
-                Buffer.BlockCopy(text, 0, pdf, at, text.Length);
-                Array.Fill(pdf, (byte)' ', at + text.Length, tm - at - text.Length);
+                if (matrix.Length > tm - at) continue;
+                Buffer.BlockCopy(matrix, 0, pdf, at, matrix.Length);
+                Array.Fill(pdf, (byte)' ', at + matrix.Length, tm - at - matrix.Length);
+                if (text is not null)
+                {
+                    Buffer.BlockCopy(text, 0, pdf, textAt, text.Length);
+                    Array.Fill(pdf, (byte)' ', textAt + text.Length, textLength - text.Length);
+                }
                 return;
             }
         }
+
+        // A PDF hex string of `s` as OfficeIMO writes the standard fonts' text (one Latin-1 byte a character).
+        private static string Hex(string s) => "<" + Convert.ToHexString(Encoding.Latin1.GetBytes(s)) + ">";
 
         private static int IndexOf(byte[] hay, byte[] needle, int from, int to)
         {
