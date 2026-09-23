@@ -55,16 +55,17 @@ function Invoke-listStandardTemplates {
         if ($Data) {
             # $null means legacy synced row (no Source/ContentHash to compare); true/false compares
             # the live content hash against the one stamped at the last push/import.
+            $IsRepoSource = Test-CIPPRepoSource -Source $_.Source
             $HasLocalChanges = $null
             if ($RowSource -and $RowContentHash) {
                 $HasLocalChanges = (Get-CIPPTemplateContentHash -JSON $EffectiveJSON) -ne $RowContentHash
             }
             $DataProps = [ordered]@{
                 GUID            = $_.GUID
-                source          = $_.Source
-                isSynced        = (![string]::IsNullOrEmpty($_.SHA))
-                sourceUrl       = (Get-CIPPTemplateSourceUrl -Source $_.Source -SourcePath $_.SourcePath -Repos $Repos)
-                hasLocalChanges = $HasLocalChanges
+                source          = $(if ($IsRepoSource) { $_.Source } else { $null })
+                isSynced        = ($IsRepoSource -and ![string]::IsNullOrEmpty($_.SHA))
+                sourceUrl       = $(if ($IsRepoSource) { Get-CIPPTemplateSourceUrl -Source $_.Source -SourcePath $_.SourcePath -Repos $Repos } else { $null })
+                hasLocalChanges = $(if ($IsRepoSource) { $HasLocalChanges } else { $null })
             }
 
             if (!$Data.excludedTenants) {

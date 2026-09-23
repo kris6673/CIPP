@@ -10,6 +10,7 @@ BeforeAll {
     function Get-Tenants { @() }
     function Get-TenantGroups { @() }
     function Write-LogMessage { param($API, $message, $Sev) }
+    . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/GitHub/Test-CIPPRepoSource.ps1')
     function Get-CIPPTemplateSourceUrl { param($Source, $SourcePath, $Repos) if ($Source) { "https://github.com/$Source" } }
 
     . (Join-Path $script:RepoRoot 'Modules/CIPPCore/Public/Baselines/Get-CIPPBaseline.ps1')
@@ -92,6 +93,22 @@ Describe 'Get-CIPPBaseline source/isSynced projection' {
             }
         }
         $Result = Get-CIPPBaseline -ID 'baseline-5'
+        $Result.hasLocalChanges | Should -BeNullOrEmpty
+    }
+
+    It 'does not read the baseline migration marker as a repo sync' {
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            param($Context, $Filter)
+            if ($Filter -like "*PartitionKey eq 'rollout'*") {
+                @([pscustomobject]@{ RowKey = 'baseline-5'; templateName = 'Migrated Baseline'; Stages = '[]'; Source = 'StandardsTemplateV2:9c4c44c0-7e0d-4e5d-a018-dd64619c49bc'; SHA = 'abc123' })
+            } else {
+                @()
+            }
+        }
+        $Result = Get-CIPPBaseline -ID 'baseline-5'
+        $Result.source | Should -BeNullOrEmpty
+        $Result.isSynced | Should -BeFalse
+        $Result.sourceUrl | Should -BeNullOrEmpty
         $Result.hasLocalChanges | Should -BeNullOrEmpty
     }
 }

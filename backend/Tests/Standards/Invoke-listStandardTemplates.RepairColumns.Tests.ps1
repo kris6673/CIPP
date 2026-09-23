@@ -20,6 +20,7 @@ BeforeAll {
     function Add-CIPPAzDataTableEntity { param($Context, $Entity, [switch]$Force) }
     function Write-LogMessage { param($headers, $API, $message, $Sev, $LogData) }
     function Repair-CippStandardsTemplate { param($Json, $Reference) }
+    . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/GitHub/Test-CIPPRepoSource.ps1')
     function Get-CIPPTemplateSourceUrl { param($Source, $SourcePath, $Repos) if ($Source) { "https://github.com/$Source" } }
 
     . $HashFunctionPath

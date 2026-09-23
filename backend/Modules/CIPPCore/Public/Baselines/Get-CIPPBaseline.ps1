@@ -260,6 +260,7 @@ function Get-CIPPBaseline {
                 }
             }
 
+            $IsRepoSource = Test-CIPPRepoSource -Source $RolloutRow.Source
             [PSCustomObject]@{
                 GUID               = $GUID
                 templateName       = $RolloutRow.templateName
@@ -273,10 +274,10 @@ function Get-CIPPBaseline {
                 alertWebhookUrl    = $RolloutRow.alertWebhookUrl
                 disableAlerts      = [bool]$RolloutRow.disableAlerts
                 disableScheduledRuns = [bool]$RolloutRow.disableScheduledRuns
-                source             = $RolloutRow.Source
-                isSynced           = (![string]::IsNullOrEmpty($RolloutRow.SHA))
-                sourceUrl          = (Get-CIPPTemplateSourceUrl -Source $RolloutRow.Source -SourcePath $RolloutRow.SourcePath -Repos $Repos)
-                hasLocalChanges    = $(if ($RolloutRow.Source) { [bool]$RolloutRow.LocalChanges } else { $null })
+                source             = $(if ($IsRepoSource) { $RolloutRow.Source } else { $null })
+                isSynced           = ($IsRepoSource -and ![string]::IsNullOrEmpty($RolloutRow.SHA))
+                sourceUrl          = $(if ($IsRepoSource) { Get-CIPPTemplateSourceUrl -Source $RolloutRow.Source -SourcePath $RolloutRow.SourcePath -Repos $Repos } else { $null })
+                hasLocalChanges    = $(if ($IsRepoSource) { [bool]$RolloutRow.LocalChanges } else { $null })
                 standardsCount     = $UniqueStandards.Count
                 stageNames         = @($Stages.name)
                 stages             = $Stages

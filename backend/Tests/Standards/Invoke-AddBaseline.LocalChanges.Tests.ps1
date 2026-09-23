@@ -15,6 +15,7 @@ BeforeAll {
     }
 
     function Get-CIPPTable { param($TableName) @{ Context = "stub-$TableName" } }
+    . (Join-Path $BackendRoot 'Modules/CIPPCore/Public/GitHub/Test-CIPPRepoSource.ps1')
     function ConvertTo-CIPPODataFilterValue { param($Value, $Type) "$Value" }
     function Get-CIPPAzDataTableEntity { param($Context, $Filter) }
     function Write-LogMessage { param($headers, $API, $message, $Sev, $LogData) }

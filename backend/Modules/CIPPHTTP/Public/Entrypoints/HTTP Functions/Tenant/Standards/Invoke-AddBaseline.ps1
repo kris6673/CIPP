@@ -34,7 +34,7 @@ function Invoke-AddBaseline {
             $RolloutTable = Get-CIPPTable -TableName BaselineRollouts
             $SafeGuid = ConvertTo-CIPPODataFilterValue -Value $Request.Body.GUID
             $ExistingRollout = Get-CIPPAzDataTableEntity @RolloutTable -Filter "PartitionKey eq 'rollout' and RowKey eq '$SafeGuid'" | Select-Object -First 1
-            $ExistingHasSource = [bool]$ExistingRollout.Source
+            $ExistingHasSource = Test-CIPPRepoSource -Source $ExistingRollout.Source
         }
 
         if (-not $GitHubPush.FullName -and $ExistingHasSource) {
