@@ -12,10 +12,10 @@ Runs are never expired automatically. A run stays, with its results, until it is
 
 ### Start investigation
 
-Select **Start investigation** and pick the users to investigate in **Users to investigate**.
+Select **Start investigation** and pick the users to investigate in **Users to investigate**. The panel's **Start investigation** button is greyed out until at least one user is picked.
 
 * **One user** opens that user's case page and starts the run there, so you can watch it progress.
-* **Several users** queues one run per user, as a single job tracked on the Queue page. The runs appear in the table as they finish.
+* **Several users** queues one run per user, as a single job tracked on the Queue page, and closes the panel once they are queued. The runs appear in the table as they finish.
 
 Runs can also be queued with **Run BEC investigation** on the [Users](../users/README.md) page, or started by an alert.
 

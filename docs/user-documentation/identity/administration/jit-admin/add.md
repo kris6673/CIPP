@@ -15,7 +15,9 @@ A default template is applied on its own once a tenant is selected. A template m
 
 ## User
 
-**Would you like to create a new user or assign permissions to an existing user?** decides which fields follow. Creating a new account keeps the elevated access separate from someone's day-to-day account, which is usually the point of doing this.
+**Would you like to create a new user or assign permissions to an existing user?** decides which fields follow. Creating a new account keeps the elevated access separate from someone's day-to-day account, which is usually the point of doing this. **Existing User** is greyed out until a tenant is selected.
+
+Changing the tenant clears the selected user, groups and Conditional Access policies, since they belong to the previous tenant.
 
 | Field                 | Description                                                                                               |
 | --------------------- | --------------------------------------------------------------------------------------------------------- |
@@ -76,14 +78,15 @@ Notification channels only deliver if they are configured in CIPP's [notificatio
 
 ## Vacation Mode
 
-**Enable Vacation Mode** is offered when the access is assigned to an existing user. It stops the account's elevated sign-ins being blocked or flagged for being somewhere unusual, for example when someone needs admin access while travelling. The exclusions cover the same window as the JIT access, plus a one-hour buffer after the end date.
+Two exclusions are offered when the access is assigned to an existing user. They stop the account's elevated sign-ins being blocked or flagged for being somewhere unusual, for example when someone needs admin access while travelling. Each can be used on its own or together, and both cover the same window as the JIT access, plus a one-hour buffer after the end date.
 
 | Field                                         | Description                                                                                                                                    |
 | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Conditional Access Policies in _tenant_       | The Conditional Access policies to exclude the user from. Several can be selected. The list is read from the selected tenant.                  |
-| Exclude from location-based audit log alerts  | Keeps the user off location-based audit log alerts for the window, so sign-ins from an unusual location do not raise alerts.                    |
+| Enable Vacation Mode                          | Excludes the user from the Conditional Access policies selected below.                                                                         |
+| Conditional Access Policies in _tenant_       | The Conditional Access policies to exclude the user from. Shown once Vacation Mode is on. Several can be selected, read from the selected tenant. |
+| Exclude from location-based audit log alerts  | Keeps the user off location-based audit log alerts for the window, so sign-ins from an unusual location do not raise alerts. Works whether or not Vacation Mode is on. |
 
-Once Vacation Mode is on, the form warns until at least one policy is selected or the audit alert switch is turned on. The exclusions are only scheduled after the JIT admin itself is created successfully, and they appear on the [Vacation Mode](../vacation-mode/README.md "mention") page with the reason as their reference, where they can be reviewed or removed like any other vacation. A template can turn Vacation Mode on by default and pre-select the policies.
+Once Vacation Mode is on, the form warns until at least one policy is selected. The exclusions are only scheduled after the JIT admin itself is created successfully, and their results are shown alongside the JIT admin's own. They appear on the [Vacation Mode](../vacation-mode/README.md "mention") page with the reason as their reference, where they can be reviewed or removed like any other vacation. A template can turn either exclusion on by default and pre-select the policies.
 
 {% hint style="warning" %}
 Excluding an account from a Conditional Access policy lifts that policy's protection for the whole window, on an account that holds elevated roles. Choose only the policies that would actually get in the way.

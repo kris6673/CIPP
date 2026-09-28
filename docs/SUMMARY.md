@@ -103,7 +103,6 @@
   * [Identity](user-documentation/dashboard/identity.md)
   * [Devices](user-documentation/dashboard/devices.md)
   * [Custom](user-documentation/dashboard/custom.md)
-  * [Previous Dashboard Experience](user-documentation/dashboard/dashboard.md)
 * [Identity Management](user-documentation/identity/README.md)
   * [Administration](user-documentation/identity/administration/README.md)
     * [Users](user-documentation/identity/administration/users/README.md)

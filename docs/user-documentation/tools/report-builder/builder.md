@@ -33,7 +33,7 @@ Opens the **Schedule Report Generation** dialog, which creates a scheduled task 
 
 The delivery options behave differently:
 
-* **Email** sends the report body as the message, to the address configured in [notifications.md](../../cipp/settings/notifications.md "mention"). Database blocks marked for attachment are sent as files.
+* **Email** sends the report body as the message, to the address configured in [notifications.md](../../cipp/settings/notifications.md "mention"). The report is attached as a PDF, followed by any database blocks marked for attachment. An attachment that would take the email over Microsoft's 4 MB limit is left off.
 * **PSA** raises a ticket with the report body as its content. Raw data is not attached.
 * **Webhook** posts a JSON payload of the task metadata and results.
 

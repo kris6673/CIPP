@@ -6,10 +6,6 @@ description: Build a baseline, assign it to tenants and stage its rollout
 
 The editor is where a baseline is given its name, its tenants, and the standards it applies. Standards are organised into stages, and a tenant receives a stage's standards only once it has met that stage's graduation conditions, which lets a baseline roll out gradually rather than all at once.
 
-{% hint style="warning" %}
-Baselines is in beta. Behaviour and screens are still changing between releases.
-{% endhint %}
-
 Leaving the page with unsaved work prompts you to confirm first.
 
 ## Page Actions
@@ -39,7 +35,7 @@ Saving without pushing keeps your changes in CIPP only, and the repository copy 
 | Baseline Name          | The name the baseline is listed under. Required.                                                                                                      |
 | Description            | Free text describing what the baseline is for.                                                                                                        |
 | Assigned Tenants       | The tenants and tenant groups the baseline applies to. Required before the baseline can be saved.                                                     |
-| Excluded Tenants       | Tenants that are left out even though a group or All Tenants assignment would otherwise include them.                                                 |
+| Excluded Tenants       | Tenants and tenant groups that are left out even though a group or All Tenants assignment would otherwise include them. An excluded group leaves out every tenant in it. |
 | Disable Scheduled Runs | Stops the baseline running on its schedule. It then runs only when you run it yourself, and deviations are neither detected nor corrected in between. |
 
 ## Alerting
@@ -71,6 +67,10 @@ Each stage has its own tab. Stage 1 always applies to every assigned tenant, so 
 
 A chip next to the stage name shows how many tenants are currently sitting in that stage.
 
+{% hint style="warning" %}
+Keep a baseline to 30 stages or fewer. The editor lets you add more, but beyond 30 the page can stop responding and crash the browser tab.
+{% endhint %}
+
 ### Graduation Conditions
 
 Add as many conditions as you need. With more than one, a **Condition Logic** field appears and sets whether all of them must match or any one of them is enough. A stage with no conditions can only be advanced into by hand, from the Alignment page.
@@ -91,13 +91,19 @@ Each standard added to the stage expands to show its own settings, along with it
 
 Three settings are common to every standard.
 
-| Setting                                        | Description                                                                                             |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Automatically fix this when the setting drifts | Corrects the setting back to its expected value on every run. Left off, the deviation is only reported. |
-| Alert on new deviation                         | Raises an alert the first time the setting is found to deviate.                                         |
-| Alert when remediated                          | Raises an alert whenever automatic fixing corrects the setting.                                         |
+| Setting                                        | Description                                                                                                                                                                                                                                                 |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Automatically fix this when the setting drifts | Corrects the setting back to its expected value on every run. Left off, the deviation is only reported.                                                                                                                                                     |
+| Alert on new deviation                         | Raises an alert when the setting starts to deviate. No further alert is sent while it stays in **Drift**, however often the check runs. You are alerted again only after the setting is compliant or the deviation is accepted, and it then deviates again. |
+| Alert when remediated                          | Raises an alert whenever automatic fixing corrects the setting.                                                                                                                                                                                             |
 
 **Set all standards to** applies any one of those settings across every standard in the stage at once.
+
+**Detect Intune Drift** and **Detect Conditional Access Drift** work differently from other standards. Instead of checking one setting, they raise a deviation for every Intune or Conditional Access policy in the tenant that no baseline template covers. They never change anything automatically, even with automatic fixing turned on. Review each policy on the [Alignment](alignment.md) page, where denying it removes the policy on the next run.
+
+{% hint style="warning" %}
+Each of these standards has a single result per tenant, however many policies it finds. You are alerted when the first uncovered policy appears. Any policy added or changed after that raises no alert of its own while the earlier ones are still awaiting a decision. To be alerted about new policies, accept every existing uncovered policy on the [Alignment](alignment.md) page, or add a template to the baseline that covers it, so the standard is back to compliant.
+{% endhint %}
 
 {% hint style="info" %}
 Standards arrive with automatic fixing switched off. Nothing is changed in a tenant until you turn it on, either per standard or with **Set all standards to**.

@@ -291,6 +291,4 @@ To exclude a licence from this and all other reports in CIPP, add the licence on
 
 The [identity.md](identity.md "mention"), [devices.md](devices.md "mention"), and [custom.md](custom.md "mention") tabs show the results of the test suite selected on this tab, including remediation guidance for failed tests. Each has its own page in this documentation.
 
-**Previous Dashboard Experience** returns you to the [dashboard.md](dashboard.md "mention").
-
 {% include "../../../.gitbook/includes/feature-request.md" %}

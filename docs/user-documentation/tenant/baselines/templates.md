@@ -6,10 +6,6 @@ description: Create, import, run and manage the baselines applied to your tenant
 
 Every baseline you have created or imported is listed here, with the standards it carries, the tenants it is assigned to, and how far each tenant has progressed through its stages. This is where baselines are added, edited, run on demand, shared, and removed.
 
-{% hint style="warning" %}
-Baselines is in beta. Behaviour and screens are still changing between releases.
-{% endhint %}
-
 ## Action Buttons
 
 <details>
@@ -40,6 +36,8 @@ The flyout previews every template it found and pre-selects the ones it can conv
 | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Import everything as report-only (recommended)                                                                             | Brings every standard across with automatic fixing switched off, so you can review the results before letting CIPP change anything. Re-enable it per standard afterwards. |
 | Migrated drift templates should also alert on Intune and Conditional Access policies that were not created from a template | Adds detection of policies that exist in the tenant but were never deployed from a template, so they surface as deviations.                                               |
+
+Tenant overrides cannot be prepared before migrating. Import as report-only, create the overrides you need from the [Alignment](alignment.md) page, then turn on automatic fixing.
 
 Each template in the list carries a status.
 

@@ -14,6 +14,10 @@ The analysis works from CIPP's stored copy of the tenant's policies, so a policy
 
 A number out of 10 for how well the policies cover what they should. Enforced controls count in full and report-only controls count half, across every persona and control in the grid that applies to the tenant. Critical and high findings then take off up to two points. The caption shows how many of the expected controls are enforced, and how many critical and high findings there are. The score is green from 8, amber from 5, and red below that.
 
+{% hint style="info" %}
+Do not aim for 10 out of 10. Use the findings to decide which gaps are worth closing rather than chasing every point.
+{% endhint %}
+
 ## Coverage by persona
 
 A grid of the kinds of identity the policies target against the controls they should be subject to. The header counts the tenant's policies by state: enforced, report-only, and disabled. Hover a cell to see the policies behind it.
