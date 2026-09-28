@@ -461,7 +461,7 @@ function Invoke-NinjaOneTenantSync {
                 }
 
                 # Excluded Roles
-                foreach ($CAIRole in $CAPolicy.conditions.users.excludeRoles) {
+                foreach ($CAERole in $CAPolicy.conditions.users.excludeRoles) {
                     foreach ($Member in ($Roles | Where-Object { $_.id -eq $CAERole }).Members) {
                         $null = $CAMembers.remove($Member.id)
                     }
@@ -1277,6 +1277,9 @@ function Invoke-NinjaOneTenantSync {
                     } catch {
                         $ErrorMessage = Get-CippException -Exception $_
                         Write-LogMessage -tenant $Customer.defaultDomainName -API 'NinjaOneSync' -message "NinjaOne user document creation failed for $($Customer.displayName). NinjaOne rejects the whole batch if any single document is invalid, so all $(($NinjaUserCreation | Measure-Object).count) user(s) in this batch were not written: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+                        # Drop the rejected batch. Kept, it was re-sent with every following user and, if one
+                        # document was invalid, failed every time - so no later user was written either.
+                        [System.Collections.Generic.List[PSCustomObject]]$NinjaUserCreation = @()
                     }
 
                     try {
@@ -1290,6 +1293,8 @@ function Invoke-NinjaOneTenantSync {
                     } catch {
                         $ErrorMessage = Get-CippException -Exception $_
                         Write-LogMessage -tenant $Customer.defaultDomainName -API 'NinjaOneSync' -message "NinjaOne user document update failed for $($Customer.displayName). NinjaOne rejects the whole batch if any single document is invalid, so all $(($NinjaUserUpdates | Measure-Object).count) user(s) in this batch were not written: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+                        # Drop the rejected batch; see the creation batch above.
+                        [System.Collections.Generic.List[PSCustomObject]]$NinjaUserUpdates = @()
                     }
 
 
