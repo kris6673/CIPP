@@ -149,6 +149,7 @@ const CACHE_TYPE_COLLECTIONS = {
     "CsExternalAccessPolicy",
     "CsTenantFederationConfiguration",
     "CsTeamsMessagingPolicy",
+    "CsTeamsFilesPolicy",
     "CsTeamsMessagingConfiguration",
     "CsTeamsAppPermissionPolicy",
     "Teams",
