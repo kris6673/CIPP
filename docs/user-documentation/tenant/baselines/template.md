@@ -91,15 +91,19 @@ Each standard added to the stage expands to show its own settings, along with it
 
 Three settings are common to every standard.
 
-| Setting                                        | Description                                                                                             |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Automatically fix this when the setting drifts | Corrects the setting back to its expected value on every run. Left off, the deviation is only reported. |
-| Alert on new deviation                         | Raises an alert the first time the setting is found to deviate.                                         |
-| Alert when remediated                          | Raises an alert whenever automatic fixing corrects the setting.                                         |
+| Setting                                        | Description                                                                                                                                                                                                                                                 |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Automatically fix this when the setting drifts | Corrects the setting back to its expected value on every run. Left off, the deviation is only reported.                                                                                                                                                     |
+| Alert on new deviation                         | Raises an alert when the setting starts to deviate. No further alert is sent while it stays in **Drift**, however often the check runs. You are alerted again only after the setting is compliant or the deviation is accepted, and it then deviates again. |
+| Alert when remediated                          | Raises an alert whenever automatic fixing corrects the setting.                                                                                                                                                                                             |
 
 **Set all standards to** applies any one of those settings across every standard in the stage at once.
 
 **Detect Intune Drift** and **Detect Conditional Access Drift** work differently from other standards. Instead of checking one setting, they raise a deviation for every Intune or Conditional Access policy in the tenant that no baseline template covers. They never change anything automatically, even with automatic fixing turned on. Review each policy on the [Alignment](alignment.md) page, where denying it removes the policy on the next run.
+
+{% hint style="warning" %}
+Each of these standards has a single result per tenant, however many policies it finds. You are alerted when the first uncovered policy appears. Any policy added or changed after that raises no alert of its own while the earlier ones are still awaiting a decision. To be alerted about new policies, accept every existing uncovered policy on the [Alignment](alignment.md) page, or add a template to the baseline that covers it, so the standard is back to compliant.
+{% endhint %}
 
 {% hint style="info" %}
 Standards arrive with automatic fixing switched off. Nothing is changed in a tenant until you turn it on, either per standard or with **Set all standards to**.
