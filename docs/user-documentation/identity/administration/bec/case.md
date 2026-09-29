@@ -50,7 +50,7 @@ The score is a total of fixed points, one contribution per signal, regardless of
 | Identity Protection lists the user as confirmed compromised                               | 5      |
 | A consent to an application in the rogue-app catalogues                                   | 5      |
 | An application in the tenant matching the known-malicious catalogue                       | 5      |
-| A successful sign-in or activity from an address judged Compromised or Likely attacker    | 4      |
+| A successful sign-in, activity or accepted password from an attacker address              | 4      |
 | Identity Protection lists the user at high risk                                           | 4      |
 | A transport rule with a diversion or suppression action changed in the window             | 4      |
 | A suspicious inbox rule (see Inbox rules below)                                           | 4      |
@@ -144,13 +144,13 @@ Every address seen in the case, on a sign-in or on an audited action, is judged 
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Compromised     | Decided outright: you marked the address as compromised for this case, or it is blocked on CIPP's [IP Allow/Block List](../../../tools/tenant-tools/geoiplookup.md).              |
 | Likely attacker | The evidence points strongly at the attacker.                                                                                                                                     |
-| Suspicious      | Some evidence against the address, not enough to call it the attacker's. An address with only failed sign-ins never goes higher than this.                                       |
+| Suspicious      | Some evidence against the address, not enough to call it the attacker's, or you marked it suspicious for this case. An address with only failed sign-ins or unfinished self-service password resets never goes higher than this. |
 | Unknown         | Not enough evidence either way.                                                                                                                                                   |
 | Likely user     | The evidence points at the user, for example an address they regularly signed in from before the window.                                                                         |
 | Safe            | Decided outright: you marked the address as safe for this case, or it is trusted on CIPP's IP Allow/Block List.                                                                   |
 | Service         | A Microsoft service address the user never signed in from, or an address whose only sign-ins or actions came from CIPP or partner delegated administration rather than the user. |
 
-Each address carries a score built from weighted reasons, and each reason is listed with the points it added or took away. Reasons that count against an address include flagged activity from it, a hosting, proxy or VPN network, a location outside the usage location, never having been used by the user before the window, a risky or scripted sign-in, and other accounts appearing on it only during the window. Reasons that count in its favour include the user's regular address, network or location before the window, a compliant device, colleagues using it before the window (an office or VPN exit) and a trusted named location. Entries on the Exchange tenant allow/block and connection-filter lists nudge the score without deciding it. To tell a shared office or VPN address from an attacker's, the run also looks at the sign-ins of a small random sample of the user's colleagues. An address that shares a sign-in or mailbox session with a likely-attacker address is pulled towards the attacker too, because one session moving between addresses is one actor.
+Each address carries a score built from weighted reasons, and each reason is listed with the points it added or took away. Reasons that count against an address include flagged activity from it, a hosting, proxy or VPN network, a location outside the usage location, never having been used by the user before the window, a risky or scripted sign-in, a failed sign-in that got past the password and was stopped by MFA or Conditional Access (with no successful sign-in from the address), and other accounts appearing on it only during the window. Reasons that count in its favour include the user's regular address, network or location before the window, a compliant device, colleagues using it before the window (an office or VPN exit) and a trusted named location. Entries on the Exchange tenant allow/block and connection-filter lists nudge the score without deciding it. To tell a shared office or VPN address from an attacker's, the run also looks at the sign-ins of a small random sample of the user's colleagues. An address that shares a sign-in or mailbox session with a likely-attacker address is pulled towards the attacker too, because one session moving between addresses is one actor.
 
 The address of a technician who ran or reviewed the case counts strongly towards the user's side, since it is most likely the partner's own, but it is still judged rather than cleared outright.
 
@@ -274,12 +274,12 @@ Beside each card:
 
 | Field   | Description                                                                                                                             |
 | ------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Verdict | **Auto** keeps the verdict the case calculated. **Safe** or **Compromised** decides the address for this case, whatever its score says. |
+| Verdict | **Auto** keeps the verdict the case calculated. **Safe**, **Suspicious** or **Compromised** decides the address for this case, whatever its score says. **Suspicious** keeps it listed for review without counting it as the attacker's. |
 | Note    | Why you decided it. Greyed out while the verdict is **Auto**.                                                                           |
 
-**Re-run with these verdicts** re-judges every address with your decisions and replaces the verdicts, the attacker activity, the delegated mailboxes and the threat score. The rest of the case, including its analysis window, stays as it was. The re-run happens in the background, with its progress shown in the drawer, and the case refreshes when it finishes. The button is greyed out until at least one address is set to **Safe** or **Compromised**, and while the choices match the ones the case already uses.
+**Re-run with these verdicts** re-judges every address with your decisions and replaces the verdicts, the attacker activity, the delegated mailboxes and the threat score. The rest of the case, including its analysis window, stays as it was. The re-run happens in the background, with its progress shown in the drawer, and the case refreshes when it finishes. The button is greyed out until at least one address is set to **Safe**, **Suspicious** or **Compromised**, and while the choices match the ones the case already uses.
 
-With **Remember for this tenant (CIPP IP list)** switched on, the addresses you set to **Safe** are also added to CIPP's [IP Allow/Block List](../../../tools/tenant-tools/geoiplookup.md) as trusted, and the ones set to **Compromised** as blocked, each noted with the case id, so later cases for the tenant start from your decision. The switch only appears for users who can change CIPP settings.
+With **Remember for this tenant (CIPP IP list)** switched on, the addresses you set to **Safe** are also added to CIPP's [IP Allow/Block List](../../../tools/tenant-tools/geoiplookup.md) as trusted, and the ones set to **Compromised** as blocked, each noted with the case id, so later cases for the tenant start from your decision. Addresses set to **Suspicious** apply to this case only. The switch only appears for users who can change CIPP settings.
 
 ## Containment
 
