@@ -10,10 +10,11 @@ Leaving the page with unsaved work prompts you to confirm first.
 
 ## Page Actions
 
-| Button        | Description                                                                                                                                                                                                                                                                                                                     |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Save Baseline | Saves the baseline once you confirm. Greyed out until the three items in **Setup Progress** are complete. After a save you are offered a check of the assigned tenants, which makes no changes and reports its results on the [Alignment](alignment.md) page. Otherwise the schedule picks the baseline up within twelve hours. |
-| Add Stage     | Adds a stage, either empty or as a copy of the stage currently open, including its standards and graduation conditions.                                                                                                                                                                                                         |
+| Button            | Description                                                                                                                                                                                                                                                                                                                     |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Back to Baselines | Returns to [Manage Baselines](templates.md), even when the editor was opened from the Alignment page.                                                                                                                                                                                                                           |
+| Save Baseline     | Saves the baseline once you confirm. Greyed out until the three items in **Setup Progress** are complete. After a save you are offered a check of the assigned tenants, which makes no changes and reports its results on the [Alignment](alignment.md) page. Otherwise the schedule picks the baseline up within twelve hours. |
+| Add Stage         | Adds a stage, either empty or as a copy of the stage currently open, including its standards and graduation conditions. A baseline holds at most 20 stages; once it has 20 the button is greyed out and reads **Maximum of 20 stages reached**.                                                                                 |
 
 ## GitHub Sync
 
@@ -66,10 +67,6 @@ A checklist of the three things a baseline needs before it can be saved: a name,
 Each stage has its own tab. Stage 1 always applies to every assigned tenant, so it carries no conditions. Every stage after it has graduation conditions deciding when a tenant moves up. Earlier stages keep applying, and where the same standard appears in two stages the later stage's settings win.
 
 A chip next to the stage name shows how many tenants are currently sitting in that stage.
-
-{% hint style="warning" %}
-Keep a baseline to 30 stages or fewer. The editor lets you add more, but beyond 30 the page can stop responding and crash the browser tab.
-{% endhint %}
 
 ### Graduation Conditions
 
