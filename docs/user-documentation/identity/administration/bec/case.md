@@ -49,23 +49,22 @@ The score is a total of fixed points, one contribution per signal, regardless of
 | ----------------------------------------------------------------------------------------- | ------ |
 | Identity Protection lists the user as confirmed compromised                               | 5      |
 | A consent to an application in the rogue-app catalogues                                   | 5      |
-| An inbox rule that hides, forwards or deletes mail, or acts on all incoming mail           | 5      |
 | An application in the tenant matching the known-malicious catalogue                       | 5      |
 | A successful sign-in or activity from an address judged Compromised or Likely attacker    | 4      |
 | Identity Protection lists the user at high risk                                           | 4      |
 | A transport rule with a diversion or suppression action changed in the window             | 4      |
+| A suspicious inbox rule (see Inbox rules below)                                           | 4      |
 | Mail opened, synced, deleted, moved or sent from an attacker address                      | 3      |
 | A Microsoft Form created, edited or shared from an attacker address                       | 3      |
 | Another mailbox reached through this account's delegated access from an attacker address  | 3      |
 | Another account in the tenant signed in or acted from an attacker address                 | 3      |
-| One or more inbox rules on the mailbox                                                    | 3      |
 | One or more inbox rule changes in the window                                              | 3      |
 | A successful sign-in from outside the usage location                                      | 3      |
 | A successful non-interactive sign-in from outside the usage location                      | 3      |
 | A rule, safelist, sharing, or sent-mail action from outside the usage location            | 3      |
 | An anonymous sharing link created or changed in the window                                | 3      |
 | A mass-mail pattern (repeated subjects or send bursts)                                    | 3      |
-| A consent with a high-risk scope from an unverified publisher                             | 3      |
+| A consent with a high-risk scope from an unverified publisher, for an app new in the window | 3      |
 | Mail received from a look-alike of one of the tenant's domains                            | 3      |
 | A Defender-classified threat delivered to the mailbox                                     | 3      |
 | OneDrive or SharePoint files touched from an attacker address                             | 2      |
@@ -74,20 +73,21 @@ The score is a total of fixed points, one contribution per signal, regardless of
 | An MFA method registered in the window                                                    | 2      |
 | An Intune device enrolled in the window                                                   | 2      |
 | An Entra device registered in the window                                                  | 2      |
-| A flagged mailbox delegation (external, guest or catch-all)                               | 2      |
+| A flagged mailbox delegation (external, guest, catch-all on the Inbox or writing the Calendar) | 2      |
 | A flagged directory-audit event                                                           | 2      |
 | Hard deletes above the threshold, or mailbox access from outside the usage location       | 2      |
 | Identity Protection lists the user at medium risk                                         | 2      |
-| Permission changes elsewhere in the tenant only                                           | 1      |
+| Permission changes elsewhere in the tenant only, except on Exchange's system mailboxes    | 1      |
+| One or more inbox rules on the mailbox                                                    | 1      |
 | One or more new applications                                                              | 1      |
 | More than five new users                                                                  | 1      |
-| A user-installed non-Microsoft add-in                                                     | 1      |
+| A side-loaded, non-Marketplace, non-Microsoft add-in                                      | 1      |
 | Identity Protection lists the user at low risk                                            | 1      |
 
 Seven points or more reads as **High**, four to six as **Medium**, and anything below that as **Low**.
 
 {% hint style="warning" %}
-Scoring counts findings, not volume. A mailbox holding a single ordinary inbox rule already scores three, one point short of Medium, so a single unrelated finding tips it over. Forty rules score the same three points as one.
+Scoring counts findings, not volume, and a finding scores for what makes it suspicious, not for existing. Ordinary inbox rules score one point however many there are; a suspicious rule adds four, which is Medium on its own and High once anything else corroborates it, such as the rule being created in the window. Activity from an address judged a Microsoft service, a trusted address or the user's own is never counted as foreign, wherever it geolocates.
 {% endhint %}
 
 {% hint style="warning" %}
@@ -205,10 +205,10 @@ Footholds that survive a password reset.
 
 | Finding              | Report check | What it shows                                                                                                                                                                                                                                                                                                                                                                                  |
 | -------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Inbox rules          | 1            | The inbox rules currently on the mailbox, each with its risk and the reasons for it, and the latest audited change to it: what changed, who made it (and whether that was the user, a partner or CIPP), when, and from which IP and country. Rules that hide, forward or delete mail, or act on all incoming mail, are flagged. The rule changes in the window follow in their own list. |
-| Mailbox delegations  | 12           | Every delegation on the mailbox: FullAccess, SendAs, SendOnBehalf, Calendar and Inbox folder permissions, and resource delegates. A trustee that is a guest, an address outside the tenant's accepted domains, or the Default/Anonymous principal with more than availability rights is flagged, as is any delegation granted in the window, whatever the trustee.                        |
-| Application consents | 13           | The applications this user has consented to and the enterprise-app roles assigned to them, with the client application's publisher and verification state. A consent is flagged when the application matches the CIPP known-malicious catalogue or the Huntress rogue-apps feed, or carries a high-risk delegated scope (mail, files, directory, `offline_access`) from an unverified, non-Microsoft publisher. |
-| Mailbox add-ins      | 15           | The add-ins available to the mailbox. Enabled, user-installed add-ins from a non-Microsoft provider are flagged; an add-in can read and send mail on the user's behalf.                                                                                                                                                                                                                         |
+| Inbox rules          | 1            | The inbox rules currently on the mailbox, each with its risk and the reasons for it, and the latest audited change to it: what changed, who made it (and whether that was the user, a partner or CIPP), when, and from which IP and country. A rule is suspicious when it forwards or redirects outside the tenant, moves mail to RSS Feeds, or hides mail (deletes it or moves it to a low-visibility folder such as Archive or Junk) and also acts on all incoming mail, targets financial or security keywords (invoice, payment, hacked, phishing...), or has a blank or punctuation-only name. An ordinary delete or archive rule is listed with its reasons but not flagged. The rule changes in the window follow in their own list. |
+| Mailbox delegations  | 12           | Every delegation on the mailbox: FullAccess, SendAs, SendOnBehalf, Calendar and Inbox folder permissions, and resource delegates. A trustee that is a guest, an address outside the tenant's accepted domains, the Default/Anonymous principal with any rights on the Inbox, or with write rights on the Calendar (everyone reading a calendar is a common setting), is flagged, as is any delegation granted in the window, whatever the trustee.                        |
+| Application consents | 13           | The applications this user has consented to and the enterprise-app roles assigned to them, with the client application's publisher and verification state. A consent is flagged when the application matches the CIPP known-malicious catalogue or the Huntress rogue-apps feed, or carries a high-risk delegated scope (mail, files, directory, `offline_access`) from an unverified, non-Microsoft publisher and the application first appeared in the tenant during the window. Older high-risk consents are listed as Review. |
+| Mailbox add-ins      | 15           | The add-ins available to the mailbox. Enabled, user-installed add-ins from a non-Microsoft provider that were side-loaded rather than installed from the Microsoft Marketplace are flagged; an add-in can read and send mail on the user's behalf.                                                                                                                                                                                                                         |
 | New applications     | 3            | Every application in the tenant, of any age, that matches CIPP's catalogue of known-malicious applications, named with its catalogue entry and source, followed by the service principals registered during the window. A catalogue match raises a warning, because consent-based access survives a password reset.                                                                      |
 
 {% hint style="info" %}
@@ -251,7 +251,7 @@ Tenant-wide signals that outlast the one mailbox.
 | Partner and CIPP actions on this account      | None         | Every audited change in the case made by a partner identity acting over GDAP (this partner or another) or by CIPP itself, gathered from the directory audit and the rule, safelist, sharing, permission, transport-rule and mailbox activity findings. Partner identities are named by their partner tenant where they belong to this partner, and each source table carries the same **ActorKind** column. Routine MSP work reads as such, and anything a partner identity did that the investigation did not expect stands out. |
 | Recently added users                          | 2            | Accounts created in the tenant during the window, with their type and creation date.                                                                                                                                                                                                                                                         |
 | Recent password changes                       | 7            | Accounts across the tenant whose password changed during the window, with the change time.                                                                                                                                                                                                                                                   |
-| Entra directory audit                         | 17           | Directory audit events that targeted, or were initiated by, the user during the window, with who did it and from where. Security-info registration, application consent, service-principal creation, device registration, password and token events and role changes are flagged. It overlaps the findings above on purpose: use it to date and attribute them, not as separate incidents. |
+| Entra directory audit                         | 17           | Directory audit events that targeted, or were initiated by, the user during the window, with who did it and from where. Security-info registration, application consent, service-principal creation, device registration, password and token events and role changes are flagged. A plain user update is flagged only when it changes sign-in methods or the recovery email, and not when the MFA service refreshes an existing Authenticator's device token. It overlaps the findings above on purpose: use it to date and attribute them, not as separate incidents. |
 
 Select **Investigate** on one or more rows of **Other accounts the attacker addresses reached** to queue a new investigation for each account. Each case appears on the [Business Email Compromise](README.md) page as it finishes.
 
