@@ -13440,6 +13440,13 @@
                   "AppId": {
                     "type": "string"
                   },
+                  "DisplayName": {
+                    "type": "string",
+                    "description": "Entra generates the key pair server-side and adds it alongside the current one. Nothing signs with it until SetPreferredSigningKey. The display name becomes the immutable certificate subject and relying parties may show it, so default to Entra's own subject rather than branding it."
+                  },
+                  "EndDateTime": {
+                    "type": "string"
+                  },
                   "Id": {
                     "type": "string"
                   },
@@ -13457,6 +13464,9 @@
                   },
                   "tenantFilter": {
                     "type": "string"
+                  },
+                  "Thumbprint": {
+                    "$ref": "#/components/schemas/LabelValue"
                   },
                   "Type": {
                     "type": "string"
@@ -15261,7 +15271,7 @@
         "tags": [
           "Tenant > Standards"
         ],
-        "description": "Advances a tenant to the next stage of a baseline (manual stage approval). The tenant\nreceives all standards from the new stage on the next engine run.",
+        "description": "Advances a tenant to the next stage of a baseline (manual stage approval), or with\naction 'evaluate' re-checks the next stage's conditions now instead of waiting for the\nscheduled run. The tenant receives all standards from the new stage on the next engine run.",
         "requestBody": {
           "required": true,
           "content": {
@@ -15269,6 +15279,10 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "action": {
+                    "type": "string",
+                    "description": "evaluate: re-check the next stage's conditions now; anything else is a manual advance"
+                  },
                   "templateId": {
                     "type": "string"
                   },
@@ -62717,7 +62731,7 @@
       },
       "post": {
         "summary": "ListTenants",
-        "operationId": "ListTenants",
+        "operationId": "ListTenantsPost",
         "tags": [
           "Tenant > Administration > Tenant"
         ],
@@ -65226,6 +65240,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad request - missing required field or invalid input"
           },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
