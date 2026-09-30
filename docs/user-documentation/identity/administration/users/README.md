@@ -94,6 +94,7 @@ A newly created user is not a usable Exchange recipient for the first few minute
 | Schedule user creation                 | Defers creation to a chosen date instead of running it immediately.                                |
 | Scheduled creation Date                | The date the creation task should run.                                                             |
 | Send results to Webhook / E-mail / PSA | Delivers the outcome of the scheduled task to the notification channels configured for the tenant. |
+| Push notification to my devices        | Sends the outcome as a push notification to the devices you registered under User Preferences. |
 | HaloPSA Ticket                         | An existing HaloPSA ticket to add the results to as a note, instead of raising a new ticket. Only shown once **Send results to PSA** is on and the HaloPSA integration is enabled. |
 | Reference                              | Free text added to the notification title so the task can be recognised later.                     |
 

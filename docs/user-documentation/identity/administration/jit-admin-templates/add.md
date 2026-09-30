@@ -24,7 +24,7 @@ The template is created for the tenant selected in the top menu; there is no ten
 | Default Groups               | The groups the account is added to. Not available on an All Tenants template, since group identifiers do not carry between tenants. |
 | Default Duration             | How long the elevation lasts, which sets the end date on the JIT admin form. Optional.                                              |
 | Default Expiration Action    | What happens to the account when the elevation ends. Required.                                                                      |
-| Default Notification Actions | Which channels are notified when the grant is created: Webhook, Email or PSA. Several can be selected.                              |
+| Default Notification Actions | Which channels are notified when the grant is created: Webhook, Email, PSA or Push (a notification to the creator's own registered devices). Several can be selected. |
 | Generate TAP by Default      | Issues a Temporary Access Pass with the grant.                                                                                      |
 | Reason Template              | Reason text the template pre-fills, which the requester can adjust.                                                                 |
 
