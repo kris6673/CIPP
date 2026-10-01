@@ -25860,7 +25860,7 @@
         "tags": [
           "CIPP > Core"
         ],
-        "description": "Finds which tenants hold the given licence SKUs, searching the cached licence overview rather than querying each tenant live. Takes an array of skuIds in the body.",
+        "description": "Resolves licence SKU ids to display names from the licence name table, falling back to the given tenant's cached licence overview. Takes an array of skuIds in the body.",
         "requestBody": {
           "required": false,
           "content": {
@@ -25872,8 +25872,11 @@
                     "type": "array",
                     "items": {
                       "type": "string"
-                    },
-                    "description": "Get skuIds from POST body"
+                    }
+                  },
+                  "tenantFilter": {
+                    "type": "string",
+                    "description": "Tenant whose cached licence overview is checked for SKUs the name table does not hold yet"
                   }
                 }
               }
