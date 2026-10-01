@@ -60,7 +60,7 @@ function Invoke-HuduExtensionSync {
 
         # Get CIPP Extension Reporting Data (from new CippReportingDB)
         # Include mailboxes if needed for Hudu sync
-        $ExtensionCache = Get-CippExtensionReportingData -TenantFilter $Tenant.defaultDomainName -IncludeMailboxes
+        $ExtensionCache = Get-CippExtensionReportingData -TenantFilter $Tenant.defaultDomainName -IncludeMailboxes -Exclude 'SecureScore', 'SecureScoreControlProfiles', 'Organization'
         $company_id = $TenantMap.IntegrationId
         $HuduCompany = Get-HuduCompanies -Id $company_id
         if ($HuduCompany.archived -eq $true) {
