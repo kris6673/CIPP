@@ -8,7 +8,7 @@ function Search-CIPPBitlockerKeys {
         by cross-referencing the deviceId with Devices or ManagedDevices data.
 
     .PARAMETER TenantFilter
-        Tenant domain or GUID to search. If not specified, searches all tenants.
+        Tenant domains or GUIDs to search. If not specified, searches all tenants.
 
     .PARAMETER KeyId
         Optional BitLocker recovery key ID to search for. If not specified, returns all keys.
@@ -37,7 +37,7 @@ function Search-CIPPBitlockerKeys {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false)]
-        [string]$TenantFilter,
+        [string[]]$TenantFilter,
 
         [Parameter(Mandatory = $false)]
         [string]$KeyId,
@@ -70,8 +70,8 @@ function Search-CIPPBitlockerKeys {
         } elseif ($SearchTerms) {
             $SearchParams.SearchTerms = $SearchTerms
         } else {
-            # If no search criteria, search for a pattern that matches any GUID or just get all
-            $SearchParams.SearchTerms = @('[a-f0-9]{8}-')
+            # Search terms are matched literally; every cached row is a JSON object, so '{' returns all keys
+            $SearchParams.SearchTerms = @('{')
         }
 
         if ($Limit -gt 0) {
@@ -164,7 +164,7 @@ function Search-CIPPBitlockerKeys {
         return $EnrichedResults
 
     } catch {
-        Write-LogMessage -API 'SearchBitlockerKeys' -tenant $TenantFilter -message "Failed to search BitLocker keys: $($_.Exception.Message)" -sev Error
+        Write-LogMessage -API 'SearchBitlockerKeys' -tenant "$TenantFilter" -message "Failed to search BitLocker keys: $($_.Exception.Message)" -sev Error
         throw
     }
 }
