@@ -43,6 +43,10 @@ function Invoke-HuduExtensionSync {
 
         # Get Asset cache
         $HuduAssetCache = Get-CippTable -tablename 'CacheHuduAssets'
+        # Asset hashes written this run are batched; reads check them first so a repeat asset sees its new hash
+        $PendingAssetCache = @{}
+        $GetAssetCache = { param($Partition, $Id) $Key = "$Partition|$Id"; if ($PendingAssetCache.ContainsKey($Key)) { $PendingAssetCache[$Key] } else { Get-CIPPAzDataTableEntity @HuduAssetCache -Filter "PartitionKey eq '$Partition' and CompanyId eq '$company_id' and RowKey eq '$Id'" } }
+        $FlushAssetCache = { if ($PendingAssetCache.Count) { Add-CIPPAzDataTableEntity @HuduAssetCache -Entity @($PendingAssetCache.Values) -Force; $PendingAssetCache.Clear() } }
 
         # Get Relations cache - Hudu's relations API has no per-company filter, so this is cached
         # globally and shared across every tenant's sync instead of pulling the full relations
@@ -988,7 +992,7 @@ function Invoke-HuduExtensionSync {
                         $HuduUserCount = ($HuduUser | Measure-Object).Count
 
                         if ($HuduUserCount -eq 1) {
-                            $ExistingAsset = Get-CIPPAzDataTableEntity @HuduAssetCache -Filter "PartitionKey eq 'HuduUser' and CompanyId eq '$company_id' and RowKey eq '$($HuduUser.id)'"
+                            $ExistingAsset = & $GetAssetCache 'HuduUser' $HuduUser.id
                             $ExistingHash = $ExistingAsset.Hash
 
                             if (!$ExistingAsset -or $ExistingHash -ne $NewHash) {
@@ -1000,7 +1004,7 @@ function Invoke-HuduExtensionSync {
                                     CompanyId    = [string]$company_id
                                     Hash         = [string]$NewHash
                                 }
-                                Add-CIPPAzDataTableEntity @HuduAssetCache -Entity $AssetCache -Force
+                                $PendingAssetCache["$($AssetCache.PartitionKey)|$($AssetCache.RowKey)"] = $AssetCache
                             }
 
                         } elseif ($HuduUserCount -eq 0) {
@@ -1016,7 +1020,7 @@ function Invoke-HuduExtensionSync {
                                         CompanyId    = [string]$company_id
                                         Hash         = [string]$NewHash
                                     }
-                                    Add-CIPPAzDataTableEntity @HuduAssetCache -Entity $AssetCache -Force
+                                    $PendingAssetCache["$($AssetCache.PartitionKey)|$($AssetCache.RowKey)"] = $AssetCache
                                     # Add newly created user to the People collection to prevent duplicates
                                     & $AddPerson $CreateHuduUser
                                 }
@@ -1041,6 +1045,8 @@ function Invoke-HuduExtensionSync {
                     Write-Information $_.InvocationInfo.PositionMessage
                 }
             }
+
+            & $FlushAssetCache
 
             $licensedUserHTML = $OutputUsers | ConvertTo-Html -PreContent $pre -PostContent $post -Fragment | ForEach-Object { $tmp = $_ -replace '&lt;', '<'; $tmp -replace '&gt;', '>'; } | Out-String
 
@@ -1322,7 +1328,7 @@ function Invoke-HuduExtensionSync {
                     if (![string]::IsNullOrEmpty($DeviceLayoutId)) {
                         if ($HuduDevice) {
                             if (($HuduDevice | Measure-Object).count -eq 1) {
-                                $ExistingAsset = Get-CIPPAzDataTableEntity @HuduAssetCache -Filter "PartitionKey eq 'HuduDevice' and CompanyId eq '$company_id' and RowKey eq '$($HuduDevice.id)'"
+                                $ExistingAsset = & $GetAssetCache 'HuduDevice' $HuduDevice.id
                                 $ExistingHash = $ExistingAsset.Hash
 
                                 if (!$ExistingAsset -or $ExistingAsset.Hash -ne $NewHash -or $CredentialFieldsChanged) {
@@ -1334,7 +1340,7 @@ function Invoke-HuduExtensionSync {
                                         CompanyId    = [string]$company_id
                                         Hash         = [string]$NewHash
                                     }
-                                    Add-CIPPAzDataTableEntity @HuduAssetCache -Entity $AssetCache -Force
+                                    $PendingAssetCache["$($AssetCache.PartitionKey)|$($AssetCache.RowKey)"] = $AssetCache
                                 }
 
                                 if (![string]::IsNullOrEmpty($Device.userPrincipalName)) {
@@ -1377,7 +1383,7 @@ function Invoke-HuduExtensionSync {
                                         CompanyId    = [string]$company_id
                                         Hash         = [string]$NewHash
                                     }
-                                    Add-CIPPAzDataTableEntity @HuduAssetCache -Entity $AssetCache -Force
+                                    $PendingAssetCache["$($AssetCache.PartitionKey)|$($AssetCache.RowKey)"] = $AssetCache
                                     # Add newly created device to the HuduDevices collection to prevent duplicates
                                     $HuduDevices.Add($CreateHuduDevice)
                                     $NewKeys = Get-HuduDeviceMatchKey -HuduDevice $CreateHuduDevice
@@ -1400,6 +1406,7 @@ function Invoke-HuduExtensionSync {
                     $CompanyResult.Errors.add("Device $($device.deviceName): A Fatal Error occured while processing the device $_")
                 }
             }
+            & $FlushAssetCache
         } else {
             $CompanyResult.Logs.Add('Skipping Device Processing - No Device Layout ID')
         }

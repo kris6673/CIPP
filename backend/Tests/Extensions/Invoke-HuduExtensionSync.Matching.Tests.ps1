@@ -145,7 +145,7 @@ Describe 'Invoke-HuduExtensionSync matching' {
         Mock Get-CIPPDbItem { if ($Type -eq 'IntuneDeviceCompliancePolicies_cp1') { foreach ($S in $Statuses) { [PSCustomObject]@{ RowKey = "x-$($S.id)"; Data = ($S | ConvertTo-Json -Compress) } } } }
         Mock Get-HuduFormattedField { "[$Title=$Value]" }
         Mock Get-HuduFormattedBlock { "<$Heading>$Body</$Heading>" }
-        Mock Get-StringHash { 'hash' }
+        Mock Get-StringHash { [System.Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes($String))) }
         Mock Set-HuduAsset { $script:SetAssets.Add([PSCustomObject]@{ Id = $asset_id; Body = $Fields.microsoft_365 }) }
         Mock New-HuduAsset {
             $script:NextId++
