@@ -1356,15 +1356,15 @@ function Invoke-HuduExtensionSync {
                             }
                         } else {
                             if ($device.deviceType -in $IntuneDesktopDeviceTypes) {
-                                $DeviceLayoutID = $DesktopsLayout.id
+                                $CreateLayoutId = $DesktopsLayout.id
                                 $DeviceCreation = $CreateDevices
                             } else {
-                                $DeviceLayoutID = $MobilesLayout.id
+                                $CreateLayoutId = $MobilesLayout.id
                                 $DeviceCreation = $CreateMobileDevices
                             }
                             if ($DeviceCreation -eq $true) {
                                 $CompanyResult.Logs.Add("Creating $($device.deviceName) in Hudu")
-                                $CreateHuduDevice = (New-HuduAsset -Name $device.deviceName -company_id $company_id -asset_layout_id $DeviceLayoutID -Fields $DeviceAssetFields -PrimarySerial $Device.serialNumber).asset
+                                $CreateHuduDevice = (New-HuduAsset -Name $device.deviceName -company_id $company_id -asset_layout_id $CreateLayoutId -Fields $DeviceAssetFields -PrimarySerial $Device.serialNumber).asset
 
                                 if (!$CreateHuduDevice) {
                                     $CompanyResult.Errors.add("Device $($device.deviceName): Failed to create device in Hudu, check your device asset fields for 'Primary Serial'.")

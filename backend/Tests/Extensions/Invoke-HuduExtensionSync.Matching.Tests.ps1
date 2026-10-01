@@ -220,6 +220,21 @@ Describe 'Invoke-HuduExtensionSync matching' {
         @($script:SetAssets.Id) | Should -Contain $Created
     }
 
+    It 'keeps updating devices after an unmatched mobile device' {
+        $Phone = [PSCustomObject]@{ id = 'mdm-0'; deviceName = 'PHONE-0'; serialNumber = 'PH0'; azureADDeviceId = $null; userPrincipalName = 'alice@contoso.com'; operatingSystem = 'iOS'; deviceType = 'iPhone' }
+        $script:Cache.Devices = @($Phone) + @($Devices)
+        try {
+            $script:SetAssets.Clear(); $script:NewAssets.Clear()
+            $null = Invoke-HuduExtensionSync -Configuration $script:Configuration -TenantFilter 'contoso.onmicrosoft.com'
+            @($script:SetAssets.Id) | Should -Contain 201
+            @($script:SetAssets.Id) | Should -Contain 202
+            @($script:NewAssets.Name) | Should -Contain 'PC-3'
+            @($script:NewAssets.Name) | Should -Not -Contain 'PHONE-0'
+        } finally {
+            $script:Cache.Devices = $Devices
+        }
+    }
+
     It 'creates only the user to device relations that do not already exist' {
         $Created = ($script:NewAssets | Where-Object Name -EQ 'PC-3').Id
         @($script:NewRelations) | Should -Be @('102->202', "103->$Created")
