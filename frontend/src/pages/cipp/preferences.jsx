@@ -1,5 +1,5 @@
 import Head from "next/head";
-import { Alert, Box, Button, Container, Stack, Tooltip, Typography } from "@mui/material";
+import { Alert, Box, Button, Container, Stack, Tooltip } from "@mui/material";
 import { Grid } from "@mui/system";
 import { Layout as DashboardLayout } from "../../layouts/index";
 import { CippPropertyListCard } from "../../components/CippCards/CippPropertyListCard";
@@ -13,9 +13,10 @@ import { CippOffboardingDefaultSettings } from "../../components/CippComponents/
 import { ApiGetCall } from "../../api/ApiCall";
 import { getCippFormatting } from "../../utils/get-cipp-formatting";
 import { useEffect, useState } from "react";
-import { ApiPostCall } from "../../api/ApiCall";
 import { CippApiResults } from "../../components/CippComponents/CippApiResults";
 import { usePushSubscription } from "../../hooks/use-push-subscription";
+import { CippDataTable } from "../../components/CippTable/CippDataTable";
+import { CippIcons } from "../../utils/icon-registry";
 
 // Web Push devices for the signed-in user. Deliberately outside the settings form: the
 // settings blob is saved wholesale from the sidebar, while devices are a collection with
@@ -23,69 +24,68 @@ import { usePushSubscription } from "../../hooks/use-push-subscription";
 const PushDevicesCard = () => {
   const devices = ApiGetCall({ url: "/api/ListPushSubscriptions", queryKey: "ListPushSubscriptions" });
   const push = usePushSubscription({ publicKey: devices.data?.PublicKey });
-  const action = ApiPostCall({ relatedQueryKeys: ["ListPushSubscriptions"] });
   const list = devices.data?.Devices ?? [];
+  const registered = list.some((d) => d.Endpoint === push.currentEndpoint);
 
   const enableButton = (
     <Button
-      variant="outlined"
       size="small"
+      variant="contained"
       disabled={!!push.blockedReason || push.register.isPending}
       onClick={() => push.subscribe().catch(() => {})}
     >
-      {list.some((d) => d.Endpoint === push.currentEndpoint) ? "Re-register this device" : "Enable on this device"}
+      {registered ? "Re-register this device" : "Enable on this device"}
     </Button>
   );
 
   return (
-    <CippPropertyListCard
-      title="Push Notifications"
-      isFetching={devices.isFetching}
-      showDivider={false}
-      actionButton={
-        push.blockedReason ? (
-          <Tooltip title={push.blockedReason}>
-            <span>{enableButton}</span>
-          </Tooltip>
-        ) : (
-          enableButton
-        )
-      }
-      propertyItems={
-        list.length
-          ? list.map((device) => ({
-              label: device.Endpoint === push.currentEndpoint ? `${device.DeviceName} (this device)` : device.DeviceName,
-              value: (
-                <Button
-                  size="small"
-                  color="error"
-                  disabled={action.isPending}
-                  onClick={() =>
-                    action.mutate({ url: "/api/ExecPushSubscription", data: { Action: "Unsubscribe", RowKey: device.RowKey } })
-                  }
-                >
-                  Remove
-                </Button>
-              ),
-            }))
-          : [{ label: "", value: <Typography variant="body2">No devices registered. Enable notifications on each browser or installed app you want scheduled task, alert and offboarding results pushed to.</Typography> }]
-      }
-      cardButton={
-        <Stack spacing={1} sx={{ width: "100%" }}>
-          <Box>
-            <Button
-              size="small"
-              disabled={!list.length || action.isPending}
-              onClick={() => action.mutate({ url: "/api/ExecPushSubscription", data: { Action: "Test" } })}
-            >
-              Send test notification
-            </Button>
-          </Box>
-          <CippApiResults apiObject={push.register} />
-          <CippApiResults apiObject={action} />
-        </Stack>
-      }
-    />
+    <Stack spacing={1}>
+      <CippDataTable
+        title="Push Notification Devices"
+        queryKey="ListPushSubscriptions"
+        data={list}
+        isFetching={devices.isFetching}
+        refreshFunction={() => devices.refetch()}
+        dataMap={(d) => ({
+          ...d,
+          DeviceName:
+            d.Endpoint === push.currentEndpoint ? `${d.DeviceName} (this device)` : d.DeviceName,
+        })}
+        simpleColumns={["DeviceName", "Created"]}
+        exportEnabled={false}
+        showBulkExportAction={false}
+        cardButton={[
+          push.blockedReason ? (
+            <Tooltip key="enable" title={push.blockedReason}>
+              <span>{enableButton}</span>
+            </Tooltip>
+          ) : (
+            enableButton
+          ),
+          {
+            label: "Send test notification",
+            url: "/api/ExecPushSubscription",
+            data: { Action: "Test" },
+            relatedQueryKeys: ["ListPushSubscriptions"],
+            confirmText: "Send a test notification to every device registered to you?",
+            condition: () => list.length > 0,
+          },
+        ]}
+        actions={[
+          {
+            label: "Remove device",
+            icon: <CippIcons.TrashIcon />,
+            color: "danger",
+            url: "/api/ExecPushSubscription",
+            type: "POST",
+            data: { Action: "Unsubscribe", RowKey: "RowKey" },
+            relatedQueryKeys: ["ListPushSubscriptions"],
+            confirmText: "Stop sending push notifications to [DeviceName]?",
+          },
+        ]}
+      />
+      <CippApiResults apiObject={push.register} />
+    </Stack>
   );
 };
 
