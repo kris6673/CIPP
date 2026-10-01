@@ -564,7 +564,7 @@ function Invoke-HuduExtensionSync {
                     }
                 }
 
-                foreach ($CAIRole in $CAPolicy.conditions.users.excludeRoles) {
+                foreach ($CAERole in $CAPolicy.conditions.users.excludeRoles) {
                     foreach ($Member in ($Roles | Where-Object { $_.id -eq $CAERole }).Members) {
                         $null = $CAMembers.remove($Member.id)
                     }

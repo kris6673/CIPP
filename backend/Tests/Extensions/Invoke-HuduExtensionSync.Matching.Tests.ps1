@@ -73,13 +73,17 @@ Describe 'Invoke-HuduExtensionSync matching' {
             Users                    = $Users
             Groups                   = $Groups
             Devices                  = $Devices
-            AllRoles                 = @(); Domains = @()
+            AllRoles                 = @([PSCustomObject]@{ id = 'R-1'; roleTemplateId = 'T-1'; displayName = 'Helpdesk Administrator'; description = 'd' })
+            Domains                  = @()
             Licenses                 = @([PSCustomObject]@{ skuId = 'sku-1'; skuPartNumber = 'E5' })
             DeviceCompliancePolicies = @([PSCustomObject]@{ id = 'cp1'; displayName = 'Compliance 1' })
             ConditionalAccess        = @(
                 [PSCustomObject]@{ id = 'P1'; displayName = 'All but Bob'; conditions = [PSCustomObject]@{ users = [PSCustomObject]@{ includeUsers = @('All'); excludeUsers = @('U-2') } } }
                 [PSCustomObject]@{ id = 'P2'; displayName = 'Sales members'; conditions = [PSCustomObject]@{ users = [PSCustomObject]@{ includeGroups = @('g-1') } } }
                 [PSCustomObject]@{ id = 'P3'; displayName = 'Carol by id'; conditions = [PSCustomObject]@{ users = [PSCustomObject]@{ includeUsers = @('u-3') } } }
+                # Role conditions are compared with the role's id here, as the sync compares them today
+                [PSCustomObject]@{ id = 'P4'; displayName = 'Everyone but helpdesk'; conditions = [PSCustomObject]@{ users = [PSCustomObject]@{ includeUsers = @('All'); excludeRoles = @('R-1') } } }
+                [PSCustomObject]@{ id = 'P5'; displayName = 'Helpdesk role'; conditions = [PSCustomObject]@{ users = [PSCustomObject]@{ includeRoles = @('R-1') } } }
             )
             Mailboxes                = @([PSCustomObject]@{ ExternalDirectoryObjectId = 'u-1'; id = 'MBX-1'; UPN = 'alice@contoso.com'; primarySmtpAddress = 'Alice.Smith@contoso.com' })
             CASMailbox               = @([PSCustomObject]@{ ExternalDirectoryObjectId = 'U-1'; EwsEnabled = 'EWS-ALICE' })
@@ -149,6 +153,7 @@ Describe 'Invoke-HuduExtensionSync matching' {
         }
         Mock New-HuduRelation { $script:NewRelations.Add("$FromableID->$ToableID") }
         Mock Set-HuduMagicDash { }
+        Mock Get-CippDbRoleMembers { if ($RoleTemplateId -eq 'T-1') { [PSCustomObject]@{ id = 'U-1'; displayName = 'Alice'; userPrincipalName = 'alice@contoso.com'; AssignmentType = 'Direct' } } }
         Mock Write-LogMessage { }
 
         $script:Result = Invoke-HuduExtensionSync -Configuration $script:Configuration -TenantFilter 'contoso.onmicrosoft.com'
@@ -173,6 +178,15 @@ Describe 'Invoke-HuduExtensionSync matching' {
         $BobPolicies = Get-Block $script:Bob 'Assigned Conditional Access Policies'
         $BobPolicies | Should -Not -Match 'All but Bob'
         $BobPolicies | Should -Match 'Sales members'
+    }
+
+    It 'adds the members of included roles and removes the members of excluded roles' {
+        $AlicePolicies = Get-Block $script:Alice 'Assigned Conditional Access Policies'
+        $AlicePolicies | Should -Match 'Helpdesk role'
+        $AlicePolicies | Should -Not -Match 'Everyone but helpdesk'
+        $BobPolicies = Get-Block $script:Bob 'Assigned Conditional Access Policies'
+        $BobPolicies | Should -Match 'Everyone but helpdesk'
+        $BobPolicies | Should -Not -Match 'Helpdesk role'
     }
 
     It 'finds mailbox settings, statistics and OneDrive by id or UPN regardless of case' {
