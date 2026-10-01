@@ -993,7 +993,7 @@ function Invoke-HuduExtensionSync {
 
                             if (!$ExistingAsset -or $ExistingHash -ne $NewHash) {
                                 $CompanyResult.Logs.Add("Updating $($HuduUser.name) in Hudu")
-                                $null = Set-HuduAsset -asset_id $HuduUser.id -Name $HuduUser.name -company_id $company_id -asset_layout_id $PeopleLayout.id -Fields $UserAssetFields
+                                $null = Set-HuduAsset -asset_id $HuduUser.id -Name $HuduUser.name -company_id $company_id -asset_layout_id $PeopleLayout.id -Fields $UserAssetFields -ExistingAsset $HuduUser
                                 $AssetCache = [PSCustomObject]@{
                                     PartitionKey = 'HuduUser'
                                     RowKey       = [string]$HuduUser.id
@@ -1327,7 +1327,7 @@ function Invoke-HuduExtensionSync {
 
                                 if (!$ExistingAsset -or $ExistingAsset.Hash -ne $NewHash -or $CredentialFieldsChanged) {
                                     $CompanyResult.Logs.Add("Updating $($HuduDevice.name) in Hudu")
-                                    $null = Set-HuduAsset -asset_id $HuduDevice.id -Name $HuduDevice.name -company_id $company_id -asset_layout_id $HuduDevice.asset_layout_id -Fields $DeviceAssetFields -PrimarySerial $Device.serialNumber
+                                    $null = Set-HuduAsset -asset_id $HuduDevice.id -Name $HuduDevice.name -company_id $company_id -asset_layout_id $HuduDevice.asset_layout_id -Fields $DeviceAssetFields -PrimarySerial $Device.serialNumber -ExistingAsset $HuduDevice
                                     $AssetCache = [PSCustomObject]@{
                                         PartitionKey = 'HuduDevice'
                                         RowKey       = [string]$HuduDevice.id
@@ -1341,7 +1341,8 @@ function Invoke-HuduExtensionSync {
                                     $RelHuduUser = & $MatchPeople $Device.userPrincipalName
 
                                     if ($RelHuduUser) {
-                                        if (-not $RelationKeys.Contains("Asset|$($RelHuduUser.id)|Asset|$($HuduDevice.id)")) {
+                                        # Add() is false when the pair was already related or tried earlier in this run
+                                        if ($RelationKeys.Add("Asset|$($RelHuduUser.id)|Asset|$($HuduDevice.id)")) {
                                             try {
                                                 Write-Information "Creating relation between $($RelHuduUser.name) and $($HuduDevice.name)"
                                                 $null = New-HuduRelation -FromableType 'Asset' -FromableID $RelHuduUser.id -ToableType 'Asset' -ToableID $HuduDevice.id -ea stop

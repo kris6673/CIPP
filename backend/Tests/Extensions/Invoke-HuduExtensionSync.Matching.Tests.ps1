@@ -25,7 +25,7 @@ BeforeAll {
     function Get-HuduFormattedField { param($Title, $Value) }
     function Get-HuduFormattedBlock { param($Heading, $Body) }
     function Get-StringHash { param($String) }
-    function Set-HuduAsset { param($asset_id, $Name, $company_id, $asset_layout_id, $Fields, $PrimarySerial) }
+    function Set-HuduAsset { param($asset_id, $Name, $company_id, $asset_layout_id, $Fields, $PrimarySerial, $ExistingAsset) }
     function New-HuduAsset { param($Name, $company_id, $asset_layout_id, $Fields, $PrimarySerial) }
     function New-HuduRelation { param($FromableType, $FromableID, $ToableType, $ToableID) }
     function Set-HuduMagicDash { param($Title, $company_name, $Message, $Icon, $Content, $Shade) }
@@ -246,6 +246,18 @@ Describe 'Invoke-HuduExtensionSync matching' {
             @($script:SetAssets.Id) | Should -Contain 202
             @($script:NewAssets.Name) | Should -Contain 'PC-3'
             @($script:NewAssets.Name) | Should -Not -Contain 'PHONE-0'
+        } finally {
+            $script:Cache.Devices = $Devices
+        }
+    }
+
+    It 'creates a relation once when several devices match the same Hudu asset for the same user' {
+        $Twin = [PSCustomObject]@{ id = 'mdm-6'; deviceName = 'PC-2'; serialNumber = 'SER6'; azureADDeviceId = $null; userPrincipalName = 'bob@contoso.com'; operatingSystem = 'macOS'; deviceType = 'macMDM' }
+        $script:Cache.Devices = @($Devices) + @($Twin)
+        try {
+            $script:NewRelations.Clear()
+            $null = Invoke-HuduExtensionSync -Configuration $script:Configuration -TenantFilter 'contoso.onmicrosoft.com'
+            @($script:NewRelations | Where-Object { $_ -eq '102->202' }).Count | Should -Be 1
         } finally {
             $script:Cache.Devices = $Devices
         }

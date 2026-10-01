@@ -3121,10 +3121,13 @@ function Set-HuduAsset {
         [Alias('primary_manufacturer')]
         [string]$PrimaryManufacturer,
 
-        [string]$Slug
+        [string]$Slug,
+
+        # The asset as already returned by Get-HuduAssets, to build the update from without fetching it again
+        [object]$ExistingAsset
     )
-    
-    $Object = Get-HuduAssets -id $Id | Select-Object name,asset_layout_id,company_id,slug,primary_serial,primary_model,primary_mail,id,primary_manufacturer,@{n='custom_fields';e={$_.fields | ForEach-Object {[pscustomobject]@{$_.label.replace(' ','_').tolower()= $_.value}}}}
+
+    $Object = $(if ($ExistingAsset) { $ExistingAsset } else { Get-HuduAssets -id $Id }) | Select-Object name,asset_layout_id,company_id,slug,primary_serial,primary_model,primary_mail,id,primary_manufacturer,@{n='custom_fields';e={$_.fields | ForEach-Object {[pscustomobject]@{$_.label.replace(' ','_').tolower()= $_.value}}}}
     if ($Object) {
         $Asset = [ordered]@{asset = $Object }
         $CompanyId = $Object.company_id
