@@ -5,7 +5,7 @@ description: Fleet-wide view of how your tenants measure up against their baseli
 # Baselines
 
 {% hint style="info" %}
-Baselines is off by default and is turned on with the **Baselines** flag on the [features.md](../../cipp/settings/features.md "mention") tab of CIPP settings. It sits behind a flag because turning it on switches off Standards and Drift, so you decide when your tenants move from one to the other.
+Baselines is controlled by the **Baselines** flag on the [features.md](../../cipp/settings/features.md "mention") tab of CIPP settings. It is on by default for installs that have no classic Standards templates, and off by default for installs that do. It sits behind a flag because turning it on switches off Standards and Drift, so you decide when your tenants move from one to the other.
 {% endhint %}
 
 A baseline is the desired configuration for your tenants. CIPP checks every assigned tenant against it twice a day, shows exactly what deviates, and, where you allow it, corrects the deviation automatically. Standards are grouped into stages so a baseline can roll out gradually, with each stage adding more of the configuration as a tenant graduates into it.
