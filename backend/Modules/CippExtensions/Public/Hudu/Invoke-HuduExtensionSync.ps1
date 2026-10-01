@@ -153,6 +153,37 @@ function Invoke-HuduExtensionSync {
             Write-Host "Hudu Devices - Error: $_"
         }
 
+        # Hudu people by the addresses they can match: Email Address field values, primary_mail and ConnectWise Manage email.
+        $PersonKeys = {
+            param($Person, [switch]$NoEmailField)
+            if (-not $NoEmailField -and $Person.fields.label -eq 'Email Address') { $Person.fields.value }
+            $Person.primary_mail
+            if ($Person.cards.integrator_name -eq 'cw_manage' -and $Person.cards.data.communicationItems.communicationType -eq 'Email') { $Person.cards.data.communicationItems.value }
+        }
+        $PeopleByEmail = [CIPP.CippIndex]::Build($People, @(foreach ($Person in $People) { , ((& $PersonKeys $Person) ?? $null) }))
+        $PeopleByEmailNoField = [CIPP.CippIndex]::Build($People, @(foreach ($Person in $People) { , ((& $PersonKeys $Person -NoEmailField) ?? $null) }))
+        $AddPerson = {
+            param($Person)
+            $People.Add($Person)
+            foreach ($Key in @(& $PersonKeys $Person)) { $PeopleByEmail.AddItem($Key, $Person) }
+            foreach ($Key in @(& $PersonKeys $Person -NoEmailField)) { $PeopleByEmailNoField.AddItem($Key, $Person) }
+        }
+        $MatchPeople = {
+            param($Upn, [switch]$NoEmailField)
+            if ([string]::IsNullOrEmpty($Upn)) {
+                # An empty address can match people by their own empty values, which only the full filter gets right
+                $People | Where-Object { (-not $NoEmailField -and $_.fields.label -eq 'Email Address' -and $_.fields.value -eq $Upn) -or $_.primary_mail -eq $Upn -or ($_.cards.integrator_name -eq 'cw_manage' -and $_.cards.data.communicationItems.communicationType -eq 'Email' -and $_.cards.data.communicationItems.value -eq $Upn) }
+            } elseif ($NoEmailField) {
+                $PeopleByEmailNoField.Find($Upn)
+            } else {
+                $PeopleByEmail.Find($Upn)
+            }
+        }
+
+        $HuduDeviceKeys = @(foreach ($HuduDevice in $HuduDevices) { Get-HuduDeviceMatchKey -HuduDevice $HuduDevice })
+        $HuduDevicesBySerial = [CIPP.CippIndex]::Build($HuduDevices, @(foreach ($Key in $HuduDeviceKeys) { , $Key.Serial }))
+        $HuduDevicesByName = [CIPP.CippIndex]::Build($HuduDevices, @(foreach ($Key in $HuduDeviceKeys) { , $Key.Name }))
+
         $importDomains = $Configuration.ImportDomains
         $monitordomains = $Configuration.MonitorDomains
 
@@ -207,6 +238,8 @@ function Invoke-HuduExtensionSync {
             }
             Add-CIPPAzDataTableEntity @HuduRelationsCache -Entity $RelationsCacheMetaEntity -Force
         }
+        $RelationKeys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        foreach ($Relation in $HuduRelations) { $null = $RelationKeys.Add("$($Relation.fromable_type)|$($Relation.fromable_id)|$($Relation.toable_type)|$($Relation.toable_id)") }
         [System.Collections.Generic.List[object]]$Links = @(
             @{
                 Title = 'M365 Admin Portal'
@@ -400,6 +433,7 @@ function Invoke-HuduExtensionSync {
 
         $BitLockerMetadataAvailable = $true
         $BitLockerKeyMetadata = @()
+        $BitLockerKeysByDevice = [CIPP.CippIndex]::Build(@(), @())
         if ($Configuration.IncludeBitLocker) {
             try {
                 $BitLockerCacheRows = @(Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'BitlockerKeys' -ErrorAction Stop)
@@ -425,6 +459,7 @@ function Invoke-HuduExtensionSync {
                 if ($BitLockerKeyMetadata | Where-Object { [string]::IsNullOrWhiteSpace([string]$_.id) -or [string]::IsNullOrWhiteSpace([string]$_.deviceId) }) {
                     throw 'BitLocker key metadata cache contains incomplete records.'
                 }
+                $BitLockerKeysByDevice = [CIPP.CippIndex]::Build($BitLockerKeyMetadata, @(foreach ($Key in $BitLockerKeyMetadata) { , ($($Key.deviceId) ?? $null) }))
                 if ($DeviceLayoutId) {
                     $LayoutSlots = @(
                         foreach ($DeviceKeys in ($BitLockerKeyMetadata | Group-Object deviceId)) {
@@ -453,14 +488,20 @@ function Invoke-HuduExtensionSync {
 
         $DeviceCompliancePolicies = $ExtensionCache.DeviceCompliancePolicies
 
+        $GuidPattern = '(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
         $DeviceComplianceDetails = foreach ($Policy in $DeviceCompliancePolicies) {
             # Device statuses are cached per policy with new naming: IntuneDeviceCompliancePolicies_{policyId}
             $DeviceStatusItems = Get-CIPPDbItem -TenantFilter $TenantFilter -Type "IntuneDeviceCompliancePolicies_$($Policy.id)" | Where-Object { $_.RowKey -notlike '*-Count' }
-            $DeviceStatuses = if ($DeviceStatusItems) { $DeviceStatusItems | ForEach-Object { $_.Data | ConvertFrom-Json } } else { @() }
+            $DeviceStatuses = @(if ($DeviceStatusItems) { $DeviceStatusItems | ForEach-Object { $_.Data | ConvertFrom-Json } })
+            # Status positions by display name, by the id after its last '_', and by every GUID in the id
+            $Positions = [object[]]@(for ($p = 0; $p -lt $DeviceStatuses.Count; $p++) { $p })
             [pscustomobject]@{
                 ID             = $Policy.id
                 DisplayName    = $Policy.displayName
-                DeviceStatuses = @($DeviceStatuses)
+                DeviceStatuses = $DeviceStatuses
+                ByName         = [CIPP.CippIndex]::Build($Positions, @(foreach ($Status in $DeviceStatuses) { , ($($Status.deviceDisplayName) ?? $null) }))
+                ByIdSuffix     = [CIPP.CippIndex]::Build($Positions, @(foreach ($Status in $DeviceStatuses) { , ($(if ($Status.id -and "$($Status.id)".Contains('_')) { "$($Status.id)".Substring("$($Status.id)".LastIndexOf('_') + 1) }) ?? $null) }))
+                ByIdGuid       = [CIPP.CippIndex]::Build($Positions, @(foreach ($Status in $DeviceStatuses) { , ($(if ($Status.id) { [regex]::Matches("$($Status.id)", $GuidPattern).Value }) ?? $null) }))
             }
         }
 
@@ -476,6 +517,12 @@ function Invoke-HuduExtensionSync {
             }
         }
 
+        # Lookups built once; each matches like the Where-Object / -in it replaces (case-insensitive, list order)
+        $GroupById = [CIPP.CippIndex]::Build($Groups, @(foreach ($Group in $Groups) { , ($($Group.id) ?? $null) }))
+        $AllGroupsById = [CIPP.CippIndex]::Build($AllGroups, @(foreach ($Group in $AllGroups) { , ($($Group.id) ?? $null) }))
+        $GroupsByMemberId = [CIPP.CippIndex]::Build($Groups, @(foreach ($Group in $Groups) { , ($($Group.Members.id) ?? $null) }))
+        $GroupsByDeviceId = [CIPP.CippIndex]::Build($Groups, @(foreach ($Group in $Groups) { , ($($Group.members.deviceId) ?? $null) }))
+
         $AllConditionalAccessPolicies = $ExtensionCache.ConditionalAccess
 
         $ConditionalAccessMembers = foreach ($CAPolicy in $AllConditionalAccessPolicies) {
@@ -488,7 +535,7 @@ function Invoke-HuduExtensionSync {
             }
 
             foreach ($CAIGroup in $CAPolicy.conditions.users.includeGroups) {
-                foreach ($Member in ($Groups | Where-Object { $_.id -eq $CAIGroup }).Members) {
+                foreach ($Member in $GroupById.Find($CAIGroup).Members) {
                     $null = $CAMembers.add($Member.id)
                 }
             }
@@ -499,13 +546,20 @@ function Invoke-HuduExtensionSync {
                 }
             }
 
-            $CAMembers = $CAMembers | Select-Object -Unique
+            # First occurrence wins and the compare is case-sensitive, like Select-Object -Unique
+            $UniqueMembers = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+            $NullMemberSeen = $false
+            $CAMembers = @(foreach ($Member in $CAMembers) {
+                    if ($null -eq $Member) { if (-not $NullMemberSeen) { $NullMemberSeen = $true; $Member } }
+                    elseif ($UniqueMembers.Add([string]$Member)) { $Member }
+                })
+            if ($CAMembers.Count -eq 0) { $CAMembers = $null }
 
             if ($CAMembers) {
                 $CAPolicy.conditions.users.excludeUsers | ForEach-Object { $null = $CAMembers.remove($_) }
 
                 foreach ($CAEGroup in $CAPolicy.conditions.users.excludeGroups) {
-                    foreach ($Member in ($Groups | Where-Object { $_.id -eq $CAEGroup }).Members) {
+                    foreach ($Member in $GroupById.Find($CAEGroup).Members) {
                         $null = $CAMembers.remove($Member.id)
                     }
                 }
@@ -628,35 +682,41 @@ function Invoke-HuduExtensionSync {
                     $LicenseNamesBySku[([string]$License.skuId).ToLowerInvariant()] = [string]$License.skuPartNumber
                 }
             }
+            $CAsByMemberId = [CIPP.CippIndex]::Build($ConditionalAccessMembers, @(foreach ($Cap in $ConditionalAccessMembers) { , ($($Cap.Members) ?? $null) }))
+            $CASById = [CIPP.CippIndex]::Build($CASFull, @(foreach ($CAS in $CASFull) { , ($($CAS.ExternalDirectoryObjectId) ?? $null) }))
+            $MailboxById = [CIPP.CippIndex]::Build($MailboxDetailedFull, @(foreach ($Mailbox in $MailboxDetailedFull) { , ($($Mailbox.ExternalDirectoryObjectId) ?? $null) }))
+            $MailboxStatsByUpn = [CIPP.CippIndex]::Build($MailboxStatsFull, @(foreach ($Stats in $MailboxStatsFull) { , ($($Stats.userPrincipalName) ?? $null) }))
+            $OneDriveByUpn = [CIPP.CippIndex]::Build($OneDriveDetails, @(foreach ($Drive in $OneDriveDetails) { , ($($Drive.ownerPrincipalName) ?? $null) }))
+            $DevicesByUpn = [CIPP.CippIndex]::Build($devices, @(foreach ($UpnDevice in $devices) { , ($($UpnDevice.userPrincipalName) ?? $null) }))
+            # Permissions are found by list position so a row matching several of a mailbox's identities is listed once, in order
+            $PermissionList = @($Permissions)
+            $PermissionPositionsByIdentity = [CIPP.CippIndex]::Build([object[]]@(for ($p = 0; $p -lt $PermissionList.Count; $p++) { $p }), @(foreach ($Perm in $PermissionList) { , ($($Perm.Identity) ?? $null) }))
+            $AssignedMapServices = ($AssignedMap | Get-Member -MemberType NoteProperty).name
             $OutputUsers = foreach ($user in $licensedUsers) {
                 try {
                     $HuduUser = $null
-                    $UserGroups = foreach ($Group in $Groups) {
-                        if ($User.id -in $Group.Members.id) {
-                            $FoundGroup = $AllGroups | Where-Object { $_.id -eq $Group.id }
-                            [PSCustomObject]@{
-                                'Display Name'   = $FoundGroup.displayName
-                                'Mail Enabled'   = $FoundGroup.mailEnabled
-                                'Mail'           = $FoundGroup.mail
-                                'Security Group' = $FoundGroup.securityEnabled
-                                'Group Types'    = $FoundGroup.groupTypes -join ','
-                            }
+                    $UserGroups = foreach ($Group in $GroupsByMemberId.Find($User.id)) {
+                        $FoundGroup = $AllGroupsById.Find($Group.id)
+                        [PSCustomObject]@{
+                            'Display Name'   = $FoundGroup.displayName
+                            'Mail Enabled'   = $FoundGroup.mailEnabled
+                            'Mail'           = $FoundGroup.mail
+                            'Security Group' = $FoundGroup.securityEnabled
+                            'Group Types'    = $FoundGroup.groupTypes -join ','
                         }
                     }
 
-                    $UserPolicies = foreach ($cap in $ConditionalAccessMembers) {
-                        if ($User.id -in $Cap.Members) {
-                            [PSCustomObject]@{
-                                displayName            = $cap.displayName
-                                state                  = $cap.State
-                                authenticationStrength = $cap.AuthenticationStrength
-                                clientAppTypes         = $cap.ClientAppTypes
-                                includeApplications    = $cap.IncludeApplications
-                                includeLocations       = $cap.IncludeLocations
-                                signInFrequency        = $cap.SignInFrequency
-                                userRiskLevels         = $cap.UserRiskLevels
-                                signInRiskLevels       = $cap.SignInRiskLevels
-                            }
+                    $UserPolicies = foreach ($cap in $CAsByMemberId.Find($User.id)) {
+                        [PSCustomObject]@{
+                            displayName            = $cap.displayName
+                            state                  = $cap.State
+                            authenticationStrength = $cap.AuthenticationStrength
+                            clientAppTypes         = $cap.ClientAppTypes
+                            includeApplications    = $cap.IncludeApplications
+                            includeLocations       = $cap.IncludeLocations
+                            signInFrequency        = $cap.SignInFrequency
+                            userRiskLevels         = $cap.UserRiskLevels
+                            signInRiskLevels       = $cap.SignInRiskLevels
                         }
                     }
 
@@ -665,12 +725,12 @@ function Invoke-HuduExtensionSync {
                     $MailboxDetailedRequest = ''
                     $CASRequest = ''
 
-                    $CASRequest = $CASFull | Where-Object { $_.ExternalDirectoryObjectId -eq $User.id }
-                    $MailboxDetailedRequest = $MailboxDetailedFull | Where-Object { $_.ExternalDirectoryObjectId -eq $User.id }
-                    $StatsRequest = $MailboxStatsFull | Where-Object { $_.'userPrincipalName' -eq $User.userPrincipalName }
+                    $CASRequest = $CASById.Find($User.id)
+                    $MailboxDetailedRequest = $MailboxById.Find($User.id)
+                    $StatsRequest = $MailboxStatsByUpn.Find($User.userPrincipalName)
 
                     $MailboxIdentities = @($User.id, $User.userPrincipalName, $MailboxDetailedRequest.id, $MailboxDetailedRequest.UPN, $MailboxDetailedRequest.primarySmtpAddress) | Where-Object { $_ }
-                    $PermsRequest = $Permissions | Where-Object { $_.Identity -in $MailboxIdentities }
+                    $PermsRequest = @(foreach ($Identity in $MailboxIdentities) { $PermissionPositionsByIdentity.Find($Identity) }) | Sort-Object -Unique | ForEach-Object { $PermissionList[$_] }
 
                     $ParsedPerms = foreach ($Perm in $PermsRequest) {
                         if ($Perm.User -ne 'NT AUTHORITY\SELF' -and $Perm.Deny -ne $true) {
@@ -700,9 +760,9 @@ function Invoke-HuduExtensionSync {
                         StorageUsedInBytes       = $StatsRequest.storageUsedInBytes
                     }
 
-                    $userDevices = ($devices | Where-Object { $_.userPrincipalName -eq $user.userPrincipalName } | Select-Object @{N = 'Name'; E = { "<a target='_blank' href=https://intune.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_Intune_Devices/DeviceSettingsBlade/overview/mdmDeviceId/$($_.id)>$($_.deviceName) ($($_.operatingSystem))" } }).name -join '<br/>'
+                    $userDevices = ($DevicesByUpn.Find($user.userPrincipalName) | Select-Object @{N = 'Name'; E = { "<a target='_blank' href=https://intune.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_Intune_Devices/DeviceSettingsBlade/overview/mdmDeviceId/$($_.id)>$($_.deviceName) ($($_.operatingSystem))" } }).name -join '<br/>'
 
-                    $UserDevicesDetailsRaw = $devices | Where-Object { $_.userPrincipalName -eq $user.userPrincipalName } | Select-Object @{N = 'Name'; E = { "<a target='_blank' href=https://intune.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_Intune_Devices/DeviceSettingsBlade/overview/mdmDeviceId/$($_.id)>$($_.deviceName)</a>" } }, @{n = 'Owner'; e = { $_.managedDeviceOwnerType } }, `
+                    $UserDevicesDetailsRaw = $DevicesByUpn.Find($user.userPrincipalName) | Select-Object @{N = 'Name'; E = { "<a target='_blank' href=https://intune.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_Intune_Devices/DeviceSettingsBlade/overview/mdmDeviceId/$($_.id)>$($_.deviceName)</a>" } }, @{n = 'Owner'; e = { $_.managedDeviceOwnerType } }, `
                     @{n = 'Enrolled'; e = { $_.enrolledDateTime } }, `
                     @{n = 'Last Sync'; e = { $_.lastSyncDateTime } }, `
                     @{n = 'OS'; e = { $_.operatingSystem } }, `
@@ -726,7 +786,7 @@ function Invoke-HuduExtensionSync {
                             }
                         } | Where-Object { $_ } | Sort-Object -Unique) -join ', '
 
-                    $UserOneDriveDetails = $OneDriveDetails | Where-Object { $_.ownerPrincipalName -eq $user.userPrincipalName }
+                    $UserOneDriveDetails = $OneDriveByUpn.Find($user.userPrincipalName)
 
 
 
@@ -838,7 +898,7 @@ function Invoke-HuduExtensionSync {
                     $AssignedPlans = $User.assignedplans | Where-Object { $_.capabilityStatus -eq 'Enabled' } | Select-Object @{n = 'Assigned'; e = { $_.assignedDateTime } }, @{n = 'Service'; e = { $_.service } } -Unique
                     [System.Collections.Generic.List[PSCustomObject]]$AssignedPlansFormatted = @()
                     foreach ($AssignedPlan in $AssignedPlans) {
-                        if ($AssignedPlan.service -in ($AssignedMap | Get-Member -MemberType NoteProperty).name) {
+                        if ($AssignedPlan.service -in $AssignedMapServices) {
                             $CSSClass = $AssignedMap."$($AssignedPlan.service)"
                             $PlanDisplayName = $AssignedNameMap."$($AssignedPlan.service)"
                             $ParsedDate = Get-Date($AssignedPlan.Assigned) -Format 'yyyy-MM-dd HH:mm:ss'
@@ -889,7 +949,7 @@ function Invoke-HuduExtensionSync {
                         $UserDevicesDetailsBlock = $null
                     }
 
-                    $HuduUser = $People | Where-Object { ($_.fields.label -eq 'Email Address' -and $_.fields.value -eq $user.userPrincipalName) -or $_.primary_mail -eq $user.userPrincipalName -or ($_.cards.integrator_name -eq 'cw_manage' -and $_.cards.data.communicationItems.communicationType -eq 'Email' -and $_.cards.data.communicationItems.value -eq $user.userPrincipalName) }
+                    $HuduUser = & $MatchPeople $user.userPrincipalName
 
                     [System.Collections.Generic.List[PSCustomObject]]$CIPPLinksFormatted = @()
                     if ($EnableCIPP) {
@@ -957,7 +1017,7 @@ function Invoke-HuduExtensionSync {
                                     }
                                     Add-CIPPAzDataTableEntity @HuduAssetCache -Entity $AssetCache -Force
                                     # Add newly created user to the People collection to prevent duplicates
-                                    $People.Add($CreateHuduUser)
+                                    & $AddPerson $CreateHuduUser
                                 }
                             }
                         } else {
@@ -1028,18 +1088,28 @@ function Invoke-HuduExtensionSync {
                         # Handle DeviceStatuses as either array or single object
                         $DeviceStatuses = $Policy.DeviceStatuses
 
-                        # Enhanced device matching with multiple strategies
-                        $MatchingStatuses = $DeviceStatuses | Where-Object {
-                            # Primary match: deviceDisplayName to deviceName (most reliable)
-                            ($_.deviceDisplayName -eq $device.deviceName) -or
-                            # Secondary match: deviceDisplayName to managedDeviceName
-                            ($_.deviceDisplayName -eq $device.managedDeviceName) -or
-                            # Tertiary match: extract device ID from composite compliance ID and match to device.id
-                            ($_.id -and $device.id -and $_.id -match ".*_$([regex]::Escape($device.id))$") -or
-                            # Quaternary match: extract device ID from composite compliance ID and match to azureADDeviceId
-                            ($_.id -and $device.azureADDeviceId -and $_.id -match ".*_$([regex]::Escape($device.azureADDeviceId))$") -or
-                            # Alternative match: check if azureADDeviceId appears anywhere in the compliance ID
-                            ($_.id -and $device.azureADDeviceId -and $_.id -like "*$($device.azureADDeviceId)*")
+                        # Enhanced device matching with multiple strategies. The lookups give the same statuses as the
+                        # filter below when the device id has no '_' and the Entra id is a GUID; otherwise use the filter.
+                        $MatchingStatuses = if (-not "$($device.id)".Contains('_') -and ([string]::IsNullOrEmpty($device.azureADDeviceId) -or $device.azureADDeviceId -match "^$GuidPattern$")) {
+                            @(
+                                $Policy.ByName.Find($device.deviceName)
+                                $Policy.ByName.Find($device.managedDeviceName)
+                                if ($device.id) { $Policy.ByIdSuffix.Find($device.id) }
+                                if ($device.azureADDeviceId) { $Policy.ByIdGuid.Find($device.azureADDeviceId) }
+                            ) | Sort-Object -Unique | ForEach-Object { $DeviceStatuses[$_] }
+                        } else {
+                            $DeviceStatuses | Where-Object {
+                                # Primary match: deviceDisplayName to deviceName (most reliable)
+                                ($_.deviceDisplayName -eq $device.deviceName) -or
+                                # Secondary match: deviceDisplayName to managedDeviceName
+                                ($_.deviceDisplayName -eq $device.managedDeviceName) -or
+                                # Tertiary match: extract device ID from composite compliance ID and match to device.id
+                                ($_.id -and $device.id -and $_.id -match ".*_$([regex]::Escape($device.id))$") -or
+                                # Quaternary match: extract device ID from composite compliance ID and match to azureADDeviceId
+                                ($_.id -and $device.azureADDeviceId -and $_.id -match ".*_$([regex]::Escape($device.azureADDeviceId))$") -or
+                                # Alternative match: check if azureADDeviceId appears anywhere in the compliance ID
+                                ($_.id -and $device.azureADDeviceId -and $_.id -like "*$($device.azureADDeviceId)*")
+                            }
                         }
 
                         if ($MatchingStatuses) {
@@ -1082,11 +1152,9 @@ function Invoke-HuduExtensionSync {
                     }
                     $DevicePoliciesFormatted = $DevicePoliciesTable | ConvertTo-Html -Fragment | Out-String
 
-                    $DeviceGroupsTable = foreach ($Group in $Groups) {
-                        if ($device.azureADDeviceId -in $Group.members.deviceId) {
-                            [PSCustomObject]@{
-                                Name = $Group.displayName
-                            }
+                    $DeviceGroupsTable = foreach ($Group in $GroupsByDeviceId.Find($device.azureADDeviceId)) {
+                        [PSCustomObject]@{
+                            Name = $Group.displayName
                         }
                     }
                     $DeviceGroupsFormatted = $DeviceGroupsTable | ConvertTo-Html -Fragment | Out-String
@@ -1109,7 +1177,7 @@ function Invoke-HuduExtensionSync {
                     #$DeviceAppsBlock = Get-HuduFormattedBlock -Heading 'App Details' -Body ($DeviceAppsFormatted -join '')
                     $DeviceGroupsBlock = Get-HuduFormattedBlock -Heading 'Device Groups' -Body ($DeviceGroupsFormatted -join '')
 
-                    $HuduDevice = Find-HuduDeviceMatch -Device $Device -HuduDevices $HuduDevices -ExcludeSerials $ExcludeSerials
+                    $HuduDevice = Find-HuduDeviceMatch -Device $Device -HuduDevices $HuduDevices -ExcludeSerials $ExcludeSerials -SerialIndex $HuduDevicesBySerial -NameIndex $HuduDevicesByName
 
                     [System.Collections.Generic.List[PSCustomObject]]$DeviceLinksFormatted = @()
                     $DeviceLinksFormatted.add((Get-HuduLinkBlock -URL "https://intune.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_Intune_Devices/DeviceSettingsBlade/overview/mdmDeviceId/$($Device.id)" -Icon 'fas fa-laptop' -Title 'Endpoint Manager'))
@@ -1219,15 +1287,14 @@ function Invoke-HuduExtensionSync {
                                 }
 
                                 $BitLockerKeyIds = @(
-                                    $BitLockerKeyMetadata |
-                                        Where-Object { $_.deviceId -eq $Device.azureADDeviceId } |
+                                    $BitLockerKeysByDevice.Find($Device.azureADDeviceId) |
                                         ForEach-Object { [string]$_.id } |
                                         Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
                                         Sort-Object -Unique
                                 )
                                 $DeviceHashMaterial += "`nBitLocker Key IDs:$($BitLockerKeyIds -join ',')"
 
-                                $BitLockerFields = Get-HuduBitLockerSyncField -KeyMetadata @($BitLockerKeyMetadata | Where-Object { $_.deviceId -eq $Device.azureADDeviceId }) -ExistingFields $SingleHuduDevice.fields -DeviceId $Device.azureADDeviceId -TenantFilter $TenantFilter -ErrorAction Stop
+                                $BitLockerFields = Get-HuduBitLockerSyncField -KeyMetadata @($BitLockerKeysByDevice.Find($Device.azureADDeviceId)) -ExistingFields $SingleHuduDevice.fields -DeviceId $Device.azureADDeviceId -TenantFilter $TenantFilter -ErrorAction Stop
                                 if ($BitLockerFields.Count -gt 0) {
                                     $CredentialFieldsChanged = $true
                                     foreach ($FieldName in $BitLockerFields.Keys) {
@@ -1270,11 +1337,10 @@ function Invoke-HuduExtensionSync {
                                 }
 
                                 if (![string]::IsNullOrEmpty($Device.userPrincipalName)) {
-                                    $RelHuduUser = $People | Where-Object { ($_.fields.label -eq 'Email Address' -and $_.fields.value -eq $Device.userPrincipalName) -or $_.primary_mail -eq $Device.userPrincipalName -or ($_.cards.integrator_name -eq 'cw_manage' -and $_.cards.data.communicationItems.communicationType -eq 'Email' -and $_.cards.data.communicationItems.value -eq $Device.userPrincipalName) }
+                                    $RelHuduUser = & $MatchPeople $Device.userPrincipalName
 
                                     if ($RelHuduUser) {
-                                        $Relation = $HuduRelations | Where-Object { $_.fromable_type -eq 'Asset' -and $_.fromable_id -eq $RelHuduUser.id -and $_.toable_type -eq 'Asset' -and $_.toable_id -eq $HuduDevice.id }
-                                        if (-not $Relation) {
+                                        if (-not $RelationKeys.Contains("Asset|$($RelHuduUser.id)|Asset|$($HuduDevice.id)")) {
                                             try {
                                                 Write-Information "Creating relation between $($RelHuduUser.name) and $($HuduDevice.name)"
                                                 $null = New-HuduRelation -FromableType 'Asset' -FromableID $RelHuduUser.id -ToableType 'Asset' -ToableID $HuduDevice.id -ea stop
@@ -1312,8 +1378,11 @@ function Invoke-HuduExtensionSync {
                                     Add-CIPPAzDataTableEntity @HuduAssetCache -Entity $AssetCache -Force
                                     # Add newly created device to the HuduDevices collection to prevent duplicates
                                     $HuduDevices.Add($CreateHuduDevice)
+                                    $NewKeys = Get-HuduDeviceMatchKey -HuduDevice $CreateHuduDevice
+                                    foreach ($Key in $NewKeys.Serial) { $HuduDevicesBySerial.AddItem($Key, $CreateHuduDevice) }
+                                    foreach ($Key in $NewKeys.Name) { $HuduDevicesByName.AddItem($Key, $CreateHuduDevice) }
 
-                                    $RelHuduUser = $People | Where-Object { $_.primary_mail -eq $Device.userPrincipalName -or ($_.cards.integrator_name -eq 'cw_manage' -and $_.cards.data.communicationItems.communicationType -eq 'Email' -and $_.cards.data.communicationItems.value -eq $Device.userPrincipalName) }
+                                    $RelHuduUser = & $MatchPeople $Device.userPrincipalName -NoEmailField
                                     if ($RelHuduUser) {
                                         try {
                                             $null = New-HuduRelation -FromableType 'Asset' -FromableID $RelHuduUser.id -ToableType 'Asset' -ToableID $CreateHuduDevice.id -ea stop
