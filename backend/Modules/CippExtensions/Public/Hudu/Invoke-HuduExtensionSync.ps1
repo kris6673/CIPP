@@ -91,11 +91,17 @@ function Invoke-HuduExtensionSync {
         try {
             if (![string]::IsNullOrEmpty($PeopleLayoutId)) {
                 # Add required fields to People Layout
-                $null = Add-HuduAssetLayoutField -AssetLayoutId $PeopleLayoutId -Label 'Microsoft 365'
-                $null = Add-HuduAssetLayoutField -AssetLayoutId $PeopleLayoutId -Label 'Email Address' -Position 1 -ShowInList $true -FieldType 'Text'
-                $null = Add-HuduAssetLayoutField -AssetLayoutId $PeopleLayoutId -Label 'Licenses' -Position 2 -FieldType 'Text'
-                $CreateUsers = $Configuration.CreateMissingUsers
                 $PeopleLayout = Get-HuduAssetLayouts -Id $PeopleLayoutId
+                foreach ($RequiredField in @(
+                        @{ Label = 'Microsoft 365' }
+                        @{ Label = 'Email Address'; Position = 1; ShowInList = $true; FieldType = 'Text' }
+                        @{ Label = 'Licenses'; Position = 2; FieldType = 'Text' }
+                    )) {
+                    # The layout is fetched again only when a field was added or moved
+                    $LayoutAfter = Add-HuduAssetLayoutField -AssetLayoutId $PeopleLayoutId -AssetLayout $PeopleLayout @RequiredField
+                    if (-not [object]::ReferenceEquals($LayoutAfter, $PeopleLayout)) { $PeopleLayout = Get-HuduAssetLayouts -Id $PeopleLayoutId }
+                }
+                $CreateUsers = $Configuration.CreateMissingUsers
                 if ($PeopleLayout.id) {
                     $PeopleArray = Get-HuduAssets -CompanyId $company_id -AssetLayoutId $PeopleLayout.id
                     $People = [System.Collections.Generic.List[object]]::new([object[]]@($PeopleArray))
@@ -130,7 +136,7 @@ function Invoke-HuduExtensionSync {
                 foreach ($RequiredField in $RequiredDeviceLayoutFields) {
                     $CurrentField = $DesktopsLayout.fields | Where-Object { $_.label -eq $RequiredField.Label } | Select-Object -First 1
                     if (-not $CurrentField -or [string]$CurrentField.field_type -ne $RequiredField.FieldType -or [int]$CurrentField.position -ne [int]$RequiredField.Position) {
-                        $null = Add-HuduAssetLayoutField -AssetLayoutId $DeviceLayoutId -Label $RequiredField.Label -FieldType $RequiredField.FieldType -Position $RequiredField.Position
+                        $null = Add-HuduAssetLayoutField -AssetLayoutId $DeviceLayoutId -Label $RequiredField.Label -FieldType $RequiredField.FieldType -Position $RequiredField.Position -AssetLayout $DesktopsLayout
                         $DeviceLayoutFieldsAdded = $true
                         $DesktopsLayout = Get-HuduAssetLayouts -Id $DeviceLayoutId
                     }

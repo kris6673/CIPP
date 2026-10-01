@@ -13,7 +13,7 @@ BeforeAll {
     function Get-CIPPAzDataTableEntity { param($Filter) }
     function Get-CippExtensionReportingData { param($TenantFilter, [switch]$IncludeMailboxes, [string[]]$Exclude) }
     function Get-HuduCompanies { param($Id) }
-    function Add-HuduAssetLayoutField { param($AssetLayoutId, $Label, $FieldType, $Position, $ShowInList) }
+    function Add-HuduAssetLayoutField { param($AssetLayoutId, $Label, $FieldType, $Position, $ShowInList, $AssetLayout) }
     function Get-HuduAssetLayouts { param($Id, $LayoutId) }
     function Get-HuduAssets { param($CompanyId, $AssetLayoutId) }
     function Get-HuduRelations { }
