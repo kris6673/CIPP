@@ -81,9 +81,10 @@ Describe 'Invoke-HuduExtensionSync matching' {
                 [PSCustomObject]@{ id = 'P1'; displayName = 'All but Bob'; conditions = [PSCustomObject]@{ users = [PSCustomObject]@{ includeUsers = @('All'); excludeUsers = @('U-2') } } }
                 [PSCustomObject]@{ id = 'P2'; displayName = 'Sales members'; conditions = [PSCustomObject]@{ users = [PSCustomObject]@{ includeGroups = @('g-1') } } }
                 [PSCustomObject]@{ id = 'P3'; displayName = 'Carol by id'; conditions = [PSCustomObject]@{ users = [PSCustomObject]@{ includeUsers = @('u-3') } } }
-                # Role conditions are compared with the role's id here, as the sync compares them today
-                [PSCustomObject]@{ id = 'P4'; displayName = 'Everyone but helpdesk'; conditions = [PSCustomObject]@{ users = [PSCustomObject]@{ includeUsers = @('All'); excludeRoles = @('R-1') } } }
-                [PSCustomObject]@{ id = 'P5'; displayName = 'Helpdesk role'; conditions = [PSCustomObject]@{ users = [PSCustomObject]@{ includeRoles = @('R-1') } } }
+                # Conditional access names roles by template id, not the directory role's own id
+                [PSCustomObject]@{ id = 'P4'; displayName = 'Everyone but helpdesk'; conditions = [PSCustomObject]@{ users = [PSCustomObject]@{ includeUsers = @('All'); excludeRoles = @('T-1') } } }
+                [PSCustomObject]@{ id = 'P5'; displayName = 'Helpdesk role'; conditions = [PSCustomObject]@{ users = [PSCustomObject]@{ includeRoles = @('T-1') } } }
+                [PSCustomObject]@{ id = 'P6'; displayName = 'Role instance id'; conditions = [PSCustomObject]@{ users = [PSCustomObject]@{ includeRoles = @('R-1') } } }
             )
             Mailboxes                = @([PSCustomObject]@{ ExternalDirectoryObjectId = 'u-1'; id = 'MBX-1'; UPN = 'alice@contoso.com'; primarySmtpAddress = 'Alice.Smith@contoso.com' })
             CASMailbox               = @([PSCustomObject]@{ ExternalDirectoryObjectId = 'U-1'; EwsEnabled = 'EWS-ALICE' })
@@ -180,10 +181,11 @@ Describe 'Invoke-HuduExtensionSync matching' {
         $BobPolicies | Should -Match 'Sales members'
     }
 
-    It 'adds the members of included roles and removes the members of excluded roles' {
+    It 'adds the members of included roles and removes the members of excluded roles, by role template id' {
         $AlicePolicies = Get-Block $script:Alice 'Assigned Conditional Access Policies'
         $AlicePolicies | Should -Match 'Helpdesk role'
         $AlicePolicies | Should -Not -Match 'Everyone but helpdesk'
+        $AlicePolicies | Should -Not -Match 'Role instance id'
         $BobPolicies = Get-Block $script:Bob 'Assigned Conditional Access Policies'
         $BobPolicies | Should -Match 'Everyone but helpdesk'
         $BobPolicies | Should -Not -Match 'Helpdesk role'

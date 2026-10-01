@@ -324,6 +324,7 @@ function Invoke-HuduExtensionSync {
             }
             [PSCustomObject]@{
                 ID              = $Role.id
+                RoleTemplateId  = $Role.roleTemplateId
                 DisplayName     = $Role.displayName
                 Description     = $Role.description
                 Members         = $Members
@@ -541,7 +542,7 @@ function Invoke-HuduExtensionSync {
             }
 
             foreach ($CAIRole in $CAPolicy.conditions.users.includeRoles) {
-                foreach ($Member in ($Roles | Where-Object { $_.id -eq $CAIRole }).Members) {
+                foreach ($Member in ($Roles | Where-Object { $_.RoleTemplateId -eq $CAIRole }).Members) {
                     $null = $CAMembers.add($Member.id)
                 }
             }
@@ -565,7 +566,7 @@ function Invoke-HuduExtensionSync {
                 }
 
                 foreach ($CAERole in $CAPolicy.conditions.users.excludeRoles) {
-                    foreach ($Member in ($Roles | Where-Object { $_.id -eq $CAERole }).Members) {
+                    foreach ($Member in ($Roles | Where-Object { $_.RoleTemplateId -eq $CAERole }).Members) {
                         $null = $CAMembers.remove($Member.id)
                     }
                 }
