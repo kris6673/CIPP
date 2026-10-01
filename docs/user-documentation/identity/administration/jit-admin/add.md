@@ -68,7 +68,7 @@ Temporary Access Pass has to be enabled in the tenant's authentication methods p
 | Field               | Description                                                                                 |
 | ------------------- | ------------------------------------------------------------------------------------------- |
 | Expiration Action   | What happens to the account when the window closes. Required.                               |
-| Notification Action | How you are told the JIT admin was created: Webhook, Email or PSA. Several can be selected. |
+| Notification Action | How you are told the JIT admin was created: Webhook, Email, PSA or Push (a notification to your own registered devices). Several can be selected. |
 
 The expiration action offers **Delete User** and **Disable User** for any grant. Depending on which switches are on, it also offers **Remove Roles**, **Remove Groups**, or **Remove Roles and Groups**, so the account itself survives and only the elevation is taken away. Changing the switches after choosing clears the selection, since the option may no longer apply.
 
