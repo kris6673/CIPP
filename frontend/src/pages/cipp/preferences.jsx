@@ -10,7 +10,7 @@ import countryList from "../../data/countryList.json";
 import { CippSettingsSideBar } from "../../components/CippComponents/CippSettingsSideBar";
 import CippDevOptions from "../../components/CippComponents/CippDevOptions";
 import { CippOffboardingDefaultSettings } from "../../components/CippComponents/CippOffboardingDefaultSettings";
-import { ApiGetCall } from "../../api/ApiCall";
+import { ApiGetCall, ApiGetCallWithPagination } from "../../api/ApiCall";
 import { getCippFormatting } from "../../utils/get-cipp-formatting";
 import { useEffect, useState } from "react";
 import { CippApiResults } from "../../components/CippComponents/CippApiResults";
@@ -22,10 +22,9 @@ import { CippIcons } from "../../utils/icon-registry";
 // settings blob is saved wholesale from the sidebar, while devices are a collection with
 // their own endpoints.
 const PushDevicesCard = () => {
-  const devices = ApiGetCall({ url: "/api/ListPushSubscriptions", queryKey: "ListPushSubscriptions" });
-  const push = usePushSubscription({ publicKey: devices.data?.PublicKey });
-  const list = devices.data?.Devices ?? [];
-  const registered = list.some((d) => d.Endpoint === push.currentEndpoint);
+  // Same paginated query the table runs, so the VAPID public key costs no extra request.
+  const devices = ApiGetCallWithPagination({ url: "/api/ListPushSubscriptions", queryKey: "ListPushSubscriptions" });
+  const push = usePushSubscription({ publicKey: devices.data?.pages?.[0]?.PublicKey });
 
   const enableButton = (
     <Button
@@ -34,7 +33,7 @@ const PushDevicesCard = () => {
       disabled={!!push.blockedReason || push.register.isPending}
       onClick={() => push.subscribe().catch(() => {})}
     >
-      {registered ? "Re-register this device" : "Enable on this device"}
+      Enable on this device
     </Button>
   );
 
@@ -43,9 +42,7 @@ const PushDevicesCard = () => {
       <CippDataTable
         title="Push Notification Devices"
         queryKey="ListPushSubscriptions"
-        data={list}
-        isFetching={devices.isFetching}
-        refreshFunction={() => devices.refetch()}
+        api={{ url: "/api/ListPushSubscriptions", dataKey: "Devices" }}
         dataMap={(d) => ({
           ...d,
           DeviceName:
@@ -66,9 +63,7 @@ const PushDevicesCard = () => {
             label: "Send test notification",
             url: "/api/ExecPushSubscription",
             data: { Action: "Test" },
-            relatedQueryKeys: ["ListPushSubscriptions"],
             confirmText: "Send a test notification to every device registered to you?",
-            condition: () => list.length > 0,
           },
         ]}
         actions={[
