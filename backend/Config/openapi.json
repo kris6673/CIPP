@@ -65256,7 +65256,7 @@
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "Lists Entra ID users for a tenant with license and sign-in details, or retrieves a specific user by ID. For AllTenants or cached data, consider using ListDBCache with type=Users for significantly better performance.",
+        "description": "Lists Entra ID users for a tenant with license and sign-in details, or retrieves a specific user by ID. Supports UseReportDB=true to serve cached users from the reporting database; AllTenants always uses the cache. When manualPagination is set on a cached read, one page is returned per request as { Results, Metadata } with a continuation token in Metadata.nextLink.",
         "parameters": [
           {
             "name": "graphFilter",
@@ -65275,7 +65275,42 @@
             }
           },
           {
+            "name": "manualPagination",
+            "in": "query",
+            "description": "Return one page per request as { Results, Metadata } with a continuation token in Metadata.nextLink; cached reads only.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "nextLink",
+            "in": "query",
+            "description": "Continuation token from the previous page's Metadata.nextLink; opaque to callers.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "$ref": "#/components/parameters/tenantFilter"
+          },
+          {
+            "name": "UseReportDB",
+            "in": "query",
+            "description": "Serve from the reporting database cache instead of live Graph. AllTenants always uses the cache.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
           },
           {
             "name": "UserID",
@@ -65508,9 +65543,6 @@
                         "type": "string",
                         "x-cipp-field-source": "graph-entity"
                       },
-                      "Message": {
-                        "x-cipp-field-source": "backend"
-                      },
                       "mobilePhone": {
                         "type": "string",
                         "x-cipp-field-source": "graph-entity"
@@ -65685,6 +65717,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
