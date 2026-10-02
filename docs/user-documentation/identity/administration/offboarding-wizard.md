@@ -102,7 +102,7 @@ Selecting **Delete user** greys out the mailbox access, forwarding and out of of
 | Schedule this offboarding  | Defers the job to a chosen date instead of running it immediately, and reveals the settings below.                        |
 | Scheduled Offboarding Date | When the job should run.                                                                                                  |
 | Webhook, E-mail, PSA       | Which channels are notified when the job completes. Each has to be configured in CIPP's notification settings to deliver. |
-| Push notification to my devices | Sends a push notification to the browsers and installed apps you registered under [user-settings.md](../../shared-features/menu-bar/user-settings.md "mention"). Only you receive it. |
+| Push notification to my devices | Sends a push notification to the browsers and installed apps you registered under [user-settings.md](../../shared-features/menu-bar/user-settings.md "mention"). Only you receive it. You need at least one device registered there first; without one, the offboarding is not queued and the results explain where to enrol. |
 | HaloPSA Ticket             | An existing HaloPSA ticket to add the results to as a note, instead of raising a new ticket. Only shown once PSA is selected and the HaloPSA integration is enabled. |
 | Reference                  | Free text added to the notification so the job can be recognised later.                                                   |
 

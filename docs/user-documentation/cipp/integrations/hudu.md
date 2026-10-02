@@ -87,7 +87,7 @@ Work through the remaining toggles to decide whether missing users and devices a
 {% step %}
 ### Save and test
 
-Select **Submit**, then select **Test**. A message confirming the connection and reporting your Hudu version means the URL and API key are correct.
+Select **Submit**, then select **Test**. A message confirming the connection and reporting your Hudu version means the URL and API key are correct. If the test fails, the message includes the error returned by Hudu.
 {% endstep %}
 
 {% step %}
@@ -142,6 +142,8 @@ CIPP adds the fields it needs to whichever layouts you map, so no preparation is
 ## What Gets Synchronised
 
 Once a tenant is mapped, CIPP schedules a daily synchronisation for it. Each run publishes a Magic Dash card on the Hudu company titled **Microsoft 365 -&#x20;**_**tenant name**_, showing the licensed user count and containing tenant detail, portal links and the assigned roles table. The roles table lists each role's active members and, for tenants using Privileged Identity Management, its eligible members in a separate column with their eligibility end date; expired eligibilities are left out. User and device assets are then created or updated in the mapped layouts, and domains are imported as website records where enabled.
+
+Each tenant's synchronisation first checks that CIPP can reach Hudu with the saved API key. If it cannot, that tenant's run stops straight away and the Hudu error is recorded in the logbook. Select **Test** to confirm the connection.
 
 Use **Reschedule next sync date** to push the next run to a specific date, which is the cleanest way to keep the initial full synchronisation out of business hours.
 

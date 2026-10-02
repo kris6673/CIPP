@@ -143,6 +143,8 @@ A full synchronisation runs once every 24 hours for every mapped tenant. CIPP as
 
 Synchronisation can also be triggered on demand. **Force Sync** on this page queues every mapped tenant, and the **Sync Now** row action on the **Tenant Mapping** table queues a single tenant on its own. NinjaOne runs its own synchronisation rather than using the scheduled integration tasks, so mapped tenants do not appear on the [integration-sync.md](integration-sync.md "mention") page.
 
+Before the daily run, a catch-up pass, or **Force Sync** queues any tenants, CIPP checks that it can sign in to NinjaOne with the saved credentials. If it cannot, no tenants are queued and the logbook records that the NinjaOne API check failed. Select **Test** to confirm the credentials.
+
 Intune device compliance is handled separately. CIPP subscribes to Graph change notifications for device compliance, so the Intune Device Compliance Status and Intune Non-Compliant Settings fields update within minutes of a change in Microsoft 365 rather than waiting for the daily run. This requires at least one of those two fields to be mapped.
 
 Where **Sync Users** or **Sync Licenses** is enabled, CIPP creates and maintains the document templates it needs in NinjaOne Documentation, `CIPP - Microsoft 365 Users` and `CIPP - Microsoft 365 Licenses`, and writes a document per user or licence beneath them. You do not need to create these templates yourself.
