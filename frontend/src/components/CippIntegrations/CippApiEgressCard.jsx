@@ -3,7 +3,9 @@ import {
   Card,
   CardContent,
   CardHeader,
+  MenuItem,
   Stack,
+  TextField,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
@@ -24,9 +26,11 @@ import {
   YAxis,
 } from "recharts";
 import { ApiGetCall } from "../../api/ApiCall";
+import { CippDataTable } from "../CippTable/CippDataTable";
 
 // Authoritative per-client API egress from Craft's CraftEgressAccounting table (via /api/ListApiEgress):
-// a used-of-cap gauge for the instance total, and a stacked-by-client trend over the selected window.
+// a used-of-cap gauge for the instance total, a stacked-by-client trend over the selected window, and
+// today's top endpoints for all API clients, one client, or signed-in users (tracked, never capped).
 // Self-hides when accounting is off / not hosted. Reused on the Diagnostics and Integrations pages.
 
 const RANGE_OPTIONS = [
@@ -55,6 +59,7 @@ const formatBucketTime = (iso, hours) => {
 export const CippApiEgressCard = () => {
   const theme = useTheme();
   const [hours, setHours] = useState(24);
+  const [endpointSource, setEndpointSource] = useState("all");
 
   const query = ApiGetCall({
     url: "/api/ListApiEgress",
@@ -79,13 +84,53 @@ export const CippApiEgressCard = () => {
   const chartData = useMemo(() => {
     const ids = r?.ClientIds ?? [];
     return (r?.Trend ?? []).map((bucket) => {
-      const row = { time: formatBucketTime(bucket.BucketStartUtc, hours) };
+      const row = {
+        time: formatBucketTime(bucket.BucketStartUtc, hours),
+        topEndpoints: bucket.TopEndpoints ?? [],
+      };
       ids.forEach((id) => {
         row[id] = Math.round(((bucket[id] ?? 0) / 1048576) * 100) / 100;
       });
       return row;
     });
   }, [r, hours]);
+
+  const endpointSources = useMemo(
+    () => [
+      { value: "all", label: "All API clients", endpoints: r?.Endpoints ?? [] },
+      ...(r?.Clients ?? []).map((c) => ({
+        value: c.AppId,
+        label: c.Name,
+        endpoints: c.Endpoints ?? [],
+      })),
+      ...(r?.Interactive
+        ? [
+            {
+              value: "interactive",
+              label: "Signed-in users (not capped)",
+              endpoints: r.Interactive.Endpoints ?? [],
+            },
+          ]
+        : []),
+    ],
+    [r]
+  );
+  const endpointRows = useMemo(
+    () =>
+      (endpointSources.find((s) => s.value === endpointSource) ?? endpointSources[0]).endpoints.map(
+        (e) => ({
+          Endpoint: e.Endpoint,
+          Egress: formatBytes(e.Bytes),
+          Requests: e.Requests,
+          AvgSize: formatBytes(e.AvgBytes),
+          MaxSize: formatBytes(e.MaxBytes),
+          CacheHitPct: e.Requests > 0 ? Math.round((e.CacheHits / e.Requests) * 100) : 0,
+          Errors: e.Errors,
+          Shed: e.Shed,
+        })
+      ),
+    [endpointSources, endpointSource]
+  );
 
   // Query resolved but accounting is off / no data: render nothing.
   if (query.isSuccess && !r?.Enabled) return null;
@@ -165,6 +210,12 @@ export const CippApiEgressCard = () => {
                   {r.ShedRequests} shed today
                 </Typography>
               )}
+              {r?.Interactive && (
+                <Typography variant="caption" color="text.secondary">
+                  Signed-in users: {formatBytes(r.Interactive.Bytes)} across{" "}
+                  {r.Interactive.Requests} requests (not capped)
+                </Typography>
+              )}
             </Stack>
           </Grid>
 
@@ -182,6 +233,14 @@ export const CippApiEgressCard = () => {
                   <YAxis tick={{ fontSize: 11 }} tickMargin={4} unit="MB" />
                   <RechartsTooltip
                     formatter={(value, name) => [`${value} MB`, r?.ClientNames?.[name] ?? name]}
+                    labelFormatter={(label, payload) => {
+                      const top = payload?.[0]?.payload?.topEndpoints ?? [];
+                      return top.length
+                        ? `${label} - top: ${top
+                            .map((e) => `${e.Endpoint} ${formatBytes(e.Bytes)}`)
+                            .join(", ")}`
+                        : label;
+                    }}
                   />
                   <Legend formatter={(name) => r?.ClientNames?.[name] ?? name} />
                   {clientIds.map((id, i) => (
@@ -199,6 +258,41 @@ export const CippApiEgressCard = () => {
                 </AreaChart>
               </ResponsiveContainer>
             )}
+          </Grid>
+
+          {/* ── Today's top endpoints ── */}
+          <Grid size={{ xs: 12 }}>
+            <TextField
+              select
+              size="small"
+              label="Endpoints for"
+              value={endpointSource}
+              onChange={(e) => setEndpointSource(e.target.value)}
+              sx={{ minWidth: 260 }}
+            >
+              {endpointSources.map((s) => (
+                <MenuItem key={s.value} value={s.value}>
+                  {s.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <CippDataTable
+              noCard
+              title="Top endpoints today"
+              data={endpointRows}
+              isFetching={query.isFetching}
+              queryKey="ApiEgressEndpointsTable"
+              simpleColumns={[
+                "Endpoint",
+                "Egress",
+                "Requests",
+                "AvgSize",
+                "MaxSize",
+                "CacheHitPct",
+                "Errors",
+                "Shed",
+              ]}
+            />
           </Grid>
         </Grid>
       </CardContent>
