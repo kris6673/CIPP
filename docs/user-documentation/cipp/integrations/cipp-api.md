@@ -30,13 +30,38 @@ The IP Range list supports both IPv4 and IPv6 addresses as standalone IP address
 Custom Roles will limit which API endpoints each API Client can access. This can be used to limit all API calls to read only for example.
 {% endhint %}
 
-## API Egress
+## API Usage
 
 {% hint style="info" %}
-Visible to SuperAdmins only. The card is hidden entirely on instances where egress accounting isn't enabled, such as most self-hosted deployments.
+The usage figures need the SuperAdmin role. On instances where egress accounting isn't enabled, such as most self-hosted deployments, the tab shows "API egress accounting is not enabled on this instance." instead.
 {% endhint %}
 
-At the top of the CIPP-API page, on hosted instances with egress accounting enabled, a card shows how much data your API clients have served today against the instance's daily cap, with a per-client trend you can switch between 24h, 3d and 7d windows. The API Client table below it also gets an **Egress Today** column with each client's own total for today.
+The **API Usage** tab on the CIPP-API page holds the **API Egress** card, which shows how much data this instance has served and which endpoints served it. Use the **24h**, **3d** and **7d** toggle in the card header to set the trend window.
+
+**Daily total**
+
+A gauge shows today's API client egress against the instance's daily cap. It turns amber at 80% and red once the cap is reached, at which point further API client requests are turned away with a 429 response and the card shows how many were refused today. Where no cap is set, the card shows today's total on its own. Below the gauge, a separate line gives today's traffic from signed-in users, which is shown for information only and never counts towards the cap.
+
+**Trend**
+
+A stacked chart shows each API client's egress over the selected window. Hover over a point to see the endpoints that served the most data in that interval.
+
+**Top endpoints today**
+
+A table of today's endpoints, ordered by the data they served. Use **Endpoints for** to switch between **All API clients**, a single API client, and **Signed-in users (not capped)**. Graph requests are grouped by resource with IDs removed, so requests for different users' group memberships count as one endpoint, and MCP traffic is grouped by tool.
+
+| Column      | Description                                                  |
+| ----------- | ------------------------------------------------------------ |
+| Endpoint    | The endpoint or MCP tool.                                    |
+| Egress      | Data served by this endpoint today.                          |
+| Requests    | Number of requests today.                                    |
+| AvgSize     | Average response size.                                       |
+| MaxSize     | Largest single response.                                     |
+| Cache Hit % | Share of requests answered from cache.                       |
+| Errors      | Requests that returned an error.                             |
+| Shed        | Requests turned away because the daily cap had been reached. |
+
+The API Client table on the **Settings** tab also has an **Egress Today** column with each client's own total for today. It shows `-` for a client with no recorded traffic, or where accounting isn't enabled.
 
 ## Using an API Client
 

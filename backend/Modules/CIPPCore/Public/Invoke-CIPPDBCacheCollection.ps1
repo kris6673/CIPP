@@ -64,6 +64,7 @@ function Invoke-CIPPDBCacheCollection {
             'DirectoryRecommendations'
             'CrossTenantAccessPolicy'
             'DefaultAppManagementPolicy'
+            'ActivityBasedTimeoutPolicy'
             'Settings'
             'SecureScore'
             'PIMSettings'
@@ -139,7 +140,6 @@ function Invoke-CIPPDBCacheCollection {
         )
         ConditionalAccess  = @(
             'ConditionalAccessPolicies'
-            'CredentialUserRegistrationDetails'
             'UserRegistrationDetails'
         )
         IdentityProtection = @(
