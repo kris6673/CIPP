@@ -101,6 +101,7 @@ const Page = () => {
     Compliance_Portal: true,
     Power_Platform_Portal: true,
     Power_BI_Portal: true,
+    Login_Hint: false,
   };
 
   const auth = ApiGetCall({
@@ -300,6 +301,10 @@ const Page = () => {
     {
       name: "portalLinks.Power_BI_Portal",
       label: "Power BI",
+    },
+    {
+      name: "portalLinks.Login_Hint",
+      label: "Preselect my account (login_hint)",
     },
   ];
 
