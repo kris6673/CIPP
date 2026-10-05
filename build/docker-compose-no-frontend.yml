@@ -1,7 +1,15 @@
+# Cap container logs so CRAFT_VERBOSE output can't grow the Docker VM disk.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 20m
+    max-file: "3"
+
 services:
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite:latest
     container_name: cipp-azurite
+    logging: *logging
     restart: unless-stopped
     command: >
       azurite
@@ -35,6 +43,7 @@ services:
     # then browse everything via http://localhost:5196 (same-origin API).
     image: ghcr.io/cyberdrain/craft:dev
     container_name: cipp-api
+    logging: *logging
     restart: unless-stopped
     ports:
       - "127.0.0.1:5196:8080"

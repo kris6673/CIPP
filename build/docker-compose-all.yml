@@ -12,11 +12,21 @@
 #
 # -p cipp keeps the project name stable regardless of the directory the command is run from.
 #
+# --pull always leaves the previous image dangling on each update; run `docker image prune -f` now and then.
+#
 # Ports: 5196 CRAFT (browse the app here), 3000 Next.js dev, 6006 Storybook, 10000-10002 azurite.
+# Cap container logs so CRAFT_VERBOSE output can't grow the Docker VM disk.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 20m
+    max-file: "3"
+
 services:
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite:latest
     container_name: cipp-azurite
+    logging: *logging
     restart: unless-stopped
     # The prestart guard empties regenerable cache tables when the LokiJS file has
     # grown past the point where azurite can load it without OOM crash-looping.
@@ -81,6 +91,7 @@ services:
     image: ghcr.io/cyberdrain/craft:dev
     platform: linux/amd64
     container_name: cipp-api
+    logging: *logging
     restart: unless-stopped
     ports:
       - "127.0.0.1:5196:8080"
@@ -182,6 +193,7 @@ services:
     image: node:22-slim
     platform: linux/amd64
     container_name: cipp-frontend
+    logging: *logging
     restart: unless-stopped
     working_dir: /app
     # npx next dev instead of `yarn run dev`: the repo's dev script binds 127.0.0.1,
@@ -230,6 +242,7 @@ services:
     image: node:22-slim
     platform: linux/amd64
     container_name: cipp-storybook
+    logging: *logging
     restart: unless-stopped
     working_dir: /app
     # No yarn install here — cipp-frontend owns that for the shared node_modules volume, and
