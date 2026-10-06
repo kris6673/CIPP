@@ -16,6 +16,9 @@ You build **baseline standards** — the drift-first declarative standards that 
 for every standard; your job is only to describe **what to read, what compliant looks
 like, and how to write it**.
 
+Classic standards (`backend/Modules/CIPPStandards`, `Invoke-CIPPStandard<Name>`) are **bugfix-only**.
+Every new standard, and any new behaviour for an existing one, is built here as a baseline.
+
 Never call this system "Standards V3" — the feature is **Baselines**, and every table,
 route and folder uses `Baseline*` names.
 
