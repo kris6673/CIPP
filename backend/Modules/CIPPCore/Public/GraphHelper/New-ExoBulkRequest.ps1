@@ -26,7 +26,7 @@ function New-ExoBulkRequest {
         }
         $Token = Get-GraphToken -Tenantid $tenantid -scope "$Resource/.default" -AsApp:$AsApp.IsPresent
 
-        $Tenant = Get-Tenants -IncludeErrors | Where-Object { $_.defaultDomainName -eq $tenantid -or $_.customerId -eq $tenantid }
+        $Tenant = Get-Tenants -IncludeErrors -TenantFilter $tenantid
         $Headers = @{
             Authorization             = $Token.Authorization
             Prefer                    = 'odata.maxpagesize = 1000;odata.continue-on-error'
@@ -57,9 +57,7 @@ function New-ExoBulkRequest {
             $ReturnedData = [System.Collections.Generic.List[object]]::new()
             $BatchPayloads = [System.Collections.Generic.List[object]]::new()
             foreach ($batch in $batches) {
-                $BatchBodyObj = @{
-                    requests = @()
-                }
+                $BatchRequests = [System.Collections.Generic.List[object]]::new()
                 foreach ($cmd in $batch) {
                     $cmdparams = $cmd.CmdletInput.Parameters
                     if ($cmdparams.Identity) { $Anchor = $cmdparams.Identity }
@@ -93,7 +91,7 @@ function New-ExoBulkRequest {
                         headers = $Headers.Clone()
                         id      = $RequestId
                     }
-                    $BatchBodyObj['requests'] = $BatchBodyObj['requests'] + $BatchRequest
+                    $BatchRequests.Add($BatchRequest)
 
                     # Map the Request ID to the Cmdlet Name and Operation GUID (if provided)
                     $IdToCmdletName[$RequestId] = $cmd.CmdletInput.CmdletName
@@ -102,7 +100,8 @@ function New-ExoBulkRequest {
                         $IdToOperationGuid[$RequestId] = $cmd.OperationGuid
                     }
                 }
-                $BatchBodyJson = ConvertTo-Json -InputObject $BatchBodyObj -Depth 10
+                $BatchBodyObj = @{ requests = $BatchRequests.ToArray() }
+                $BatchBodyJson = [CIPP.CippJson]::ToJson($BatchBodyObj, 10) ?? (ConvertTo-Json -InputObject $BatchBodyObj -Depth 10)
                 $BatchBodyJson = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $BatchBodyJson
                 # Clone the headers as they stood for this batch's POST (X-AnchorMailbox/X-CmdletName are
                 # mutated per sub-request above); the $batch envelope also carries per-request headers.
@@ -161,7 +160,7 @@ function New-ExoBulkRequest {
             # (else a capped exponential backoff), and swap the successful results back in by id.
             $RateLimitRetry = 0
             while ($RateLimitRetry -lt 3) {
-                $Throttled = @($ReturnedData | Where-Object { $_.status -eq 429 -and $_.id -and $IdToBatchRequest.ContainsKey($_.id) })
+                $Throttled = @($ReturnedData.Where({ $_.status -eq 429 -and $_.id -and $IdToBatchRequest.ContainsKey($_.id) }))
                 if ($Throttled.Count -eq 0) { break }
                 $RateLimitRetry++
                 $RetryAfter = 0
@@ -173,7 +172,8 @@ function New-ExoBulkRequest {
                 $RetryPayloads = [System.Collections.Generic.List[object]]::new()
                 for ($i = 0; $i -lt $ThrottledRequests.Count; $i += 10) {
                     $Slice = $ThrottledRequests[$i..[math]::Min($i + 9, $ThrottledRequests.Count - 1)]
-                    $RetryJson = ConvertTo-Json -InputObject @{ requests = @($Slice) } -Depth 10
+                    $RetryBody = @{ requests = @($Slice) }
+                    $RetryJson = [CIPP.CippJson]::ToJson($RetryBody, 10) ?? (ConvertTo-Json -InputObject $RetryBody -Depth 10)
                     $RetryJson = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $RetryJson
                     $RetryPayloads.Add(@{ Json = $RetryJson; Headers = $Headers.Clone() })
                 }
@@ -209,7 +209,8 @@ function New-ExoBulkRequest {
                 }
 
                 Write-Host "Fetching next page for $($NextBatchRequests.Count) request(s)"
-                $NextBatchBodyJson = ConvertTo-Json -InputObject @{ requests = @($NextBatchRequests) } -Depth 10
+                $NextBatchBody = @{ requests = @($NextBatchRequests) }
+                $NextBatchBodyJson = [CIPP.CippJson]::ToJson($NextBatchBody, 10) ?? (ConvertTo-Json -InputObject $NextBatchBody -Depth 10)
                 $NextBatchBodyJson = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $NextBatchBodyJson
                 $NextResults = Invoke-CIPPRestMethod $BatchURL -Method POST -Body $NextBatchBodyJson -Headers $Headers -ContentType 'application/json; charset=utf-8'
 
@@ -240,7 +241,7 @@ function New-ExoBulkRequest {
                 $itemId = $item.id
                 $CmdletName = $IdToCmdletName[$itemId]
                 $OperationGuid = $IdToOperationGuid[$itemId]  # Will be $null if not provided
-                $body = $item.body.PSObject.Copy()
+                $body = if ($item.body -is [System.Management.Automation.PSCustomObject]) { $item.body } else { $item.body.PSObject.Copy() }
 
                 if ($body.'@adminapi.warnings') {
                     Write-Warning ($body.'@adminapi.warnings' | Out-String)
@@ -295,7 +296,7 @@ function New-ExoBulkRequest {
         } else {
             $FinalData = foreach ($item in $ReturnedData) {
                 $OperationGuid = $IdToOperationGuid[$item.id]  # Will be $null if not provided
-                $body = $item.body.PSObject.Copy()
+                $body = if ($item.body -is [System.Management.Automation.PSCustomObject]) { $item.body } else { $item.body.PSObject.Copy() }
 
                 if ($body.'@adminapi.warnings') {
                     Write-Warning ($body.'@adminapi.warnings' | Out-String)

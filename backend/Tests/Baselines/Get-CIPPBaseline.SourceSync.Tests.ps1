@@ -113,6 +113,37 @@ Describe 'Get-CIPPBaseline source/isSynced projection' {
     }
 }
 
+Describe 'Get-CIPPBaseline empty stages' {
+    BeforeEach {
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            param($Context, $Filter)
+            if ($Filter -like "*PartitionKey eq 'rollout'*") {
+                @(
+                    [pscustomobject]@{
+                        RowKey       = 'baseline-7'
+                        templateName = 'Empty Stage Baseline'
+                        Stages       = '[{"name":"Default","logic":"and","conditions":[]},{"name":"Stage 2","logic":"and","conditions":[]}]'
+                    }
+                )
+            } elseif ($Filter -like "*standardItem*") {
+                @(
+                    [pscustomobject]@{ scope = 'tenant'; scopeId = 'tenant1.onmicrosoft.com'; scopeName = 'tenant1.onmicrosoft.com'; stage = 1; standardName = 'Standard1'; expectedValue = '{}'; remediateEnabled = $false }
+                )
+            } else {
+                @()
+            }
+        }
+    }
+
+    It 'returns an empty standards list for a stage with no standards, never a null entry' {
+        $Result = Get-CIPPBaseline -ID 'baseline-7'
+        @($Result.stages).Count | Should -Be 2
+        @($Result.stages[0].standards) | Should -Be @('Standard1')
+        @($Result.stages[1].standards).Count | Should -Be 0
+        @($Result.stages[1].standardsConfig).Count | Should -Be 0
+    }
+}
+
 Describe 'Get-CIPPBaseline excluded tenant group expansion' {
     BeforeEach {
         Mock -CommandName Get-TenantGroups -MockWith {
@@ -172,5 +203,47 @@ Describe 'Get-CIPPBaseline excluded tenant group expansion' {
         $Result.tenantStates.tenantFilter | Should -Not -Contain 'tenant4.onmicrosoft.com'
         $Result.tenantStates.tenantFilter | Should -Not -Contain 'tenant5.onmicrosoft.com'
         $Result.tenantStates.tenantFilter | Should -Contain 'tenant6.onmicrosoft.com'
+    }
+}
+
+# Issues #745/#751: free-text identities (Autopilot profile DisplayName) are the value itself;
+# only picker identities are template references worth resolving into {label, value}.
+Describe 'Get-CIPPBaseline identity label resolution' {
+    BeforeEach {
+        function Get-CIPPBaselineDefinition { }
+        Mock -CommandName Get-CIPPBaselineDefinition -MockWith {
+            @(
+                [pscustomobject]@{ name = 'AutopilotProfile'; instanceIdentity = 'DisplayName'; variables = [pscustomobject]@{ DisplayName = [pscustomobject]@{ type = 'textField' } }; remediate = [pscustomobject]@{ executor = 'AutopilotProfile' } }
+                [pscustomobject]@{ name = 'ConditionalAccessTemplate'; instanceIdentity = 'caTemplate'; variables = [pscustomobject]@{ caTemplate = [pscustomobject]@{ type = 'autoComplete' } }; remediate = [pscustomobject]@{ executor = 'CATemplate' } }
+            )
+        }
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            param($Context, $Filter)
+            if ($Filter -like "*PartitionKey eq 'rollout'*") {
+                @([pscustomobject]@{ RowKey = 'baseline-7'; templateName = 'Identity Baseline'; Stages = '[{"name":"Default","logic":"and","conditions":[]}]' })
+            } elseif ($Filter -like '*standardItem*') {
+                @(
+                    [pscustomobject]@{ scope = 'tenant'; scopeId = 't1.onmicrosoft.com'; stage = 1; standardName = 'AutopilotProfile#m1'; expectedValue = '{"DisplayName":"Workstations"}' }
+                    [pscustomobject]@{ scope = 'tenant'; scopeId = 't1.onmicrosoft.com'; stage = 1; standardName = 'ConditionalAccessTemplate#m2'; expectedValue = '{"caTemplate":"ca-guid-1"}' }
+                )
+            } elseif ($Filter -like "*PartitionKey eq 'CATemplate'*") {
+                @([pscustomobject]@{ RowKey = 'ca-guid-1'; JSON = '{"displayName":"Block legacy auth"}' })
+            } else {
+                @()
+            }
+        }
+    }
+
+    It 'leaves a free-text identity as its plain string' {
+        $Result = Get-CIPPBaseline -ID 'baseline-7' -ResolveIdentityLabels
+        $Config = $Result.stages[0].standardsConfig | Where-Object { $_.standard -eq 'AutopilotProfile' }
+        $Config.variables.DisplayName | Should -Be 'Workstations'
+    }
+
+    It 'still resolves a template picker identity into a label/value option' {
+        $Result = Get-CIPPBaseline -ID 'baseline-7' -ResolveIdentityLabels
+        $Config = $Result.stages[0].standardsConfig | Where-Object { $_.standard -eq 'ConditionalAccessTemplate' }
+        $Config.variables.caTemplate.label | Should -Be 'Block legacy auth'
+        $Config.variables.caTemplate.value | Should -Be 'ca-guid-1'
     }
 }

@@ -14,9 +14,13 @@ Nothing on this page is proof of a compromise. The checks surface the informatio
 
 Nothing runs when the page opens. It loads the user's runs and shows the latest one, or a **Business Email Compromise** status card with **Run investigation** when the user has none. Starting a run queues a background job, and the status card shows whether it is **Queued - waiting for a worker** or **Running**, with the step it is on and each step's outcome as it completes. A run usually takes a few minutes; a tenant with a lot of audit data can take up to ten. A run that makes no progress for twenty minutes, typically because the background worker restarted, is marked **Failed** with the reason shown, and the button becomes **Run a new investigation**. The failed run stays in the user's history.
 
+A step that fails, or stops before it finishes, does not end the run: the remaining steps still run, and the checks from the failed step show as failed on the completed case, listed in the warning above the findings. Only a failure in the last step, which scores the run and builds the case, marks the whole run **Failed**.
+
+While a run is queued or in progress, the status card also offers **Contain user**, so containment does not have to wait for the investigation to finish. Because there are no findings yet, the drawer's targets come from the live tenant rather than the case. The result is still recorded on the case, and a **Remediation taken** card appears below the status card once containment has run.
+
 Every run is kept as a **case** with its own id (`BEC-<timestamp>-<suffix>`), so returning to the page shows the user's latest case rather than starting a new one. **← All BEC cases** goes back to the [Business Email Compromise](README.md) page, which lists every case for every user and tenant and is where runs are deleted.
 
-Runs can also be queued for many users at once. Select the users on the [Users](../users/README.md) page and choose **Run BEC investigation**, or use **Start investigation** on the [Business Email Compromise](README.md) page. One run per user (at most fifty per request) is queued as a single job that the Queue page tracks. Each run is a separate case and shows up on the [Business Email Compromise](README.md) page and in the user's own case list as it completes.
+Runs can also be queued for many users at once. Select the users on the [Users](../users/README.md) page and choose **BEC Remediation**, or use **Start investigation** on the [Business Email Compromise](README.md) page. One run per user is queued, and the Queue page tracks them together under one entry. Each run is a separate case and shows up on the [Business Email Compromise](README.md) page and in the user's own case list as it completes.
 
 Everything collected is metadata: audit records, sign-ins, directory audits, message-trace headers, permissions, consents, rules and devices. No message body, attachment or file content is ever read or stored, which keeps the investigation inside what a partner relationship permits.
 
@@ -49,23 +53,22 @@ The score is a total of fixed points, one contribution per signal, regardless of
 | ----------------------------------------------------------------------------------------- | ------ |
 | Identity Protection lists the user as confirmed compromised                               | 5      |
 | A consent to an application in the rogue-app catalogues                                   | 5      |
-| An inbox rule that hides, forwards or deletes mail, or acts on all incoming mail           | 5      |
 | An application in the tenant matching the known-malicious catalogue                       | 5      |
-| A successful sign-in or activity from an address judged Compromised or Likely attacker    | 4      |
+| A successful sign-in, activity or accepted password from an attacker address              | 4      |
 | Identity Protection lists the user at high risk                                           | 4      |
 | A transport rule with a diversion or suppression action changed in the window             | 4      |
+| A suspicious inbox rule (see Inbox rules below)                                           | 4      |
 | Mail opened, synced, deleted, moved or sent from an attacker address                      | 3      |
 | A Microsoft Form created, edited or shared from an attacker address                       | 3      |
 | Another mailbox reached through this account's delegated access from an attacker address  | 3      |
 | Another account in the tenant signed in or acted from an attacker address                 | 3      |
-| One or more inbox rules on the mailbox                                                    | 3      |
 | One or more inbox rule changes in the window                                              | 3      |
 | A successful sign-in from outside the usage location                                      | 3      |
 | A successful non-interactive sign-in from outside the usage location                      | 3      |
 | A rule, safelist, sharing, or sent-mail action from outside the usage location            | 3      |
 | An anonymous sharing link created or changed in the window                                | 3      |
 | A mass-mail pattern (repeated subjects or send bursts)                                    | 3      |
-| A consent with a high-risk scope from an unverified publisher                             | 3      |
+| A consent with a high-risk scope from an unverified publisher, for an app new in the window | 3      |
 | Mail received from a look-alike of one of the tenant's domains                            | 3      |
 | A Defender-classified threat delivered to the mailbox                                     | 3      |
 | OneDrive or SharePoint files touched from an attacker address                             | 2      |
@@ -74,20 +77,21 @@ The score is a total of fixed points, one contribution per signal, regardless of
 | An MFA method registered in the window                                                    | 2      |
 | An Intune device enrolled in the window                                                   | 2      |
 | An Entra device registered in the window                                                  | 2      |
-| A flagged mailbox delegation (external, guest or catch-all)                               | 2      |
+| A flagged mailbox delegation (external, guest, catch-all on the Inbox or writing the Calendar) | 2      |
 | A flagged directory-audit event                                                           | 2      |
 | Hard deletes above the threshold, or mailbox access from outside the usage location       | 2      |
 | Identity Protection lists the user at medium risk                                         | 2      |
-| Permission changes elsewhere in the tenant only                                           | 1      |
+| Permission changes elsewhere in the tenant only, except on Exchange's system mailboxes    | 1      |
+| One or more inbox rules on the mailbox                                                    | 1      |
 | One or more new applications                                                              | 1      |
 | More than five new users                                                                  | 1      |
-| A user-installed non-Microsoft add-in                                                     | 1      |
+| A side-loaded, non-Marketplace, non-Microsoft add-in                                      | 1      |
 | Identity Protection lists the user at low risk                                            | 1      |
 
 Seven points or more reads as **High**, four to six as **Medium**, and anything below that as **Low**.
 
 {% hint style="warning" %}
-Scoring counts findings, not volume. A mailbox holding a single ordinary inbox rule already scores three, one point short of Medium, so a single unrelated finding tips it over. Forty rules score the same three points as one.
+Scoring counts findings, not volume, and a finding scores for what makes it suspicious, not for existing. Ordinary inbox rules score one point however many there are; a suspicious rule adds four, which is Medium on its own and High once anything else corroborates it, such as the rule being created in the window. Activity from an address judged a Microsoft service, a trusted address or the user's own is never counted as foreign, wherever it geolocates.
 {% endhint %}
 
 {% hint style="warning" %}
@@ -144,13 +148,15 @@ Every address seen in the case, on a sign-in or on an audited action, is judged 
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Compromised     | Decided outright: you marked the address as compromised for this case, or it is blocked on CIPP's [IP Allow/Block List](../../../tools/tenant-tools/geoiplookup.md).              |
 | Likely attacker | The evidence points strongly at the attacker.                                                                                                                                     |
-| Suspicious      | Some evidence against the address, not enough to call it the attacker's. An address with only failed sign-ins never goes higher than this.                                       |
+| Suspicious      | Some evidence against the address, not enough to call it the attacker's, or you marked it suspicious for this case. An address with only failed sign-ins or unfinished self-service password resets never goes higher than this. |
 | Unknown         | Not enough evidence either way.                                                                                                                                                   |
 | Likely user     | The evidence points at the user, for example an address they regularly signed in from before the window.                                                                         |
 | Safe            | Decided outright: you marked the address as safe for this case, or it is trusted on CIPP's IP Allow/Block List.                                                                   |
 | Service         | A Microsoft service address the user never signed in from, or an address whose only sign-ins or actions came from CIPP or partner delegated administration rather than the user. |
 
-Each address carries a score built from weighted reasons, and each reason is listed with the points it added or took away. Reasons that count against an address include flagged activity from it, a hosting, proxy or VPN network, a location outside the usage location, never having been used by the user before the window, a risky or scripted sign-in, and other accounts appearing on it only during the window. Reasons that count in its favour include the user's regular address, network or location before the window, a compliant device, colleagues using it before the window (an office or VPN exit) and a trusted named location. Entries on the Exchange tenant allow/block and connection-filter lists nudge the score without deciding it. To tell a shared office or VPN address from an attacker's, the run also looks at the sign-ins of a small random sample of the user's colleagues. An address that shares a sign-in or mailbox session with a likely-attacker address is pulled towards the attacker too, because one session moving between addresses is one actor.
+Each address carries a score built from weighted reasons, and each reason is listed with the points it added or took away. Reasons that count against an address include flagged activity from it, a hosting, proxy or VPN network, a location outside the usage location, never having been used by the user before the window, a risky or scripted sign-in, a failed sign-in that got past the password and was stopped by MFA or Conditional Access (with no successful sign-in from the address), and other accounts appearing on it only during the window. Reasons that count in its favour include the user's regular address, network or location before the window, a compliant device, colleagues using it before the window (an office or VPN exit) and a trusted named location. Entries on the Exchange tenant allow/block and connection-filter lists nudge the score without deciding it. To tell a shared office or VPN address from an attacker's, the run also looks at the sign-ins of a small random sample of the user's colleagues. An address that shares a sign-in or mailbox session with a likely-attacker address is pulled towards the attacker too, because one session moving between addresses is one actor.
+
+A user on an approved trip is not penalised for being abroad. When [vacation mode](../vacation-mode/README.md) scheduled a travel policy for the user, a sign-in or action from one of the trip's countries while the trip lasted does not count as outside the usage location or as a new country, and it is left out of the foreign sign-in and activity counts in the threat score. The address shows **Approved travel** among its reasons. Everything else about it is still judged, so a VPN or hosting network, a risky sign-in or flagged activity from the destination still counts.
 
 The address of a technician who ran or reviewed the case counts strongly towards the user's side, since it is most likely the partner's own, but it is still judged rather than cleared outright.
 
@@ -205,10 +211,10 @@ Footholds that survive a password reset.
 
 | Finding              | Report check | What it shows                                                                                                                                                                                                                                                                                                                                                                                  |
 | -------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Inbox rules          | 1            | The inbox rules currently on the mailbox, each with its risk and the reasons for it, and the latest audited change to it: what changed, who made it (and whether that was the user, a partner or CIPP), when, and from which IP and country. Rules that hide, forward or delete mail, or act on all incoming mail, are flagged. The rule changes in the window follow in their own list. |
-| Mailbox delegations  | 12           | Every delegation on the mailbox: FullAccess, SendAs, SendOnBehalf, Calendar and Inbox folder permissions, and resource delegates. A trustee that is a guest, an address outside the tenant's accepted domains, or the Default/Anonymous principal with more than availability rights is flagged, as is any delegation granted in the window, whatever the trustee.                        |
-| Application consents | 13           | The applications this user has consented to and the enterprise-app roles assigned to them, with the client application's publisher and verification state. A consent is flagged when the application matches the CIPP known-malicious catalogue or the Huntress rogue-apps feed, or carries a high-risk delegated scope (mail, files, directory, `offline_access`) from an unverified, non-Microsoft publisher. |
-| Mailbox add-ins      | 15           | The add-ins available to the mailbox. Enabled, user-installed add-ins from a non-Microsoft provider are flagged; an add-in can read and send mail on the user's behalf.                                                                                                                                                                                                                         |
+| Inbox rules          | 1            | The inbox rules currently on the mailbox, each with its risk and the reasons for it, and the latest audited change to it: what changed, who made it (and whether that was the user, a partner or CIPP), when, and from which IP and country. A rule is suspicious when it forwards or redirects outside the tenant, moves mail to RSS Feeds, or hides mail (deletes it or moves it to a low-visibility folder such as Archive or Junk) and also acts on all incoming mail, targets financial or security keywords (invoice, payment, hacked, phishing...), or has a blank or punctuation-only name. An ordinary delete or archive rule is listed with its reasons but not flagged. The rule changes in the window follow in their own list. |
+| Mailbox delegations  | 12           | Every delegation on the mailbox: FullAccess, SendAs, SendOnBehalf, Calendar and Inbox folder permissions, and resource delegates. A trustee that is a guest, an address outside the tenant's accepted domains, the Default/Anonymous principal with any rights on the Inbox, or with write rights on the Calendar (everyone reading a calendar is a common setting), is flagged, as is any delegation granted in the window, whatever the trustee.                        |
+| Application consents | 13           | The applications this user has consented to and the enterprise-app roles assigned to them, with the client application's publisher and verification state. A consent is flagged when the application matches the CIPP known-malicious catalogue or the Huntress rogue-apps feed, or carries a high-risk delegated scope (mail, files, directory, `offline_access`) from an unverified, non-Microsoft publisher and the application first appeared in the tenant during the window. Older high-risk consents are listed as Review. |
+| Mailbox add-ins      | 15           | The add-ins available to the mailbox. Enabled, user-installed add-ins from a non-Microsoft provider that were side-loaded rather than installed from the Microsoft Marketplace are flagged; an add-in can read and send mail on the user's behalf.                                                                                                                                                                                                                         |
 | New applications     | 3            | Every application in the tenant, of any age, that matches CIPP's catalogue of known-malicious applications, named with its catalogue entry and source, followed by the service principals registered during the window. A catalogue match raises a warning, because consent-based access survives a password reset.                                                                      |
 
 {% hint style="info" %}
@@ -251,7 +257,7 @@ Tenant-wide signals that outlast the one mailbox.
 | Partner and CIPP actions on this account      | None         | Every audited change in the case made by a partner identity acting over GDAP (this partner or another) or by CIPP itself, gathered from the directory audit and the rule, safelist, sharing, permission, transport-rule and mailbox activity findings. Partner identities are named by their partner tenant where they belong to this partner, and each source table carries the same **ActorKind** column. Routine MSP work reads as such, and anything a partner identity did that the investigation did not expect stands out. |
 | Recently added users                          | 2            | Accounts created in the tenant during the window, with their type and creation date.                                                                                                                                                                                                                                                         |
 | Recent password changes                       | 7            | Accounts across the tenant whose password changed during the window, with the change time.                                                                                                                                                                                                                                                   |
-| Entra directory audit                         | 17           | Directory audit events that targeted, or were initiated by, the user during the window, with who did it and from where. Security-info registration, application consent, service-principal creation, device registration, password and token events and role changes are flagged. It overlaps the findings above on purpose: use it to date and attribute them, not as separate incidents. |
+| Entra directory audit                         | 17           | Directory audit events that targeted, or were initiated by, the user during the window, with who did it and from where. Security-info registration, application consent, service-principal creation, device registration, password and token events and role changes are flagged. A plain user update is flagged only when it changes sign-in methods or the recovery email, and not when the MFA service refreshes an existing Authenticator's device token. It overlaps the findings above on purpose: use it to date and attribute them, not as separate incidents. |
 
 Select **Investigate** on one or more rows of **Other accounts the attacker addresses reached** to queue a new investigation for each account. Each case appears on the [Business Email Compromise](README.md) page as it finishes.
 
@@ -274,12 +280,12 @@ Beside each card:
 
 | Field   | Description                                                                                                                             |
 | ------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Verdict | **Auto** keeps the verdict the case calculated. **Safe** or **Compromised** decides the address for this case, whatever its score says. |
+| Verdict | **Auto** keeps the verdict the case calculated. **Safe**, **Suspicious** or **Compromised** decides the address for this case, whatever its score says. **Suspicious** keeps it listed for review without counting it as the attacker's. |
 | Note    | Why you decided it. Greyed out while the verdict is **Auto**.                                                                           |
 
-**Re-run with these verdicts** re-judges every address with your decisions and replaces the verdicts, the attacker activity, the delegated mailboxes and the threat score. The rest of the case, including its analysis window, stays as it was. The re-run happens in the background, with its progress shown in the drawer, and the case refreshes when it finishes. The button is greyed out until at least one address is set to **Safe** or **Compromised**, and while the choices match the ones the case already uses.
+**Re-run with these verdicts** re-judges every address with your decisions and replaces the verdicts, the attacker activity, the delegated mailboxes and the threat score. The rest of the case, including its analysis window, stays as it was. The re-run happens in the background, with its progress shown in the drawer, and the case refreshes when it finishes. The button is greyed out until at least one address is set to **Safe**, **Suspicious** or **Compromised**, and while the choices match the ones the case already uses.
 
-With **Remember for this tenant (CIPP IP list)** switched on, the addresses you set to **Safe** are also added to CIPP's [IP Allow/Block List](../../../tools/tenant-tools/geoiplookup.md) as trusted, and the ones set to **Compromised** as blocked, each noted with the case id, so later cases for the tenant start from your decision. The switch only appears for users who can change CIPP settings.
+With **Remember for this tenant (CIPP IP list)** switched on, the addresses you set to **Safe** are also added to CIPP's [IP Allow/Block List](../../../tools/tenant-tools/geoiplookup.md) as trusted, and the ones set to **Compromised** as blocked, each noted with the case id, so later cases for the tenant start from your decision. Addresses set to **Suspicious** apply to this case only. The switch only appears for users who can change CIPP settings.
 
 ## Containment
 

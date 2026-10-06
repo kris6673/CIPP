@@ -10,10 +10,11 @@ Leaving the page with unsaved work prompts you to confirm first.
 
 ## Page Actions
 
-| Button        | Description                                                                                                                                                                                                                                                                                                                     |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Save Baseline | Saves the baseline once you confirm. Greyed out until the three items in **Setup Progress** are complete. After a save you are offered a check of the assigned tenants, which makes no changes and reports its results on the [Alignment](alignment.md) page. Otherwise the schedule picks the baseline up within twelve hours. |
-| Add Stage     | Adds a stage, either empty or as a copy of the stage currently open, including its standards and graduation conditions.                                                                                                                                                                                                         |
+| Button            | Description                                                                                                                                                                                                                                                                                                                     |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Back to Baselines | Returns to [Manage Baselines](templates.md), even when the editor was opened from the Alignment page.                                                                                                                                                                                                                           |
+| Save Baseline     | Saves the baseline once you confirm. Greyed out until the three items in **Setup Progress** are complete. After a save you are offered a check of the assigned tenants, which makes no changes and reports its results on the [Alignment](alignment.md) page. Otherwise the schedule picks the baseline up within twelve hours. |
+| Add Stage         | Adds a stage, either empty or as a copy of the stage currently open, including its standards and graduation conditions. A baseline holds at most 20 stages; once it has 20 the button is greyed out and reads **Maximum of 20 stages reached**.                                                                                 |
 
 ## GitHub Sync
 
@@ -67,10 +68,6 @@ Each stage has its own tab. Stage 1 always applies to every assigned tenant, so 
 
 A chip next to the stage name shows how many tenants are currently sitting in that stage.
 
-{% hint style="warning" %}
-Keep a baseline to 30 stages or fewer. The editor lets you add more, but beyond 30 the page can stop responding and crash the browser tab.
-{% endhint %}
-
 ### Graduation Conditions
 
 Add as many conditions as you need. With more than one, a **Condition Logic** field appears and sets whether all of them must match or any one of them is enough. A stage with no conditions can only be advanced into by hand, from the Alignment page.
@@ -91,15 +88,19 @@ Each standard added to the stage expands to show its own settings, along with it
 
 Three settings are common to every standard.
 
-| Setting                                        | Description                                                                                             |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Automatically fix this when the setting drifts | Corrects the setting back to its expected value on every run. Left off, the deviation is only reported. |
-| Alert on new deviation                         | Raises an alert the first time the setting is found to deviate.                                         |
-| Alert when remediated                          | Raises an alert whenever automatic fixing corrects the setting.                                         |
+| Setting                                        | Description                                                                                                                                                                                                                                                 |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Automatically fix this when the setting drifts | Corrects the setting back to its expected value on every run. Left off, the deviation is only reported.                                                                                                                                                     |
+| Alert on new deviation                         | Raises an alert when the setting starts to deviate. No further alert is sent while it stays in **Drift**, however often the check runs. You are alerted again only after the setting is compliant or the deviation is accepted, and it then deviates again. |
+| Alert when remediated                          | Raises an alert when automatic fixing corrects a setting that was not compliant. A setting that is reapplied on every run while already compliant raises no further alert.                                                                                                                                                                                             |
 
 **Set all standards to** applies any one of those settings across every standard in the stage at once.
 
 **Detect Intune Drift** and **Detect Conditional Access Drift** work differently from other standards. Instead of checking one setting, they raise a deviation for every Intune or Conditional Access policy in the tenant that no baseline template covers. They never change anything automatically, even with automatic fixing turned on. Review each policy on the [Alignment](alignment.md) page, where denying it removes the policy on the next run.
+
+{% hint style="warning" %}
+Each of these standards has a single result per tenant, however many policies it finds. You are alerted when the first uncovered policy appears. Any policy added or changed after that raises no alert of its own while the earlier ones are still awaiting a decision. To be alerted about new policies, accept every existing uncovered policy on the [Alignment](alignment.md) page, or add a template to the baseline that covers it, so the standard is back to compliant.
+{% endhint %}
 
 {% hint style="info" %}
 Standards arrive with automatic fixing switched off. Nothing is changed in a tenant until you turn it on, either per standard or with **Set all standards to**.

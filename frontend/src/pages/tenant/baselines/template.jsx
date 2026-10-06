@@ -23,6 +23,7 @@ import { Grid } from '@mui/system'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useRouter } from 'next/router'
+import Link from 'next/link'
 import { get } from 'lodash'
 import { Layout as DashboardLayout } from '../../../layouts/index'
 import { CippHead } from '../../../components/CippComponents/CippHead'
@@ -59,6 +60,8 @@ const unitOptions = [
   { label: 'Days', value: 'days' },
   { label: 'Weeks', value: 'weeks' },
 ]
+
+const MAX_STAGES = 20
 
 const logicOptions = [
   { label: 'All conditions must match (AND)', value: 'and' },
@@ -582,6 +585,10 @@ const Page = () => {
   // editor, or a clone before its first save); the save response's id is adopted
   // so saving twice never creates twice.
   const [saveTargetId, setSaveTargetId] = useState(null)
+  // Bumped only when a different template is loaded into the editor. Keying the stage
+  // panels on it (not on the template id) keeps their forms mounted across a save:
+  // per-standard actions live in those forms, so a remount would reset them.
+  const [editorGeneration, setEditorGeneration] = useState(0)
   const [stages, setStages] = useState(() => buildEditorStages(undefined))
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogStageIndex, setDialogStageIndex] = useState(0)
@@ -687,6 +694,7 @@ const Page = () => {
   if (template && template.GUID !== loadedTemplateId) {
     setLoadedTemplateId(template.GUID)
     setSaveTargetId(router.query.clone ? null : template.GUID)
+    setEditorGeneration((generation) => generation + 1)
     setStages(buildEditorStages(template))
     setActiveStage(0)
     setHasUnsavedChanges(false)
@@ -766,6 +774,7 @@ const Page = () => {
     )
 
   const handleAddStage = () => {
+    if (stages.length >= MAX_STAGES) return
     mutateStages((prev) => [
       ...prev,
       {
@@ -789,6 +798,7 @@ const Page = () => {
 
   // Duplicate a stage (standards + graduation condition structure) as a new stage at the end.
   const handleCopyStage = (stageIndex) => {
+    if (stages.length >= MAX_STAGES) return
     mutateStages((prev) => {
       const source = prev[stageIndex]
       return [
@@ -948,7 +958,20 @@ const Page = () => {
             alignItems: { xs: 'stretch', sm: 'center' },
             mb: 1
           }}>
+          <Stack spacing={1} sx={{ alignItems: 'flex-start' }}>
+            {/* A fixed link, not router.back(): the editor is often opened from Alignment,
+                and "back" should land on the Baselines list either way. */}
+            <Button
+              component={Link}
+              href="/tenant/baselines/templates"
+              color="inherit"
+              size="small"
+              startIcon={<CippIcons.ArrowBack fontSize="small" />}
+            >
+              Back to Baselines
+            </Button>
             <Typography variant="h4">{pageTitle}</Typography>
+          </Stack>
           <Stack
             direction="row"
             spacing={2}
@@ -970,9 +993,12 @@ const Page = () => {
               color="primary"
               startIcon={<CippIcons.Add />}
               endIcon={<CippIcons.ExpandMore />}
+              disabled={stages.length >= MAX_STAGES}
               onClick={(event) => setAddStageAnchor(event.currentTarget)}
             >
-              Add Stage
+              {stages.length >= MAX_STAGES
+                ? `Maximum of ${MAX_STAGES} stages reached`
+                : 'Add Stage'}
             </Button>
             <Menu
               anchorEl={addStageAnchor}
@@ -1219,7 +1245,7 @@ const Page = () => {
               <CardContent>
                 {stages.map((stage, index) => (
                   <StagePanel
-                    key={`${loadedTemplateId ?? 'new'}-${index}`}
+                    key={`${editorGeneration}-${index}`}
                     stageIndex={index}
                     stage={stage}
                     hidden={activeStage !== index}

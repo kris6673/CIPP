@@ -25,6 +25,7 @@ Every row in the Tenant and Standard views carries a state.
 | Partially Accepted         | Individual properties of the setting have been accepted, but others still deviate.                                                                                            |
 | Denied - Remediate Pending | The deviation was denied, and the setting is corrected back to the baseline on the next run.                                                                                  |
 | Denied - Delete Pending    | The deviation was denied, and the offending policy is removed on the next run.                                                                                                |
+| Error                      | The last attempt to correct the setting failed, so it cannot be accepted or denied. The run logs explain why. A deviation already denied keeps its **Denied** state instead. |
 | Conflict                   | Two baselines configure the same standard at the same assignment level with different settings, so nothing is compared or corrected. Edit one of the baselines to resolve it. |
 | Skipped - No License       | The tenant is not licensed for the standard, so it is left out of scoring.                                                                                                    |
 | No Data                    | Nothing has been collected for the standard yet.                                                                                                                              |
@@ -45,6 +46,8 @@ The view opens on the tenant currently selected, and is laid out as a score bar,
 ### Assigned Baselines
 
 One card per baseline assigned to the tenant, showing how closely the tenant matches the standards rolled out to it so far, which stage it is in, and what has to happen before it reaches the next one. Where the next stage needs manual approval the card is marked **Awaiting approval** and carries a **Move to next stage** button, which applies that stage's standards on the following run.
+
+Where the next stage is reached automatically, the card instead carries **Re-evaluate stage conditions**, which checks the tenant against that stage's conditions straight away rather than waiting for the next scheduled check. If the conditions are met, the tenant moves into the stage and receives its standards on the following run; if not, the result lists the conditions still unmet.
 
 ### What-If Report
 
@@ -144,7 +147,7 @@ One row per baseline, with the tenants it covers and how far the rollout has pro
 | Remediation      | Whether the baseline reports on deviations only, or corrects them automatically. |
 | Updated At       | When the baseline was last saved.                                                |
 
-Selecting a row opens the **Baseline Rollout** flyout, which gives a card per tenant showing the stage it is in, when it entered that stage, what has to happen before it advances, and an estimate of when that will be. Tenants waiting on manual approval carry a **Move to Next Stage** button.
+Selecting a row opens the **Baseline Rollout** flyout, which gives a card per tenant showing the stage it is in, when it entered that stage, what has to happen before it advances, and an estimate of when that will be. Tenants waiting on manual approval carry a **Move to Next Stage** button. Tenants whose next stage is reached automatically carry **Re-evaluate Stage** instead, which checks that stage's conditions for the tenant straight away, in the same way as **Re-evaluate stage conditions** on the tenant's own card.
 
 ### Table Actions
 

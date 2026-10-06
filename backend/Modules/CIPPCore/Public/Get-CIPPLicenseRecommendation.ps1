@@ -81,6 +81,10 @@ function Get-CIPPLicenseRecommendation {
     .PARAMETER PlanIdsBySku
         Optional. Hashtable of skuId (lower) -> string[] service plan ids. Defaults to ConversionTable.csv.
 
+    .PARAMETER PlanNamesById
+        Optional. Hashtable of service plan id (lower) -> friendly name, used to name plans an
+        analysis would otherwise drop silently. Defaults to ConversionTable.csv.
+
     .FUNCTIONALITY
         Internal
     #>
@@ -101,7 +105,8 @@ function Get-CIPPLicenseRecommendation {
         $AppUsage,
         $MailboxUsage,
         $CopilotUsage,
-        [hashtable]$PlanIdsBySku
+        [hashtable]$PlanIdsBySku,
+        [hashtable]$PlanNamesById
     )
 
     if ($TenureMonths -le 0) { $TenureMonths = 6 }
@@ -155,24 +160,42 @@ function Get-CIPPLicenseRecommendation {
     $MailboxUsage = @($MailboxUsage)
     $CopilotUsage = @($CopilotUsage)
 
+    # The overview (Get-CIPPLicenseOverview) already has the ExcludedLicenses table applied and tags
+    # every subscription with Microsoft's isTrial flag in TermInfo. Trial seats cost nothing, so a
+    # SKU held only on trial subscriptions is left out of every pass here; the licenses page still
+    # shows it. The waste engine receives the overview untouched and applies the same rule itself.
+    $OverviewKnown = $Licenses.Count -gt 0
+    $OverviewLicenses = $Licenses
+    $Licenses = @($Licenses | Where-Object { @($_.TermInfo).Count -eq 0 -or @($_.TermInfo | Where-Object { $_.IsTrial -ne $true }).Count -gt 0 })
+
     $Catalog = Get-CIPPLicenseCatalog
     $Uplift = if ($Catalog.meta.monthlyCommitmentUplift) { [double]$Catalog.meta.monthlyCommitmentUplift } else { 0.20 }
 
     # ------------------------------------------------------------------ service plans per SKU
-    if (-not $PlanIdsBySku) {
-        $PlanIdsBySku = @{}
+    if (-not $PlanIdsBySku -or -not $PlanNamesById) {
+        $NeedIds = -not $PlanIdsBySku
+        $NeedNames = -not $PlanNamesById
+        if ($NeedIds) { $PlanIdsBySku = @{} }
+        if ($NeedNames) { $PlanNamesById = @{} }
         try {
             $TablePath = Join-Path $env:CIPPRootPath 'Config\ConversionTable.csv'
             if (Test-Path $TablePath) {
                 foreach ($Row in ([System.IO.File]::ReadAllText($TablePath) | ConvertFrom-Csv)) {
                     $Key = ([string]$Row.GUID).ToLowerInvariant()
                     if (-not $Key -or -not $Row.Service_Plan_Id) { continue }
-                    if (-not $PlanIdsBySku.ContainsKey($Key)) { $PlanIdsBySku[$Key] = [System.Collections.Generic.List[string]]::new() }
-                    $PlanIdsBySku[$Key].Add(([string]$Row.Service_Plan_Id).ToLowerInvariant())
+                    $PlanKey = ([string]$Row.Service_Plan_Id).ToLowerInvariant()
+                    if ($NeedIds) {
+                        if (-not $PlanIdsBySku.ContainsKey($Key)) { $PlanIdsBySku[$Key] = [System.Collections.Generic.List[string]]::new() }
+                        $PlanIdsBySku[$Key].Add($PlanKey)
+                    }
+                    if ($NeedNames -and $Row.Service_Plans_Included_Friendly_Names -and -not $PlanNamesById.ContainsKey($PlanKey)) {
+                        $PlanNamesById[$PlanKey] = [string]$Row.Service_Plans_Included_Friendly_Names
+                    }
                 }
             }
         } catch { Write-Information "ConversionTable read failed: $($_.Exception.Message)" }
     }
+    $PlanNameOf = { param($Id) $Key = ([string]$Id).ToLowerInvariant(); if ($PlanNamesById.ContainsKey($Key)) { $PlanNamesById[$Key] } else { $Key } }
     $PlanSetOf = @{}
     $GetPlanSet = {
         param($Sku)
@@ -194,6 +217,11 @@ function Get-CIPPLicenseRecommendation {
     $Capabilities = @($Catalog.capabilities)
     $CapById = @{}
     foreach ($Cap in $Capabilities) { $CapById[[string]$Cap.id] = $Cap }
+    # Service plans no capability describes (Windows 365, Defender for Identity, ...): a product
+    # made only of these contributes nothing to a capability union and can't be reported by name,
+    # only by which of its plans a target doesn't carry.
+    $CapMappedPlanIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($Cap in $Capabilities) { foreach ($Id in @($Cap.servicePlanIds)) { if ($Id) { $null = $CapMappedPlanIds.Add(([string]$Id).ToLowerInvariant()) } } }
     # cap id -> which capability ids a plan set includes (respecting per-user disabled plans)
     $CapsOfPlans = {
         param($PlanSet, $Disabled)
@@ -252,6 +280,29 @@ function Get-CIPPLicenseRecommendation {
             TermInfo = @($Lic.TermInfo)
         }
     }
+    # Who holds which license comes from the overview's AssignedUsers, never from the raw user
+    # objects, so exclusions and the trial rule above apply to every pass. Lowercased UPN -> skuIds.
+    $SkusOfUser = @{}
+    foreach ($Lic in $Licenses) {
+        if (-not $Lic.skuId) { continue }
+        $Key = ([string]$Lic.skuId).ToLowerInvariant()
+        foreach ($Holder in @($Lic.AssignedUsers)) {
+            if (-not $Holder.userPrincipalName) { continue }
+            $UpnKey = ([string]$Holder.userPrincipalName).ToLowerInvariant()
+            if (-not $SkusOfUser.ContainsKey($UpnKey)) { $SkusOfUser[$UpnKey] = [System.Collections.Generic.List[string]]::new() }
+            if (-not $SkusOfUser[$UpnKey].Contains($Key)) { $SkusOfUser[$UpnKey].Add($Key) }
+        }
+    }
+    # The overview does not carry per-user disabled plans; those come from the user object for a
+    # SKU the overview says the user holds.
+    $DisabledPlansOf = {
+        param($User, $Sku)
+        $Key = ([string]$Sku).ToLowerInvariant()
+        foreach ($Assigned in @($User.assignedLicenses)) {
+            if ($Assigned.skuId -and ([string]$Assigned.skuId).ToLowerInvariant() -eq $Key) { return , @($Assigned.disabledPlans) }
+        }
+        return , @()
+    }
     $NameOf = {
         param($Sku)
         $Key = ([string]$Sku).ToLowerInvariant()
@@ -280,9 +331,10 @@ function Get-CIPPLicenseRecommendation {
     $CopilotByUpn = @{}
     foreach ($Row in $CopilotUsage) { if ($Row.userPrincipalName) { $CopilotByUpn[([string]$Row.userPrincipalName).ToLowerInvariant()] = $Row } }
 
-    # Real (member, non-resource, licensed) users
+    # Real (member, non-resource) users the overview lists as holding a license. The user object
+    # only supplies account attributes (enabled, sign-in dates, assignment dates, disabled plans).
     $RealUsers = @($Users | Where-Object {
-            $_.assignedLicenses -and @($_.assignedLicenses).Count -gt 0 -and
+            $_.userPrincipalName -and $SkusOfUser.ContainsKey(([string]$_.userPrincipalName).ToLowerInvariant()) -and
             $_.userType -ne 'Guest' -and $_.isResourceAccount -ne $true
         })
     $LicensedUserCount = $RealUsers.Count
@@ -333,7 +385,7 @@ function Get-CIPPLicenseRecommendation {
     }
 
     # ------------------------------------------------------------------ waste tiers (existing engine)
-    $Optimization = Get-CIPPLicenseOptimization -TenantFilter $TenantFilter -Licenses $Licenses -Users $Users -ActivityDetail $ActivityDetail -InactiveDays $InactiveDays -Currency $Currency
+    $Optimization = Get-CIPPLicenseOptimization -TenantFilter $TenantFilter -Licenses $OverviewLicenses -Users $Users -ActivityDetail $ActivityDetail -InactiveDays $InactiveDays -Currency $Currency
 
     # Tenant-level SKUs (extra file storage, server protection, capacity) are consumed without a
     # user assignment, so their unassigned seats are not waste. Drop those findings and recount.
@@ -397,6 +449,28 @@ function Get-CIPPLicenseRecommendation {
         return $Best
     }
 
+    # Friendly names of service plans a target doesn't carry that no capability represents, so a
+    # downgrade or consolidation still reports what silently disappears. Reporting only.
+    $PlanLosses = {
+        param($FromSkuIds, $FromDisabledSets, $TargetSkuId)
+        # Assigned outside the if: an empty set emitted from a statement block enumerates to nothing.
+        $TargetPlans = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        if ($TargetSkuId) { $TargetPlans = & $GetPlanSet $TargetSkuId }
+        $Names = [System.Collections.Generic.List[string]]::new()
+        for ($i = 0; $i -lt @($FromSkuIds).Count; $i++) {
+            $PlanSet = & $GetPlanSet $FromSkuIds[$i]
+            $Disabled = $FromDisabledSets[$i]
+            foreach ($PlanId in $PlanSet) {
+                if ($Disabled -and $Disabled.Contains($PlanId)) { continue }
+                if ($CapMappedPlanIds.Contains($PlanId)) { continue }
+                if ($TargetPlans.Contains($PlanId)) { continue }
+                $Name = & $PlanNameOf $PlanId
+                if ($Name -and -not $Names.Contains($Name)) { $Names.Add($Name) }
+            }
+        }
+        return , @($Names | Sort-Object -Unique)
+    }
+
     # ------------------------------------------------------------------ downgrades
     $DowngradeGroups = @{}
     $DowngradeUserCount = 0
@@ -405,14 +479,12 @@ function Get-CIPPLicenseRecommendation {
             $Upn = [string]$User.userPrincipalName
             $Used = & $UsedCapsOf $Upn
             if ($null -eq $Used) { continue }
-            foreach ($Assigned in @($User.assignedLicenses)) {
-                if (-not $Assigned.skuId) { continue }
-                $Key = ([string]$Assigned.skuId).ToLowerInvariant()
+            foreach ($Key in $SkusOfUser[$Upn.ToLowerInvariant()]) {
                 if (-not $ProductBySku.ContainsKey($Key)) { continue }
                 $Current = $ProductBySku[$Key]
                 if ($null -eq $Current.price) { continue }
                 $Disabled = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-                foreach ($D in @($Assigned.disabledPlans)) { if ($D) { $null = $Disabled.Add(([string]$D).ToLowerInvariant()) } }
+                foreach ($D in (& $DisabledPlansOf $User $Key)) { if ($D) { $null = $Disabled.Add(([string]$D).ToLowerInvariant()) } }
                 $Held = & $CapsOfPlans (& $GetPlanSet $Key) $Disabled
                 if ($Held.Count -eq 0) { continue }
 
@@ -448,6 +520,11 @@ function Get-CIPPLicenseRecommendation {
                     foreach ($CapId in ($Held | Sort-Object)) {
                         if ($Target -and $Target.caps.Contains($CapId)) { $Kept.Add((& $CapLabel $CapId)) } else { $Lost.Add((& $CapLabel $CapId)) }
                     }
+                    $TargetSkuForLoss = if ($Target) { $Target.skuId } else { $null }
+                    foreach ($Name in (& $PlanLosses @($Key) @(, $Disabled) $TargetSkuForLoss)) {
+                        if (-not $Lost.Contains($Name)) { $Lost.Add($Name) }
+                    }
+                    $Lost = [System.Collections.Generic.List[string]]::new([string[]]@($Lost | Sort-Object -Unique))
                     $DowngradeGroups[$GroupKey] = [pscustomobject]@{
                         FromLicense   = $Current.name
                         FromSkuId     = $Key
@@ -482,72 +559,86 @@ function Get-CIPPLicenseRecommendation {
             $Upn = [string]$User.userPrincipalName
             $HeldProducts = [System.Collections.Generic.List[object]]::new()
             $UnionCaps = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-            $Families = [System.Collections.Generic.List[string]]::new()
-            $Sum = 0.0
             $Unpriced = $false
-            foreach ($Assigned in @($User.assignedLicenses)) {
-                if (-not $Assigned.skuId) { continue }
-                $Key = ([string]$Assigned.skuId).ToLowerInvariant()
+            # Describable = at least one capability comes from this product. An opaque add-on
+            # (Windows 365, Defender for Identity, ...) contributes nothing to a capability union,
+            # so it never joins a Consolidate bundle - the base plan "covering" it is not real.
+            $DescProducts = [System.Collections.Generic.List[object]]::new()
+            $DescDisabled = [System.Collections.Generic.List[object]]::new()
+            $DescUnionCaps = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+            $DescFamilies = [System.Collections.Generic.List[string]]::new()
+            $DescSum = 0.0
+            foreach ($Key in $SkusOfUser[$Upn.ToLowerInvariant()]) {
                 if (-not $ProductBySku.ContainsKey($Key)) { $Unpriced = $true; continue }
                 $Product = $ProductBySku[$Key]
                 if ($null -eq $Product.price) { $Unpriced = $true; continue }
                 $HeldProducts.Add($Product)
-                $Families.Add($Product.family)
-                $Sum += $Product.price
                 $Disabled = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-                foreach ($D in @($Assigned.disabledPlans)) { if ($D) { $null = $Disabled.Add(([string]$D).ToLowerInvariant()) } }
+                foreach ($D in (& $DisabledPlansOf $User $Key)) { if ($D) { $null = $Disabled.Add(([string]$D).ToLowerInvariant()) } }
                 $UnionCaps.UnionWith((& $CapsOfPlans (& $GetPlanSet $Key) $Disabled))
+                if ($Product.caps.Count -gt 0) {
+                    $DescProducts.Add($Product)
+                    $DescDisabled.Add($Disabled)
+                    $DescFamilies.Add($Product.family)
+                    $DescSum += $Product.price
+                    $DescUnionCaps.UnionWith((& $CapsOfPlans (& $GetPlanSet $Key) $Disabled))
+                }
             }
             if ($HeldProducts.Count -eq 0 -or $Unpriced) { continue }
-            $FromNames = @($HeldProducts | Sort-Object -Property name | Select-Object -ExpandProperty name -Unique)
-            $FromKey = ($HeldProducts.skuId | Sort-Object) -join '+'
 
-            # Consolidate: several plans -> one cheaper plan covering the same capabilities
-            if ($HeldProducts.Count -ge 2 -and -not $OverlapUpns.Contains($Upn)) {
-                $Target = & $CheapestCovering $UnionCaps @($Families) $Sum
+            # Consolidate: several describable plans -> one cheaper plan covering the same capabilities
+            if ($DescProducts.Count -ge 2 -and -not $OverlapUpns.Contains($Upn)) {
+                $Target = & $CheapestCovering $DescUnionCaps @($DescFamilies) $DescSum
                 if ($Target) {
-                    $GroupKey = "Consolidate|$FromKey|$($Target.skuId)"
+                    $DescFromKey = ($DescProducts.skuId | Sort-Object) -join '+'
+                    $GroupKey = "Consolidate|$DescFromKey|$($Target.skuId)"
                     if (-not $UpgradeGroups.ContainsKey($GroupKey)) {
+                        $Loses = & $PlanLosses @($DescProducts.skuId) @($DescDisabled) $Target.skuId
                         $UpgradeGroups[$GroupKey] = [pscustomobject]@{
                             Type          = 'Consolidate'
-                            FromLicenses  = $FromNames
-                            FromSkuIds    = @($HeldProducts.skuId)
+                            FromLicenses  = @($DescProducts | Sort-Object -Property name | Select-Object -ExpandProperty name -Unique)
+                            FromSkuIds    = @($DescProducts.skuId)
                             ToLicense     = $Target.name
                             ToSkuId       = $Target.skuId
                             Seats         = 0
-                            UnitCost      = [math]::Round($Sum, 2)
+                            UnitCost      = [math]::Round($DescSum, 2)
                             TargetCost    = $Target.price
-                            UnitDelta     = [math]::Round($Target.price - $Sum, 2)
+                            UnitDelta     = [math]::Round($Target.price - $DescSum, 2)
                             MonthlyDelta  = 0.0
-                            Gains         = @(($Target.caps | Where-Object { -not $UnionCaps.Contains($_) } | Sort-Object) | ForEach-Object { & $CapLabel $_ })
+                            Gains         = @(($Target.caps | Where-Object { -not $DescUnionCaps.Contains($_) } | Sort-Object) | ForEach-Object { & $CapLabel $_ })
+                            Loses         = @($Loses)
                             Users         = [System.Collections.Generic.List[object]]::new()
                         }
                     }
                     $Group = $UpgradeGroups[$GroupKey]
                     $Group.Seats = $Group.Seats + 1
-                    $Group.MonthlyDelta = [math]::Round($Group.MonthlyDelta + ($Target.price - $Sum), 2)
+                    $Group.MonthlyDelta = [math]::Round($Group.MonthlyDelta + ($Target.price - $DescSum), 2)
                     $Group.Users.Add([pscustomobject]@{ userPrincipalName = $Upn; displayName = [string]$User.displayName })
                 }
             }
 
-            # Protect: no device management / sign-in security / device threat protection at all
-            if (-not $UnionCaps.Overlaps($ProtectCaps)) {
+            # Protect: no device management / sign-in security / device threat protection at all.
+            # Eligibility stays on the full capability union (an opaque add-on can never supply a
+            # protect capability anyway); cost basis is the describable products only, so an add-on
+            # that contributes nothing isn't netted away against the target's price.
+            if ($DescProducts.Count -gt 0 -and -not $UnionCaps.Overlaps($ProtectCaps)) {
                 $Required = [System.Collections.Generic.HashSet[string]]::new($UnionCaps, [System.StringComparer]::OrdinalIgnoreCase)
                 $Required.UnionWith($ProtectCaps)
-                $Target = & $CheapestCovering $Required @($Families) ([double]::MaxValue)
+                $Target = & $CheapestCovering $Required @($DescFamilies) ([double]::MaxValue)
                 if ($Target) {
-                    $GroupKey = "Protect|$FromKey|$($Target.skuId)"
+                    $DescFromKey = ($DescProducts.skuId | Sort-Object) -join '+'
+                    $GroupKey = "Protect|$DescFromKey|$($Target.skuId)"
                     if (-not $UpgradeGroups.ContainsKey($GroupKey)) {
                         $UpgradeGroups[$GroupKey] = [pscustomobject]@{
                             Type          = 'Protect'
-                            FromLicenses  = $FromNames
-                            FromSkuIds    = @($HeldProducts.skuId)
+                            FromLicenses  = @($DescProducts | Sort-Object -Property name | Select-Object -ExpandProperty name -Unique)
+                            FromSkuIds    = @($DescProducts.skuId)
                             ToLicense     = $Target.name
                             ToSkuId       = $Target.skuId
                             Seats         = 0
-                            UnitCost      = [math]::Round($Sum, 2)
+                            UnitCost      = [math]::Round($DescSum, 2)
                             TargetCost    = $Target.price
-                            UnitDelta     = [math]::Round($Target.price - $Sum, 2)
+                            UnitDelta     = [math]::Round($Target.price - $DescSum, 2)
                             MonthlyDelta  = 0.0
                             Gains         = @(($Target.caps | Where-Object { -not $UnionCaps.Contains($_) } | Sort-Object) | ForEach-Object { & $CapLabel $_ })
                             Users         = [System.Collections.Generic.List[object]]::new()
@@ -555,7 +646,7 @@ function Get-CIPPLicenseRecommendation {
                     }
                     $Group = $UpgradeGroups[$GroupKey]
                     $Group.Seats = $Group.Seats + 1
-                    $Group.MonthlyDelta = [math]::Round($Group.MonthlyDelta + ($Target.price - $Sum), 2)
+                    $Group.MonthlyDelta = [math]::Round($Group.MonthlyDelta + ($Target.price - $DescSum), 2)
                     $Group.Users.Add([pscustomobject]@{ userPrincipalName = $Upn; displayName = [string]$User.displayName })
                 }
             }
@@ -578,9 +669,7 @@ function Get-CIPPLicenseRecommendation {
                 if ($State.state -and $State.state -ne 'Active') { continue }
                 $StateBySku[([string]$State.skuId).ToLowerInvariant()] = $State
             }
-            foreach ($Assigned in @($User.assignedLicenses)) {
-                if (-not $Assigned.skuId) { continue }
-                $Key = ([string]$Assigned.skuId).ToLowerInvariant()
+            foreach ($Key in $SkusOfUser[([string]$User.userPrincipalName).ToLowerInvariant()]) {
                 if (-not $AssignedActiveBySku.ContainsKey($Key)) { $AssignedActiveBySku[$Key] = 0; $StableBySku[$Key] = 0 }
                 $AssignedActiveBySku[$Key] = $AssignedActiveBySku[$Key] + 1
                 $Since = $null
@@ -715,9 +804,7 @@ function Get-CIPPLicenseRecommendation {
     $NoActivityMonthly = 0.0
     $NoActivitySeats = 0
     foreach ($User in $NoActivityUsers) {
-        foreach ($Assigned in @($User.assignedLicenses)) {
-            if (-not $Assigned.skuId) { continue }
-            $Key = ([string]$Assigned.skuId).ToLowerInvariant()
+        foreach ($Key in $SkusOfUser[([string]$User.userPrincipalName).ToLowerInvariant()]) {
             $Unit = & $PriceOf $Key
             $Name = & $NameOf $Key
             & $AddSuggestion 'Remove license' $User.userPrincipalName $Name $Key '' "Remove $Name" "No activity in email, Teams, OneDrive or SharePoint for $InactiveDays days (sign-in dates need Entra ID P1, which this tenant does not report)" 1 ($Unit ?? 0) ($null -ne $Unit) @() @()
@@ -742,7 +829,9 @@ function Get-CIPPLicenseRecommendation {
         foreach ($U in @($Up.Users)) {
             $From = @($Up.FromLicenses) -join ' + '
             if ($Up.Type -eq 'Consolidate') {
-                & $AddSuggestion 'Combine licenses' $U.userPrincipalName $From $Up.FromSkuIds[0] $Up.ToLicense "Replace $From with $($Up.ToLicense)" 'One bundle covers the same features for less' 1 (-1 * [double]$Up.UnitDelta) $true @() @()
+                $Reason = 'One bundle covers the same features for less'
+                if (@($Up.Loses).Count -gt 0) { $Reason += "; would lose $(@($Up.Loses) -join ', ')" }
+                & $AddSuggestion 'Combine licenses' $U.userPrincipalName $From $Up.FromSkuIds[0] $Up.ToLicense "Replace $From with $($Up.ToLicense)" $Reason 1 (-1 * [double]$Up.UnitDelta) $true @() $Up.Loses
             } else {
                 & $AddSuggestion 'Add protection' $U.userPrincipalName $From $Up.FromSkuIds[0] $Up.ToLicense "Change $From to $($Up.ToLicense)" "No device management, sign-in security or device threat protection; adds $(@($Up.Gains) -join ', ')" 1 (-1 * [double]$Up.UnitDelta) $true @() @()
             }
@@ -796,7 +885,7 @@ function Get-CIPPLicenseRecommendation {
         MonthlyCommitmentUplift   = $Uplift
         SuggestionCount           = $Suggestions.Count
         AnonymizedReports         = $AnonymizedReports
-        DataAvailable             = ($Licenses.Count -gt 0)
+        DataAvailable             = $OverviewKnown
         UsageDataAvailable        = ($ActivityDetail.Count -gt 0)
         AppUsageDataAvailable     = ($AppUsage.Count -gt 0)
         MailboxUsageDataAvailable = ($MailboxUsage.Count -gt 0)

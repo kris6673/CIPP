@@ -47,10 +47,14 @@ function Get-CIPPBaseline {
     # name field = displayName) are what CA and Intune templates use, but the wider
     # template families store rows under partitions that do NOT match their executor
     # ('TransportTemplate', 'ExConnectorTemplate', ...) and name them 'name'/'Name'.
+    # Only picker identities are template references: free-text identities (the
+    # Autopilot/Device Prep/Apple enrollment profile names) are the value itself, and
+    # wrapping them renders '[object Object]' in the editor's text field.
     $IdentityDefinitions = @{}
     if ($ResolveIdentityLabels) {
         foreach ($Definition in @(Get-CIPPBaselineDefinition)) {
-            if ($Definition.instanceIdentity) {
+            $IdentityType = "$($Definition.variables.$($Definition.instanceIdentity).type)"
+            if ($Definition.instanceIdentity -and $IdentityType -in @('autoComplete', 'select')) {
                 $IdentityDefinitions[$Definition.name] = @{
                     Variable  = $Definition.instanceIdentity
                     Partition = "$($Definition.identity.partition ?? $Definition.remediate.executor)"
@@ -138,7 +142,8 @@ function Get-CIPPBaseline {
                     name            = $StageDefinition.name
                     logic           = $StageDefinition.logic
                     conditions      = @($StageDefinition.conditions)
-                    standards       = @($StageDeltas.standardName)
+                    # Enumerated explicitly: member access on an empty array yields a lone $null.
+                    standards       = @($StageDeltas | ForEach-Object { $_.standardName })
                     standardsConfig = @($StageDeltas | ForEach-Object {
                             [PSCustomObject]@{
                                 standard         = (($_.standardName) -split '#')[0]
@@ -274,8 +279,11 @@ function Get-CIPPBaseline {
                 baselineName       = $RolloutRow.templateName
                 description        = $RolloutRow.description
                 assignedTenants    = $AssignedTenants
-                assignments        = $(if ($AssignedTo.Count -gt 0) { $AssignedTo } else { $Assignments })
-                exclusions         = $(if ($ExcludedTo.Count -gt 0) { $ExcludedTo } else { @($ExcludedTenants | ForEach-Object { [PSCustomObject]@{ label = $_; value = $_ } }) })
+                # @() not $(): a subexpression unrolls a one-item list into a bare object, which
+                # the table then flattens into "Exclusions - Label" columns that go blank as soon
+                # as a second entry exists (#771). Always ship a real array.
+                assignments        = @(if ($AssignedTo.Count -gt 0) { $AssignedTo } else { $Assignments })
+                exclusions         = @(if ($ExcludedTo.Count -gt 0) { $ExcludedTo } else { $ExcludedTenants | ForEach-Object { [PSCustomObject]@{ label = $_; value = $_ } } })
                 excludedTenants    = $ExpandedExcludedTenants
                 alertEmails        = $RolloutRow.alertEmails
                 alertWebhookUrl    = $RolloutRow.alertWebhookUrl

@@ -96,6 +96,20 @@ Sets how long CIPP log entries are kept before automatic deletion.
 
 Enter the number of days and select **Save**.
 
+## Report Attachment Retention
+
+Sets how long oversized scheduled report attachments stay available. An attachment that would take a scheduled report email over Microsoft's 4 MB limit is uploaded to storage instead, and the email links to it. This setting controls how long those files, and the download links pointing at them, are kept.
+
+| Field | Description                                                                                                                         |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Days  | The retention period in days. The minimum is 7, the maximum is 365, and the default is 360. Values outside that range are rejected. |
+
+Enter the number of days and select **Save**. Files past the retention period are deleted daily at 2:30 AM, after which their download links stop working.
+
+{% hint style="info" %}
+A download link expires after the retention period that applied when its email was sent. Changing the setting later does not extend links already sent.
+{% endhint %}
+
 ## JIT Admin Settings
 
 Caps how long a Just-In-Time admin account created through CIPP may remain active, which stops technicians from provisioning long-lived privileged accounts.

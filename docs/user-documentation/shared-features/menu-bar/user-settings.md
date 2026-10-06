@@ -59,10 +59,31 @@ A label on the card indicates which defaults are currently in effect: **Using Te
 
 An Out of Office message alone is enough for these defaults to count as configured for the user vs all-users precedence.
 
-A **Send results to** section chooses where the outcome of an offboarding is reported, with options for Webhook, E-mail, and PSA.
+A **Send results to** section chooses where the outcome of an offboarding is reported, with options for Webhook, E-mail, PSA, and Push notification.
 
 {% hint style="info" %}
 If a tenant has its own offboarding defaults saved, those replace your personal defaults entirely for that tenant, including when the tenant message field is empty.
+{% endhint %}
+
+## Push Notification Devices
+
+Lists the browsers and installed apps you have registered to receive push notifications from CIPP, and registers the one you are using now. Notifications are per person: a scheduled task, alert, offboarding or JIT admin grant with **Push (notify me)** selected notifies the devices registered by whoever created it, and nobody else. Each browser and each installed copy of the app counts as its own device.
+
+Push needs at least one device registered here. Until you have one, the post execution actions on the scheduler and the alert forms do not offer **Push (notify me)**, and their helper text points you to this card. Once a device is registered, the same helper text says how many devices will be notified. A scheduled task, alert, report schedule or offboarding that asks for Push without a registered device is not saved, and the message returned points back here.
+
+| Column      | Description                                                                                                                                              |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Device Name | The operating system and browser the device registered from, with **(app)** added for an installed copy of CIPP. The browser you are using now is marked **(this device)**. |
+| Created     | When the device was registered.                                                                                                                          |
+
+| Control                | Description                                                                                                                                                                                                                                                                                       |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Enable on this device  | Asks the browser for notification permission and registers this device. Greyed out, with the reason shown when you hover over it, if the browser does not support push notifications, if notifications are blocked for CIPP in the browser settings, if you are impersonating a role, or if push notifications are not ready on the instance yet. On iOS it is only available once CIPP has been added to the Home Screen and opened from there. |
+| Send test notification | Sends a test notification to every device you have registered, after you confirm.                                                                                                                                                                                                                 |
+| Remove device          | A row action that stops notifications to that device, after you confirm. A device can be removed from any browser; the registration is deleted, not the browser's permission.                                                                                                                   |
+
+{% hint style="info" %}
+A device the browser has silently dropped, for example after the site data was cleared, is removed from the list automatically the next time a notification to it fails.
 {% endhint %}
 
 ## Portal Links Configuration

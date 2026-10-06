@@ -93,11 +93,11 @@ Unless you have been asked to test a specific build, stay on Latest (Stable).
 
 This card configures how often CIPP asks the container registry whether a newer image has been published on your channel. By default, it checks every hour and auto-restarts at 23:00.
 
-| Setting                                 | Description                                                                                                            |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Check Interval                          | How often CIPP checks the registry for a new image: Disabled, Every hour, Every 4 hours, Every 12 hours, or Every day. |
-| Preferred Check Time                    | The hour of the day, in 24-hour time, at which the check should run.                                                   |
-| Auto-restart when an update is detected | When enabled, CIPP automatically restarts the container to apply an update once one is found.                          |
+| Setting                                 | Description                                                                                                                                  |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Check Interval                          | How often CIPP checks the registry for a new image: Disabled, Every hour, Every 4 hours, Every 12 hours, or Every day.                       |
+| Preferred Restart Time                  | The hour of the day, in 24-hour time, at which the check runs and, with auto-restart on, the container restarts to apply an update it finds. |
+| Auto-restart when an update is detected | When enabled, CIPP automatically restarts the container to apply an update once one is found.                                                |
 
 Select **Save Settings** to store these options. Setting Check Interval to **Disabled** turns off scheduled checks and disables the other two settings, as neither has any effect without them; you can still check on demand with **Check for Updates**.
 

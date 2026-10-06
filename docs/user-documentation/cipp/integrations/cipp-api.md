@@ -18,7 +18,7 @@ If you're using a **hosted CIPP instance**, you can follow the instructions belo
       2. Select the API Client from the list.
    3. Ensure that you Enable the client in order to save it to the Function App authentication settings.
    4. Optionally set the [#custom-roles](../../../setup/setting-up-cipp/roles.md#custom-roles "mention") and Allowed IP Ranges for additional security.
-   5. Select if you want MCP Access Allowed for this client. Enabling MCP Access sets this client up as an MCP connector app (the app your AI signs in as); CIPP automatically creates and manages a separate shared **CIPP-MCP** resource app that the tokens are issued for. You can enable MCP Access on more than one client, each with its own role and IP range. MCP Access is only supported on the latest CIPP infrastructure. See [#enable-the-mcp-feature](cipp-api.md#enable-the-mcp-feature "mention") for more information.
+   5. Select if you want MCP Access Allowed for this client. Enabling MCP Access sets this client up as an MCP connector app (the app your AI signs in as); CIPP automatically creates and manages a separate shared **CIPP-MCP** resource app that the tokens are issued for. You can enable MCP Access on more than one client. Connectors that sign a user in run with that user's own CIPP role; the client's role and IP range only apply when the client calls with its own secret and no user. MCP Access is only supported on the latest CIPP infrastructure. See [#enable-the-mcp-feature](cipp-api.md#enable-the-mcp-feature "mention") for more information.
    6. Submit the form to create the client. Remember to copy the Application secret to a secure location.
 3. Once you have the API Client(s) configured, click Actions > Save to Azure, this updates the Function App authentication settings with the new Client IDs.
 
@@ -30,13 +30,38 @@ The IP Range list supports both IPv4 and IPv6 addresses as standalone IP address
 Custom Roles will limit which API endpoints each API Client can access. This can be used to limit all API calls to read only for example.
 {% endhint %}
 
-## API Egress
+## API Usage
 
 {% hint style="info" %}
-Visible to SuperAdmins only. The card is hidden entirely on instances where egress accounting isn't enabled, such as most self-hosted deployments.
+The usage figures need the SuperAdmin role. On instances where egress accounting isn't enabled, such as most self-hosted deployments, the tab shows "API egress accounting is not enabled on this instance." instead.
 {% endhint %}
 
-At the top of the CIPP-API page, on hosted instances with egress accounting enabled, a card shows how much data your API clients have served today against the instance's daily cap, with a per-client trend you can switch between 24h, 3d and 7d windows. The API Client table below it also gets an **Egress Today** column with each client's own total for today.
+The **API Usage** tab on the CIPP-API page holds the **API Egress** card, which shows how much data this instance has served and which endpoints served it. Use the **24h**, **3d** and **7d** toggle in the card header to set the trend window.
+
+**Daily total**
+
+A gauge shows today's API client egress against the instance's daily cap. It turns amber at 80% and red once the cap is reached, at which point further API client requests are turned away with a 429 response and the card shows how many were refused today. Where no cap is set, the card shows today's total on its own. Below the gauge, a separate line gives today's traffic from signed-in users, which is shown for information only and never counts towards the cap.
+
+**Trend**
+
+A stacked chart shows each API client's egress over the selected window. Hover over a point to see the endpoints that served the most data in that interval.
+
+**Top endpoints today**
+
+A table of today's endpoints, ordered by the data they served. Use **Endpoints for** to switch between **All API clients**, a single API client, and **Signed-in users (not capped)**. Graph requests are grouped by resource with IDs removed, so requests for different users' group memberships count as one endpoint, and MCP traffic is grouped by tool.
+
+| Column      | Description                                                  |
+| ----------- | ------------------------------------------------------------ |
+| Endpoint    | The endpoint or MCP tool.                                    |
+| Egress      | Data served by this endpoint today.                          |
+| Requests    | Number of requests today.                                    |
+| AvgSize     | Average response size.                                       |
+| MaxSize     | Largest single response.                                     |
+| Cache Hit % | Share of requests answered from cache.                       |
+| Errors      | Requests that returned an error.                             |
+| Shed        | Requests turned away because the daily cap had been reached. |
+
+The API Client table on the **Settings** tab also has an **Egress Today** column with each client's own total for today. It shows `-` for a client with no recorded traffic, or where accounting isn't enabled.
 
 ## Using an API Client
 
@@ -100,13 +125,13 @@ Open the [cipp-api.md](cipp-api.md "mention") page and **Create New Client** (or
 
 | Field                  | Value                                                                                            |
 | ---------------------- | ------------------------------------------------------------------------------------------------ |
-| **Role**               | `Readonly` (recommended), or a custom read role. This becomes what the AI can do. The role must not carry its own IP restriction, for the same reason the client's IP range has to be `Any`. |
+| **Role**               | `Readonly` (recommended), or a custom read role. Only applies when something calls with this client's own ID and secret and no user signs in (client credentials). Connectors that sign a user in run with that user's own CIPP role. |
 | **IP range**           | `Any`. The connector calls in from your AI provider's servers, so you can't pin it to your office IPs. |
 | **Enable this client** | On                                                                                               |
 | **MCP Access Allowed** | **On**                                                                                           |
 
 {% hint style="warning" %}
-**Don't put IP restrictions on an MCP-enabled client.** MCP requests arrive from your AI provider's cloud IPs (Anthropic, OpenAI, Microsoft), not your network, so any allowed-IP range, whether on the client's own **IP range** or on the **role** you assign it, blocks the connector with a 403. Leave the IP range as `Any` and use a role that has no IP restriction. CIPP flags this on the API Clients page and in the client dialog if it detects it.
+**Watch IP restrictions with MCP.** MCP requests arrive from your AI provider's cloud IPs (Anthropic, OpenAI, Microsoft), not your network, so an allowed-IP range blocks the connector with a 403. For connectors that sign a user in, that's the IP restriction on the **user's** CIPP role. For client-credentials calls, it's the client's own **IP range** and its **role**. Leave the client's IP range as `Any`, and make sure the roles your MCP users hold have no IP restriction. CIPP flags restricted MCP clients on the API Clients page and in the client dialog.
 {% endhint %}
 
 {% endstep %}
@@ -133,9 +158,9 @@ The instance restarts. Give it up to \~60 seconds before connecting. For AI prov
 
 Add CIPP as a custom connector in your AI and give it the MCP URL. That's all you need: no client ID and no secret. The URL is `https://<your-cipp-api-url>/api/ExecMCP` and can be found on the API page.
 
-Click **Connect**. You'll be redirected to your normal Microsoft / CIPP sign-in, so log in and approve. Your LLM completes the connection and CIPP's read tools appear.
+Click **Connect**. You'll be redirected to your normal Microsoft / CIPP sign-in, so log in and approve. Your LLM completes the connection and CIPP's read tools appear. The connector acts as you: every call runs with your own CIPP role, so each person who connects needs a CIPP role that covers the tools they use.
 
-If you have **more than one** MCP client enabled, add `?client=<client-id>` to the URL (for example `https://<your-cipp-api-url>/api/ExecMCP?client=<client-id>`) so the connector signs in as that specific client and gets its role and IP range. With a single MCP client the bare URL is fine. CIPP shows the exact per-client URL on the **MCP** tab of the CIPP-API integration.
+If you have **more than one** MCP client enabled, add `?client=<client-id>` to the URL (for example `https://<your-cipp-api-url>/api/ExecMCP?client=<client-id>`) so the connector signs in as that specific client. With a single MCP client the bare URL is fine. CIPP shows the exact per-client URL on the **MCP** tab of the CIPP-API integration.
 
 {% hint style="info" %}
 **Copilot Studio / Microsoft 365 Copilot agents are the exception.** They sign in as a confidential client with a secret, so follow [#copilot-studio-and-microsoft-365-copilot-agents](cipp-api.md#copilot-studio-and-microsoft-365-copilot-agents "mention") instead of this step. If your connection drops or the AI asks for a client ID, see the troubleshooting section below.
@@ -158,7 +183,14 @@ If tools show up and return data, you're done.
 
 <summary>How MCP authentication works (two apps and Conditional Access)</summary>
 
-**Two apps.** The API client you flag _MCP Access Allowed_ is the app the AI signs in as (the OAuth client); it carries the redirect URIs, and CIPP resolves each MCP session's role and IP restrictions from it. CIPP also creates and manages a single shared resource app, **CIPP-MCP**, which is the protected resource the token is issued for. Keeping the client and the resource separate is what lets your AI silently refresh its token in the background; if one app were both, Entra rejects the refresh (`AADSTS90009`, "requesting a token for itself") and the connection drops every \~60–90 minutes. It also gives MCP its own resource, separate from the app you use to sign in to the CIPP portal. You can flag more than one client for MCP, each with its own role and IP range.
+**Two apps.** The API client you flag _MCP Access Allowed_ is the app the AI signs in as (the OAuth client); it carries the redirect URIs. CIPP also creates and manages a single shared resource app, **CIPP-MCP**, which is the protected resource the token is issued for. Keeping the client and the resource separate is what lets your AI silently refresh its token in the background; if one app were both, Entra rejects the refresh (`AADSTS90009`, "requesting a token for itself") and the connection drops every \~60–90 minutes. It also gives MCP its own resource, separate from the app you use to sign in to the CIPP portal. You can flag more than one client for MCP.
+
+**Which role applies.** It depends on how the token was obtained, not on which client was used:
+
+| How the connector signs in | Runs with |
+| --- | --- |
+| A user signs in (PKCE, as Claude, ChatGPT and VS Code do, or a client secret, as Copilot Studio does) | **That user's own CIPP role** and its IP restrictions. The client's role is ignored. |
+| The client's ID and secret only, no user (client credentials) | **The API client's role** and IP range. |
 
 **Conditional Access.** Entra evaluates CA "cloud apps" against the _resource_ a sign-in is for, so scope any MCP Conditional Access to the **CIPP-MCP** resource app. One policy covers every connector, whichever client it uses. Scoping CA to the client app does **not** govern MCP sign-ins. Avoid **device-compliance** or **named-location** controls on CIPP-MCP: MCP tokens come from the AI provider's cloud IPs on an unmanaged device, so those will block the connector (MFA is already satisfied at the interactive sign-in and carried in the refresh). Device-compliance CA on your portal-login app is unaffected, because MCP is a separate resource.
 
@@ -197,6 +229,8 @@ Copilot Studio (and Microsoft 365 Copilot agents) is the one supported client th
 
 {% hint style="info" %}
 Do the [#cipp-mcp](cipp-api.md#cipp-mcp "mention") steps first (Enable MCP → create the MCP client → **Save to Azure**). Keep the **MCP client's Application (Client) ID** and its **secret** handy. If you didn't save the secret, reset it with **Actions → Reset Application Secret**.
+
+Copilot Studio still signs each user in, so every call runs with **that user's own CIPP role**, not the client's role. Everyone who uses the agent needs a CIPP role that covers the tools it calls; otherwise they get "the user does not have the required permission".
 {% endhint %}
 
 {% stepper %}

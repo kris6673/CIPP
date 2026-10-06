@@ -2208,6 +2208,9 @@ foreach ($Contract in ($Contracts | Sort-Object Name -CaseSensitive)) {
     $PathItem = [ordered]@{}
     foreach ($Method in $Methods) {
         $Operation = ConvertTo-OasOperation -Contract $Contract -Method $Method
+        # operationIds must be unique across the spec, so the POST half of a dual-method
+        # endpoint gets a suffix and the GET keeps the plain name.
+        if ($Methods.Count -gt 1 -and $Method -ne $Methods[0]) { $Operation['operationId'] = "$($Contract.Name)$($Method.Substring(0,1).ToUpper())$($Method.Substring(1))" }
         if ($Override) { $Operation = Merge-OpenApiOverride -Base $Operation -Override $Override }
         $PathItem[$Method] = $Operation
     }
