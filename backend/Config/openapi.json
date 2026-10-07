@@ -792,6 +792,7 @@
                       "x-cipp-field-source": "storage"
                     },
                     "assignedTo": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "description": {
@@ -810,9 +811,11 @@
                       "x-cipp-field-source": "storage"
                     },
                     "excludedTenants": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "excludedTo": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "LocalChanges": {
@@ -841,6 +844,7 @@
                       "x-cipp-field-source": "storage"
                     },
                     "Stages": {
+                      "type": "string",
                       "x-cipp-field-source": "storage"
                     },
                     "templateName": {
