@@ -95,7 +95,7 @@ function Add-CIPPScheduledTask {
                 return "Error - The command '$RequestedCommand' does not exist and cannot be scheduled."
             }
 
-            if ($Command.Module -notin @('CIPPCore', 'CIPPAlerts', 'CIPPStandards', 'CIPPTests', 'CIPPDB', 'CippExtensions', 'CIPPActivityTriggers')) {
+            if ($Command.Module -notin @('CIPPCore', 'CIPPAlerts', 'CIPPStandards', 'CIPPBaselines', 'CIPPTests', 'CIPPDB', 'CippExtensions', 'CIPPActivityTriggers')) {
                 Write-LogMessage -headers $Headers -API 'ScheduledTask' -message "Blocked attempt to schedule command from unauthorized module: $($Command.ModuleName)\$RequestedCommand" -Sev 'Warning'
                 return "Error - The command '$RequestedCommand' is not permitted to run as a scheduled task."
             }
