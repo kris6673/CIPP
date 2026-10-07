@@ -71,7 +71,7 @@ services:
     container_name: cipp-manifests
     command: >
       sh -c 'set -e; mkdir -p /out;
-      for m in CIPPStandards CIPPAlerts CIPPTests CIPPDB CippExtensions CIPPActivityTriggers; do
+      for m in CIPPStandards CIPPAlerts CIPPBaselines CIPPTests CIPPDB CippExtensions CIPPActivityTriggers; do
       cp -f "/src/$$m/$$m.psd1" "/out/$$m.psd1"; done'
     volumes:
       - ../backend/Modules:/src:ro
@@ -126,6 +126,7 @@ services:
       - App__Worker__DevExpandModules__3=CIPPDB
       - App__Worker__DevExpandModules__4=CippExtensions
       - App__Worker__DevExpandModules__5=CIPPActivityTriggers
+      - App__Worker__DevExpandModules__6=CIPPBaselines
       # The Next.js dev server runs in a container, if using windows bind mounts are too slow for node_modules
       # you should use the other docker compose file without the frontend container and run the frontend dev server on the host using the start script
       - CRAFT_DEV_FRONTEND_URL=http://cipp-frontend:3000
@@ -161,6 +162,7 @@ services:
       # the .psm1 stub) still comes from the bind mount above, so PS edits stay live.
       - ./.devmanifests/CIPPStandards.psd1:/app/API/Modules/CIPPStandards/CIPPStandards.psd1
       - ./.devmanifests/CIPPAlerts.psd1:/app/API/Modules/CIPPAlerts/CIPPAlerts.psd1
+      - ./.devmanifests/CIPPBaselines.psd1:/app/API/Modules/CIPPBaselines/CIPPBaselines.psd1
       - ./.devmanifests/CIPPTests.psd1:/app/API/Modules/CIPPTests/CIPPTests.psd1
       - ./.devmanifests/CIPPDB.psd1:/app/API/Modules/CIPPDB/CIPPDB.psd1
       - ./.devmanifests/CippExtensions.psd1:/app/API/Modules/CippExtensions/CippExtensions.psd1

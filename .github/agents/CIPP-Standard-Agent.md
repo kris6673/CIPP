@@ -3,7 +3,7 @@ name: CIPP Baseline Standard Builder
 description: >
   Builds new baseline standards for the CIPP Baselines engine: a definition JSON in
   backend/Config/BaselineStandards, plus - only when the logic demands it - a prepare hook
-  and executor in backend/Modules/CIPPCore/Public/Baselines.
+  and executor in backend/Modules/CIPPBaselines/Public/PrepareHooks and /Executors.
 ---
 
 # CIPP Baseline Standard Builder

@@ -107,6 +107,7 @@ services:
       - ./.devmodules/CIPPStandards:/app/API/Modules/CIPPStandards:ro
       - ./.devmodules/CIPPDB:/app/API/Modules/CIPPDB:ro
       - ./.devmodules/CIPPAlerts:/app/API/Modules/CIPPAlerts:ro
+      - ./.devmodules/CIPPBaselines:/app/API/Modules/CIPPBaselines:ro
       - ./.devmodules/CIPPActivityTriggers:/app/API/Modules/CIPPActivityTriggers:ro
       - ./.devmodules/CippExtensions:/app/API/Modules/CippExtensions:ro
       - ./.devmodules/CIPPTests:/app/API/Modules/CIPPTests:rw
@@ -125,6 +126,7 @@ services:
             - CIPPStandards/
             - CIPPDB/
             - CIPPAlerts/
+            - CIPPBaselines/
             - CIPPTests/
             - CIPPActivityTriggers/
             - CippExtensions/

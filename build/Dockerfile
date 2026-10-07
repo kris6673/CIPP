@@ -43,6 +43,10 @@ FROM ps-base AS build-cippalerts
 COPY backend/Modules/CIPPAlerts /src/CIPPAlerts
 RUN pwsh -File /build/build-single-module.ps1 -Module CIPPAlerts
 
+FROM ps-base AS build-cippbaselines
+COPY backend/Modules/CIPPBaselines /src/CIPPBaselines
+RUN pwsh -File /build/build-single-module.ps1 -Module CIPPBaselines
+
 FROM ps-base AS build-cippactivitytriggers
 COPY backend/Modules/CIPPActivityTriggers /src/CIPPActivityTriggers
 RUN pwsh -File /build/build-single-module.ps1 -Module CIPPActivityTriggers
@@ -219,6 +223,7 @@ COPY --from=build-cippextensions       /src/CippExtensions/       /app/API/Modul
 COPY --from=build-cippactivitytriggers /src/CIPPActivityTriggers/ /app/API/Modules/CIPPActivityTriggers/
 COPY --from=build-cippdb               /src/CIPPDB/               /app/API/Modules/CIPPDB/
 COPY --from=build-cippalerts           /src/CIPPAlerts/           /app/API/Modules/CIPPAlerts/
+COPY --from=build-cippbaselines        /src/CIPPBaselines/        /app/API/Modules/CIPPBaselines/
 COPY --from=build-cipptests            /src/CIPPTests/            /app/API/Modules/CIPPTests/
 COPY --from=build-cippstandards        /src/CIPPStandards/        /app/API/Modules/CIPPStandards/
 COPY --from=build-cipphttp             /src/CIPPHTTP/             /app/API/Modules/CIPPHTTP/
