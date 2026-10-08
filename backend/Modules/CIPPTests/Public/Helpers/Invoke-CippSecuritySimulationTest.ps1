@@ -19,87 +19,18 @@ function Invoke-CippSecuritySimulationTest {
     )
 
     $TestId = "SecuritySimulation_$ScenarioId"
-    $Path = Join-Path $env:CIPPRootPath 'Modules\CIPPTests\Public\Tests\SecuritySimulations\scenarios.json'
-    $Scenario = @([System.IO.File]::ReadAllText($Path) | ConvertFrom-Json -Depth 20) | Where-Object { $_.id -eq $ScenarioId } | Select-Object -First 1
+    $Context = Get-CippSecuritySimulationContext -Tenant $Tenant -ScenarioId $ScenarioId
+    $Scenario = $Context.Scenarios | Where-Object { $_.id -eq $ScenarioId } | Select-Object -First 1
     if (-not $Scenario) {
         return Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -Name $ScenarioId -ResultMarkdown "Scenario '$ScenarioId' is not defined."
     }
 
-    $Licensed = -not $Scenario.licensePresets -or (Test-CIPPStandardLicense -StandardName $TestId -TenantFilter $Tenant -Preset $Scenario.licensePresets -SkipLog)
+    $Plan = $Context.Plans[$ScenarioId]
+    $Licensed = $Plan.Licensed
 
-    $AlignmentTable = Get-CippTable -tablename 'BaselineAlignment'
-    $SafeTenant = ConvertTo-CIPPODataFilterValue -Value $Tenant
-    $AlignmentRows = @(Get-CIPPAzDataTableEntity @AlignmentTable -Filter "PartitionKey eq '$SafeTenant'")
-
-    $StandardState = {
-        param($Reference)
-        $Name = "$($Reference.name)"
-        $Definition = Get-CIPPBaselineDefinition -Name $Name | Select-Object -First 1
-        $State = [PSCustomObject]@{
-            name      = $Name
-            label     = "$($Definition.label ?? $Name)"
-            role      = $(if ("$($Reference.role)") { "$($Reference.role)" } else { 'prevents' })
-            status    = 'Not in a baseline'
-            compliant = $false
-            assigned  = $false
-            detail    = ''
-        }
-        $Row = @($AlignmentRows | Where-Object { ("$($_.StandardName)" -split '#')[0] -eq $Name }) |
-            Sort-Object -Property { [int64]($_.LastRun ?? 0) } -Descending | Select-Object -First 1
-        if ($Row) {
-            $State.assigned = $true
-            switch -Regex ("$($Row.Status)") {
-                '^Compliant$' { $State.status = 'Compliant'; $State.compliant = $true }
-                '^(Accepted|Partially Accepted)$' { $State.status = 'Accepted deviation'; $State.compliant = $false; $State.detail = "$($Row.DeviationReason)" }
-                '^(Denied|Drift)' { $State.status = 'Drift'; $State.compliant = $false }
-                '^Skipped - No License$' { $State.status = 'License missing'; $State.compliant = $null }
-                default { $State.status = 'No data'; $State.compliant = $null }
-            }
-        } elseif ($Definition.requiredCapabilities -and -not (Test-CIPPStandardLicense -StandardName $Name -TenantFilter $Tenant -RequiredCapabilities @($Definition.requiredCapabilities | ForEach-Object { $_ }) -SkipLog)) {
-            $State.status = 'License missing'
-            $State.compliant = $null
-        } else {
-            try {
-                $Item = @{
-                    TenantFilter     = $Tenant
-                    TenantName       = $Tenant
-                    Standard         = $Name
-                    BaseName         = $Name
-                    Variables        = $null
-                    Tiers            = @()
-                    Stage            = 1
-                    StageName        = ''
-                    TemplateId       = ''
-                    SourceScope      = 'test'
-                    SourceTemplate   = 'Security Simulation'
-                    RemediateEnabled = $false
-                    AlertEnabled     = $false
-                }
-                $Graded = Invoke-CIPPBaselineStandard -Item $Item -Mode 'compare' -GradeOnly
-                if ($null -eq $Graded) {
-                    $State.status = 'Needs configuration'
-                    $State.detail = 'This standard needs its settings chosen in a baseline before it can be checked.'
-                } elseif ($Graded.Compliant -eq $true) {
-                    $State.status = 'Compliant'
-                    $State.compliant = $true
-                } else {
-                    $State.status = 'Not configured'
-                    $Properties = @($Graded.Diff | ForEach-Object { $_.Property } | Where-Object { $_ } | Select-Object -Unique)
-                    if ($Properties.Count -gt 0) { $State.detail = 'Differs on: {0}' -f ($Properties -join ', ') }
-                }
-            } catch {
-                $State.status = 'Could not evaluate'
-                $State.compliant = $null
-                $State.detail = $_.Exception.Message
-            }
-        }
-        $State
-    }
-
-    $Rules = $null
     $AlertState = {
         param($Alert)
-        if ($null -eq $Rules) {
+        if ($null -eq $Context.Rules) {
             $Rules = [System.Collections.Generic.List[object]]::new()
             $RuleTable = Get-CippTable -TableName 'WebhookRules'
             foreach ($Row in @(Get-CIPPAzDataTableEntity @RuleTable -Filter "PartitionKey eq 'Webhookv2'")) {
@@ -124,10 +55,11 @@ function Invoke-CippSecuritySimulationTest {
                 }
                 $Rules.Add([PSCustomObject]@{ Logbook = "$($Row.type)"; Comment = "$($Row.AlertComment)"; Operations = @($Operations) })
             }
+            $Context.Rules = $Rules
         }
         $Operation = "$($Alert.operation)"
         $Logbook = "$($Alert.logbook)"
-        $Matched = @($Rules | Where-Object {
+        $Matched = @($Context.Rules | Where-Object {
                 $Rule = $_
                 if ($Logbook -and $Rule.Logbook -and $Rule.Logbook -ne $Logbook) { return $false }
                 @($Rule.Operations | Where-Object { $Operation -eq $_ -or $Operation -like $_ }).Count -gt 0
@@ -142,11 +74,9 @@ function Invoke-CippSecuritySimulationTest {
     }
 
     $Steps = @($Scenario.steps | Where-Object { $_ })
-    $Persona = $(if ("$($Scenario.persona)") { "$($Scenario.persona)" } else { 'user' })
-    $NeedsIdentity = @($Steps | Where-Object { $_.whatIf }).Count -gt 0
-    # The What If API itself needs Entra ID P1 or P2, whatever else the scenario is licensed for.
-    $CALicensed = $NeedsIdentity -and $Licensed -and (Test-CIPPStandardLicense -StandardName $TestId -TenantFilter $Tenant -Preset Entra -SkipLog)
-    $Identity = $(if ($CALicensed) { Resolve-CIPPSimulationIdentity -TenantFilter $Tenant -Persona $Persona } else { $null })
+    $Persona = $Plan.Persona
+    $CALicensed = $Plan.CALicensed
+    $Identity = $Plan.Identity
     $AttackerCanSatisfy = @($Scenario.attackerCanSatisfy | Where-Object { $_ })
 
     $WhatIfCalls = 0
@@ -161,7 +91,18 @@ function Invoke-CippSecuritySimulationTest {
     foreach ($Step in $Steps) {
         $Index++
         $StepId = "$($Step.id)"
-        $Standards = @(foreach ($Reference in @($Step.standards | Where-Object { $_ })) { & $StandardState $Reference })
+        $Standards = @(foreach ($Reference in @($Step.standards | Where-Object { $_ })) {
+                $State = $Context.Standards["$($Reference.name)"]
+                [PSCustomObject]@{
+                    name      = $State.name
+                    label     = $State.label
+                    role      = $(if ("$($Reference.role)") { "$($Reference.role)" } else { 'prevents' })
+                    status    = $State.status
+                    compliant = $State.compliant
+                    assigned  = $State.assigned
+                    detail    = $State.detail
+                }
+            })
         $Alerts = @(foreach ($Alert in @($Step.alerts | Where-Object { $_ })) { & $AlertState $Alert })
 
         $WhatIf = $null
@@ -173,9 +114,8 @@ function Invoke-CippSecuritySimulationTest {
                 $WhatIf = [PSCustomObject]@{ verdict = 'unknown'; detail = 'noIdentity'; error = "No $Persona account is available in the cache to evaluate this sign-in."; gaps = @(); policies = @() }
                 $WhatIfSkipped = $true
             } else {
-                $Body = New-CIPPCAWhatIfRequest -UserId $Identity.userId -IncludeApplications $Step.whatIf.includeApplications -Conditions ($Step.whatIf | Select-Object -Property * -ExcludeProperty includeApplications)
                 $WhatIfCalls++
-                $Evaluation = @(Invoke-CIPPCAWhatIf -TenantFilter $Tenant -Bodies @($Body))[0]
+                $Evaluation = $Context.WhatIf["$ScenarioId|$StepId"]
                 if ($Evaluation.Error) {
                     $WhatIf = [PSCustomObject]@{ verdict = 'unknown'; detail = 'error'; error = "$($Evaluation.Error)"; gaps = @(); policies = @() }
                     $WhatIfSkipped = $true
