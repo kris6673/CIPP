@@ -419,7 +419,7 @@ export const getCippFormatting = (
   ]
 
   const matchDateTime =
-    /([dD]ate[tT]ime|[Ee]xpiration|[Tt]imestamp|[sS]tart[Dd]ate)/
+    /([dD]ate[tT]ime|[Ee]xpiration|[Tt]imestamp|[sS]tart[Dd]ate|[eE]nd[Dd]ate)/
   if (timeAgoArray.includes(cellName) || matchDateTime.test(cellName)) {
     return isText && canReceive === false ? (
       parseCippDate(data).toLocaleString() // This runs if canReceive is false and isText is true
