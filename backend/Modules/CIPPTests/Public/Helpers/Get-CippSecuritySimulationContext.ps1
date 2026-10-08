@@ -4,8 +4,7 @@ function Get-CippSecuritySimulationContext {
         Everything the Security Simulation tests read for a tenant, fetched once.
     .DESCRIPTION
         Loads the scenarios, picks the account each persona signs in as, evaluates every What If step in one
-        batch and grades each distinct standard once: from the tenant's BaselineAlignment row when a baseline
-        covers it, otherwise live in compare mode. During a suite run Initialize-CippTestSuiteSecuritySimulations
+        batch and grades each standard once against the secure value its scenario defines. During a suite run Initialize-CippTestSuiteSecuritySimulations
         shares one context across all scenario tests; a single test builds one for its own scenario.
     .FUNCTIONALITY
         Internal
@@ -70,61 +69,94 @@ function Get-CippSecuritySimulationContext {
         for ($i = 0; $i -lt $WhatIfKeys.Count; $i++) { $Context.WhatIf[$WhatIfKeys[$i]] = $Evaluations[$i] }
     }
 
-    $Names = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-    foreach ($Reference in @($Scenarios.steps.standards | Where-Object { $_ })) { $null = $Names.Add("$($Reference.name)") }
-    foreach ($Name in $Names) {
+    # Graded live against the scenario's secure value (a list means any entry is secure); tenant-specific settings use the baseline verdict.
+    $References = @($Scenarios.steps.standards | Where-Object { $_ })
+    foreach ($Reference in $References) {
+        $Name = "$($Reference.name)"
+        $Key = '{0}|{1}' -f $Name, (ConvertTo-Json -Compress -Depth 5 -InputObject $Reference.secure)
+        if ($Context.Standards.ContainsKey($Key)) { continue }
         $Stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
         $Definition = Get-CIPPBaselineDefinition -Name $Name | Select-Object -First 1
         $State = [PSCustomObject]@{
             name      = $Name
             label     = "$($Definition.label ?? $Name)"
-            status    = 'Not in a baseline'
+            status    = 'Not configured'
             compliant = $false
             assigned  = $false
             detail    = ''
         }
         $Row = @($AlignmentRows | Where-Object { ("$($_.StandardName)" -split '#')[0] -eq $Name }) |
             Sort-Object -Property { [int64]($_.LastRun ?? 0) } -Descending | Select-Object -First 1
-        if ($Row) {
-            $State.assigned = $true
-            switch -Regex ("$($Row.Status)") {
-                '^Compliant$' { $State.status = 'Compliant'; $State.compliant = $true }
-                '^(Accepted|Partially Accepted)$' { $State.status = 'Accepted deviation'; $State.compliant = $false; $State.detail = "$($Row.DeviationReason)" }
-                '^(Denied|Drift)' { $State.status = 'Drift'; $State.compliant = $false }
-                '^Skipped - No License$' { $State.status = 'License missing'; $State.compliant = $null }
-                default { $State.status = 'No data'; $State.compliant = $null }
-            }
-        } elseif ($Definition.requiredCapabilities -and -not (Test-CIPPStandardLicense -StandardName $Name -TenantFilter $Tenant -RequiredCapabilities @($Definition.requiredCapabilities | ForEach-Object { $_ }) -SkipLog)) {
+        $State.assigned = $null -ne $Row
+        $TenantSpecific = @(($Definition.variables ?? [PSCustomObject]@{}).PSObject.Properties | Where-Object {
+                $_.Value.required -eq $true -and $null -eq ($_.Value.default ?? $_.Value.recommended) -and -not ($Reference.secure -and $Reference.secure.PSObject.Properties[$_.Name])
+            }).Count -gt 0
+
+        if ($Definition.requiredCapabilities -and -not (Test-CIPPStandardLicense -StandardName $Name -TenantFilter $Tenant -RequiredCapabilities @($Definition.requiredCapabilities | ForEach-Object { $_ }) -SkipLog)) {
             $State.status = 'License missing'
             $State.compliant = $null
+        } elseif ($TenantSpecific) {
+            switch -Regex ("$($Row.Status)") {
+                '^Compliant$' { $State.status = 'Compliant'; $State.compliant = $true }
+                '^(Accepted|Partially Accepted)$' { $State.status = 'Accepted deviation'; $State.detail = "$($Row.DeviationReason)" }
+                '^(Denied|Drift)' { $State.status = 'Drift' }
+                '^Skipped - No License$' { $State.status = 'License missing'; $State.compliant = $null }
+                '^$' { $State.status = 'Needs configuration'; $State.detail = 'This standard needs tenant-specific settings, chosen in a baseline, before it can be checked.' }
+                default { $State.status = 'No data'; $State.compliant = $null }
+            }
         } else {
-            try {
-                $Item = @{
-                    TenantFilter     = $Tenant
-                    TenantName       = $Tenant
-                    Standard         = $Name
-                    BaseName         = $Name
-                    Variables        = $null
-                    Tiers            = @()
-                    Stage            = 1
-                    StageName        = ''
-                    TemplateId       = ''
-                    SourceScope      = 'test'
-                    SourceTemplate   = 'Security Simulation'
-                    RemediateEnabled = $false
-                    AlertEnabled     = $false
+            $Candidates = [System.Collections.Generic.List[object]]::new()
+            $Candidates.Add([ordered]@{})
+            foreach ($Setting in @(if ($Reference.secure) { $Reference.secure.PSObject.Properties })) {
+                $Expanded = [System.Collections.Generic.List[object]]::new()
+                foreach ($Candidate in $Candidates) {
+                    foreach ($Value in @($Setting.Value)) {
+                        $Next = [ordered]@{}
+                        foreach ($Existing in $Candidate.Keys) { $Next[$Existing] = $Candidate[$Existing] }
+                        $Next[$Setting.Name] = $Value
+                        $Expanded.Add($Next)
+                    }
                 }
-                $Graded = Invoke-CIPPBaselineStandard -Item $Item -Mode 'compare' -GradeOnly
-                if ($null -eq $Graded) {
-                    $State.status = 'Needs configuration'
-                    $State.detail = 'This standard needs its settings chosen in a baseline before it can be checked.'
-                } elseif ($Graded.Compliant -eq $true) {
-                    $State.status = 'Compliant'
-                    $State.compliant = $true
-                } else {
-                    $State.status = 'Not configured'
-                    $Properties = @($Graded.Diff | ForEach-Object { $_.Property } | Where-Object { $_ } | Select-Object -Unique)
-                    if ($Properties.Count -gt 0) { $State.detail = 'Differs on: {0}' -f ($Properties -join ', ') }
+                $Candidates = $Expanded
+            }
+            try {
+                $FirstDiff = $null
+                foreach ($Candidate in $Candidates) {
+                    $Item = @{
+                        TenantFilter     = $Tenant
+                        TenantName       = $Tenant
+                        Standard         = $Name
+                        BaseName         = $Name
+                        Variables        = $(if ($Candidate.Count -gt 0) { [PSCustomObject]$Candidate } else { $null })
+                        Tiers            = @()
+                        Stage            = 1
+                        StageName        = ''
+                        TemplateId       = ''
+                        SourceScope      = 'test'
+                        SourceTemplate   = 'Security Simulation'
+                        RemediateEnabled = $false
+                        AlertEnabled     = $false
+                    }
+                    $Graded = Invoke-CIPPBaselineStandard -Item $Item -Mode 'compare' -GradeOnly
+                    if ($null -eq $Graded) {
+                        $State.status = 'Needs configuration'
+                        $State.detail = 'This standard needs its settings chosen in a baseline before it can be checked.'
+                        break
+                    }
+                    if ($Graded.Compliant -eq $true) {
+                        $State.status = 'Compliant'
+                        $State.compliant = $true
+                        break
+                    }
+                    $FirstDiff ??= @($Graded.Diff | ForEach-Object { $_.Property } | Where-Object { $_ } | Select-Object -Unique)
+                }
+                if ($State.compliant -eq $false -and $State.status -eq 'Not configured') {
+                    if ("$($Row.Status)" -match '^(Accepted|Partially Accepted)$') {
+                        $State.status = 'Accepted deviation'
+                        $State.detail = "$($Row.DeviationReason)"
+                    } elseif (@($FirstDiff).Count -gt 0) {
+                        $State.detail = 'Differs on: {0}' -f ($FirstDiff -join ', ')
+                    }
                 }
             } catch {
                 $State.status = 'Could not evaluate'
@@ -132,7 +164,7 @@ function Get-CippSecuritySimulationContext {
                 $State.detail = $_.Exception.Message
             }
         }
-        $Context.Standards[$Name] = $State
+        $Context.Standards[$Key] = $State
         $Context.Timings.Add([PSCustomObject]@{ Name = $Name; Seconds = $Stopwatch.Elapsed.TotalSeconds })
     }
     $Context

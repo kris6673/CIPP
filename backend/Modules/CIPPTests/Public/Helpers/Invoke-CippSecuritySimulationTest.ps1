@@ -98,7 +98,7 @@ function Invoke-CippSecuritySimulationTest {
         $Standards = @(foreach ($Reference in @($Step.standards | Where-Object { $_ })) {
                 # Security defaults and per-user MFA cannot run alongside Conditional Access, so CA-licensed tenants skip them.
                 if ($Reference.skipWhenLicensed -and (Test-CIPPStandardLicense -StandardName $TestId -TenantFilter $Tenant -Preset $Reference.skipWhenLicensed -SkipLog)) { continue }
-                $State = $Context.Standards["$($Reference.name)"]
+                $State = $Context.Standards['{0}|{1}' -f $Reference.name, (ConvertTo-Json -Compress -Depth 5 -InputObject $Reference.secure)]
                 [PSCustomObject]@{
                     name      = $State.name
                     label     = $State.label
@@ -238,7 +238,8 @@ function Invoke-CippSecuritySimulationTest {
         if ($Seen.Add("$($Fix.type)|$($Fix.name)")) { $UniqueFixes.Add($Fix) }
     }
     # An alert only fires when the unified audit log is ingesting.
-    $AuditOn = $Context.Standards['AuditLog'].compliant -ne $false
+    $AuditOn = @($Context.Standards.Keys | Where-Object { $_ -like 'AuditLog|*' } | ForEach-Object { $Context.Standards[$_].compliant }) -notcontains $false
+    $DetectionOnly = @($Steps | Where-Object { $_.stopsChainWhen }).Count -eq 0
     $Detected = $AuditOn -and @($Results | Where-Object { $_.reached } | ForEach-Object { $_.alerts } | Where-Object { $_.configured }).Count -gt 0
     $Prevented = $null -ne $PreventedAt
 
@@ -261,16 +262,19 @@ function Invoke-CippSecuritySimulationTest {
             preventedWhenFixed       = $null -ne $PreventedWhenFixedAt
             preventedWhenFixedAtStep = $PreventedWhenFixedAt
             detected                 = [bool]$Detected
+            detectionOnly            = $DetectionOnly
             fixCount                 = $UniqueFixes.Count
             fixes                    = @($UniqueFixes)
         }
         evidence = [PSCustomObject]@{ whatIfCalls = $WhatIfCalls }
     }
 
-    $Status = if (-not $Licensed) { 'Skipped' } elseif ($WhatIfSkipped) { 'Investigate' } elseif ($Prevented) { 'Passed' } else { 'Failed' }
+    # When no control can block the action, alerting on it is the protection there is.
+    $Status = if (-not $Licensed) { 'Skipped' } elseif ($WhatIfSkipped) { 'Investigate' } elseif ($Prevented -or ($DetectionOnly -and $Detected)) { 'Passed' } else { 'Failed' }
     $Headline = if (-not $Licensed) { 'Not evaluated: the tenant is not licensed for the capabilities this scenario needs.' }
     elseif ($WhatIfSkipped) { 'The sign-in step could not be evaluated, so the outcome is unknown.' }
     elseif ($Prevented) { "Prevented. $($Scenario.outcome.prevented)" }
+    elseif ($DetectionOnly -and $Detected) { 'Detected. No control can block this action, and an alert fires when it happens.' }
     elseif ($Detected) { "Not prevented, but an alert would fire. $($Scenario.outcome.notPrevented)" }
     else { "Not prevented and undetected. $($Scenario.outcome.notPrevented)" }
     $FixLine = if ($UniqueFixes.Count -gt 0) { "`n`nCloses the gaps: " + (@($UniqueFixes | ForEach-Object { if ($_.type -eq 'caTemplate') { $_.name } else { $_.label } }) -join '; ') + '.' } else { '' }

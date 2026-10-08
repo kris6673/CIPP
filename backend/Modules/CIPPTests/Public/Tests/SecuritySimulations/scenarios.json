@@ -23,7 +23,8 @@
           "devicePlatform": "windows",
           "deviceInfo": {
             "isCompliant": false
-          }
+          },
+          "includeApplications": ["c44b4083-3bb0-49c1-b47d-974e53cbdf3c"]
         },
         "gaps": [
           {
@@ -46,7 +47,10 @@
         "standards": [
           {
             "name": "ActivityBasedTimeout",
-            "role": "limits"
+            "role": "limits",
+            "secure": {
+              "timeout": ["01:00:00", "03:00:00"]
+            }
           }
         ]
       },
@@ -65,7 +69,10 @@
         "standards": [
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
         ]
       }
@@ -96,19 +103,31 @@
         "standards": [
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           },
           {
             "name": "DefaultSharingLink",
-            "role": "limits"
+            "role": "limits",
+            "secure": {
+              "sharingLinkType": [1, 2]
+            }
           },
           {
             "name": "sharingCapability",
-            "role": "prevents"
+            "role": "prevents",
+            "secure": {
+              "sharingCapability": [0, 1, 3]
+            }
           },
           {
             "name": "SPAnonymousLinkExpiration",
-            "role": "limits"
+            "role": "limits",
+            "secure": {
+              "days": [1, 7, 14, 30]
+            }
           }
         ],
         "stopsChainWhen": "prevented"
@@ -121,7 +140,10 @@
         "standards": [
           {
             "name": "SPAnonymousLinkExpiration",
-            "role": "limits"
+            "role": "limits",
+            "secure": {
+              "days": [1, 7, 14, 30]
+            }
           }
         ]
       }
@@ -151,7 +173,10 @@
         "standards": [
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
         ]
       },
@@ -163,7 +188,10 @@
         "standards": [
           {
             "name": "EnableMailboxAuditing",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "auditDisabled": false
+            }
           }
         ]
       },
@@ -182,11 +210,17 @@
         "standards": [
           {
             "name": "EXODisableAutoForwarding",
-            "role": "prevents"
+            "role": "prevents",
+            "secure": {
+              "autoForwardingMode": ["Off", "Automatic"]
+            }
           },
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
         ],
         "stopsChainWhen": "prevented"
@@ -238,7 +272,10 @@
         "standards": [
           {
             "name": "unmanagedSync",
-            "role": "prevents"
+            "role": "prevents",
+            "secure": {
+              "conditionalAccessPolicy": [1, 2]
+            }
           }
         ]
       },
@@ -254,11 +291,17 @@
           },
           {
             "name": "SPSyncButtonState",
-            "role": "limits"
+            "role": "limits",
+            "secure": {
+              "hideSyncButton": true
+            }
           },
           {
             "name": "unmanagedSync",
-            "role": "prevents"
+            "role": "prevents",
+            "secure": {
+              "conditionalAccessPolicy": [1, 2]
+            }
           }
         ]
       }
@@ -330,11 +373,17 @@
         "standards": [
           {
             "name": "EXODisableAutoForwarding",
-            "role": "prevents"
+            "role": "prevents",
+            "secure": {
+              "autoForwardingMode": ["Off", "Automatic"]
+            }
           },
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
         ]
       }
@@ -366,7 +415,10 @@
         "standards": [
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           },
           {
             "name": "DisableReshare",
@@ -387,7 +439,10 @@
         "standards": [
           {
             "name": "SPExternalUserExpiration",
-            "role": "limits"
+            "role": "limits",
+            "secure": {
+              "days": [30, 60, 90]
+            }
           }
         ]
       }
@@ -437,7 +492,10 @@
         "standards": [
           {
             "name": "DisableGuests",
-            "role": "limits"
+            "role": "limits",
+            "secure": {
+              "days": [30, 60, 90]
+            }
           }
         ]
       },
@@ -449,7 +507,13 @@
         "standards": [
           {
             "name": "DisableGuestDirectory",
-            "role": "limits"
+            "role": "limits",
+            "secure": {
+              "guestUserRoleId": [
+                "2af84b1e-32c8-42b7-82bc-daa82404023b",
+                "10dae51f-b6af-4016-8d66-8c2a99b929b3"
+              ]
+            }
           }
         ]
       },
@@ -468,7 +532,10 @@
         "standards": [
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
         ]
       }
@@ -530,7 +597,10 @@
         "standards": [
           {
             "name": "EnableMailboxAuditing",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "auditDisabled": false
+            }
           }
         ]
       },
@@ -549,7 +619,10 @@
         "standards": [
           {
             "name": "EXODisableAutoForwarding",
-            "role": "prevents"
+            "role": "prevents",
+            "secure": {
+              "autoForwardingMode": ["Off", "Automatic"]
+            }
           }
         ]
       }
@@ -587,15 +660,24 @@
         "standards": [
           {
             "name": "EnableMailboxAuditing",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "auditDisabled": false
+            }
           },
           {
             "name": "EXODisableAutoForwarding",
-            "role": "prevents"
+            "role": "prevents",
+            "secure": {
+              "autoForwardingMode": ["Off", "Automatic"]
+            }
           },
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
         ],
         "stopsChainWhen": "prevented"
@@ -615,7 +697,10 @@
         "standards": [
           {
             "name": "EXODisableAutoForwarding",
-            "role": "prevents"
+            "role": "prevents",
+            "secure": {
+              "autoForwardingMode": ["Off", "Automatic"]
+            }
           }
         ]
       }
@@ -660,7 +745,10 @@
           },
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
         ],
         "stopsChainWhen": "prevented"
@@ -673,7 +761,10 @@
         "standards": [
           {
             "name": "EnableMailboxAuditing",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "auditDisabled": false
+            }
           }
         ]
       }
@@ -706,7 +797,8 @@
           "clientAppType": "browser",
           "devicePlatform": "windows",
           "country": "NL",
-          "ipAddress": "185.220.101.60"
+          "ipAddress": "185.220.101.60",
+          "includeApplications": ["00000006-0000-0ff1-ce00-000000000000"]
         },
         "gaps": [
           {
@@ -747,7 +839,10 @@
         "standards": [
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
         ]
       },
@@ -759,7 +854,12 @@
         "standards": [
           {
             "name": "DeletedUserRentention",
-            "role": "recovers"
+            "role": "recovers",
+            "secure": {
+              "days": [
+                30, 90, 365, 730, 1095, 1460, 1825, 2190, 2555, 2920, 3285, 3650
+              ]
+            }
           }
         ]
       }
@@ -803,7 +903,10 @@
           },
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
         ]
       },
@@ -822,7 +925,10 @@
         "standards": [
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
         ]
       },
@@ -838,7 +944,11 @@
           },
           {
             "name": "AuthMethodsSettings",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "reportSuspiciousActivity": "enabled",
+              "systemCredential": "enabled"
+            }
           }
         ],
         "stopsChainWhen": "prevented",
@@ -920,7 +1030,10 @@
           },
           {
             "name": "SmartLockout",
-            "role": "limits"
+            "role": "limits",
+            "secure": {
+              "LockoutThreshold": [5, 10]
+            }
           }
         ]
       },
@@ -932,7 +1045,10 @@
         "standards": [
           {
             "name": "EnableMailboxAuditing",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "auditDisabled": false
+            }
           }
         ]
       },
@@ -951,7 +1067,10 @@
         "standards": [
           {
             "name": "EXODisableAutoForwarding",
-            "role": "prevents"
+            "role": "prevents",
+            "secure": {
+              "autoForwardingMode": ["Off", "Automatic"]
+            }
           }
         ]
       }
@@ -985,7 +1104,8 @@
           "devicePlatform": "windows",
           "signInRiskLevel": "medium",
           "country": "NL",
-          "ipAddress": "185.220.101.33"
+          "ipAddress": "185.220.101.33",
+          "includeApplications": ["c44b4083-3bb0-49c1-b47d-974e53cbdf3c"]
         },
         "gaps": [
           {
@@ -1027,7 +1147,10 @@
         "standards": [
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
         ]
       },
@@ -1114,11 +1237,17 @@
         "standards": [
           {
             "name": "EnableMailboxAuditing",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "auditDisabled": false
+            }
           },
           {
             "name": "ActivityBasedTimeout",
-            "role": "limits"
+            "role": "limits",
+            "secure": {
+              "timeout": ["01:00:00", "03:00:00"]
+            }
           }
         ]
       },
@@ -1137,11 +1266,17 @@
         "standards": [
           {
             "name": "EXODisableAutoForwarding",
-            "role": "prevents"
+            "role": "prevents",
+            "secure": {
+              "autoForwardingMode": ["Off", "Automatic"]
+            }
           },
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
         ]
       }
@@ -1229,11 +1364,17 @@
         "standards": [
           {
             "name": "EnableMailboxAuditing",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "auditDisabled": false
+            }
           },
           {
             "name": "ActivityBasedTimeout",
-            "role": "limits"
+            "role": "limits",
+            "secure": {
+              "timeout": ["01:00:00", "03:00:00"]
+            }
           }
         ]
       },
@@ -1257,15 +1398,24 @@
         "standards": [
           {
             "name": "EnableMailboxAuditing",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "auditDisabled": false
+            }
           },
           {
             "name": "EXODisableAutoForwarding",
-            "role": "prevents"
+            "role": "prevents",
+            "secure": {
+              "autoForwardingMode": ["Off", "Automatic"]
+            }
           },
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
         ]
       }
@@ -1302,7 +1452,10 @@
         "standards": [
           {
             "name": "AuditLog",
-            "role": "detects"
+            "role": "detects",
+            "secure": {
+              "enabled": true
+            }
           }
         ]
       },
