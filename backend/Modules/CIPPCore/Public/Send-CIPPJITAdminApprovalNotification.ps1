@@ -51,6 +51,8 @@ function Send-CIPPJITAdminApprovalNotification {
         if ($Config.webhook) { $null = Send-CIPPAlert -Type 'webhook' -Title $Title -JSONContent ([pscustomobject]$Details) -TenantFilter $Tenant -APIName 'JITAdminApproval' }
         if ($Config.sendtoIntegration) { $null = Send-CIPPAlert -Type 'psa' -Title $Title -HTMLContent $Html -TenantFilter $Tenant -APIName 'JITAdminApproval' }
 
+        # Push is CIPP-NG only: approvers come from allowedUsers, which only CIPP-NG populates
+        if ($env:CIPPNG -ne 'true') { return }
         $PushTargets = if ($Status -eq 'Requested') {
             $ApproverRoles = @($ApprovalRequest.ApproverRoles | ConvertFrom-Json)
             $UsersTable = Get-CIPPTable -TableName 'allowedUsers'
