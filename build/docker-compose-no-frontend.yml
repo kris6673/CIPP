@@ -111,6 +111,7 @@ services:
       - ./.devmodules/CIPPBaselines:/app/API/Modules/CIPPBaselines:ro
       - ./.devmodules/CIPPActivityTriggers:/app/API/Modules/CIPPActivityTriggers:ro
       - ./.devmodules/CippExtensions:/app/API/Modules/CippExtensions:ro
+      - ./.devmodules/CIPPPwPush:/app/API/Modules/CIPPPwPush:ro
       - ./.devmodules/CIPPTests:/app/API/Modules/CIPPTests:rw
     develop:
       watch:
@@ -131,6 +132,7 @@ services:
             - CIPPTests/
             - CIPPActivityTriggers/
             - CippExtensions/
+            - CIPPPwPush/
         - action: restart
           path: ../backend/Shared
           target: /app/API/Shared

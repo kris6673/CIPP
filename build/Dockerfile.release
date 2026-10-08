@@ -55,6 +55,10 @@ FROM ps-base AS build-cippextensions
 COPY backend/Modules/CippExtensions /src/CippExtensions
 RUN pwsh -File /build/build-single-module.ps1 -Module CippExtensions
 
+FROM ps-base AS build-cipppwpush
+COPY backend/Modules/CIPPPwPush /src/CIPPPwPush
+RUN pwsh -File /build/build-single-module.ps1 -Module CIPPPwPush
+
 FROM ps-base AS build-cipptests
 COPY backend/Modules/CIPPTests /src/CIPPTests
 RUN pwsh -File /build/build-single-module.ps1 -Module CIPPTests -KeepPublic
@@ -193,7 +197,6 @@ ENV BUILD_DATE=$BUILD_DATE
 COPY backend/Modules/AzBobbyTables  /app/API/Modules/AzBobbyTables/
 COPY backend/Modules/DNSHealth      /app/API/Modules/DNSHealth/
 COPY backend/Modules/HuduAPI        /app/API/Modules/HuduAPI/
-COPY backend/Modules/PassPushPosh   /app/API/Modules/PassPushPosh/
 
 # Backend support directories
 # --chown: the app user owns Config/ so CRAFT can write Config/function-permissions.json
@@ -212,6 +215,7 @@ COPY backend/ExecMaintenanceScripts /app/API/ExecMaintenanceScripts/
 COPY docs                           /app/API/Docs/
 
 # Compiled modules — ordered by change frequency (least → most)
+COPY --from=build-cipppwpush           /src/CIPPPwPush/           /app/API/Modules/CIPPPwPush/
 COPY --from=build-cippextensions       /src/CippExtensions/       /app/API/Modules/CippExtensions/
 COPY --from=build-cippactivitytriggers /src/CIPPActivityTriggers/ /app/API/Modules/CIPPActivityTriggers/
 COPY --from=build-cippdb               /src/CIPPDB/               /app/API/Modules/CIPPDB/
