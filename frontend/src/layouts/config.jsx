@@ -73,23 +73,6 @@ export const nativeMenuItems = [
             permissions: ['Identity.Role.*'],
           },
           {
-            title: 'JIT Admin Requests',
-            path: '/identity/administration/jit-admin/requests',
-            permissions: ['Identity.Role.*'],
-          },
-          {
-            title: 'JIT Admin Templates',
-            path: '/identity/administration/jit-admin-templates',
-            permissions: ['Identity.Role.*'],
-            scope: 'global',
-          },
-          {
-            title: 'JIT Role Templates',
-            path: '/identity/administration/jit-role-templates',
-            permissions: ['Identity.Role.*'],
-            scope: 'global',
-          },
-          {
             title: 'Vacation Mode',
             path: '/identity/administration/vacation-mode',
             permissions: ['Identity.User.*'],

@@ -1,4 +1,6 @@
 import { Layout as DashboardLayout } from '../../../../layouts/index'
+import { TabbedLayout } from '../../../../layouts/TabbedLayout'
+import tabOptions from './tabOptions.json'
 import { CippIcons } from '../../../../utils/icon-registry'
 import CippTablePage from '../../../../components/CippComponents/CippTablePage'
 
@@ -97,7 +99,9 @@ const Page = () => {
 }
 
 Page.getLayout = (page) => (
-  <DashboardLayout allTenantsSupport={true}>{page}</DashboardLayout>
+  <DashboardLayout allTenantsSupport={true}>
+    <TabbedLayout tabOptions={tabOptions}>{page}</TabbedLayout>
+  </DashboardLayout>
 )
 
 export default Page
