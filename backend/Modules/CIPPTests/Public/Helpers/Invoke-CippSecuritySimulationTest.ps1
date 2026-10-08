@@ -42,18 +42,20 @@ function Invoke-CippSecuritySimulationTest {
                 $Excluded = $(try { $Row.excludedTenants | ConvertFrom-Json -ErrorAction Stop } catch { $null })
                 if ($Excluded -and (@(Expand-CIPPTenantGroups -TenantFilter $Excluded).value -contains $Tenant)) { continue }
                 $Operations = [System.Collections.Generic.List[string]]::new()
+                $Properties = [System.Collections.Generic.List[string]]::new()
                 foreach ($Condition in @($(try { $Row.Conditions | ConvertFrom-Json -ErrorAction Stop } catch { @() }) | Where-Object { $_ })) {
+                    $Properties.Add("$($Condition.Property.label)")
                     if ("$($Condition.Property.label)" -ne 'Operation' -and "$($Condition.Property.value)" -ne 'List:Operation') { continue }
                     $Operator = "$($Condition.Operator.value)".ToLower()
                     if ($Operator -notin @('eq', 'in', 'like', 'contains', 'match')) { continue }
-                    foreach ($Input in @($(if ($Condition.Input -is [array]) { $Condition.Input } else { @($Condition.Input) }))) {
-                        $Value = "$($Input.value ?? $Input)"
+                    foreach ($ConditionInput in @($(if ($Condition.Input -is [array]) { $Condition.Input } else { @($Condition.Input) }))) {
+                        $Value = "$($ConditionInput.value ?? $ConditionInput)"
                         if (-not $Value) { continue }
                         if ($Operator -eq 'contains') { $Value = "*$Value*" }
                         if (-not $Operations.Contains($Value)) { $Operations.Add($Value) }
                     }
                 }
-                $Rules.Add([PSCustomObject]@{ Logbook = "$($Row.type)"; Comment = "$($Row.AlertComment)"; Operations = @($Operations) })
+                $Rules.Add([PSCustomObject]@{ Logbook = "$($Row.type)"; Comment = "$($Row.AlertComment)"; Operations = @($Operations); Properties = @($Properties) })
             }
             $Context.Rules = $Rules
         }
@@ -62,6 +64,8 @@ function Invoke-CippSecuritySimulationTest {
         $Matched = @($Context.Rules | Where-Object {
                 $Rule = $_
                 if ($Logbook -and $Rule.Logbook -and $Rule.Logbook -ne $Logbook) { return $false }
+                # A preset that narrows a broad operation (UserLoggedIn, Update user.) only counts when that condition is there too.
+                if ($Alert.property -and @($Rule.Properties) -notcontains "$($Alert.property)") { return $false }
                 @($Rule.Operations | Where-Object { $Operation -eq $_ -or $Operation -like $_ }).Count -gt 0
             })
         [PSCustomObject]@{
@@ -92,6 +96,8 @@ function Invoke-CippSecuritySimulationTest {
         $Index++
         $StepId = "$($Step.id)"
         $Standards = @(foreach ($Reference in @($Step.standards | Where-Object { $_ })) {
+                # Security defaults and per-user MFA cannot run alongside Conditional Access, so CA-licensed tenants skip them.
+                if ($Reference.skipWhenLicensed -and (Test-CIPPStandardLicense -StandardName $TestId -TenantFilter $Tenant -Preset $Reference.skipWhenLicensed -SkipLog)) { continue }
                 $State = $Context.Standards["$($Reference.name)"]
                 [PSCustomObject]@{
                     name      = $State.name
@@ -217,9 +223,13 @@ function Invoke-CippSecuritySimulationTest {
                 fixes            = @($Fixes)
             })
 
+        # 'prevented' stops the chain when every gradable 'prevents' standard on the step is compliant.
         $StopsWhen = "$($Step.stopsChainWhen)".ToLower()
-        if ($StopsWhen -and $Reached -and $StepVerdict -eq $StopsWhen) { $Reached = $false; $PreventedAt = $StepId }
-        if ($StopsWhen -and $ReachedWhenFixed -and $VerdictWhenFixed -eq $StopsWhen) { $ReachedWhenFixed = $false; $PreventedWhenFixedAt = $StepId }
+        $Preventing = @($Standards | Where-Object { $_.role -eq 'prevents' -and $null -ne $_.compliant })
+        $Stops = if ($StopsWhen -eq 'prevented') { $Preventing.Count -gt 0 -and @($Preventing | Where-Object { -not $_.compliant }).Count -eq 0 } else { $StepVerdict -eq $StopsWhen }
+        $StopsWhenFixed = if ($StopsWhen -eq 'prevented') { $Preventing.Count -gt 0 } else { $VerdictWhenFixed -eq $StopsWhen }
+        if ($StopsWhen -and $Reached -and $Stops) { $Reached = $false; $PreventedAt = $StepId }
+        if ($StopsWhen -and $ReachedWhenFixed -and $StopsWhenFixed) { $ReachedWhenFixed = $false; $PreventedWhenFixedAt = $StepId }
     }
 
     $UniqueFixes = [System.Collections.Generic.List[object]]::new()
@@ -227,7 +237,9 @@ function Invoke-CippSecuritySimulationTest {
     foreach ($Fix in @($Results | ForEach-Object { $_.fixes })) {
         if ($Seen.Add("$($Fix.type)|$($Fix.name)")) { $UniqueFixes.Add($Fix) }
     }
-    $Detected = @($Results | Where-Object { $_.reached } | ForEach-Object { $_.alerts } | Where-Object { $_.configured }).Count -gt 0
+    # An alert only fires when the unified audit log is ingesting.
+    $AuditOn = $Context.Standards['AuditLog'].compliant -ne $false
+    $Detected = $AuditOn -and @($Results | Where-Object { $_.reached } | ForEach-Object { $_.alerts } | Where-Object { $_.configured }).Count -gt 0
     $Prevented = $null -ne $PreventedAt
 
     $Data = [PSCustomObject]@{
