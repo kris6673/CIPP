@@ -1,6 +1,6 @@
 # Add JIT Admin Template
 
-This page creates a JIT Admin template, which stores the settings for a just-in-time admin grant so the same elevation can be requested repeatedly without rebuilding it. Templates are selected on the [add.md](../jit-admin/add.md "mention") page, and everything a template fills in can still be changed before the grant is submitted.
+This page creates a JIT Admin template, which stores the settings for a just-in-time admin grant so the same elevation can be requested repeatedly without rebuilding it. Templates are selected on the [add.md](../add.md "mention") page, and everything a template fills in can still be changed before the grant is submitted.
 
 {% hint style="info" %}
 The template is created for the tenant selected in the top menu; there is no tenant field on the form. Select All Tenants to create a template available everywhere. Changing the tenant in the top menu while the form is open clears the default user, groups, domain and Conditional Access policies, since they belong to the previous tenant.
@@ -19,8 +19,8 @@ The template is created for the tenant selected in the top menu; there is no ten
 
 | Field                        | Description                                                                                                                         |
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Apply JIT Role Template      | Picks one or more [JIT Role Templates](../jit-role-templates/README.md "mention") and adds their roles into Default Roles below. Selections are additive to whatever Default Roles already holds, and everything stays editable afterwards. |
-| Default Roles                | The Entra ID directory roles the template assigns. If your CIPP role has a [JIT Role Template](../jit-role-templates/README.md "mention") assigned, only the roles it allows are offered here. |
+| Apply JIT Role Template      | Picks one or more [JIT Role Templates](../role-templates/README.md "mention") and adds their roles into Default Roles below. Selections are additive to whatever Default Roles already holds, and everything stays editable afterwards. |
+| Default Roles                | The Entra ID directory roles the template assigns. If your CIPP role has a [JIT Role Template](../role-templates/README.md "mention") assigned, only the roles it allows are offered here. |
 | Default Groups               | The groups the account is added to. Not available on an All Tenants template, since group identifiers do not carry between tenants. |
 | Default Duration             | How long the elevation lasts, which sets the end date on the JIT admin form. Optional.                                              |
 | Default Expiration Action    | What happens to the account when the elevation ends. Required.                                                                      |
@@ -44,7 +44,7 @@ The expiration action offers **Delete User** and **Disable User** whatever the s
 | Default Usage Location                | The country the account is licensed in. Shown for a new user, and optional.                                                              |
 | Default User                          | The account the elevation is granted to. Shown when the template targets an existing user, and not available on an All Tenants template. |
 
-When the template targets an existing user, it can also pre-set the Vacation Mode section of the JIT Admin form, which excludes the user from the chosen Conditional Access policies, location-based audit log alerts, or both, for the length of the grant plus a one-hour buffer. None of these are available on an All Tenants template. See [add.md](../jit-admin/add.md "mention") for what each exclusion does.
+When the template targets an existing user, it can also pre-set the Vacation Mode section of the JIT Admin form, which excludes the user from the chosen Conditional Access policies, location-based audit log alerts, or both, for the length of the grant plus a one-hour buffer. None of these are available on an All Tenants template. See [add.md](../add.md "mention") for what each exclusion does.
 
 | Field                                        | Description                                                                                                  |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
@@ -62,4 +62,4 @@ Default First Name, Default Last Name, Default Username and Reason Template acce
 An All Tenants template can only create a new user. The Existing User option is greyed out, because a specific account exists in one tenant and means nothing in the others. Domain and group selection are withdrawn for the same reason, so an All Tenants template covers the roles, timing and expiry behaviour while the tenant-specific details are supplied when the grant is made.
 {% endhint %}
 
-{% include "../../../../../.gitbook/includes/feature-request.md" %}
+{% include "../../../../../../.gitbook/includes/feature-request.md" %}
