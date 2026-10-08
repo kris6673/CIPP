@@ -3,8 +3,10 @@ import { TabbedLayout } from '../../../../layouts/TabbedLayout'
 import tabOptions from './tabOptions.json'
 import { CippIcons } from '../../../../utils/icon-registry'
 import CippTablePage from '../../../../components/CippComponents/CippTablePage'
+import { useSettings } from '../../../../hooks/use-settings'
 
 const Page = () => {
+  const tenantFilter = useSettings()?.currentTenant
   const actions = [
     {
       label: 'Approve',
@@ -58,7 +60,7 @@ const Page = () => {
     <CippTablePage
       title="JIT Admin Requests"
       apiUrl="/api/ListJITAdminRequests"
-      queryKey="ListJITAdminRequests"
+      queryKey={`ListJITAdminRequests-${tenantFilter}`}
       simpleColumns={[
         'State',
         'Tenant',
