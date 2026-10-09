@@ -94,7 +94,7 @@ Describe 'Invoke-ExecSetSharePointMember' {
         $Response.Body.Results[1] | Should -Be 'Successfully added good@contoso.com as a visitor of https://contoso.sharepoint.com/sites/hr.'
     }
 
-    It 'returns BadRequest when every user fails' {
+    It 'returns InternalServerError when every user fails' {
         Mock -CommandName New-GraphPostRequest -MockWith { throw 'User not found' } -ParameterFilter { $uri -like '*/ensureuser' }
         $Request = New-TestRequest @{
             tenantFilter = 'contoso.onmicrosoft.com'; Add = $true; Role = 'Members'; SharePointType = 'Sts'
@@ -104,7 +104,7 @@ Describe 'Invoke-ExecSetSharePointMember' {
 
         $Response = Invoke-ExecSetSharePointMember -Request $Request -TriggerMetadata $null
 
-        $Response.StatusCode | Should -Be ([int][System.Net.HttpStatusCode]::BadRequest)
+        $Response.StatusCode | Should -Be ([int][System.Net.HttpStatusCode]::InternalServerError)
         $Response.Body.Results | Should -BeLike '*Failed to add x@contoso.com*Failed to add y@contoso.com*'
     }
 

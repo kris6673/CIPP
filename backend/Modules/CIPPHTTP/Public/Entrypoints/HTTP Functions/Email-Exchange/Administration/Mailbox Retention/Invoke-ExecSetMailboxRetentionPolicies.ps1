@@ -10,6 +10,7 @@ Function Invoke-ExecSetMailboxRetentionPolicies {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Results = [System.Collections.Generic.List[string]]::new()
+    $Succeeded = 0
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.body.tenantFilter
     $CmdletArray = [System.Collections.ArrayList]::new()
     $CmdletMetadataArray = [System.Collections.ArrayList]::new()
@@ -101,6 +102,7 @@ Function Invoke-ExecSetMailboxRetentionPolicies {
                                     Write-LogMessage -headers $Request.Headers -API $APINAME -message $Message -Sev 'Error' -tenant $TenantFilter
                                     $Results.Add($Message)
                                 } else {
+                                    $Succeeded++
                                     $Message = "Successfully applied retention policy '$PolicyName' to $($metadata.MailboxIdentity)"
                                     Write-LogMessage -headers $Request.Headers -API $APINAME -message $Message -Sev 'Info' -tenant $TenantFilter
                                     $Results.Add($Message)
@@ -116,6 +118,7 @@ Function Invoke-ExecSetMailboxRetentionPolicies {
 
                 try {
                     $null = New-ExoRequest -tenantid $TenantFilter -cmdlet $CmdletObj.CmdletInput.CmdletName -cmdParams $CmdletObj.CmdletInput.Parameters
+                    $Succeeded++
                     $Message = "Successfully applied retention policy '$PolicyName' to $($CmdletMetadata.MailboxIdentity)"
                     Write-LogMessage -headers $Request.Headers -API $APINAME -message $Message -Sev 'Info' -tenant $TenantFilter
                     $Results.Add($Message)
@@ -128,7 +131,7 @@ Function Invoke-ExecSetMailboxRetentionPolicies {
             }
         }
 
-        $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = Get-CippBulkStatusCode -Total $Results.Count -Failed ($Results.Count - $Succeeded)
 
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
