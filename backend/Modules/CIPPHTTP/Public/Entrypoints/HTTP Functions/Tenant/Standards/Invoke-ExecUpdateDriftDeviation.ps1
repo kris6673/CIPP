@@ -330,7 +330,7 @@ function Invoke-ExecUpdateDriftDeviation {
     } catch {
         Write-LogMessage -Headers $Request.Headers -API $APINAME -message "Failed to update drift deviation: $($_.Exception.Message)" -Sev 'Error'
         return ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::BadRequest
+                StatusCode = [HttpStatusCode]::InternalServerError
                 Body       = @{error = $_.Exception.Message }
             })
     }

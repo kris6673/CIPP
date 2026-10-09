@@ -135,7 +135,7 @@ Function Invoke-ExecSetMailboxRetentionPolicies {
         $Message = "Failed to set mailbox retention policies: $ErrorMessage"
         Write-LogMessage -headers $Request.Headers -API $APINAME -message $Message -Sev 'Error' -tenant $TenantFilter
         $Results.Add($Message)
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

@@ -59,7 +59,7 @@ function Invoke-ExecAddMultiTenantApp {
             $ErrorMessage = Get-CippException -Exception $_
             $Results = "Function Error: $($ErrorMessage.NormalizedError)"
             Write-LogMessage -headers $Headers -API $APIName -message $Results -Sev 'Error' -LogData $ErrorMessage
-            $StatusCode = [HttpStatusCode]::BadRequest
+            $StatusCode = [HttpStatusCode]::InternalServerError
         }
     } elseif ($Request.Body.configMode -eq 'template') {
         Write-Information 'Application Approval - Template Mode'

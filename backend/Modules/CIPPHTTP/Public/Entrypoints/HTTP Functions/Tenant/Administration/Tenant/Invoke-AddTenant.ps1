@@ -57,7 +57,7 @@ function Invoke-AddTenant {
                             resultText = "Failed to retrieve organization profile: $($_.Exception.Message)"
                         })
                 }
-                $StatusCode = [HttpStatusCode]::BadRequest
+                $StatusCode = [HttpStatusCode]::InternalServerError
             }
         }
         'AddTenant' {
@@ -169,7 +169,7 @@ function Invoke-AddTenant {
                                 resultText = $Result
                             })
                     }
-                    $StatusCode = [HttpStatusCode]::BadRequest
+                    $StatusCode = [HttpStatusCode]::InternalServerError
                 }
             }
         }

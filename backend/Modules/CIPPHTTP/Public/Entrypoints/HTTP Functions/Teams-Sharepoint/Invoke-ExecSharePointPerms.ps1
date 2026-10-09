@@ -45,7 +45,7 @@ Function Invoke-ExecSharePointPerms {
     } catch {
         $ErrorMessage = $_.Exception.Message
         $Result = "Failed. Error: $ErrorMessage"
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

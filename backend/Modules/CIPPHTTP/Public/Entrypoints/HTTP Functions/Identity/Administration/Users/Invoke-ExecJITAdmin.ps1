@@ -169,7 +169,7 @@ function Invoke-ExecJITAdmin {
             $CreateResult = Set-CIPPUserJITAdmin @JITAdmin
         } catch {
             return ([HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::BadRequest
+                    StatusCode = [HttpStatusCode]::InternalServerError
                     Body       = @{'Results' = @("Failed to create JIT Admin user: $($_.Exception.Message)") }
                 })
         }

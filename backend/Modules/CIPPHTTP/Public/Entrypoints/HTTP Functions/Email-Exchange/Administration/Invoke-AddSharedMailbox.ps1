@@ -67,7 +67,7 @@ function Invoke-AddSharedMailbox {
         $Message = "Failed to create shared mailbox. $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $Tenant -message $Message -Sev 'Error' -LogData $ErrorMessage
         $Results.Add($Message)
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
 

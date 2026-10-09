@@ -282,7 +282,7 @@ function Invoke-ExecContainerManagement {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API $APIName -headers $Headers -message "Failed to list channels: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
                 return [HttpResponseContext]@{
-                    StatusCode = [HttpStatusCode]::BadRequest
+                    StatusCode = [HttpStatusCode]::InternalServerError
                     Body       = @{ Results = "Failed: $($ErrorMessage.NormalizedError)" }
                 }
             }

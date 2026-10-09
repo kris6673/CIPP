@@ -237,7 +237,7 @@ Function Invoke-ExecManageRetentionPolicies {
         $Message = "Failed to manage retention policies: $ErrorMessage"
         Write-LogMessage -headers $Request.Headers -API $APINAME -message $Message -Sev 'Error' -tenant $TenantFilter
         $Results.Add($Message)
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $GraphRequest = @($Results)
     }
 

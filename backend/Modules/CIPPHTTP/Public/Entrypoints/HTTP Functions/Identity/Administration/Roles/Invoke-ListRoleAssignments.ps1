@@ -66,7 +66,7 @@ function Invoke-ListRoleAssignments {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to list role assignments: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         $Results = "Failed to list role assignments for $TenantFilter. $($ErrorMessage.NormalizedError)"
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return [HttpResponseContext]@{
