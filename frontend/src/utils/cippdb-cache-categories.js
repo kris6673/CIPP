@@ -16,7 +16,6 @@ const CACHE_TYPE_COLLECTIONS = {
     "AuthorizationPolicy",
     "AuthenticationMethodsPolicy",
     "SecurityDefaults",
-    "DeviceSettings",
     "DirectoryRecommendations",
     "CrossTenantAccessPolicy",
     "DefaultAppManagementPolicy",

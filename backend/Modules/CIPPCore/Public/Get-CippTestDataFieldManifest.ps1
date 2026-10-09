@@ -92,7 +92,6 @@ function Get-CippTestDataFieldManifest {
             'CsTenantFederationConfiguration'    = @('AllowFederatedUsers', 'AllowedDomains', 'AllowTeamsConsumer', 'AllowTeamsConsumerInbound')
             'DefaultAppManagementPolicy'         = @('isEnabled', 'applicationRestrictions', 'servicePrincipalRestrictions')
             'DeviceRegistrationPolicy'           = @('azureADJoin', 'userDeviceQuota', 'localAdminPassword', 'multiFactorAuthConfiguration')
-            'DeviceSettings'                     = @('secureByDefault')
             'DirectoryRecommendations'           = @('status', 'priority', 'displayName', 'impactType', 'lastModifiedDateTime', 'insights', 'recommendationType', 'applicationDisplayName', 'applicationId')
             'DlpCompliancePolicies'              = @('Name', 'DisplayName', 'Mode', 'Enabled', 'TeamsLocation', 'TeamsLocationException', 'Workload', 'EnforcementPlanes')
             'Domains'                            = @('id', 'passwordValidityPeriodInDays', 'authenticationType')
