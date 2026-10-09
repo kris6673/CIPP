@@ -697,6 +697,19 @@ function ConditionsSection({ formControl, disabled }) {
         />
       </Grid>
 
+      {/* Auth flows */}
+      <Grid size={{ xs: 12, md: 4 }}>
+        <CippFormComponent
+          type="autoComplete"
+          name="conditions.authenticationFlows.transferMethods"
+          label="Authentication Flow Transfer Methods"
+          formControl={formControl}
+          multiple={false}
+          disabled={disabled}
+          options={authFlowOpts}
+        />
+      </Grid>
+
       {/* Risk levels */}
       <Grid size={{ xs: 12 }}>
         <Divider sx={{ my: 1 }}>
@@ -756,19 +769,6 @@ function ConditionsSection({ formControl, disabled }) {
           multiple={false}
           disabled={disabled}
           options={insiderRiskOpts}
-        />
-      </Grid>
-
-      {/* Auth flows */}
-      <Grid size={{ xs: 12, md: 4 }}>
-        <CippFormComponent
-          type="autoComplete"
-          name="conditions.authenticationFlows.transferMethods"
-          label="Authentication Flow Transfer Methods"
-          formControl={formControl}
-          multiple={false}
-          disabled={disabled}
-          options={authFlowOpts}
         />
       </Grid>
 
