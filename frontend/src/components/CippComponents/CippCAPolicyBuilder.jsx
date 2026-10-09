@@ -569,7 +569,10 @@ function ConditionsSection({ formControl, disabled }) {
     [condSchema]
   );
   const authFlowOpts = useMemo(
-    () => enumToOptions(authFlowSchema?.properties?.transferMethods),
+    () =>
+      enumToOptions(authFlowSchema?.properties?.transferMethods).filter(
+        (o) => o.value !== "none"
+      ),
     [authFlowSchema]
   );
 
@@ -704,7 +707,8 @@ function ConditionsSection({ formControl, disabled }) {
           name="conditions.authenticationFlows.transferMethods"
           label="Authentication Flow Transfer Methods"
           formControl={formControl}
-          multiple={false}
+          multiple
+          creatable={false}
           disabled={disabled}
           options={authFlowOpts}
         />
@@ -1500,9 +1504,12 @@ const CippCAPolicyBuilder = ({
             return;
           }
 
-          // Special handling for guestOrExternalUserTypes — Graph stores as comma-separated
-          // string but our form uses a multi-select array
-          if (key === "guestOrExternalUserTypes" && typeof value === "string") {
+          // Special handling for guestOrExternalUserTypes / transferMethods — Graph stores as
+          // comma-separated string but our form uses a multi-select array
+          if (
+            (key === "guestOrExternalUserTypes" || key === "transferMethods") &&
+            typeof value === "string"
+          ) {
             const types = value.split(",").filter((t) => t.trim() !== "" && t !== "none");
             if (types.length > 0) {
               formControl.setValue(path, types);
@@ -1758,6 +1765,11 @@ export function extractCAPolicyJSON(formValues) {
     }
     return guestObj;
   };
+
+  const authFlows = cleaned.conditions?.authenticationFlows;
+  if (Array.isArray(authFlows?.transferMethods)) {
+    authFlows.transferMethods = authFlows.transferMethods.join(",");
+  }
 
   if (cleaned.conditions?.users?.excludeGuestsOrExternalUsers) {
     cleaned.conditions.users.excludeGuestsOrExternalUsers = fixGuestExternalUsers(
