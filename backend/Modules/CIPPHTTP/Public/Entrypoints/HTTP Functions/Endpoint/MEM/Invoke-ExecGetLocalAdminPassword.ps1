@@ -18,9 +18,8 @@ Function Invoke-ExecGetLocalAdminPassword {
         $StatusCode = [HttpStatusCode]::OK
 
     } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $Body = [pscustomobject]@{'Results' = "Failed. $ErrorMessage" }
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $Body = [pscustomobject]@{'Results' = $_.Exception.Message }
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
 
     }
 

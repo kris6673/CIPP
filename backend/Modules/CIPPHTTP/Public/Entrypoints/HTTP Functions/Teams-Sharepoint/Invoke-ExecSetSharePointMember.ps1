@@ -42,11 +42,11 @@ function Invoke-ExecSetSharePointMember {
     }
 
     try {
-        $Results = Set-CIPPSharePointSiteMember @MemberParams
-        $StatusCode = [HttpStatusCode]::OK
+        $Results = @(Set-CIPPSharePointSiteMember @MemberParams)
+        $StatusCode = Get-CippBulkStatusCode -Total $Results.Count -Failed $Results.Where({ $_.state -eq 'error' }).Count
     } catch {
         $Results = $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

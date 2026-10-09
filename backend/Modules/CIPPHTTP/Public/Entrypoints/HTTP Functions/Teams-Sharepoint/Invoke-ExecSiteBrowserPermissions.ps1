@@ -334,8 +334,12 @@ function Invoke-ExecSiteBrowserPermissions {
             throw 'No users selected.'
         }
 
-        $Results = Set-CIPPSharePointPerms -tenantFilter $TenantFilter -OnedriveAccessUser $UPNs -URL $SiteUrl -Headers $Headers -APIName $APIName -RemovePermission:(-not $Add)
-        return (@($Results) -join ' ')
+        $Results = @(Set-CIPPSharePointPerms -tenantFilter $TenantFilter -OnedriveAccessUser $UPNs -URL $SiteUrl -Headers $Headers -APIName $APIName -RemovePermission:(-not $Add))
+        $Failed = $Results.Where({ $_.state -eq 'error' }).Count
+        $Outcome.Status = Get-CippBulkStatusCode -Total $Results.Count -Failed $Failed
+        $Result = @($Results.resultText) -join ' '
+        if ($Failed -eq $Results.Count) { throw $Result }
+        return $Result
     }
 
     function Invoke-BrowserInheritance {

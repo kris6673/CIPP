@@ -147,8 +147,9 @@ function Invoke-ExecBulkLicense {
                 try {
                     $BulkResults = Set-CIPPUserLicense -LicenseRequests $LicenseRequests -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers
                     foreach ($Result in $BulkResults) {
-                        $Results.Add($Result)
+                        $Results.Add($Result.resultText)
                     }
+                    $Failed = $Failed + @(@($BulkResults).Where({ $_.state -eq 'error' }) | Select-Object -ExpandProperty UserId -Unique).Count
                 } catch {
                     $Failed = $Failed + $LicenseRequests.Count
                     $ErrorMessage = Get-CippException -Exception $_

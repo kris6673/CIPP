@@ -55,7 +55,7 @@ function Invoke-ExecCustomScript {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -tenant $TenantFilter -user $Request.Headers.'x-ms-client-principal-name' -message "Failed to execute custom script: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        $StatusCode = $FailCode ?? [HttpStatusCode]::InternalServerError
+        $StatusCode = $FailCode ?? (Get-CippErrorStatusCode -ErrorRecord $_)
         $Body = @{
             Error = $ErrorMessage.NormalizedError
             Tenant = $TenantFilter

@@ -151,7 +151,12 @@ function Invoke-ExecCommunityRepo {
         }
         'UploadTemplate' {
             $Branch = $RepoEntity.UploadBranch ?? $RepoEntity.DefaultBranch
-            $Results = Push-CIPPTemplateToRepo -GUID $Request.Body.GUID -FullName $Request.Body.FullName -Message $Request.Body.Message -Branch $Branch
+            try {
+                $Results = Push-CIPPTemplateToRepo -GUID $Request.Body.GUID -FullName $Request.Body.FullName -Message $Request.Body.Message -Branch $Branch
+            } catch {
+                $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
+                $Results = @{ resultText = $_.Exception.Message; state = 'error' }
+            }
         }
         'UploadBaseline' {
             # A baseline is not a templates-table row: Export-CIPPBaselineTemplate
@@ -160,7 +165,12 @@ function Invoke-ExecCommunityRepo {
             # their current members). Related templates are separate files, exactly the
             # shape UploadTemplate writes, so they import through the untouched path.
             $Branch = $RepoEntity.UploadBranch ?? $RepoEntity.DefaultBranch
-            $Results = Push-CIPPBaselineToRepo -GUID $Request.Body.GUID -FullName $Request.Body.FullName -Message $Request.Body.Message -Branch $Branch
+            try {
+                $Results = Push-CIPPBaselineToRepo -GUID $Request.Body.GUID -FullName $Request.Body.FullName -Message $Request.Body.Message -Branch $Branch
+            } catch {
+                $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
+                $Results = @{ resultText = $_.Exception.Message; state = 'error' }
+            }
         }
         'SetBranch' {
             if (!$RepoEntity) {

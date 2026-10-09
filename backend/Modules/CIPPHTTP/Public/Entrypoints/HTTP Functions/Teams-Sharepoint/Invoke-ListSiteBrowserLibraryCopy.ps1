@@ -31,7 +31,7 @@ function Invoke-ListSiteBrowserLibraryCopy {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to retrieve library copy status: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::InternalServerError
+        $StatusCode = Get-CippErrorStatusCode -ErrorRecord $_
     }
 
     return ([HttpResponseContext]@{

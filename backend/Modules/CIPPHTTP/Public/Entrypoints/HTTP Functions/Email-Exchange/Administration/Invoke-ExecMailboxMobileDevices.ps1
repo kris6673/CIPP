@@ -22,7 +22,7 @@ Function Invoke-ExecMailboxMobileDevices {
         $Results = [pscustomobject]@{'Results' = $MobileResults }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $Results = [pscustomobject]@{'Results' = "Failed  $($UserId): $($_.Exception.Message)" }
+        $Results = [pscustomobject]@{'Results' = $_.Exception.Message }
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
