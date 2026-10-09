@@ -151,7 +151,7 @@ function Get-CippTestDataFieldManifest {
             'RoleManagementPolicies'             = @('policyId', 'scopeId', 'scopeType', 'roleDefinitionId', 'rules', 'effectiveRules')
             'Roles'                              = @('id', 'displayName', 'roleTemplateId', 'members')
             'SecureScore'                        = @('currentScore', 'maxScore', 'createdDateTime', 'controlScores')
-            'SensitivityLabels'                  = @('name', 'PolicyName', 'IsValid', 'isActive', 'sensitivity', 'parent', 'hasProtection')
+            'SensitivityLabels'                  = @('name', 'isActive', 'sensitivity', 'parent', 'hasProtection')
             'ServicePrincipalRiskDetections'     = @('servicePrincipalId', 'servicePrincipalDisplayName', 'appId', 'activity', 'riskState', 'riskLevel', 'riskEventType', 'detectedDateTime', 'lastUpdatedDateTime')
             'ServicePrincipals'                  = @('id', 'appId', 'displayName', 'accountEnabled', 'keyCredentials', 'passwordCredentials', 'appOwnerOrganizationId', 'servicePrincipalType', 'replyUrls', 'owners', 'appRoleAssignmentRequired', 'preferredSingleSignOnMode')
             'Settings'                           = @('id', 'templateId', 'displayName', 'values', 'isOfficeStoreEnabled', 'isAppAndServicesTrialEnabled', 'isInOrgFormsPhishingScanEnabled')

@@ -133,6 +133,7 @@ const CACHE_TYPE_COLLECTIONS = {
     "ComplianceRetentionRules",
     "ExoDlpSensitiveInfoTypes",
     "ExoLabels",
+    "ExoLabelPolicies",
   ],
   CopilotUsage: [
     "CopilotUsageUserDetail",
