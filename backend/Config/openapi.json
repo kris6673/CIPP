@@ -1443,6 +1443,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -3421,6 +3424,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -4091,14 +4097,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -6041,6 +6047,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -6844,14 +6853,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -6991,6 +7000,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -7937,6 +7949,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -8091,14 +8106,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -8785,6 +8800,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -8851,6 +8869,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -8940,6 +8961,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -9385,6 +9409,9 @@
           },
           "404": {
             "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -9857,6 +9884,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -9941,6 +9971,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -10128,6 +10161,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -10659,6 +10695,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -10732,6 +10771,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -10796,6 +10838,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -11250,6 +11295,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -12365,14 +12413,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -12890,6 +12938,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -14081,14 +14132,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -14651,6 +14702,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -20100,14 +20154,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -20914,6 +20968,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -24517,6 +24574,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -25101,6 +25161,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -25472,6 +25535,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -25661,6 +25727,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -27100,14 +27169,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -27804,6 +27873,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -31211,14 +31283,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -32524,6 +32596,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -34691,6 +34766,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -35434,6 +35512,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -36349,6 +36430,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -37471,6 +37555,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -38554,6 +38641,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -38606,6 +38696,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -38657,6 +38750,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -39270,6 +39366,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -39552,14 +39651,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -39751,14 +39850,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -39815,14 +39914,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -40099,6 +40198,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -40808,6 +40910,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -41132,6 +41237,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -41867,6 +41975,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -42919,14 +43030,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -43602,14 +43713,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -44976,6 +45087,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -45080,14 +45194,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -45148,6 +45262,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -45331,6 +45448,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -46268,14 +46388,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -47116,14 +47236,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -47360,6 +47480,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -47741,6 +47864,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -47952,6 +48078,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -48496,6 +48625,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -48571,6 +48703,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -49298,14 +49433,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -49420,14 +49555,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -49569,14 +49704,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -49940,6 +50075,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -50194,6 +50332,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -50753,6 +50894,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -51480,6 +51624,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -52036,6 +52183,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -53974,6 +54124,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -54332,6 +54485,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -54503,6 +54659,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -54819,6 +54978,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -54870,6 +55032,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -55042,6 +55207,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -55690,6 +55858,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -57212,14 +57383,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -57328,6 +57499,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -57403,6 +57577,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -57586,14 +57763,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -57661,14 +57838,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -57974,6 +58151,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -58172,6 +58352,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -58790,6 +58973,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -59025,6 +59211,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -59596,6 +59785,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -60882,6 +61074,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -61593,6 +61788,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -62485,6 +62683,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -63594,14 +63795,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -63892,14 +64093,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -64205,6 +64406,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -65798,6 +66002,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -66318,6 +66525,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -66368,14 +66578,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -68135,6 +68345,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -68370,14 +68583,14 @@
               }
             }
           },
-          "400": {
-            "description": "Bad request - missing required field or invalid input"
-          },
           "401": {
             "description": "Unauthorized - invalid or missing bearer token"
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -68646,6 +68859,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -68782,6 +68998,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -69111,6 +69330,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -69458,6 +69680,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -69536,6 +69761,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -69737,6 +69965,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -70115,6 +70346,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -70234,6 +70468,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -70467,6 +70704,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
@@ -70686,6 +70926,9 @@
           },
           "403": {
             "description": "Forbidden - caller lacks the required RBAC role"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         },
         "security": [
