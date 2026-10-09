@@ -3,6 +3,7 @@ name: Baseline Standards JSON
 on:
   pull_request:
     branches:
+      - main
       - dev
     paths:
       - 'backend/Config/BaselineStandards/**/*.json'
