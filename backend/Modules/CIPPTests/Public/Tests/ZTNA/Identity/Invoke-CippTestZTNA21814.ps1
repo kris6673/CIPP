@@ -23,7 +23,7 @@ function Invoke-CippTestZTNA21814 {
             $RoleUsers = $RoleMembers.Where({ $_.'@odata.type' -eq '#microsoft.graph.user' })
 
             foreach ($RoleMember in $RoleUsers) {
-                $UserDetail = @($UserById.Find($RoleMember.id))[0]
+                $UserDetail = $UserById.First($RoleMember.id)
 
                 if ($UserDetail) {
                     $RoleData.Add([PSCustomObject]@{

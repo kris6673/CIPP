@@ -27,7 +27,7 @@ function Invoke-CippTestZTNA21815 {
             })
 
             foreach ($Assignment in $ActiveAssignments) {
-                $User = @($UserById.Find($Assignment.principalId))[0]
+                $User = $UserById.First($Assignment.principalId)
                 if (-not $User) { continue }
 
                 $PermanentAssignments.Add([PSCustomObject]@{

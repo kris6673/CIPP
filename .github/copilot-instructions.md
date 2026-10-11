@@ -60,7 +60,7 @@ in-app tests) runs for every tenant, and tenants with 50k users or 20k mailboxes
 churn; these patterns do.
 
 - Filter with `foreach` + `if` or `.Where({ })`, never `| Where-Object`. Build a lookup once (hashtable, `HashSet`,
-  `[CIPP.CippIndex]`) instead of scanning inside a loop. `.Where()` returns a collection even for zero or one match;
+  `[CIPP.CippIndex]`, whose `.First($Key)` replaces `.Find($Key) | Select-Object -First 1`) instead of scanning inside a loop. `.Where()` returns a collection even for zero or one match;
   `.github/agents/CIPP-Test-Agent.md` lists the cases where that differs from the pipeline result.
 - No `| Select-Object -First` on a hot path: it throws to stop the pipeline (`Get-Thing | Select-Object -First 1` stops
   `Get-Thing` with an exception on every call). Use `$X.Where({ P }, 'First')[0]` or `@($X)[0]`; indexing an empty

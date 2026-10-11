@@ -187,7 +187,8 @@ function Get-GraphToken {
             }
             if ($null -eq $AccessToken.expires_on -and $AccessToken.expires_in) {
                 $ExpiresOn = [int](Get-Date -UFormat %s -Millisecond 0) + $AccessToken.expires_in
-                Add-Member -InputObject $AccessToken -NotePropertyName 'expires_on' -NotePropertyValue $ExpiresOn -Force
+                $AccessToken.PSObject.Properties.Remove('expires_on')
+                $AccessToken.PSObject.Properties.Add([psnoteproperty]::new('expires_on', $ExpiresOn))
             }
 
             if ($UseSharedTokenCache -and $SharedTokenCacheKey) {

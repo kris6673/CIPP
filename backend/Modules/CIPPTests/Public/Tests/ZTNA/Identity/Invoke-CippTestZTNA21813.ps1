@@ -36,7 +36,7 @@ function Invoke-CippTestZTNA21813 {
             $AllAssignments = @($ActiveAssignments) + @($EligibleAssignments)
 
             foreach ($Assignment in $AllAssignments) {
-                $User = @($UserById.Find($Assignment.principalId))[0]
+                $User = $UserById.First($Assignment.principalId)
                 if (-not $User) { continue }
 
                 $UserId = $User.id
