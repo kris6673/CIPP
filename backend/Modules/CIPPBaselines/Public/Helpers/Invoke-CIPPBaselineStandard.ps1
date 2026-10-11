@@ -254,7 +254,10 @@ function Invoke-CIPPBaselineStandard {
         if ($StaleRows.Count -gt 0 -and -not $GradeOnly) {
             try { Remove-CIPPAzDataTableEntity -Force @ResolvedTable -Entity $StaleRows } catch { Write-Information "Baselines: stale resolved-row cleanup for $($Item.Standard) on $TenantFilter failed: $($_.Exception.Message)" }
         }
-        $Prior = @($PriorRows | Sort-Object -Property { [int64]($_.LastRun ?? 0) } -Descending)[0]
+        $Prior = $null
+        foreach ($PriorRow in $PriorRows) {
+            if ($null -eq $Prior -or [int64]($PriorRow.LastRun ?? 0) -gt [int64]($Prior.LastRun ?? 0)) { $Prior = $PriorRow }
+        }
         $PriorStatus = $Prior.Status
 
         # Per-property verdicts default to 'accept' (tolerate); 'denyDelete' marks the path's
