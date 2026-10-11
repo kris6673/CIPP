@@ -17,6 +17,7 @@ Describe 'CippJson.ToJson matches ConvertTo-Json -Compress' {
         @{ Name = 'an empty foreach result held in a row'; Value = & { $Empty = foreach ($x in @()) { $x }; [pscustomobject]@{ G = $Empty; N = 1 } } }
         @{ Name = 'a row whose properties were enumerated'; Value = & { $R = '{"a":1,"b":{"c":[{"d":2}]}}' | ConvertFrom-Json; $null = @($R.PSObject.Properties); $null = @($R.b.PSObject.Properties); $null = @($R.b.c[0].PSObject.Properties); $R } }
         @{ Name = 'a row whose members were enumerated'; Value = & { $R = [pscustomobject]@{ a = 1 }; $null = @($R.PSObject.Members); $null = $R | Get-Member; $null = $R.psobject.TypeNames; $R } }
+        @{ Name = 'a row whose script property serialises another row'; Value = ([pscustomobject]@{ a = 'x' } | Add-Member -MemberType ScriptProperty -Name inner -Value { [CIPP.CippJson]::ToJson([pscustomobject]@{ b = 'y' }, 5) } -PassThru) }
         @{ Name = 'a row with added note, script and alias properties'; Value = ([pscustomobject]@{ a = 1 } | Add-Member -NotePropertyName b -NotePropertyValue 'x' -PassThru | Add-Member -MemberType ScriptProperty -Name c -Value { 2 } -PassThru | Add-Member -MemberType AliasProperty -Name d -Value a -PassThru) }
     ) {
         [CIPP.CippJson]::ToJson($Value, 100) | Should -BeExactly (Get-Expected $Value)

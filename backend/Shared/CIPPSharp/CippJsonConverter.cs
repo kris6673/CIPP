@@ -1,9 +1,11 @@
 using System;
+using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Management.Automation;
+using System.Text;
 using System.Text.Json;
 using Newtonsoft.Json;
 
@@ -73,9 +75,10 @@ namespace CIPP
         {
             if (root.ValueKind == JsonValueKind.Array)
             {
-                var rows = new List<object?>();
-                foreach (var item in root.EnumerateArray()) rows.Add(ReadRecord(item, keep));
-                return rows.ToArray();
+                var rows = new object?[root.GetArrayLength()];
+                int r = 0;
+                foreach (var item in root.EnumerateArray()) rows[r++] = ReadRecord(item, keep);
+                return rows;
             }
 
             return ReadRecord(root, keep);
@@ -91,7 +94,7 @@ namespace CIPP
             {
                 // Skipped fields are never materialized — this is the whole point of projection.
                 if (keep != null && !keep.Contains(p.Name)) continue;
-                pso.Properties.Add(new PSNoteProperty(p.Name, ReadValue(p.Value)));  // kept => whole subtree
+                PSMembers.AddNoteProperty(pso, p.Name, ReadValue(p.Value));  // kept => whole subtree
             }
             return pso;
         }
@@ -174,13 +177,14 @@ namespace CIPP
                 case JsonValueKind.Object:
                     var pso = new PSObject();
                     foreach (var p in el.EnumerateObject())
-                        pso.Properties.Add(new PSNoteProperty(p.Name, ReadValue(p.Value)));
+                        PSMembers.AddNoteProperty(pso, p.Name, ReadValue(p.Value));
                     return pso;
 
                 case JsonValueKind.Array:
-                    var list = new List<object?>();
-                    foreach (var item in el.EnumerateArray()) list.Add(ReadValue(item));
-                    return list.ToArray();
+                    var list = new object?[el.GetArrayLength()];
+                    int i = 0;
+                    foreach (var item in el.EnumerateArray()) list[i++] = ReadValue(item);
+                    return list;
 
                 case JsonValueKind.String:
                     return ReadString(el);
@@ -206,12 +210,32 @@ namespace CIPP
         /// </summary>
         public static string? ToJson(object? value, int depth = 100)
         {
-            var sw = new StringWriter(CultureInfo.InvariantCulture);
-            using (var w = new JsonTextWriter(sw) { Formatting = Formatting.None })
+            // One builder per thread, taken while in use so a re-entrant call (a script property) gets its own
+            var sb = t_builder ?? new StringBuilder(1024);
+            t_builder = null;
+            try
             {
-                if (!TryWrite(w, value, depth)) return null;
+                using (var w = new JsonTextWriter(new StringWriter(sb, CultureInfo.InvariantCulture)) { Formatting = Formatting.None, ArrayPool = CharPool.Instance })
+                {
+                    if (!TryWrite(w, value, depth)) return null;
+                }
+                return sb.ToString();
             }
-            return sw.ToString();
+            finally
+            {
+                sb.Clear();
+                if (sb.Capacity <= MaxPooledBuilderChars) t_builder = sb;
+            }
+        }
+
+        [ThreadStatic] private static StringBuilder? t_builder;
+        private const int MaxPooledBuilderChars = 256 * 1024;
+
+        private sealed class CharPool : IArrayPool<char>
+        {
+            public static readonly CharPool Instance = new();
+            public char[] Rent(int minimumLength) => ArrayPool<char>.Shared.Rent(minimumLength);
+            public void Return(char[]? array) { if (array != null) ArrayPool<char>.Shared.Return(array); }
         }
 
         private static bool TryWrite(JsonTextWriter w, object? v, int depth)

@@ -49,6 +49,54 @@ namespace CIPP
 
         public static bool Available => s_instanceMembers != null && s_isHidden != null;
 
+        // Properties.Add minus the member copy and the type-table check (JSON records have no type data): ~1/3 faster
+        private static readonly Func<string, bool>? s_isReserved = BuildIsReserved();
+        private static readonly Action<PSObject, PSMemberInfo>? s_addInstance = BuildAddInstance();
+
+        private static Func<string, bool>? BuildIsReserved()
+        {
+            try
+            {
+                var method = typeof(PSMemberInfoCollection<PSPropertyInfo>).GetMethod("IsReservedName", BindingFlags.NonPublic | BindingFlags.Static, new[] { typeof(string) });
+                return method == null ? null : (Func<string, bool>)method.CreateDelegate(typeof(Func<string, bool>));
+            }
+            catch { return null; }
+        }
+
+        private static Action<PSObject, PSMemberInfo>? BuildAddInstance()
+        {
+            try
+            {
+                var asm = typeof(PSObject).Assembly;
+                var replicate = typeof(PSMemberInfo).GetMethod("ReplicateInstance", BindingFlags.NonPublic | BindingFlags.Instance, new[] { typeof(object) });
+                var instanceMembers = typeof(PSObject).GetProperty("InstanceMembers", BindingFlags.NonPublic | BindingFlags.Instance);
+                var add = instanceMembers?.PropertyType.GetMethod("Add", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, new[] { typeof(PSMemberInfo), typeof(bool) });
+                var hasInstanceMember = asm.GetType("System.Management.Automation.Language.PSGetMemberBinder")?.GetMethod("SetHasInstanceMember", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static, new[] { typeof(string) });
+                var noteType = asm.GetType("System.Management.Automation.Language.PSVariableAssignmentBinder")?.GetMethod("NoteTypeHasInstanceMemberOrTypeName", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static, new[] { typeof(Type) });
+                if (replicate == null || instanceMembers == null || add == null || hasInstanceMember == null || noteType == null) return null;
+
+                var pso = Expression.Parameter(typeof(PSObject));
+                var member = Expression.Parameter(typeof(PSMemberInfo));
+                var body = Expression.Block(
+                    Expression.Call(member, replicate, Expression.Convert(pso, typeof(object))),
+                    Expression.Call(Expression.Property(pso, instanceMembers), add, Expression.Convert(member, add.GetParameters()[0].ParameterType), Expression.Constant(false)),
+                    Expression.Call(hasInstanceMember, Expression.Property(member, nameof(PSMemberInfo.Name))),
+                    Expression.Call(noteType, Expression.Constant(typeof(PSCustomObject))));
+                return Expression.Lambda<Action<PSObject, PSMemberInfo>>(body, pso, member).Compile();
+            }
+            catch { return null; }
+        }
+
+        /// <summary>pso.Properties.Add(new PSNoteProperty(name, value)) for a PSCustomObject being built.</summary>
+        public static void AddNoteProperty(PSObject pso, string name, object? value)
+        {
+            var member = new PSNoteProperty(name, value);
+            if (s_addInstance == null || s_isReserved == null || s_isReserved(name) || pso.BaseObject is not PSCustomObject) pso.Properties.Add(member);
+            else s_addInstance(pso, member);
+        }
+
+        public static bool FastAddAvailable => s_addInstance != null && s_isReserved != null;
+
         // Added properties only: adapted .NET properties of a wrapped value are not included.
         public static IEnumerable<PSPropertyInfo> InstanceProperties(PSObject pso)
         {

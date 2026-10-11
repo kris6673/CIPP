@@ -74,3 +74,55 @@ Describe 'CippJson.ConvertFromJson returned from a function matches ConvertFrom-
         if ($null -eq $Expected) { $null -eq $Actual | Should -BeTrue } else { $Actual.GetType().Name | Should -Be $Expected.GetType().Name }
     }
 }
+
+Describe 'CippJson.ConvertFromJson records behave like records built with Properties.Add' {
+    BeforeAll {
+        function ConvertTo-SlowRecord([string]$Json) {
+            $Parsed = $Json | ConvertFrom-Json -AsHashtable
+            $Record = [pscustomobject]@{}
+            foreach ($Key in $Parsed.Keys) { $Record.PSObject.Properties.Add([psnoteproperty]::new($Key, $Parsed[$Key])) }
+            $Record
+        }
+    }
+
+    It 'uses the fast member add on this PowerShell' {
+        [CIPP.CippJson].Assembly.GetType('CIPP.PSMembers').GetProperty('FastAddAvailable').GetValue($null) | Should -BeTrue
+    }
+
+    It 'is found by a member-access site that already cached a miss for that name' {
+        $Name = 'zz' + [guid]::NewGuid().ToString('N')
+        function Get-Field($Object, $FieldName) { $Object.$FieldName }
+        function Get-Static($Object) { $Object.zzStaticProbe }
+        $Empty = [pscustomobject]@{ other = 1 }
+        foreach ($i in 1..3) { $null = Get-Field $Empty $Name; $null = Get-Static $Empty }
+
+        Get-Field ([CIPP.CippJson]::ConvertFromJson("{`"$Name`":`"v`"}")) $Name | Should -Be 'v'
+        Get-Static ([CIPP.CippJson]::ConvertFromJson('{"zzStaticProbe":"s"}')) | Should -Be 's'
+    }
+
+    It 'behaves the same for enumeration, Add-Member, Remove, Get-Member and Select-Object' {
+        $Json = '{"id":"1","name":"a","nested":{"x":1}}'
+        $Fast = [CIPP.CippJson]::ConvertFromJson($Json)
+        $Slow = ConvertTo-SlowRecord $Json
+        foreach ($Record in $Fast, $Slow) {
+            $Record | Add-Member -NotePropertyName extra -NotePropertyValue 2
+            $Record.PSObject.Properties.Remove('name')
+        }
+        $Fast.PSObject.Properties.Name -join ',' | Should -Be ($Slow.PSObject.Properties.Name -join ',')
+        (Get-Member -InputObject $Fast -MemberType NoteProperty).Name -join ',' | Should -Be ((Get-Member -InputObject $Slow -MemberType NoteProperty).Name -join ',')
+        ($Fast | Select-Object * | ConvertTo-Json -Compress) | Should -Be ($Slow | Select-Object * | ConvertTo-Json -Compress)
+        $Fast -is [pscustomobject] | Should -BeTrue
+        $Fast.nested.x | Should -Be 1
+    }
+
+    It 'rejects a reserved member name as Properties.Add does' {
+        { [CIPP.CippJson]::ConvertFromJson('{"psobject":1}') } | Should -Throw '*reserved*'
+    }
+
+    It 'keeps the last of two keys that differ only in case, as Properties.Add does' {
+        $Record = [pscustomobject]@{}
+        $Record.PSObject.Properties.Add([psnoteproperty]::new('a', 1))
+        $Record.PSObject.Properties.Add([psnoteproperty]::new('A', 2))
+        ([CIPP.CippJson]::ConvertFromJson('{"a":1,"A":2}') | ConvertTo-Json -Compress) | Should -Be ($Record | ConvertTo-Json -Compress)
+    }
+}

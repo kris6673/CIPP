@@ -68,6 +68,11 @@ churn; these patterns do.
 - A per-call helper that every request, standard or test hits (tenant lookups, capabilities, tokens) must not re-read a
   table and re-parse JSON each time: keep a short-lived per-tenant result (see `Get-CIPPTenantCapabilities`).
 - Never `+=`. Never `Select-Object` / `Sort-Object` / `Group-Object` over hashtables.
+- Never invoke a script block per row or per field (`& $Helper $Value`): each call builds a command processor and binds
+  parameters (Add-CIPPDbItem's shape sampling spent 400 MB per cache run this way). Inline the loop, or move the logic
+  into CIPPSharp when it is called per field.
+- On a dictionary whose keys come from data, use `$Dict.PSBase.Count` / `$Dict.PSBase.Keys`: PowerShell member access
+  prefers keys, so a field named `count` or `keys` silently replaces `.Count` / `.Keys`.
 - Serialise with `[CIPP.CippJson]::ToJson($X, $Depth)` and fall back to `ConvertTo-Json` when it returns `$null`. Parse
   with `[CIPP.CippJson]::ConvertFromJson($Json)`, passing a field list when only some fields are read. Parse a
   `CIPPRestClient` result with `[CIPP.CippJson]::ConvertFromResponse($Result)`: it reads the UTF-8 body bytes
