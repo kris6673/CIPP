@@ -52,3 +52,25 @@ Describe 'CippJson.ReadStringField matches reading the field off ConvertFromJson
         [object]::ReferenceEquals([CIPP.CippJson]::ReadStringField($Json, 'deviceName'), $null) | Should -BeTrue
     }
 }
+
+Describe 'CippJson.ConvertFromJson returned from a function matches ConvertFrom-Json (Invoke-CIPPRestMethod)' {
+    It 'returns the same shape for <Json>' -ForEach @(
+        @{ Json = '[]' }
+        @{ Json = '[{"id":"1"}]' }
+        @{ Json = '[{"id":"1"},{"id":"2"}]' }
+        @{ Json = '[1,"two",null]' }
+        @{ Json = '[[1,2],[3]]' }
+        @{ Json = '{"value":[{"id":"1","createdDateTime":"2025-05-05T05:05:05Z"}],"@odata.nextLink":null}' }
+        @{ Json = '"text"' }
+        @{ Json = 'null' }
+        @{ Json = '{"a":{"b":[]}}' }
+    ) {
+        function Old($Content) { return $Content | ConvertFrom-Json -Depth 100 }
+        function New($Content) { return [CIPP.CippJson]::ConvertFromJson($Content) }
+        $Expected = Old $Json
+        $Actual = New $Json
+        @($Actual).Count | Should -Be @($Expected).Count
+        ConvertTo-Json -InputObject $Actual -Depth 10 -Compress | Should -BeExactly (ConvertTo-Json -InputObject $Expected -Depth 10 -Compress)
+        if ($null -eq $Expected) { $null -eq $Actual | Should -BeTrue } else { $Actual.GetType().Name | Should -Be $Expected.GetType().Name }
+    }
+}

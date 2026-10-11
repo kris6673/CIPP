@@ -208,7 +208,7 @@ namespace CIPP
                 {
                     if (depth < 0) return false;
                     w.WriteStartObject();
-                    foreach (var p in pso.Properties)
+                    foreach (var p in PSMembers.Available ? PSMembers.InstanceProperties(pso) : pso.Properties)
                     {
                         object? pv;
                         try { pv = p.Value; } catch { return false; }
@@ -219,10 +219,10 @@ namespace CIPP
                     return true;
                 }
                 // ConvertTo-Json ignores note properties on strings and dates only; anything else with
-                // them is written as {"value":...}. Members is not enumerated: that builds every adapted member.
+                // them is written as {"value":...}.
                 var baseObject = pso.BaseObject;
                 if (!(baseObject is string || baseObject is DateTime)
-                    && pso.Properties.Match("*", PSMemberTypes.NoteProperty).Count > 0) return false;
+                    && (PSMembers.Available ? PSMembers.HasNoteProperty(pso) : pso.Properties.Match("*", PSMemberTypes.NoteProperty).Count > 0)) return false;
                 v = baseObject;
             }
 

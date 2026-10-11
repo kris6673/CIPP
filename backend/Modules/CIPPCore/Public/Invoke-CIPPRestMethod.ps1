@@ -262,7 +262,7 @@ function Invoke-CIPPRestMethod {
 
     if ($Result.IsJson) {
         try {
-            return $Result.Content | ConvertFrom-Json -Depth 100
+            return [CIPP.CippJson]::ConvertFromJson($Result.Content)
         } catch {
             # Malformed JSON — return raw so callers can handle it
             return $Result.Content
