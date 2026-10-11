@@ -52,9 +52,25 @@ namespace CIPP
                 : null;
 
             using var doc = JsonDocument.Parse(json, Opts);
-            var root = doc.RootElement;
+            return ReadRoot(doc.RootElement, keep);
+        }
 
-            // Records live at the root, or one level down if the root is an array.
+        /// <summary>
+        /// A CIPPRestClient response body, parsed straight from its UTF-8 bytes: the same result as
+        /// ConvertFromJson(response.Content) without decoding the body into a string first.
+        /// </summary>
+        public static object? ConvertFromResponse(HttpResult response)
+        {
+            var json = response.ContentBytes is { } bytes ? HttpBody.Utf8(bytes) : null;
+            if (json is null) return ConvertFromJson(response.Content);
+            if (json.Value.Length == 0) return null;
+            using var doc = JsonDocument.Parse(json.Value, Opts);
+            return ReadRoot(doc.RootElement, null);
+        }
+
+        // Records live at the root, or one level down if the root is an array.
+        private static object? ReadRoot(JsonElement root, HashSet<string>? keep)
+        {
             if (root.ValueKind == JsonValueKind.Array)
             {
                 var rows = new List<object?>();

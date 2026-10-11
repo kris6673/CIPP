@@ -62,14 +62,23 @@ churn; these patterns do.
 - Filter with `foreach` + `if` or `.Where({ })`, never `| Where-Object`. Build a lookup once (hashtable, `HashSet`,
   `[CIPP.CippIndex]`) instead of scanning inside a loop. `.Where()` returns a collection even for zero or one match;
   `.github/agents/CIPP-Test-Agent.md` lists the cases where that differs from the pipeline result.
-- No `| Select-Object -First` on a hot path: it throws to stop the pipeline. Use `$X.Where({ P }, 'First')[0]` or `@($X)[0]`.
+- No `| Select-Object -First` on a hot path: it throws to stop the pipeline (`Get-Thing | Select-Object -First 1` stops
+  `Get-Thing` with an exception on every call). Use `$X.Where({ P }, 'First')[0]` or `@($X)[0]`; indexing an empty
+  collection also throws internally, so where it is usually empty use `foreach ($Item in $X) { $First = $Item; break }`.
+- A per-call helper that every request, standard or test hits (tenant lookups, capabilities, tokens) must not re-read a
+  table and re-parse JSON each time: keep a short-lived per-tenant result (see `Get-CIPPTenantCapabilities`).
 - Never `+=`. Never `Select-Object` / `Sort-Object` / `Group-Object` over hashtables.
 - Serialise with `[CIPP.CippJson]::ToJson($X, $Depth)` and fall back to `ConvertTo-Json` when it returns `$null`. Parse
-  with `[CIPP.CippJson]::ConvertFromJson($Json)`, passing a field list when only some fields are read.
+  with `[CIPP.CippJson]::ConvertFromJson($Json)`, passing a field list when only some fields are read. Parse a
+  `CIPPRestClient` result with `[CIPP.CippJson]::ConvertFromResponse($Result)`: it reads the UTF-8 body bytes
+  (`$Result.ContentBytes`) without building `$Result.Content`, which is decoded only when something reads it. Test for a
+  body with `$Result.HasContent`, not `[string]::IsNullOrWhiteSpace($Result.Content)`.
 - Read an environment variable that may be unset with `[System.Environment]::GetEnvironmentVariable('Name')`: `$env:Name`
   throws and catches an exception internally every time the variable is missing.
 - Don't `Add-Member -NotePropertyName` per row (it throws internally while binding its parameters):
-  `$Row.PSObject.Properties.Add([psnoteproperty]::new('Name', $Value))`.
+  `$Row.PSObject.Properties.Add([psnoteproperty]::new('Name', $Value))`. `Add-Member -Force` is `$P.Remove('Name')`
+  followed by that `Add` (the property moves to the end, as with `-Force`). Test for a property with
+  `$null -ne $Row.PSObject.Properties['Name']`, not `$Row.PSObject.Properties.Name -contains 'Name'` (a full walk).
 - Don't enumerate `.PSObject.Properties` / `.PSObject.Members` per row to read fields: it builds member sets and leaves
   them attached to every row. In CIPPSharp C#, read a row's fields with `PSMembers.InstanceProperties` (it skips hidden
   members: once anything has enumerated `Properties`, the reserved `pstypenames` sits among the instance members).

@@ -100,7 +100,7 @@ function Get-Tenants {
         }
         # GDAP relationship objects carry customerId, not domains, so a domain-scoped refresh must key
         # on the customerId of the row already read above - otherwise it matches zero relationships.
-        $ResolvedCustomerId = ($IncludedTenantsCache | Select-Object -First 1).customerId
+        $ResolvedCustomerId = @($IncludedTenantsCache)[0].customerId
         if ($TenantFilter -and -not $RelationshipFilter -and $ResolvedCustomerId) {
             $RelationshipFilter = " and customer/tenantId eq '$ResolvedCustomerId'"
             $IncludedTenantFilter = { $_.customerId -eq $ResolvedCustomerId }

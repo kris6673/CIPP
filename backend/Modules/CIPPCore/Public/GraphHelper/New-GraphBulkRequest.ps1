@@ -126,7 +126,7 @@ function New-GraphBulkRequest {
                         $null = $AnsweredIds.Add([string]$NextResponse.id)
                         $PageStatus = $NextResponse.status -as [int]
                         if ($PageStatus -ge 400) {
-                            $PageRequest = $NextBatchRequests | Where-Object { $_.id -eq $NextResponse.id } | Select-Object -First 1
+                            $PageRequest = $NextBatchRequests.Where({ $_.id -eq $NextResponse.id }, 'First')[0]
                             $RetryKey = "$($NextResponse.id)|$($PageRequest.url)"
                             if ($PageRequest -and $RetriedPages.Add($RetryKey)) {
                                 $RetryAfter = [Math]::Min([Math]::Max(($NextResponse.headers.'Retry-After' -as [int]), 0), 30)

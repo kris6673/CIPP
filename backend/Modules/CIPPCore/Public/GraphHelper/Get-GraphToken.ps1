@@ -20,7 +20,7 @@ function Get-GraphToken {
 
     # Certificate-exclusive auth: force the SAM certificate for CIPP's own SAM app tokens (app-only and
     # delegated). Scoped to the SAM app - explicit $AppID/$AppSecret callers use their own credentials.
-    if ($env:CertificateAuthMode -and -not $AppID -and -not $AppSecret) {
+    if ([System.Environment]::GetEnvironmentVariable('CertificateAuthMode') -and -not $AppID -and -not $AppSecret) {
         $UseCertificate = $true
     }
 

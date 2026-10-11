@@ -94,7 +94,7 @@ function Add-CIPPDbItem {
             foreach ($Property in @(& $PropertiesOf $Item)) {
                 $Kind = & $NoteField $Property.Name $Property.Value
                 # one level in: an object's own fields, or the fields of an array's first object
-                $Inner = if ($Kind -eq 'object') { $Property.Value } elseif ($Kind -eq 'array') { @($Property.Value | Select-Object -First 1)[0] }
+                $Inner = if ($Kind -eq 'object') { $Property.Value } elseif ($Kind -eq 'array') { foreach ($First in $Property.Value) { $First; break } }
                 if ($null -ne $Inner -and (& $TypeOf $Inner) -eq 'object') {
                     foreach ($Child in @(& $PropertiesOf $Inner)) { $null = & $NoteField "$($Property.Name).$($Child.Name)" $Child.Value }
                 }
