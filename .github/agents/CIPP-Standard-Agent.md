@@ -152,6 +152,9 @@ Data, never Compliant**.
 
 - **One function per file.** Hook and executor are separate files. Never build arrays with
   `+=` — use `[System.Collections.Generic.List[object]]`.
+- Hooks and executors run for every tenant in every baseline run: follow the PowerShell hot-path rules in
+  `.github/copilot-instructions.md` (no `| Where-Object` / `| Select-Object -First` over cached rows, lookups built
+  once, CippJson for JSON).
 - When porting a classic standard, the default is an **exact port of its wire behaviour**;
   flag questionable classic behaviour instead of silently "improving" it. Deviations
   require sign-off and get recorded in
