@@ -65,7 +65,7 @@ Temporary Access Pass has to be enabled in the tenant's authentication methods p
 
 ## Approval
 
-If JIT Admin approval is switched on in the [application settings](../../../cipp/settings/README.md#jit-admin-settings) and the request includes a role that needs approval, submitting the form does not create anything. The request is saved on the [requests.md](requests.md "mention") tab, the approvers are notified, and the result says how many approvals it needs and from which CIPP roles. When no specific roles are set to need approval, every request needs it, including one that only adds groups.
+If JIT Admin approval is switched on in the [application settings](../../../cipp/settings/README.md#jit-admin-settings) and the request is for a tenant and a role that need approval, submitting the form does not create anything. The request is saved on the [requests.md](requests.md "mention") tab, the approvers are notified, and the result says how many approvals it needs and from which CIPP roles. When no specific roles are set to need approval, every request needs it, including one that only adds groups.
 
 The duration limit and the roles you are allowed to grant are checked when you submit, and again when the request is approved.
 

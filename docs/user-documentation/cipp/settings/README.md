@@ -118,11 +118,12 @@ Caps how long a Just-In-Time admin account created through CIPP may remain activ
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Maximum Duration (ISO 8601) | The longest duration a JIT admin account may be granted. Presets range from 1 hour to 30 days, and a custom ISO 8601 duration such as `PT6H` or `P21D` can be typed directly. Leave empty for no limit. |
 | Require approval for JIT Admin requests | Holds JIT Admin requests until they are approved, instead of carrying them out straight away. The fields below appear when this is on. |
-| Roles that need approval    | The Entra ID directory roles that trigger approval. A request including any of them needs approval, and a request without them goes ahead as before. Leave empty to require approval for every request, including one that only adds groups. |
+| Tenants that need approval  | The tenants and tenant groups where approval applies. A request in any other tenant goes ahead as before. Tenant groups are checked when each request is made, so a tenant added to a static group later is covered too; a dynamic group picks up a newly matching tenant at its next scheduled membership refresh. If a selected group is deleted, every request needs approval until the group is removed here. Leave empty to require approval in every tenant. |
+| Roles that need approval    | The Entra ID directory roles that trigger approval. A request including any of them, in a tenant that needs approval, needs approval, and a request without them goes ahead as before. Leave empty to require approval for every request, including one that only adds groups. |
 | Approver roles              | The CIPP roles, built-in or custom, whose users can approve or reject requests. Required when approval is on. |
 | Approvals required          | How many different approvers must approve a request before it is carried out. Defaults to 1.                    |
 
-Select **Save Settings** to apply. The settings apply globally across all tenants. Any attempt to create a JIT admin account exceeding the maximum duration is rejected.
+Select **Save Settings** to apply. The maximum duration applies to all tenants, and approval to the tenants selected above. Any attempt to create a JIT admin account exceeding the maximum duration is rejected.
 
 {% hint style="info" %}
 Custom values must be valid ISO 8601 durations, so use forms such as `PT1H`, `P1D` or `P28D`. An invalid value prevents the card from saving.
