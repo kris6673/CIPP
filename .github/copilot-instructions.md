@@ -65,6 +65,8 @@ churn; these patterns do.
 - No `| Select-Object -First` on a hot path: it throws to stop the pipeline (`Get-Thing | Select-Object -First 1` stops
   `Get-Thing` with an exception on every call). Use `$X.Where({ P }, 'First')[0]` or `@($X)[0]`; indexing an empty
   collection also throws internally, so where it is usually empty use `foreach ($Item in $X) { $First = $Item; break }`.
+- Clamp range slices: `$X[$i..([Math]::Min($i + 19, $X.Count - 1))]`. An index past the end throws and is caught
+  internally, so `$X[$i..($i + 19)]` over 3 items costs 17 exceptions.
 - A per-call helper that every request, standard or test hits (tenant lookups, capabilities, tokens) must not re-read a
   table and re-parse JSON each time: keep a short-lived per-tenant result (see `Get-CIPPTenantCapabilities`).
 - Never `+=`. Never `Select-Object` / `Sort-Object` / `Group-Object` over hashtables.
