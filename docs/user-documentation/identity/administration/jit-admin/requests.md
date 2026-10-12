@@ -1,10 +1,10 @@
 # Requests
 
-When JIT Admin approval is switched on, a JIT Admin request that needs approval waits here until enough approvers have agreed. Nothing is created or changed in the tenant while a request is pending. Approval is set up in the JIT Admin Settings card of the [application settings](../../../cipp/settings/README.md#jit-admin-settings), where you choose which roles need approval, which CIPP roles can approve, and how many approvals each request needs.
+When JIT Admin approval is switched on, a JIT Admin request that needs approval waits here until enough approvers have agreed. Nothing is created or changed in the tenant while a request is pending. Approval is set up in the JIT Admin Settings card of the [application settings](../../../cipp/settings/README.md#jit-admin-settings), where you choose which tenants and roles need approval, which CIPP roles can approve, and how many approvals each request needs.
 
 ## How a request is decided
 
-1. A technician submits the [add.md](add.md "mention") form. If the request includes a role that needs approval, it is saved here as **Pending** instead of being carried out, and the technician is told it was submitted for approval.
+1. A technician submits the [add.md](add.md "mention") form. If the request is for a tenant and a role that need approval, it is saved here as **Pending** instead of being carried out, and the technician is told it was submitted for approval.
 2. The approvers are notified. Each approval is recorded against the request, and each approver counts once.
 3. Once the required number of approvals is reached, CIPP creates the JIT Admin exactly as it was requested. Fields cannot be changed during approval; to change a request, reject it and submit a new one.
 4. A single rejection ends the request, whatever approvals it already has. A rejection always carries a note, which is passed to the requester.
@@ -64,7 +64,7 @@ The **More Info** flyout also shows the approver roles, each decision with who m
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Approve</td><td>Records your approval, with an optional note. When it is the last approval needed, the JIT Admin is created and the results are shown. Only offered to approvers on a pending request they did not submit and have not already approved.</td><td>false</td></tr><tr><td>Reject</td><td>Ends the request. A note is required and is sent to the requester. Only offered to approvers on a pending request.</td><td>false</td></tr><tr><td>More Info</td><td>Opens the Extended Info flyout with the full details for the selected row.</td><td>false</td></tr></tbody></table>
 
 {% hint style="info" %}
-While approval is on, CIPP also refuses to grant roles or groups through a JIT Admin that has no approved request behind it, such as a scheduled task set up directly. A JIT Admin scheduled to start in the future before approval was switched on is held to the same rule, so it does not activate when its start date arrives.
+While approval is on, CIPP also refuses to grant roles or groups through a JIT Admin that has no approved request behind it in a tenant that needs approval, such as a scheduled task set up directly. A JIT Admin scheduled to start in the future before approval was switched on is held to the same rule, so it does not activate when its start date arrives. The same happens when a tenant starts needing approval between submission and start, for example because it joined a selected tenant group.
 {% endhint %}
 
 {% include "../../../../../.gitbook/includes/feature-request.md" %}
