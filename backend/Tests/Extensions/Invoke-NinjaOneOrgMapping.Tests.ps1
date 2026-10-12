@@ -86,3 +86,18 @@ Describe 'Invoke-NinjaOneOrgMapping' {
         $script:Result | Should -BeLike '*3 new tenant mapping*'
     }
 }
+
+Describe 'Invoke-NinjaOneOrgMapping -NameOnly' {
+    BeforeAll {
+        $script:Added = [System.Collections.Generic.List[object]]::new()
+        Mock Invoke-WebRequest {
+            [pscustomobject]@{ content = (ConvertTo-Json -InputObject @($script:Orgs) -Depth 5 -Compress) }
+        }
+        Invoke-NinjaOneOrgMapping -NameOnly
+    }
+
+    It 'maps by organization name without downloading devices' {
+        @($script:Added.RowKey) | Should -Be @('t2')
+        Should -Invoke Invoke-WebRequest -Times 0 -ParameterFilter { $Uri -like '*/devices-detailed?*' }
+    }
+}

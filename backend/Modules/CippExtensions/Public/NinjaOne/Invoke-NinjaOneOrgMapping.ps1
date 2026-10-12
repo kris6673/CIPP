@@ -6,10 +6,14 @@ function Invoke-NinjaOneOrgMapping {
         Unmapped tenants are matched to a NinjaOne organization whose name exactly matches the tenant display name.
         Tenants still unmatched are matched to the organization owning most of their Intune devices (by serial,
         then device name), read from the ManagedDevices report cache. Existing mappings are never overwritten.
-        Runs from the mapping page and from the extension timer.
+        Runs from the mapping page and, with -NameOnly, from the extension timer.
+    .PARAMETER NameOnly
+        Skip the device match, which downloads every NinjaOne device
     #>
     [CmdletBinding()]
-    param()
+    param(
+        [switch]$NameOnly
+    )
 
     $ExcludeSerials = @('0', 'SystemSerialNumber', 'To Be Filled By O.E.M.', 'System Serial Number', '0123456789', '123456789', '............')
     $CIPPMapping = Get-CIPPTable -TableName CippMapping
@@ -66,7 +70,7 @@ function Invoke-NinjaOneOrgMapping {
         }
     }
 
-    if ($Unmatched) {
+    if ($Unmatched -and !$NameOnly) {
         $After = 0
         $NinjaDevices = do {
             $Result = (Invoke-WebRequest -Uri "https://$($Configuration.Instance)/api/v2/devices-detailed?pageSize=$PageSize&after=$After" -Method GET -Headers @{Authorization = "Bearer $($Token.access_token)" } -ContentType 'application/json').content | ConvertFrom-Json -Depth 100
