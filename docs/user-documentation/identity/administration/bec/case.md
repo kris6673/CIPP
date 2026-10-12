@@ -14,9 +14,13 @@ Nothing on this page is proof of a compromise. The checks surface the informatio
 
 Nothing runs when the page opens. It loads the user's runs and shows the latest one, or a **Business Email Compromise** status card with **Run investigation** when the user has none. Starting a run queues a background job, and the status card shows whether it is **Queued - waiting for a worker** or **Running**, with the step it is on and each step's outcome as it completes. A run usually takes a few minutes; a tenant with a lot of audit data can take up to ten. A run that makes no progress for twenty minutes, typically because the background worker restarted, is marked **Failed** with the reason shown, and the button becomes **Run a new investigation**. The failed run stays in the user's history.
 
+A step that fails, or stops before it finishes, does not end the run: the remaining steps still run, and the checks from the failed step show as failed on the completed case, listed in the warning above the findings. Only a failure in the last step, which scores the run and builds the case, marks the whole run **Failed**.
+
+While a run is queued or in progress, the status card also offers **Contain user**, so containment does not have to wait for the investigation to finish. Because there are no findings yet, the drawer's targets come from the live tenant rather than the case. The result is still recorded on the case, and a **Remediation taken** card appears below the status card once containment has run.
+
 Every run is kept as a **case** with its own id (`BEC-<timestamp>-<suffix>`), so returning to the page shows the user's latest case rather than starting a new one. **← All BEC cases** goes back to the [Business Email Compromise](README.md) page, which lists every case for every user and tenant and is where runs are deleted.
 
-Runs can also be queued for many users at once. Select the users on the [Users](../users/README.md) page and choose **Run BEC investigation**, or use **Start investigation** on the [Business Email Compromise](README.md) page. One run per user (at most fifty per request) is queued as a single job that the Queue page tracks. Each run is a separate case and shows up on the [Business Email Compromise](README.md) page and in the user's own case list as it completes.
+Runs can also be queued for many users at once. Select the users on the [Users](../users/README.md) page and choose **BEC Remediation**, or use **Start investigation** on the [Business Email Compromise](README.md) page. One run per user is queued, and the Queue page tracks them together under one entry. Each run is a separate case and shows up on the [Business Email Compromise](README.md) page and in the user's own case list as it completes.
 
 Everything collected is metadata: audit records, sign-ins, directory audits, message-trace headers, permissions, consents, rules and devices. No message body, attachment or file content is ever read or stored, which keeps the investigation inside what a partner relationship permits.
 
@@ -118,7 +122,7 @@ A check that failed outright shows **Couldn't check** with the reason. When any 
 Most checks depend on the unified audit log. When it is disabled for the tenant, the warning above the groups says so and the checks that read from it come back empty rather than clean. An empty result in that state means nothing was available to search, not that nothing happened.
 {% endhint %}
 
-Every check covers the seven days before the analysis ran, apart from the MFA methods, the Intune and registered device lists, the delegations, consents and add-ins, and the trusted and blocked sender lists, which show the account's current state regardless of age. Nothing is cut to a row count: every list is read to the end of the window, and a check that could not read its whole window says so. The **Report check** column gives the number each finding carries in the [PDF report](case.md#pdf-report).
+Every check covers the seven days before the analysis ran, or 30 days for a tenant with Entra ID P1 or P2, whose sign-in and audit logs are kept that long. The exceptions are the MFA methods, the Intune and registered device lists, the delegations, consents and add-ins, and the trusted and blocked sender lists, which show the account's current state regardless of age. Nothing is cut to a row count: every list is read to the end of the window, and a check that could not read its whole window says so. The **Report check** column gives the number each finding carries in the [PDF report](case.md#pdf-report).
 
 ### Attacker IPs & activity
 
