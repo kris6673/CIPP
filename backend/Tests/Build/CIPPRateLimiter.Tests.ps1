@@ -103,10 +103,52 @@ Describe 'CIPPRateLimiter' {
         [CIPP.CIPPRateLimiter]::Acquire('https://contoso-admin.sharepoint.com/_vti_bin/client.svc/ProcessQuery', 'POST', '<Request />', $A).Wait.TotalSeconds | Should -BeGreaterThan 29
     }
 
-    It 'does not pace SharePoint calls before a throttle' {
-        $A = Get-AuthHeader 'tenant-a'
-        1..200 | ForEach-Object { [CIPP.CIPPRateLimiter]::Acquire('https://contoso-admin.sharepoint.com/_vti_bin/client.svc/ProcessQuery', 'POST', '<Request />', $A).Wait } |
-            Where-Object { $_ -gt [timespan]::Zero } | Should -BeNullOrEmpty
+    Context 'SharePoint resource-unit pacing' {
+        BeforeAll {
+            $Csom = 'https://contoso-admin.sharepoint.com/_vti_bin/client.svc/ProcessQuery'
+            $SiteRead = '<Request><ObjectPaths><Method Name="GetSitePropertiesByUrl" /></ObjectPaths></Request>'
+            $Write = '<Request><Actions><SetProperty Id="1" ObjectPathId="2" Name="SharingCapability" /></Actions></Request>'
+            function Get-Wait($Uri, $Body, $Auth) { [CIPP.CIPPRateLimiter]::Acquire($Uri, 'POST', $Body, $Auth).Wait }
+            function Get-SharePointBucket { @([CIPP.CIPPRateLimiter]::GetDiagnostics().Buckets).Where({ $_.Key -like '*|sharepoint' }, 'First')[0] }
+        }
+
+        It 'lets 150 units through, then waits: 25 site reads at 6 units, 150 Graph reads at 1' {
+            $A = Get-AuthHeader 'tenant-a'
+            # The bucket refills 18 units/s while the claims are made, so assert either side of the boundary.
+            1..23 | ForEach-Object { Get-Wait $Csom $SiteRead $A | Should -Be ([timespan]::Zero) }
+            @(1..7 | ForEach-Object { Get-Wait $Csom $SiteRead $A })[-1] | Should -BeGreaterThan ([timespan]::Zero)
+
+            $B = Get-AuthHeader 'tenant-b'
+            1..140 | ForEach-Object { [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/sites/root', 'GET', $null, $B).Wait | Should -Be ([timespan]::Zero) }
+            @(1..60 | ForEach-Object { [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/sites/root', 'GET', $null, $B).Wait })[-1] | Should -BeGreaterThan ([timespan]::Zero)
+        }
+
+        It 'charges CSOM writes 20 and Graph permissions 3 from the same tenant budget' {
+            $A = Get-AuthHeader 'tenant-a'
+            1..7 | ForEach-Object { Get-Wait $Csom $Write $A | Should -Be ([timespan]::Zero) }
+            @(1..3 | ForEach-Object { Get-Wait $Csom $Write $A })[-1] | Should -BeGreaterThan ([timespan]::Zero)
+
+            $B = Get-AuthHeader 'tenant-b'
+            1..45 | ForEach-Object { [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/drives/b!x/items/01AB/permissions', 'GET', $null, $B).Wait | Should -Be ([timespan]::Zero) }
+            @(1..30 | ForEach-Object { [CIPP.CIPPRateLimiter]::Acquire('https://contoso.sharepoint.com/_api/web', 'GET', $null, $B).Wait })[-1] | Should -BeGreaterThan ([timespan]::Zero)
+        }
+
+        It 'raises the rate while callers keep waiting, but not on the first burst, and lowers it again on a 429' {
+            $A = Get-AuthHeader 'tenant-a'
+            1..30 | ForEach-Object { $null = Get-Wait $Csom $SiteRead $A }
+            (Get-SharePointBucket).LearnedPerSecond | Should -BeNullOrEmpty
+
+            # 30 s of waiting later, the next waiting claim probes 10% higher.
+            $Buckets = [CIPP.CIPPRateLimiter].GetField('_buckets', [Reflection.BindingFlags]'NonPublic,Static').GetValue($null)
+            $Bucket = $Buckets['tenant-a|sharepoint']
+            $Bucket.GetType().GetField('LastRaise').SetValue($Bucket, [datetime]::UtcNow.AddSeconds(-31).Ticks)
+            $null = Get-Wait $Csom $SiteRead $A
+            (Get-SharePointBucket).LearnedPerSecond | Should -Be 19.8
+
+            $Claim = [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/sites/root', 'GET', $null, $A)
+            [CIPP.CIPPRateLimiter]::Observe($Claim, 429, (Get-ResponseHeader 1), '')
+            (Get-SharePointBucket).LearnedPerSecond | Should -Be 18
+        }
     }
 
     It 'counts every EXO batch sub-request against the tenant budget, after a burst of 90% of the minute' {

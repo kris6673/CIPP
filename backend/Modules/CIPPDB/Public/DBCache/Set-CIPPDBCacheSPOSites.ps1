@@ -71,7 +71,7 @@ function Set-CIPPDBCacheSPOSites {
         $WriteChunk = {
             $AuthByUrl = @{}
             try {
-                foreach ($Result in @(Get-CIPPSPOSiteBulk -TenantFilter $TenantFilter -SiteUrls @($Chunk.Url) -MaxConcurrency 4 -BatchSize 5 -Properties $AuthoritativeFields -UseCertificate)) {
+                foreach ($Result in @(Get-CIPPSPOSiteBulk -TenantFilter $TenantFilter -SiteUrls @($Chunk.Url) -MaxConcurrency 4 -BatchSize 8 -Properties $AuthoritativeFields -UseCertificate)) {
                     if ($Result.Success -and $Result.Site) { $AuthByUrl["$($Result.SiteUrl)"] = $Result.Site }
                 }
             } catch {
