@@ -51,20 +51,24 @@ Describe 'Push-CIPPDBCacheApplyBatch' {
         @($Result.InstanceId).Count | Should -Be 2
     }
 
-    It 'keeps a single-tenant run whole and uncapped' {
+    It 'gives a single-tenant refresh the same capped per-tenant run as the nightly' {
         Push-CIPPDBCacheApplyBatch -Item (New-ApplyBatchItem -TenantFilter 'contoso.com') | Out-Null
 
-        $script:Runs.Count | Should -Be 1
-        $script:Runs[0].OrchestratorName | Should -Be 'CIPPDBCacheExecute_contoso.com'
-        @($script:Runs[0].Batch).Count | Should -Be 3
-        $script:Runs[0].PSObject.Properties.Name | Should -Not -Contain 'MaxConcurrency'
+        @($script:Runs.OrchestratorName) | Should -Be @('CIPPDBCacheExecuteIntune', 'CIPPDBCacheExecute-contoso.com')
+        $script:Runs[1].MaxConcurrency | Should -Be 2
+        @($script:Runs[1].Batch.CollectionType) | Should -Be @('Graph', 'ExchangeConfig')
+        $script:Runs[1].PSObject.Properties.Name | Should -Not -Contain 'PostExecution'
     }
 
-    It 'chains the tests run after a single-tenant test refresh' {
+    It 'keeps Intune in the tenant run of a test refresh and chains the tests after it' {
         $Item = New-ApplyBatchItem -TenantFilter 'contoso.com'
         $Item.Parameters.TestRun = $true
         Push-CIPPDBCacheApplyBatch -Item $Item | Out-Null
 
+        $script:Runs.Count | Should -Be 1
+        $script:Runs[0].OrchestratorName | Should -Be 'CIPPDBCacheExecute-contoso.com'
+        $script:Runs[0].MaxConcurrency | Should -Be 2
+        @($script:Runs[0].Batch.CollectionType) | Should -Be @('Graph', 'Intune', 'ExchangeConfig')
         $script:Runs[0].PostExecution.FunctionName | Should -Be 'CIPPDBTestsRun'
         $script:Runs[0].PostExecution.Parameters.TenantFilter | Should -Be 'contoso.com'
     }
