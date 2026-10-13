@@ -94,6 +94,14 @@ Describe 'CIPPRateLimiter' {
         [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/sites/root', 'GET', $null, (Get-AuthHeader 'tenant-b')).Wait | Should -Be ([timespan]::Zero)
     }
 
+    It 'holds callers for a long SharePoint block instead of releasing them into it' {
+        $A = Get-AuthHeader 'tenant-a'
+        $Claim = [CIPP.CIPPRateLimiter]::Acquire('https://contoso-admin.sharepoint.com/_vti_bin/client.svc/ProcessQuery', 'POST', '<Request />', $A)
+        [CIPP.CIPPRateLimiter]::Observe($Claim, 429, (Get-ResponseHeader 280), '429 TOO MANY REQUESTS')
+        [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/sites/root', 'GET', $null, $A).Wait.TotalSeconds | Should -BeGreaterThan 279
+        [CIPP.CIPPRateLimiter]::MaxWait.TotalSeconds | Should -BeGreaterThan 300
+    }
+
     It 'holds the SharePoint admin endpoint when a Graph $batch sites sub-request is throttled' {
         $A = Get-AuthHeader 'tenant-a'
         $Body = @{ requests = @(@{ id = '1'; method = 'GET'; url = '/sites/contoso.sharepoint.com:/sites/hr' }) } | ConvertTo-Json -Depth 5

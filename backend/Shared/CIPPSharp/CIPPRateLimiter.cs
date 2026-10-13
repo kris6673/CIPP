@@ -57,9 +57,10 @@ namespace CIPP
 
         private static readonly bool _disabled =
             string.Equals(Environment.GetEnvironmentVariable("CIPP_RATELIMIT_DISABLED"), "true", StringComparison.OrdinalIgnoreCase);
-        public static readonly TimeSpan MaxWait = TimeSpan.FromSeconds(120);
         private const int DefaultRetryAfterSeconds = 5;
         private const int MaxRetryAfterSeconds = 300;
+        // SharePoint blocks for up to ~280 s; a caller must outwait a full block (plus its release jitter) instead of sending into it.
+        public static readonly TimeSpan MaxWait = TimeSpan.FromSeconds(MaxRetryAfterSeconds + 5);
 
         private static readonly ConcurrentDictionary<string, Bucket> _buckets = new(StringComparer.OrdinalIgnoreCase);
         private static readonly ConcurrentDictionary<string, string> _tenantByToken = new(StringComparer.Ordinal);
