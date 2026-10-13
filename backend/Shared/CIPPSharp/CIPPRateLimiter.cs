@@ -23,6 +23,9 @@ namespace CIPP
             new("ca-service",   Pattern(@"^graph\.microsoft\.com/(v1\.0|beta)/(identity/conditionalAccess/|identityProtection/|riskyUsers|riskDetections)"), 0.9, 10),
             new("auth-methods", Pattern(@"^graph\.microsoft\.com/(v1\.0|beta)/users/[^/]+/authentication/"), 20, 20),
             new("exo-adminapi", Pattern(@"^outlook\.office365\.com/adminapi/"), 45, 2700, 300),
+            // SharePoint charges CSOM, SOAP, _api and Graph's SharePoint endpoints to one per-app quota per tenant, so a
+            // 429 from any of them holds them all. PerSecond 0 = grouped, not paced.
+            new("sharepoint", Pattern(@"^([^/]+\.sharepoint(-[a-z]+)?\.[a-z.]+/|((dod-)?graph\.microsoft\.(com|us|de)|microsoftgraph\.chinacloudapi\.cn)/(v1\.0|beta)/((sites|drives|shares|drive)(/|$)|(users|groups|me)/([^/]+/)?(drives?|sites|followedSites)(/|$)))"), 0, 0),
         };
 
         private sealed class Bucket
@@ -123,7 +126,7 @@ namespace CIPP
                     start = now;
                     if (bucket.BlockedUntil > start)
                         start = bucket.BlockedUntil + TimeSpan.FromMilliseconds(Random.Shared.Next(0, 1000)).Ticks;
-                    if (rule is not null)
+                    if (rule is not null && rule.PerSecond > 0)
                     {
                         // GCRA token bucket: Burst tokens, refilled at PerSecond; a burst drains it and later claims wait for the refill.
                         // A server-reported budget (ObserveBudget) slows both until its window resets.
@@ -205,7 +208,7 @@ namespace CIPP
             if (seconds <= 0) return;
             foreach (var (key, (rule, _)) in claim.Costs)
             {
-                if (rule is null) continue;
+                if (rule is null || rule.PerSecond <= 0) continue;
                 var usable = remaining - rule.Reserve;
                 if (usable <= 0) { Hold(key, seconds); continue; }
                 Pace(key, (double)usable / seconds, Math.Min(rule.Burst, usable), seconds);

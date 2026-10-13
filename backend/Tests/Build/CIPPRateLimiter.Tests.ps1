@@ -75,6 +75,40 @@ Describe 'CIPPRateLimiter' {
         [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/users/u2/authentication/methods', 'GET', $null, $A).Wait | Should -Be ([timespan]::Zero)
     }
 
+    It 'holds every SharePoint endpoint of the tenant when one of them is throttled' {
+        $A = Get-AuthHeader 'tenant-a'
+        $Claim = [CIPP.CIPPRateLimiter]::Acquire('https://contoso-admin.sharepoint.com/_vti_bin/client.svc/ProcessQuery', 'POST', '<Request />', $A)
+        [CIPP.CIPPRateLimiter]::Observe($Claim, 429, (Get-ResponseHeader 60), '429 TOO MANY REQUESTS')
+
+        foreach ($Uri in @(
+                'https://graph.microsoft.com/v1.0/sites/root'
+                'https://graph.microsoft.com/beta/drives/b!abc/root/children'
+                'https://graph.microsoft.com/v1.0/users/john@contoso.com/drive/root'
+                'https://graph.microsoft.com/v1.0/groups/6f1d2c3e-0000-4000-8000-0000000000a1/sites/root'
+                'https://contoso.sharepoint.com/sites/hr/_api/web'
+                'https://contoso-my.sharepoint.com/personal/john/_vti_bin/sites.asmx'
+            )) {
+            [CIPP.CIPPRateLimiter]::Acquire($Uri, 'GET', $null, $A).Wait.TotalSeconds | Should -BeGreaterThan 59 -Because $Uri
+        }
+        [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/users/john@contoso.com', 'GET', $null, $A).Wait | Should -Be ([timespan]::Zero)
+        [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/sites/root', 'GET', $null, (Get-AuthHeader 'tenant-b')).Wait | Should -Be ([timespan]::Zero)
+    }
+
+    It 'holds the SharePoint admin endpoint when a Graph $batch sites sub-request is throttled' {
+        $A = Get-AuthHeader 'tenant-a'
+        $Body = @{ requests = @(@{ id = '1'; method = 'GET'; url = '/sites/contoso.sharepoint.com:/sites/hr' }) } | ConvertTo-Json -Depth 5
+        $Claim = [CIPP.CIPPRateLimiter]::Acquire('https://graph.microsoft.com/v1.0/$batch', 'POST', $Body, $A)
+        [CIPP.CIPPRateLimiter]::Observe($Claim, 200, (Get-ResponseHeader), '{"responses":[{"id":"1","status":429,"headers":{"Retry-After":"30"}}]}')
+
+        [CIPP.CIPPRateLimiter]::Acquire('https://contoso-admin.sharepoint.com/_vti_bin/client.svc/ProcessQuery', 'POST', '<Request />', $A).Wait.TotalSeconds | Should -BeGreaterThan 29
+    }
+
+    It 'does not pace SharePoint calls before a throttle' {
+        $A = Get-AuthHeader 'tenant-a'
+        1..200 | ForEach-Object { [CIPP.CIPPRateLimiter]::Acquire('https://contoso-admin.sharepoint.com/_vti_bin/client.svc/ProcessQuery', 'POST', '<Request />', $A).Wait } |
+            Where-Object { $_ -gt [timespan]::Zero } | Should -BeNullOrEmpty
+    }
+
     It 'counts every EXO batch sub-request against the tenant budget, after a burst of 90% of the minute' {
         $A = Get-AuthHeader 'tenant-a'
         $Sub = 'https://outlook.office365.com/adminapi/beta/tenant-a/InvokeCommand'
