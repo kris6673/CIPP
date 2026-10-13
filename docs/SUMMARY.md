@@ -268,6 +268,7 @@
     * [Compliance Policies](user-documentation/endpoint/mem/list-compliance-policies.md)
     * [App Policies](user-documentation/endpoint/mem/list-appprotection-policies.md)
     * [Policy Templates](user-documentation/endpoint/mem/list-templates/README.md)
+      * [New Endpoint Manager Template](user-documentation/endpoint/mem/list-templates/add.md)
       * [Edit Template](user-documentation/endpoint/mem/list-templates/edit.md)
     * [Reusable Settings](user-documentation/endpoint/mem/reusable-settings/README.md)
       * [Edit Reusable Setting](user-documentation/endpoint/mem/reusable-settings/edit.md)
