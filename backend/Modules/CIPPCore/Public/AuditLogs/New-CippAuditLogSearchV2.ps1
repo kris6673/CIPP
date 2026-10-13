@@ -60,7 +60,7 @@ function New-CippAuditLogSearchV2 {
             }
             # 'App:<id> dont have any permissions': the tenant never consented the audit log query permissions.
             if ([string]$Raw -match "don'?t have any permissions") {
-                return [pscustomobject]@{ Id = $null; Status = 'MissingPermissions'; Outcome = 'AccessDenied'; Message = 'CIPP does not have the AuditLogsQuery.Read.All permission in this tenant. Refresh the tenant''s CPV permissions to restore audit log collection.'; Throttled = $false }
+                return [pscustomobject]@{ Id = $null; Status = 'MissingPermissions'; Outcome = 'AccessDenied'; Message = 'CIPP does not have the required permissions to search the audit log in this tenant.'; Throttled = $false }
             }
 
             $Parsed = $null
