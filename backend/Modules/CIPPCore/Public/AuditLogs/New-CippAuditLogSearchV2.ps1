@@ -58,6 +58,10 @@ function New-CippAuditLogSearchV2 {
             if ([string]$Raw -match 'AADSTS7000229') {
                 return [pscustomobject]@{ Id = $null; Status = 'MissingServicePrincipal'; Outcome = 'AccessDenied'; Message = [string]$Raw; Throttled = $false }
             }
+            # 'App:<id> dont have any permissions': the tenant never consented the audit log query permissions.
+            if ([string]$Raw -match "don'?t have any permissions") {
+                return [pscustomobject]@{ Id = $null; Status = 'MissingPermissions'; Outcome = 'AccessDenied'; Message = 'CIPP does not have the AuditLogsQuery.Read.All permission in this tenant. Refresh the tenant''s CPV permissions to restore audit log collection.'; Throttled = $false }
+            }
 
             $Parsed = $null
             if ($Raw) { try { $Parsed = ([string]$Raw) | ConvertFrom-Json -ErrorAction Stop } catch {} }
