@@ -3,9 +3,10 @@ function Get-CippUserAgent {
     .SYNOPSIS
         Builds the User-Agent string for outbound M365 API requests.
     .DESCRIPTION
-        Returns 'CIPP/<version>' optionally suffixed with semicolon-delimited 'key:value' context segments
-        set via Set-CippUserAgentContext, e.g. 'CIPP/8.2.0 (user:john@msp.com)' or
-        'CIPP/8.2.0 (scheduled-task:<taskid>; user:john@msp.com)'.
+        Returns 'ISV|CyberDrain|CIPP/<version>' (the decoration SharePoint Online asks ISVs to send)
+        optionally suffixed with semicolon-delimited 'key:value' context segments set via
+        Set-CippUserAgentContext, e.g. 'ISV|CyberDrain|CIPP/8.2.0 (user:john@msp.com)' or
+        'ISV|CyberDrain|CIPP/8.2.0 (scheduled-task:<taskid>; user:john@msp.com)'.
         This allows MDR/security teams to attribute CIPP activity in M365 audit logs.
     .FUNCTIONALITY
         Internal
@@ -28,7 +29,7 @@ function Get-CippUserAgent {
                 $Segments.Add('user:{0}' -f $Context.Identity)
             }
         }
-        return ('CIPP/{0} ({1})' -f $Version, ($Segments -join '; '))
+        return ('ISV|CyberDrain|CIPP/{0} ({1})' -f $Version, ($Segments -join '; '))
     }
-    return ('CIPP/{0}' -f $Version)
+    return ('ISV|CyberDrain|CIPP/{0}' -f $Version)
 }
