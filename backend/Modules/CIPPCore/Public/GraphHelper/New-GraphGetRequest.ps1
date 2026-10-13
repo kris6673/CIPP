@@ -60,7 +60,7 @@ function New-GraphGetRequest {
         }
 
         if (!$headers['User-Agent']) {
-            $headers['User-Agent'] = Get-CippUserAgent
+            $headers['User-Agent'] = Get-CippUserAgent -SharePoint:($uri -match '^https://[^/]+\.sharepoint(-[a-z]+)?\.')
         }
 
 

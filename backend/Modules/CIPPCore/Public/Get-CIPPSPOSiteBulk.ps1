@@ -63,7 +63,7 @@ function Get-CIPPSPOSiteBulk {
     $TokenSplat = @{ tenantid = $TenantFilter; scope = "$AdminUrl/.default" }
     if ($UseCertificate) { $TokenSplat['AsApp'] = $true; $TokenSplat['UseCertificate'] = $true }
     $Authorization = (Get-GraphToken @TokenSplat).Authorization
-    $UserAgent = Get-CippUserAgent
+    $UserAgent = Get-CippUserAgent -SharePoint
 
     if ($BatchSize -lt 1) { $BatchSize = 1 }
     $CleanUrls = @($SiteUrls | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })

@@ -40,7 +40,7 @@ function New-GraphPOSTRequest {
         $body = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $body -EscapeForJson
 
         if (!$headers['User-Agent']) {
-            $headers['User-Agent'] = Get-CippUserAgent
+            $headers['User-Agent'] = Get-CippUserAgent -SharePoint:($uri -match '^https://[^/]+\.sharepoint(-[a-z]+)?\.')
         }
 
         if (!$contentType) {

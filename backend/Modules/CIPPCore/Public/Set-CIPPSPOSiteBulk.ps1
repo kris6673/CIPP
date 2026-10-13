@@ -53,7 +53,7 @@ function Set-CIPPSPOSiteBulk {
     $TokenSplat = @{ tenantid = $TenantFilter; scope = "$AdminUrl/.default" }
     if ($UseCertificate) { $TokenSplat['AsApp'] = $true; $TokenSplat['UseCertificate'] = $true }
     $Authorization = (Get-GraphToken @TokenSplat).Authorization
-    $UserAgent = Get-CippUserAgent
+    $UserAgent = Get-CippUserAgent -SharePoint
 
     $AllowedTypes = @('Boolean', 'String', 'Int32', 'Int64')
     $EnumProperties = @('SharingCapability', 'DefaultSharingLinkType', 'DefaultLinkPermission', 'SharingDomainRestrictionMode', 'ConditionalAccessPolicy')
