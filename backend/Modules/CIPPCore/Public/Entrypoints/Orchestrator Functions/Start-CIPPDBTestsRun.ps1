@@ -98,6 +98,7 @@ function Start-CIPPDBTestsRun {
         $NameSuffix = if ($TenantFilter -ne 'allTenants') { "-$TenantFilter" } else { '' }
         $InputObject = [PSCustomObject]@{
             OrchestratorName = "TestsList$NameSuffix"
+            AllowCollision   = $TenantFilter -ne 'allTenants'
             Batch            = @($Batch)
             SkipLog          = $true
             PostExecution    = @{

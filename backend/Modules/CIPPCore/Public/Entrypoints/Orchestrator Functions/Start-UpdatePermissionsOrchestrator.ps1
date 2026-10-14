@@ -61,6 +61,7 @@ function Start-UpdatePermissionsOrchestrator {
             $TenantBatch = $Tenants | Select-Object defaultDomainName, customerId, displayName, @{n = 'FunctionName'; exp = { 'UpdatePermissionsQueue' } }, @{n = 'QueueId'; exp = { $Queue.RowKey } }
             $InputObject = [PSCustomObject]@{
                 OrchestratorName = 'UpdatePermissionsOrchestrator'
+                AllowCollision   = $false
                 Batch            = @($TenantBatch)
             }
             $InstanceId = Start-CIPPOrchestrator -InputObject $InputObject

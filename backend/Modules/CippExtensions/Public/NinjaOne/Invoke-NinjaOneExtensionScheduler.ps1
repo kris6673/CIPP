@@ -61,6 +61,7 @@ function Invoke-NinjaOneExtensionScheduler {
         if (($Batch | Measure-Object).Count -gt 0) {
             $InputObject = [PSCustomObject]@{
                 OrchestratorName = 'NinjaOneOrchestrator'
+                AllowCollision   = $false
                 Priority         = 6
                 Batch            = @($Batch)
             }
@@ -110,6 +111,7 @@ function Invoke-NinjaOneExtensionScheduler {
             if (($Batch | Measure-Object).Count -gt 0) {
                 $InputObject = [PSCustomObject]@{
                     OrchestratorName = 'NinjaOneOrchestrator'
+                    AllowCollision   = $false
                     Priority         = 6
                     Batch            = @($Batch)
                 }
