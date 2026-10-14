@@ -7,6 +7,7 @@
 
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+    Add-Type -Path (Join-Path $RepoRoot 'Shared/CIPPSharp/bin/CIPPSharp.dll')
 
     # --- in-memory table storage -------------------------------------------------------------
     function Get-CippTable { param($tablename) @{ TableName = $tablename } }
