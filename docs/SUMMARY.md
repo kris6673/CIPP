@@ -375,6 +375,7 @@
     * [Message Trace](user-documentation/tools/email-tools/message-trace.md)
     * [Historical Search](user-documentation/tools/email-tools/historical-search.md)
     * [Message Viewer](user-documentation/tools/email-tools/message-viewer.md)
+    * [Test Mail Flow Rules](user-documentation/tools/email-tools/test-message.md)
     * [Mailbox Restores](user-documentation/tools/email-tools/mailbox-restores.md)
     * [Message Encryption](user-documentation/tools/email-tools/message-encryption.md)
   * [Intune Tools](user-documentation/tools/intune-tools/README.md)
