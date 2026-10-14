@@ -72,6 +72,9 @@ function Test-CIPPIntuneCatalogPayload {
         }
 
         if ($Names -contains 'simpleSettingCollectionValue') {
+            if ($null -eq $Instance.simpleSettingCollectionValue -or @($Instance.simpleSettingCollectionValue).Count -eq 0) {
+                Add-Finding 'Error' 'EmptyCollectionValue' "$Path.simpleSettingCollectionValue" "'$DefinitionId' has no entries; Intune rejects an empty collection."
+            }
             $Index = 0
             foreach ($Entry in @($Instance.simpleSettingCollectionValue)) {
                 if (-not $Entry.'@odata.type') {
@@ -84,6 +87,9 @@ function Test-CIPPIntuneCatalogPayload {
         foreach ($Property in 'groupSettingCollectionValue', 'choiceSettingCollectionValue') {
             if ($Names -notcontains $Property) { continue }
             $Entries = @($Instance.$Property)
+            if ($Property -eq 'choiceSettingCollectionValue' -and ($null -eq $Instance.$Property -or $Entries.Count -eq 0)) {
+                Add-Finding 'Error' 'EmptyCollectionValue' "$Path.$Property" "'$DefinitionId' has no entries; Intune rejects an empty collection."
+            }
 
             # ConvertFrom-Json types small whole numbers as Int32 or Int64, so cast rather than type-test.
             if ($Definition) {

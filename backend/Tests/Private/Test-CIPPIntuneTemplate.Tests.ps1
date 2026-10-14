@@ -230,6 +230,25 @@ Describe 'Test-CIPPIntuneTemplate' {
             $Result.Errors | Should -BeNullOrEmpty
         }
 
+        # Intune: "Simple Setting Collection Value should not be empty." / "Choice setting collection id has empty choice setting value collection."
+        It 'rejects an empty <Property>, which Intune refuses' -ForEach @(
+            @{ Property = 'simpleSettingCollectionValue'; Type = 'SimpleSettingCollectionInstance'; Value = '[]' }
+            @{ Property = 'choiceSettingCollectionValue'; Type = 'ChoiceSettingCollectionInstance'; Value = '[]' }
+            @{ Property = 'simpleSettingCollectionValue'; Type = 'SimpleSettingCollectionInstance'; Value = 'null' }
+        ) {
+            $RawJSON = '{"name":"Catalog","technologies":"mdm","settings":[{"settingInstance":{"@odata.type":"#microsoft.graph.deviceManagementConfiguration' + $Type + '","settingDefinitionId":"device_test","' + $Property + '":' + $Value + '}}]}'
+            $Result = Test-CIPPIntuneTemplate -RawJSON $RawJSON -TemplateType 'Catalog' -DisplayName 'Catalog'
+            $Result.IsValid | Should -BeFalse
+            Get-Code $Result 'Error' | Should -Contain 'EmptyCollectionValue'
+        }
+
+        It 'accepts a collection holding one empty string, which Intune stores as given' {
+            $RawJSON = '{"name":"Catalog","technologies":"mdm","settings":[{"settingInstance":{"@odata.type":"#microsoft.graph.deviceManagementConfigurationSimpleSettingCollectionInstance","settingDefinitionId":"device_test","simpleSettingCollectionValue":[{"@odata.type":"#microsoft.graph.deviceManagementConfigurationStringSettingValue","value":""}]}}]}'
+            $Result = Test-CIPPIntuneTemplate -RawJSON $RawJSON -TemplateType 'Catalog' -DisplayName 'Catalog'
+            $Result.IsValid | Should -BeTrue
+            $Result.Findings | Should -BeNullOrEmpty
+        }
+
         It 'warns about an empty settings array rather than failing it' {
             $Result = Test-CIPPIntuneTemplate -RawJSON '{"name":"Catalog","technologies":"mdm","settings":[]}' -TemplateType 'Catalog' -DisplayName 'Catalog'
             $Result.IsValid | Should -BeTrue
