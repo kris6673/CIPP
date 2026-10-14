@@ -128,6 +128,10 @@ function Invoke-CIPPBecIPAnalysis {
     foreach ($Peer in @($KnownPeers | Where-Object { $_ -and $_.IP })) { $Peers[[string]$Peer.IP] = $Peer }
     $ToLookUp = @($Preliminary | Where-Object { $_.Verdict -notin @('Safe', 'Service', 'LikelyUser') -and -not $Peers.ContainsKey($_.IP) } | ForEach-Object { $_.IP })
     $PeerError = $null
+    # each address costs Graph a tenant-wide sign-in search, so only the most suspicious are looked up (the verdicts come sorted)
+    $PeerLimit = [int]($Heuristics.caps.peerLookups ?? 20)
+    $PeerCap = if ($ToLookUp.Count -gt $PeerLimit) { "$PeerLimit of $($ToLookUp.Count) addresses (most suspicious first)" }
+    if ($PeerCap) { $ToLookUp = $ToLookUp[0..($PeerLimit - 1)] }
     if ($ToLookUp.Count -gt 0 -and -not $SkipPeerLookup) {
         Write-Information "BEC IP analysis: other-account lookup for $($ToLookUp.Count) of $($Preliminary.Count) address(es)"
         try {
@@ -179,7 +183,7 @@ function Invoke-CIPPBecIPAnalysis {
         Baseline    = $BaselineResult
         Guidance    = $Guidance
         Peers       = $Peers
-        PeersResult = New-CIPPBecCollectorResult -Data @($Peers.Values) -Error $PeerError
+        PeersResult = New-CIPPBecCollectorResult -Data @($Peers.Values) -Error $PeerError -Cap $PeerCap -Complete (-not $PeerCap)
         Geo         = $Geo
         Verdicts    = $Verdicts
         Events      = $Events
