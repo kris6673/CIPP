@@ -5,8 +5,8 @@ function Start-AuditLogSearchCreationV2 {
         AuditLogCoverage ledger and fans out creation only to tenants that owe a window or have a
         retry due.
     .DESCRIPTION
-        Replaces Start-AuditLogSearchCreation. Tenant selection is unchanged (WebhookRules Webhookv2,
-        minus excluded, minus auditing-disabled). The key differences:
+        Tenants: those with Webhookv2 WebhookRules, minus excluded, minus auditing-disabled.
+        The key points:
           * Windows are clock-aligned, 35 minutes on a 30-minute stride, so consecutive windows
             OVERLAP by 5 minutes (tracked in AuditLogCoverage). The overlap is deliberate - it
             covers records landing on a boundary - and is safe only because alerting de-duplicates
