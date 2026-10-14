@@ -111,6 +111,13 @@ Describe 'Intune template corpus' {
             $Target.Instance.simpleSettingCollectionValue = @()
             Get-Code (Test-Policy $Target.Policy) 'Error' | Should -Contain 'EmptyCollectionValue'
         }
+
+        It 'catches a choice stripped of a setting its option requires' {
+            $Index = Get-CIPPIntuneDefinitionIndex
+            $Target = Find-Mutable { param($Instance) $Required = $Index[$Instance.settingDefinitionId].requiredChildIds; $Instance.choiceSettingValue -and $Required -and @($Required[$Instance.choiceSettingValue.value]).Where({ $_ }).Count -gt 0 }
+            $Target.Instance.choiceSettingValue.children = @()
+            Get-Code (Test-Policy $Target.Policy) 'Error' | Should -Contain 'MissingRequiredChild'
+        }
     }
 }
 
@@ -134,5 +141,11 @@ Describe 'Intune setting catalog' {
     It 'indexes a single-option choice with its one option' {
         $Definition = (Get-CIPPIntuneDefinitionIndex)['linux_mdatp_managed_edr_tags_item_key']
         @($Definition.options.Keys) | Should -Be @('linux_mdatp_managed_edr_tags_item_key_0')
+    }
+
+    It 'indexes the settings an option requires' {
+        $Definition = (Get-CIPPIntuneDefinitionIndex)['device_vendor_msft_policy_config_chromeintunev1~policy~googlechrome~extensions_extensioninstallforcelist']
+        $Definition.requiredChildIds['device_vendor_msft_policy_config_chromeintunev1~policy~googlechrome~extensions_extensioninstallforcelist_1'] | Should -Be @('device_vendor_msft_policy_config_chromeintunev1~policy~googlechrome~extensions_extensioninstallforcelist_extensioninstallforcelistdesc')
+        $Definition.requiredChildIds.ContainsKey('device_vendor_msft_policy_config_chromeintunev1~policy~googlechrome~extensions_extensioninstallforcelist_0') | Should -BeFalse
     }
 }

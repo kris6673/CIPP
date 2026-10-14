@@ -60,6 +60,12 @@ function Test-CIPPIntuneCatalogPayload {
             } elseif ($Definition.options -and $Value -notmatch '^%[^%]+%$' -and -not $Definition.options.ContainsKey("$Value")) {
                 Add-Finding 'Warning' 'UnknownChoiceValue' "$Path.choiceSettingValue" "Value '$Value' is not one of the options the catalog lists for '$DefinitionId'."
             }
+            if ($null -ne $Value -and $Definition.requiredChildIds) {
+                $Present = @(@($Instance.choiceSettingValue.children).ForEach({ $_.settingDefinitionId }))
+                foreach ($ChildId in @($Definition.requiredChildIds["$Value"]).Where({ $_ -and $Present -notcontains $_ })) {
+                    Add-Finding 'Error' 'MissingRequiredChild' "$Path.choiceSettingValue" "'$DefinitionId' is set to '$Value', which requires '$ChildId'; Intune rejects the policy without it."
+                }
+            }
             $Index = 0
             foreach ($Child in @($Instance.choiceSettingValue.children)) {
                 Test-SettingInstance $Child "$Path.choiceSettingValue.children[$Index]"
@@ -108,6 +114,12 @@ function Test-CIPPIntuneCatalogPayload {
                 $EntryPath = "$Path.$Property[$Index]"
                 if ($Property -eq 'choiceSettingCollectionValue' -and $null -eq $Entry.value) {
                     Add-Finding 'Error' 'MissingChoiceValue' $EntryPath 'Choice collection entry has no value.'
+                }
+                if ($Property -eq 'choiceSettingCollectionValue' -and $null -ne $Entry.value -and $Definition.requiredChildIds) {
+                    $Present = @(@($Entry.children).ForEach({ $_.settingDefinitionId }))
+                    foreach ($ChildId in @($Definition.requiredChildIds["$($Entry.value)"]).Where({ $_ -and $Present -notcontains $_ })) {
+                        Add-Finding 'Error' 'MissingRequiredChild' $EntryPath "'$DefinitionId' entry '$($Entry.value)' requires '$ChildId'; Intune rejects the policy without it."
+                    }
                 }
                 if ($Property -eq 'groupSettingCollectionValue' -and @($Entry.children).Count -eq 0) {
                     Add-Finding 'Error' 'EmptyGroupEntry' $EntryPath "'$DefinitionId' has a group entry with no settings in it; Intune rejects the whole policy."

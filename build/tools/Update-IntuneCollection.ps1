@@ -171,7 +171,18 @@ Write-Host "Settings with a category name: $Categorised of $($collection.Count)"
 # Write output files
 # ---------------------------------------------------------------------------
 $json = $collection |
-    Select-Object id, displayName, description, helpText, infoUrls, categoryId, categoryName, @{ n = 'options'; e = { if ($_.options) { , @($_.options | Select-Object id, displayName, description, helpText) } } }, minimumCount, maximumCount |
+    Select-Object id, displayName, description, helpText, infoUrls, categoryId, categoryName, @{ n = 'options'; e = {
+            if ($_.options) {
+                , @(foreach ($Option in $_.options) {
+                        $Slim = [ordered]@{ id = $Option.id; displayName = $Option.displayName; description = $Option.description; helpText = $Option.helpText }
+                        # Only where present: validation needs them, and every worker parses this file.
+                        $Required = @(@($Option.dependedOnBy).Where({ $_.required }).ForEach({ $_.dependedOnBy }))
+                        if ($Required.Count -gt 0) { $Slim.requiredChildIds = $Required }
+                        [pscustomobject]$Slim
+                    })
+            }
+        }
+    }, minimumCount, maximumCount |
     ConvertTo-Json -Depth 5 -Compress
 $fullJsonPath = Join-Path ([System.IO.Path]::GetTempPath()) 'intuneCollection.full.json'
 $collection | ConvertTo-Json -Depth 15 -Compress | Set-Content -Path $fullJsonPath -Encoding utf8NoBOM

@@ -23,5 +23,5 @@
     "Error": "device_vendor_msft_policy_config_chromeintunev1~policy~googlechrome~extensions_extensioninstallforcelist: Selected option device_vendor_msft_policy_config_chromeintunev1~policy~googlechrome~extensions_extensioninstallforcelist_1 with dependent settings  doesnt contain required dependent settings. Required dependent settings are device_vendor_msft_policy_config_chromeintunev1~policy~googlechrome~extensions_extensioninstallforcelist_extensioninstallforcelistdesc"
   },
   "Recaptured": null,
-  "ValidatorCode": null
+  "ValidatorCode": "MissingRequiredChild"
 }
