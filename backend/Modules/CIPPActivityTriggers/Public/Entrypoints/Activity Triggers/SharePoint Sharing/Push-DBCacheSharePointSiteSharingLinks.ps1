@@ -21,10 +21,10 @@ function Push-DBCacheSharePointSiteSharingLinks {
           Full        - delta walk reading permissions for every shared-facet item. This is the
                         ground truth, deliberately: a PrincipalCount pre-filter was tried and
                         removed because paged list enumeration serves stale principal counts on
-                        large busy lists, silently under-reporting shares. On group-connected
-                        team sites the shared facet is true for every item, so a full scan costs
-                        one batched permission read per item - the checkpointed resumes below are
-                        what make that converge on drives of any size.
+                        large busy lists, silently under-reporting shares. The delta is read with
+                        Prefer: hierarchicalsharing, so only permission-hierarchy roots and
+                        explicitly shared items carry the facet; without it every file on a
+                        group-connected team site does, costing a permission read per file.
           Incremental - delta from the stored token; only changed items are processed. Changed
                         items' existing rows are tombstoned and re-added from a fresh permission
                         read.
@@ -498,7 +498,7 @@ function Push-DBCacheSharePointSiteSharingLinks {
         $DroppedReads = 0
         while ($Uri) {
             try {
-                $Page = New-GraphGetRequest -uri $Uri -tenantid $TenantFilter -asapp $true -noPagination $true -SkipValueExtraction
+                $Page = New-GraphGetRequest -uri $Uri -tenantid $TenantFilter -asapp $true -noPagination $true -SkipValueExtraction -extraHeaders @{ Prefer = 'hierarchicalsharing, deltashowsharingchanges' }
             } catch {
                 $ErrorMessage = $_.Exception.Message
                 if ($Mode -eq 'Incremental' -and $ErrorMessage -match 'resync|SyncStateNotFound|Gone|410') {

@@ -96,6 +96,7 @@ BeforeAll {
     function New-GraphGetRequest {
         param($uri, $tenantid, $scope, $AsApp, [bool]$noPagination, $NoAuthCheck, [bool]$skipTokenCache, $Caller, [switch]$ComplexFilter, [switch]$CountOnly, [switch]$IncludeResponseHeaders, [hashtable]$extraHeaders, [switch]$ReturnRawResponse, [switch]$SkipValueExtraction, [switch]$Stream, [switch]$UseCertificate, $Headers)
         $script:GraphGetCalls.Add($uri)
+        if ($uri -match '/delta') { $script:DeltaPrefer.Add([string]$extraHeaders.Prefer) }
         & $script:GraphGetHandler $uri
     }
 
@@ -222,6 +223,7 @@ Describe 'Per-drive sharing-links scan' {
         $script:Orchestrations = [System.Collections.Generic.List[object]]::new()
         $script:QueueUpdates = [System.Collections.Generic.List[object]]::new()
         $script:GraphGetCalls = [System.Collections.Generic.List[string]]::new()
+        $script:DeltaPrefer = [System.Collections.Generic.List[string]]::new()
         $env:CIPP_SHARINGLINKS_FULLSCAN_DAYS = $null
         $env:CIPP_SHARINGLINKS_TIMEBOX_SECONDS = $null
 
@@ -346,6 +348,9 @@ Describe 'Per-drive sharing-links scan' {
             $DriveState.DeltaLink | Should -BeLike '*token=fresh'
             $DriveState.LastScanId | Should -Be $ScanId
             $DriveState.LastFullScanUtc | Should -Not -BeNullOrEmpty
+            # Only items with their own permissions carry the shared facet, so inheriting files cost no permission read.
+            $script:DeltaPrefer.Count | Should -BeGreaterThan 0
+            $script:DeltaPrefer.Where({ $_ -notmatch 'hierarchicalsharing' }).Count | Should -Be 0
 
             # Last drive of the last site: the scan finalised and wrote the count row.
             Get-CacheRowKeys | Should -Contain 'SharePointSharingLinks-Count'
