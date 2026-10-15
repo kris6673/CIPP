@@ -21,6 +21,7 @@ BeforeAll {
     function Get-CIPPAzDataTableEntity {
         param($TableName, $Filter)
         if ($TableName -eq 'CippSharingLinksState' -and $Filter -match "RowKey eq 'summary'") { [pscustomobject]@{ LinkCount = 3; CompletedUtc = '2026-09-02T00:00:00Z' } }
+        if ($TableName -eq 'CippSharingLinksState' -and $Filter -match "RowKey ge 'delta-'") { [pscustomobject]@{ RowKey = 'delta-a'; ResumeUri = 'https://next' }; [pscustomobject]@{ RowKey = 'delta-b'; ResumeUri = '' } }
     }
     function New-CIPPDbRequest {
         param($TenantFilter, $Type, $Fields)
@@ -73,6 +74,7 @@ Describe 'Get-CIPPSharePointSharingReport' {
         $s.oneDriveFiles | Should -Be 3
         $s.oneDriveStorageUsedGB | Should -Be 0.5
         $s.linksSynced | Should -BeTrue
+        $s.pausedLibraries | Should -Be 1
         $s.usageSynced | Should -BeTrue
         # The oldest of the usage count rows and the sharing-links summary.
         $s.lastDataRefresh | Should -Be ([DateTimeOffset]'2026-09-01T00:00:00Z')

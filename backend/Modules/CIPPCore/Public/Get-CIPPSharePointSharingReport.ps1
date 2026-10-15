@@ -53,6 +53,10 @@ function Get-CIPPSharePointSharingReport {
         Get-CIPPAzDataTableEntity @StateTable -Filter "PartitionKey eq '$SafeTenant' and RowKey eq 'summary'"
     } catch { $null }
     $CacheSynced['SharePointSharingLinks'] = [bool]$LinksSummary
+    # Libraries a scan stopped part way (throttling, outages); their links are partial until the next sync resumes them.
+    $PausedLibraries = try {
+        @(Get-CIPPAzDataTableEntity @StateTable -Filter "PartitionKey eq '$SafeTenant' and RowKey ge 'delta-' and RowKey lt 'delta.'" -Property @('RowKey', 'ResumeUri')).Where({ $_.ResumeUri }).Count
+    } catch { 0 }
     if ($LinksSummary.CompletedUtc) { $CacheTimestamps.Add([DateTimeOffset]::Parse([string]$LinksSummary.CompletedUtc)) }
     $LastDataRefresh = $CacheTimestamps | Sort-Object | Select-Object -First 1
 
@@ -97,6 +101,7 @@ function Get-CIPPSharePointSharingReport {
             passwordProtectedLinks  = @($Links | Where-Object { $_.hasPassword -eq $true }).Count
             externalRecipients      = $TopRecipients.Count
             linksSynced             = $CacheSynced['SharePointSharingLinks']
+            pausedLibraries         = $PausedLibraries
             usageSynced             = ($CacheSynced['SharePointSiteUsage'] -or $CacheSynced['OneDriveUsage'])
             lastDataRefresh         = $LastDataRefresh
         }

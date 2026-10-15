@@ -6,10 +6,10 @@ function Invoke-ExecBulkRemoveSharingLinks {
         Sharepoint.Site.ReadWrite
     .DESCRIPTION
         Revokes all sharing links / external direct grants on one site in bulk, sourced from
-        the SharePointSharingLinks reporting cache. Scope selects which classifications are
-        revoked: Anonymous (anyone links only), External (anonymous + external), or All
-        (every cached link on the site, including internal). Because the source is the
-        reporting cache, links created after the last sharing sync are not covered.
+        the cached sharing links (the sharing links sync). Scope selects which classifications
+        are revoked: Anonymous (anyone links only), External (anonymous + external), or All
+        (every cached link on the site, including internal). Because the source is the cache,
+        links created after the last sharing sync are not covered.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -14,11 +14,16 @@ import { useDialog } from '../../../../hooks/use-dialog'
 import { ApiGetCall } from '../../../../api/ApiCall'
 import { useSettings } from '../../../../hooks/use-settings'
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   Alert,
+  Box,
   Button,
   Chip,
   Container,
   Divider,
+  LinearProgress,
   Link,
   Stack,
   SvgIcon,
@@ -175,16 +180,109 @@ const Page = () => {
   // A scan started by anyone, or before this tab was opened, is tracked from the report itself.
   const scan = data.scan ?? {}
   useEffect(() => setScanRunning(!!scan.inProgress), [scan.inProgress])
+  // A scan this tab did not start replaces whatever an earlier sync left behind.
   const trackedQueueIds = useMemo(
     () =>
       scan.inProgress && scan.queueId && !syncQueueIds.includes(scan.queueId)
-        ? [...syncQueueIds, scan.queueId]
+        ? [scan.queueId]
         : syncQueueIds,
     [scan.inProgress, scan.queueId, syncQueueIds]
   )
+  useEffect(() => setSyncQueueIds([]), [currentTenant])
   const scanStarted = scan.startedUtc
     ? ` (started ${new Date(scan.startedUtc).toLocaleString()})`
     : ''
+
+  // Library-by-library progress of the running scan, light enough to poll.
+  const scanProgress = ApiGetCall({
+    url: '/api/ListSharePointSharing',
+    data: {
+      tenantFilter: currentTenant,
+      ScanStatusOnly: true,
+      InvalidateCIPPCache: true,
+    },
+    queryKey: `${queryKey}-scan`,
+    waiting: scanRunning,
+    refetchInterval: scanRunning ? 10000 : false,
+  })
+  const scanDetail = scanProgress.data?.scan ?? {}
+  const scanLibraries = scanDetail.libraries ?? []
+  const librariesScanning = scanLibraries.filter(
+    (library) => library.status === 'scanning'
+  )
+  const librariesDone = scanLibraries.filter(
+    (library) => library.status === 'done'
+  )
+  const passLabel = (mode) =>
+    mode === 'Incremental' ? 'delta' : String(mode || 'full').toLowerCase()
+  const libraryProgress = scanRunning && scanDetail.librariesTotal > 0 && (
+    <Box>
+      <Typography variant="subtitle2" gutterBottom>
+        Libraries: {scanDetail.librariesDone} of {scanDetail.librariesTotal}{' '}
+        done
+      </Typography>
+      <Stack spacing={1.5}>
+        {librariesScanning.map((library) => (
+          <Box key={`${library.site}/${library.library}`}>
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+              <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                {library.site} / {library.library}
+              </Typography>
+              <Chip
+                size="small"
+                variant="outlined"
+                label={passLabel(library.mode)}
+              />
+            </Stack>
+            <LinearProgress
+              variant={library.itemCount > 0 ? 'determinate' : 'indeterminate'}
+              value={
+                library.itemCount > 0
+                  ? Math.min(100, (library.itemsSeen / library.itemCount) * 100)
+                  : undefined
+              }
+              sx={{ height: 5, borderRadius: 3, my: 0.5 }}
+            />
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+              {library.itemsSeen.toLocaleString()}
+              {library.itemCount > 0
+                ? ` of ~${library.itemCount.toLocaleString()}`
+                : ''}{' '}
+              items
+            </Typography>
+          </Box>
+        ))}
+      </Stack>
+      {librariesDone.length > 0 && (
+        <Accordion disableGutters sx={{ mt: 1.5 }}>
+          <AccordionSummary expandIcon={<CippIcons.ExpandMore />}>
+            <Typography variant="body2">
+              Completed ({scanDetail.librariesDone}
+              {scanDetail.librariesDone > librariesDone.length
+                ? `, latest ${librariesDone.length} shown`
+                : ''}
+              )
+            </Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Stack spacing={0.5}>
+              {librariesDone.map((library) => (
+                <Typography
+                  key={`${library.site}/${library.library}`}
+                  variant="caption"
+                >
+                  {library.site} / {library.library}
+                  {library.itemCount >= 0
+                    ? ` (${library.itemCount.toLocaleString()} items)`
+                    : ''}
+                </Typography>
+              ))}
+            </Stack>
+          </AccordionDetails>
+        </Accordion>
+      )}
+    </Box>
+  )
   const summary = data.summary ?? {}
   const byScope = data.byScope ?? []
   const byLinkType = data.byLinkType ?? []
@@ -318,6 +416,7 @@ const Page = () => {
                     queueIds={trackedQueueIds}
                     relatedQueryKeys={[queryKey]}
                     label="Sharing sync"
+                    details={libraryProgress}
                   />
                   <SharingReportButton sharingData={data} tenantName={currentTenant} />
                   <Button
@@ -339,7 +438,12 @@ const Page = () => {
               </Stack>
               {scan.inProgress && (
                 <Alert severity="info" sx={{ mb: 1 }}>
-                  {`A sharing links sync is in progress${scanStarted}. The report refreshes itself once it finishes.`}
+                  {`A sharing links sync is in progress${scanStarted}${(scanDetail.phase ?? scan.phase) ? ` - ${scanDetail.phase ?? scan.phase}` : ''}${scanDetail.librariesTotal > 0 ? `, ${scanDetail.librariesDone} of ${scanDetail.librariesTotal} libraries done` : ''}. The report refreshes itself once it finishes; open the sync status for each library's progress.`}
+                </Alert>
+              )}
+              {summary.pausedLibraries > 0 && !scan.inProgress && (
+                <Alert severity="warning" sx={{ mb: 1 }}>
+                  {`${summary.pausedLibraries} ${summary.pausedLibraries === 1 ? 'library' : 'libraries'} stopped before finishing, usually because Microsoft throttled the scan. Their sharing links may be incomplete until the next sync resumes them.`}
                 </Alert>
               )}
               {needsSync && !scan.inProgress && (

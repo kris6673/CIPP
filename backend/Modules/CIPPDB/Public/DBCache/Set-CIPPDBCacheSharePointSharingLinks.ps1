@@ -116,6 +116,7 @@
             FullSweep    = [bool]$FullSweep
             StartedUtc   = [string]([DateTimeOffset]::UtcNow.ToString('o'))
             QueueId      = [string]$QueueId
+            Phase        = "Listing the libraries of $($Sites.Count) sites"
         } -Force
 
         $Batch = foreach ($Site in $Sites) {
