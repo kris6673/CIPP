@@ -22,7 +22,6 @@ function Invoke-CippTestZTNA21816 {
         $RoleEligibilitySchedules = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleEligibilitySchedules'
         $RoleAssignmentScheduleInstances = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleAssignmentScheduleInstances'
         $Users = Get-CIPPTestData -TenantFilter $Tenant -Type 'Users'
-        $Groups = Get-CIPPTestData -TenantFilter $Tenant -Type 'Groups'
 
         $EligibleGAs = $RoleEligibilitySchedules.Where({ $_.roleDefinitionId -eq $GlobalAdminRoleId })
         $EligibleGAUsers = 0
@@ -30,8 +29,14 @@ function Invoke-CippTestZTNA21816 {
         # Build id-keyed lookups once to avoid O(N*M) Where-Object scans
         $UsersById = @{}
         foreach ($U in $Users) { $UsersById[$U.id] = $U }
+        $GAMembers = Get-CippDbRoleMembers -TenantFilter $Tenant -RoleTemplateId $GlobalAdminRoleId
+        # Members are streamed: kept for every group they are too large to cache, so only the groups looked up below are kept
+        $LookupGroupIds = [System.Collections.Generic.HashSet[string]]::new()
+        foreach ($Id in @($EligibleGAs.principalId) + @($GAMembers.id)) { if ($Id) { [void]$LookupGroupIds.Add([string]$Id) } }
         $GroupsById = @{}
-        foreach ($G in $Groups) { $GroupsById[$G.id] = $G }
+        Get-CIPPTestData -TenantFilter $Tenant -Type 'Groups' -Fields 'id', 'members' -Stream | ForEach-Object {
+            if ($LookupGroupIds.Contains([string]$_.id)) { $GroupsById[$_.id] = $_ }
+        }
         # Composite-key lookup: principalId|roleDefinitionId
         $AssignmentByPrincipalRole = @{}
         foreach ($A in $RoleAssignmentScheduleInstances) {
@@ -82,8 +87,6 @@ function Invoke-CippTestZTNA21816 {
                 }
             }
         }
-
-        $GAMembers = Get-CippDbRoleMembers -TenantFilter $Tenant -RoleTemplateId $GlobalAdminRoleId
 
         foreach ($Member in $GAMembers) {
             $Assignment = $AssignmentByPrincipalRole['{0}|{1}' -f $Member.id, $GlobalAdminRoleId]
