@@ -725,15 +725,14 @@ const Page = () => {
                       sync when SharePoint admin access is available.
                     </Typography>
                     {(usageRefreshedAt || cleanupRefreshedAt) && (
-                      <Typography variant="body2" color="text.secondary">
-                        {[
-                          usageRefreshedAt &&
-                            `Usage last refreshed: ${usageRefreshedAt.toLocaleString()}`,
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        {`Last data refresh: ${[
+                          usageRefreshedAt && `usage ${usageRefreshedAt.toLocaleString()}`,
                           cleanupRefreshedAt &&
-                            `Cleanup scan last refreshed: ${cleanupRefreshedAt.toLocaleString()}`,
+                            `cleanup scan ${cleanupRefreshedAt.toLocaleString()}`,
                         ]
                           .filter(Boolean)
-                          .join(' · ')}
+                          .join(' · ')}`}
                       </Typography>
                     )}
                   </Stack>
