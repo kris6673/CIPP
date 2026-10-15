@@ -6,16 +6,25 @@ BeforeAll {
     . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPSharePointSharingReport.ps1')
 
     # Static stubs for the cache reads. No pass-through mocks.
+    function Get-CIPPSharingLinks {
+        param($TenantFilter)
+        @(
+            [pscustomobject]@{ classification = 'Anonymous'; roles = @('write'); expirationDateTime = $null; itemType = 'Folder'; driveId = 'd1'; itemId = 'i1'; siteName = 'Sales'; driveName = 'Documents'; linkType = 'edit'; hasPassword = $false }
+            [pscustomobject]@{ classification = 'External'; roles = @('read'); expirationDateTime = '2026-12-31'; itemType = 'File'; driveId = 'd1'; itemId = 'i2'; siteName = 'Sales'; driveName = 'Documents'; linkType = 'view'; sharedWith = @('a@example.com', 'b@example.org', '') }
+            [pscustomobject]@{ classification = 'Internal'; roles = @('read'); itemType = 'File'; driveId = 'D1'; itemId = 'I1'; siteUrl = 'https://x/sites/Ops'; linkType = 'view'; hasPassword = $true }
+        )
+    }
+    function Get-Tenants { param($TenantFilter, [switch]$IncludeErrors) [pscustomobject]@{ defaultDomainName = $TenantFilter } }
+    function ConvertTo-CIPPODataFilterValue { param($Value, $Type) $Value }
+    function Get-CippTable { param($tablename) @{ TableName = $tablename } }
+    function Get-CIPPSharingLinksScanStatus { param($TenantFilter) [pscustomobject]@{ inProgress = $true; queueId = 'queue-1'; startedUtc = '2026-09-03T00:00:00Z' } }
+    function Get-CIPPAzDataTableEntity {
+        param($TableName, $Filter)
+        if ($TableName -eq 'CippSharingLinksState' -and $Filter -match "RowKey eq 'summary'") { [pscustomobject]@{ LinkCount = 3; CompletedUtc = '2026-09-02T00:00:00Z' } }
+    }
     function New-CIPPDbRequest {
         param($TenantFilter, $Type, $Fields)
         switch ($Type) {
-            'SharePointSharingLinks' {
-                @(
-                    [pscustomobject]@{ classification = 'Anonymous'; roles = @('write'); expirationDateTime = $null; itemType = 'Folder'; driveId = 'd1'; itemId = 'i1'; siteName = 'Sales'; driveName = 'Documents'; linkType = 'edit'; hasPassword = $false }
-                    [pscustomobject]@{ classification = 'External'; roles = @('read'); expirationDateTime = '2026-12-31'; itemType = 'File'; driveId = 'd1'; itemId = 'i2'; siteName = 'Sales'; driveName = 'Documents'; linkType = 'view'; sharedWith = @('a@example.com', 'b@example.org', '') }
-                    [pscustomobject]@{ classification = 'Internal'; roles = @('read'); itemType = 'File'; driveId = 'D1'; itemId = 'I1'; siteUrl = 'https://x/sites/Ops'; linkType = 'view'; hasPassword = $true }
-                )
-            }
             'SharePointSiteUsage' {
                 @(
                     [pscustomobject]@{ rootWebTemplate = 'Group'; fileCount = '10'; storageUsedInBytes = 1GB }
@@ -29,7 +38,7 @@ BeforeAll {
     function Get-CIPPDbItem {
         param($TenantFilter, $Type, [switch]$CountsOnly)
         if ($Type -eq 'OneDriveUsage') { return $null }
-        [pscustomobject]@{ Timestamp = [datetime]'2026-09-01' }
+        [pscustomobject]@{ Timestamp = [DateTimeOffset]'2026-09-01T00:00:00Z' }
     }
 }
 
@@ -65,7 +74,8 @@ Describe 'Get-CIPPSharePointSharingReport' {
         $s.oneDriveStorageUsedGB | Should -Be 0.5
         $s.linksSynced | Should -BeTrue
         $s.usageSynced | Should -BeTrue
-        $s.lastDataRefresh | Should -Be ([datetime]'2026-09-01')
+        # The oldest of the usage count rows and the sharing-links summary.
+        $s.lastDataRefresh | Should -Be ([DateTimeOffset]'2026-09-01T00:00:00Z')
     }
 
     It 'ranks the busiest libraries, sites and recipients' {
@@ -78,5 +88,7 @@ Describe 'Get-CIPPSharePointSharingReport' {
         ($r.byScope | Where-Object { $_.scope -eq 'Anonymous' }).links | Should -Be 1
         ($r.byLinkType | Where-Object { $_.type -eq 'view' }).links | Should -Be 2
         @($r.links).Count | Should -Be 3
+        $r.scan.inProgress | Should -BeTrue
+        $r.scan.queueId | Should -Be 'queue-1'
     }
 }

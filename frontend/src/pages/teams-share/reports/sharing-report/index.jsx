@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CippIcons } from '../../../../utils/icon-registry'
 import { Layout as DashboardLayout } from '../../../../layouts/index'
 import { CippInfoBar } from '../../../../components/CippCards/CippInfoBar'
@@ -156,15 +156,35 @@ const Page = () => {
   const [syncQueueIds, setSyncQueueIds] = useState([])
   const newSyncRunRef = useRef(false)
   const queryKey = `ListSharePointSharing-${currentTenant}`
+  // Set from the last response: while a scan runs the report skips the server cache, so its end shows up.
+  const [scanRunning, setScanRunning] = useState(false)
 
   const sharing = ApiGetCall({
     url: '/api/ListSharePointSharing',
-    data: { tenantFilter: currentTenant },
+    data: {
+      tenantFilter: currentTenant,
+      ...(scanRunning || syncQueueIds.length > 0
+        ? { InvalidateCIPPCache: true }
+        : {}),
+    },
     queryKey: queryKey,
     waiting: !!currentTenant && currentTenant !== 'AllTenants',
   })
 
   const data = sharing.data ?? {}
+  // A scan started by anyone, or before this tab was opened, is tracked from the report itself.
+  const scan = data.scan ?? {}
+  useEffect(() => setScanRunning(!!scan.inProgress), [scan.inProgress])
+  const trackedQueueIds = useMemo(
+    () =>
+      scan.inProgress && scan.queueId && !syncQueueIds.includes(scan.queueId)
+        ? [...syncQueueIds, scan.queueId]
+        : syncQueueIds,
+    [scan.inProgress, scan.queueId, syncQueueIds]
+  )
+  const scanStarted = scan.startedUtc
+    ? ` (started ${new Date(scan.startedUtc).toLocaleString()})`
+    : ''
   const summary = data.summary ?? {}
   const byScope = data.byScope ?? []
   const byLinkType = data.byLinkType ?? []
@@ -295,7 +315,7 @@ const Page = () => {
                     isFetching={sharing.isFetching}
                   />
                   <CippMultiQueueTracker
-                    queueIds={syncQueueIds}
+                    queueIds={trackedQueueIds}
                     relatedQueryKeys={[queryKey]}
                     label="Sharing sync"
                   />
@@ -317,7 +337,12 @@ const Page = () => {
                   </Button>
                 </Stack>
               </Stack>
-              {needsSync && (
+              {scan.inProgress && (
+                <Alert severity="info" sx={{ mb: 1 }}>
+                  {`A sharing links sync is in progress${scanStarted}. The report refreshes itself once it finishes.`}
+                </Alert>
+              )}
+              {needsSync && !scan.inProgress && (
                 <Alert severity="info" sx={{ mb: 1 }}>
                   No cached sharing data found for this tenant yet. Click "Sync data" to scan the
                   tenant's SharePoint sites and OneDrive accounts for sharing links; the report

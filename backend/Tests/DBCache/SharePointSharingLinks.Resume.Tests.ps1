@@ -2,7 +2,7 @@
 #
 # The scan's correctness lives in state transitions - checkpoints, delta tokens, tombstones,
 # marker-based completion - so these tests run the real activity, finaliser, state helpers and
-# the real Add-CIPPDbItem against an in-memory stand-in for table storage that understands the
+# the real table helpers against an in-memory stand-in for table storage that understands the
 # handful of OData filter shapes the code generates. Graph is scripted per test.
 
 BeforeAll {
@@ -127,6 +127,11 @@ BeforeAll {
                 continue
             }
             $ItemId = ($Request.url -split '/')[3]
+            $script:ReadItemIds.Add($ItemId)
+            if ($ItemId -like '*ROOT') {
+                [pscustomobject]@{ id = $Request.id; status = 200; body = [pscustomobject]@{ value = @([pscustomobject]@{ id = 'inherited'; roles = @('read'); inheritedFrom = [pscustomobject]@{ id = 'site' } }) } }
+                continue
+            }
             [pscustomobject]@{
                 id     = $Request.id
                 status = 200
@@ -143,7 +148,9 @@ BeforeAll {
         }
     }
 
-    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Add-CIPPDbItem.ps1')
+    foreach ($HelperFile in (Get-ChildItem (Join-Path $RepoRoot 'Modules/CIPPCore/Public/SharingLinks') -Filter '*.ps1')) {
+        . $HelperFile.FullName
+    }
     foreach ($HelperFile in (Get-ChildItem (Join-Path $RepoRoot 'Modules/CIPPDB/Public/DBCache') -Filter '*-CIPPSharingLinks*.ps1')) {
         . $HelperFile.FullName
     }
@@ -209,14 +216,14 @@ BeforeAll {
     }
 
     function Add-CacheRow {
-        param([string]$RowKey, [string]$RunId = 'previous-scan')
-        Add-CIPPAzDataTableEntity -TableName 'CippReportingDB' -Entity @{
-            PartitionKey = 'contoso.com'; RowKey = $RowKey; Type = 'SharePointSharingLinks'; RunId = $RunId; Data = '{"id":"x"}'; ETag = '*'
+        param([string]$RowKey, [string]$ScanId = 'previous-scan')
+        Add-CIPPAzDataTableEntity -TableName 'CippSharingLinks' -Entity @{
+            PartitionKey = 'contoso.com'; RowKey = $RowKey; ScanId = $ScanId; itemId = $RowKey.Split('_')[1]; id = $RowKey; ETag = '*'
         }
     }
 
     function Get-CacheRowKeys {
-        @((Get-FakeTableRows -TableName 'CippReportingDB') | ForEach-Object { $_.RowKey }) | Sort-Object
+        @((Get-FakeTableRows -TableName 'CippSharingLinks') | ForEach-Object { $_.RowKey }) | Sort-Object
     }
 
     function Initialize-TestScan {
@@ -239,6 +246,7 @@ Describe 'Per-drive sharing-links scan' {
         $script:Orchestrations = [System.Collections.Generic.List[object]]::new()
         $script:QueueUpdates = [System.Collections.Generic.List[object]]::new()
         $script:GraphGetCalls = [System.Collections.Generic.List[string]]::new()
+        $script:ReadItemIds = [System.Collections.Generic.List[string]]::new()
         $script:DeltaPrefer = [System.Collections.Generic.List[string]]::new()
         $env:CIPP_SHARINGLINKS_FULLSCAN_DAYS = $null
 
@@ -303,7 +311,7 @@ Describe 'Per-drive sharing-links scan' {
             @($Tasks[0].InternalDomains) | Should -Be @('contoso.com')
         }
 
-        It 'queues every unfinished drive of the scan as one run of at most two at a time' {
+        It 'queues every unfinished drive of the scan as one run of at most three at a time' {
             $ScanId = 'scan-dispatch-4'
             Initialize-TestScan -ScanId $ScanId -TotalSites 2
             Add-CIPPAzDataTableEntity -TableName 'CippSharingLinksState' -Entity @{
@@ -320,7 +328,7 @@ Describe 'Per-drive sharing-links scan' {
 
             $script:Orchestrations.Count | Should -Be 1
             $script:Orchestrations[0].OrchestratorName | Should -Be 'SharingLinksDrives_contoso.com_r4'
-            $script:Orchestrations[0].MaxConcurrency | Should -Be 2
+            $script:Orchestrations[0].MaxConcurrency | Should -Be 3
             @($script:Orchestrations[0].Batch.DriveId) | Should -Be @('b!one', 'b!three')
             $script:Orchestrations[0].PostExecution.FunctionName | Should -Be 'SharingLinksDispatchDrives'
             $script:Orchestrations[0].PostExecution.Parameters.Round | Should -Be 4
@@ -347,7 +355,7 @@ Describe 'Per-drive sharing-links scan' {
             $Marker = (Get-FakeTableRows -TableName 'CippSharingLinksState') | Where-Object { $_.RowKey -eq 'done-contoso.sharepoint.com,site1,web1' }
             [string]$Marker.Failed | Should -Be 'True'
             # Not the last site, so no finalisation.
-            Get-CacheRowKeys | Should -Not -Contain 'SharePointSharingLinks-Count'
+            Get-StateRowKeys | Should -Not -Contain 'summary'
         }
 
         It 'skips a locked site un-failed so finalisation prunes its dead links' {
@@ -369,15 +377,15 @@ Describe 'Per-drive sharing-links scan' {
         It 'walks the delta ground truth, prunes stale rows and stores the token' {
             $ScanId = 'scan-team-1'
             Initialize-TestScan -ScanId $ScanId -TotalSites 1
-            Add-CacheRow -RowKey 'SharePointSharingLinks-b!driveone_01GONE_permOld'
+            Add-CacheRow -RowKey 'b!driveone_01GONE_permOld'
 
             Invoke-SiteAndDrives -SiteItem (New-SiteItem -ScanId $ScanId)
 
-            $Rows = @((Get-FakeTableRows -TableName 'CippReportingDB') | Where-Object { $_.RowKey -like 'SharePointSharingLinks-b!driveone_01ITEMA_*' })
+            $Rows = @((Get-FakeTableRows -TableName 'CippSharingLinks') | Where-Object { $_.RowKey -like 'b!driveone_01ITEMA_*' })
             $Rows.Count | Should -Be 1
-            $Rows[0].RunId | Should -Be $ScanId
+            $Rows[0].ScanId | Should -Be $ScanId
             # The full-scan prune removed what this scan did not rewrite.
-            Get-CacheRowKeys | Should -Not -Contain 'SharePointSharingLinks-b!driveone_01GONE_permOld'
+            Get-CacheRowKeys | Should -Not -Contain 'b!driveone_01GONE_permOld'
 
             $DriveState = Get-CIPPSharingLinksDriveState -TenantFilter 'contoso.com' -DriveId 'b!driveone'
             $DriveState.DeltaLink | Should -BeLike '*token=fresh'
@@ -385,11 +393,42 @@ Describe 'Per-drive sharing-links scan' {
             $DriveState.LastFullScanUtc | Should -Not -BeNullOrEmpty
             # Only items with their own permissions carry the shared facet, so inheriting files cost no permission read.
             $script:DeltaPrefer.Count | Should -BeGreaterThan 0
-            $script:DeltaPrefer.Where({ $_ -notmatch 'hierarchicalsharing' }).Count | Should -Be 0
+            # deltashowsharingchanges only works alongside deltashowremovedasdeleted and deltatraversepermissiongaps.
+            foreach ($Value in 'hierarchicalsharing', 'deltashowremovedasdeleted', 'deltatraversepermissiongaps', 'deltashowsharingchanges') {
+                $script:DeltaPrefer.Where({ $_ -notmatch $Value }).Count | Should -Be 0
+            }
 
             # Last drive of the last site: the scan finalised and wrote the count row.
-            Get-CacheRowKeys | Should -Contain 'SharePointSharingLinks-Count'
+            Get-StateRowKeys | Should -Contain 'summary'
             Get-StateRowKeys | Should -Contain 'final'
+        }
+    }
+
+    Context 'full scan with an item listed twice' {
+        It 'keeps only the last occurrence, dropping rows written for the earlier one' {
+            $ScanId = 'scan-dup-1'
+            Initialize-TestScan -ScanId $ScanId -TotalSites 1
+            $script:GraphGetHandler = {
+                param($Uri)
+                if ($Uri -match '/sites/[^/]+/drives\?') { return @([pscustomobject]@{ id = 'b!driveone'; name = 'Documents'; webUrl = 'https://contoso.sharepoint.com/sites/one/Shared%20Documents' }) }
+                if ($Uri -match 'token=page2') {
+                    return New-DeltaPage -Items @(
+                        [pscustomobject]@{ id = '01ITEMA'; name = 'a.docx' }
+                    ) -DeltaLink 'https://graph.microsoft.com/beta/drives/b!driveone/root/delta?token=fresh'
+                }
+                if ($Uri -match '/root/delta') {
+                    return New-DeltaPage -Items @(
+                        [pscustomobject]@{ id = '01ITEMA'; name = 'a.docx'; shared = [pscustomobject]@{ scope = 'anonymous' } }
+                    ) -NextLink 'https://graph.microsoft.com/beta/drives/b!driveone/root/delta?token=page2'
+                }
+                throw "Unrouted GET: $Uri"
+            }
+
+            Invoke-SiteAndDrives -SiteItem (New-SiteItem -ScanId $ScanId)
+
+            # Its later occurrence no longer carries its own permissions, so the link is gone.
+            Get-CacheRowKeys | Should -Not -Contain 'b!driveone_01ITEMA_perm-01ITEMA'
+            [int](Get-CIPPSharingLinksDriveState -TenantFilter 'contoso.com' -DriveId 'b!driveone').RowCount | Should -Be 0
         }
     }
 
@@ -397,7 +436,7 @@ Describe 'Per-drive sharing-links scan' {
         It 'keeps existing rows and defers the sweep when batch reads are throttled away' {
             $ScanId = 'scan-drop-1'
             Initialize-TestScan -ScanId $ScanId -TotalSites 1
-            Add-CacheRow -RowKey 'SharePointSharingLinks-b!driveone_01SURVIVOR_permOld'
+            Add-CacheRow -RowKey 'b!driveone_01SURVIVOR_permOld'
             # Every permission read comes back throttled inside the batch.
             Mock New-GraphBulkRequest {
                 foreach ($Request in @($Requests)) {
@@ -409,12 +448,12 @@ Describe 'Per-drive sharing-links scan' {
 
             # Nothing was rewritten, so nothing may be pruned - and the drive must not claim a
             # completed full scan, so the next run starts over.
-            Get-CacheRowKeys | Should -Contain 'SharePointSharingLinks-b!driveone_01SURVIVOR_permOld'
+            Get-CacheRowKeys | Should -Contain 'b!driveone_01SURVIVOR_permOld'
             $DriveState = Get-CIPPSharingLinksDriveState -TenantFilter 'contoso.com' -DriveId 'b!driveone'
             [string]$DriveState.DeltaLink | Should -BeNullOrEmpty
             [string]$DriveState.LastFullScanUtc | Should -BeNullOrEmpty
             # The drive still completes its task so the scan can finalise.
-            Get-CacheRowKeys | Should -Contain 'SharePointSharingLinks-Count'
+            Get-StateRowKeys | Should -Contain 'summary'
         }
     }
 
@@ -425,9 +464,9 @@ Describe 'Per-drive sharing-links scan' {
 
             Invoke-SiteAndDrives -SiteItem (New-SiteItem -ScanId $ScanId -IsPersonalSite $true)
 
-            $Rows = @((Get-FakeTableRows -TableName 'CippReportingDB') | Where-Object { $_.RowKey -like 'SharePointSharingLinks-b!driveone_01ITEMA_*' })
+            $Rows = @((Get-FakeTableRows -TableName 'CippSharingLinks') | Where-Object { $_.RowKey -like 'b!driveone_01ITEMA_*' })
             $Rows.Count | Should -Be 1
-            $Rows[0].RunId | Should -Be $ScanId
+            $Rows[0].ScanId | Should -Be $ScanId
 
             $DriveState = Get-CIPPSharingLinksDriveState -TenantFilter 'contoso.com' -DriveId 'b!driveone'
             $DriveState.DeltaLink | Should -Be 'https://graph.microsoft.com/beta/drives/b!driveone/root/delta?token=fresh'
@@ -440,36 +479,31 @@ Describe 'Per-drive sharing-links scan' {
             Initialize-TestScan -ScanId $ScanId -TotalSites 2
 
             Invoke-SiteAndDrives -SiteItem (New-SiteItem -ScanId $ScanId -IsPersonalSite $true)
-            Get-CacheRowKeys | Should -Not -Contain 'SharePointSharingLinks-Count'
+            Get-StateRowKeys | Should -Not -Contain 'summary'
 
             Invoke-SiteAndDrives -SiteItem (New-SiteItem -ScanId $ScanId -SiteId 'contoso.sharepoint.com,site2,web2' -SiteUrl 'https://contoso.sharepoint.com/sites/two' -IsPersonalSite $true)
-            $CountRow = (Get-FakeTableRows -TableName 'CippReportingDB') | Where-Object { $_.RowKey -eq 'SharePointSharingLinks-Count' }
+            $CountRow = (Get-FakeTableRows -TableName 'CippSharingLinksState') | Where-Object { $_.RowKey -eq 'summary' }
             # Two sites sharing one fake drive id: the same rows get upserted, so one link remains.
-            [int]$CountRow.DataCount | Should -Be 1
+            [int]$CountRow.LinkCount | Should -Be 1
         }
     }
 
     Context 'incremental scan from a stored delta token' {
         BeforeEach {
             $script:ScanId = 'scan-incr-1'
-            # LastFullScanUtc must sit inside the incremental window (Push-...'s $FullScanDays,
-            # default 14) or the drive falls back to a full scan. Anchor it to "now" so the
-            # fixture never drifts out of the window as the calendar advances past a fixed date.
-            $script:LastFullScanUtc = [string]([DateTimeOffset]::UtcNow.AddDays(-1).ToString('o'))
+            $script:LastFullScanUtc = '2026-01-01T00:00:00.0000000+00:00'
             Initialize-TestScan -ScanId $script:ScanId -TotalSites 1
             Add-CIPPAzDataTableEntity -TableName 'CippSharingLinksState' -Entity @{
                 PartitionKey = 'contoso.com'; RowKey = 'delta-b!driveone'; DriveId = 'b!driveone'; SiteId = 'contoso.sharepoint.com,site1,web1'
                 DeltaLink = 'https://graph.microsoft.com/beta/drives/b!driveone/root/delta?token=stored'
-                LastScanId = 'previous-scan'; LastScanUtc = $script:LastFullScanUtc; LastFullScanUtc = $script:LastFullScanUtc
+                LastScanId = 'previous-scan'; LastScanUtc = $script:LastFullScanUtc; LastFullScanUtc = $script:LastFullScanUtc; RowCount = 3
             }
-            Add-CacheRow -RowKey 'SharePointSharingLinks-b!driveone_01ITEMX_permOld'
-            Add-CacheRow -RowKey 'SharePointSharingLinks-b!driveone_01ITEMY_permKeep'
-            Add-CacheRow -RowKey 'SharePointSharingLinks-b!driveone_01ITEMZ_permDead'
-        }
-
-        It 'scans from the stored token, tombstones changed items and keeps untouched rows' {
-            $script:GraphGetHandler = {
+            Add-CacheRow -RowKey 'b!driveone_01ITEMX_permOld'
+            Add-CacheRow -RowKey 'b!driveone_01ITEMY_permKeep'
+            Add-CacheRow -RowKey 'b!driveone_01ITEMZ_permDead'
+            $script:IncrementalHandler = {
                 param($Uri)
+                if ($Uri -match '/drives/b!driveone/root\?') { return [pscustomobject]@{ id = '01ROOT'; name = 'root'; webUrl = 'https://contoso.sharepoint.com/sites/one/Shared%20Documents'; folder = [pscustomobject]@{}; root = [pscustomobject]@{} } }
                 if ($Uri -match '/sites/[^/]+/drives\?') { return @([pscustomobject]@{ id = 'b!driveone'; name = 'Documents'; webUrl = 'https://contoso.sharepoint.com/sites/one/Shared%20Documents' }) }
                 if ($Uri -eq 'https://graph.microsoft.com/beta/drives/b!driveone/root/delta?token=stored') {
                     return New-DeltaPage -Items @(
@@ -477,28 +511,6 @@ Describe 'Per-drive sharing-links scan' {
                         [pscustomobject]@{ id = '01ITEMZ'; name = 'z.docx'; deleted = [pscustomobject]@{ state = 'deleted' } }
                     ) -DeltaLink 'https://graph.microsoft.com/beta/drives/b!driveone/root/delta?token=newer'
                 }
-                throw "Unrouted GET: $Uri"
-            }
-
-            Invoke-SiteAndDrives -SiteItem (New-SiteItem -ScanId $script:ScanId)
-
-            $Keys = Get-CacheRowKeys
-            $Keys | Should -Not -Contain 'SharePointSharingLinks-b!driveone_01ITEMX_permOld'   # replaced
-            $Keys | Should -Contain 'SharePointSharingLinks-b!driveone_01ITEMX_perm-01ITEMX'   # fresh read
-            $Keys | Should -Contain 'SharePointSharingLinks-b!driveone_01ITEMY_permKeep'       # untouched
-            $Keys | Should -Not -Contain 'SharePointSharingLinks-b!driveone_01ITEMZ_permDead'  # deleted item
-
-            $DriveState = Get-CIPPSharingLinksDriveState -TenantFilter 'contoso.com' -DriveId 'b!driveone'
-            $DriveState.DeltaLink | Should -BeLike '*token=newer'
-            # Incremental completion must not claim a full scan happened.
-            $DriveState.LastFullScanUtc | Should -Be $script:LastFullScanUtc
-        }
-
-        It 'falls back to a classic full scan when the stored token is rejected' {
-            $script:GraphGetHandler = {
-                param($Uri)
-                if ($Uri -match '/sites/[^/]+/drives\?') { return @([pscustomobject]@{ id = 'b!driveone'; name = 'Documents'; webUrl = 'https://contoso.sharepoint.com/sites/one/Shared%20Documents' }) }
-                if ($Uri -match 'token=stored') { throw 'resyncRequired: The delta token is no longer valid, and the app must obtain a new one.' }
                 if ($Uri -match '/root/delta') {
                     return New-DeltaPage -Items @(
                         [pscustomobject]@{ id = '01ITEMY'; name = 'y.docx'; shared = [pscustomobject]@{ scope = 'anonymous' } }
@@ -506,17 +518,100 @@ Describe 'Per-drive sharing-links scan' {
                 }
                 throw "Unrouted GET: $Uri"
             }
+            $script:GraphGetHandler = $script:IncrementalHandler
+        }
+
+        It 'scans from the stored token, tombstones changed items and keeps untouched rows' {
+            Invoke-SiteAndDrives -SiteItem (New-SiteItem -ScanId $script:ScanId)
+
+            $Keys = Get-CacheRowKeys
+            $Keys | Should -Not -Contain 'b!driveone_01ITEMX_permOld'   # replaced
+            $Keys | Should -Contain 'b!driveone_01ITEMX_perm-01ITEMX'   # fresh read
+            $Keys | Should -Contain 'b!driveone_01ITEMY_permKeep'       # untouched
+            $Keys | Should -Not -Contain 'b!driveone_01ITEMZ_permDead'  # deleted item
+
+            $DriveState = Get-CIPPSharingLinksDriveState -TenantFilter 'contoso.com' -DriveId 'b!driveone'
+            $DriveState.DeltaLink | Should -BeLike '*token=newer'
+            [int]$DriveState.RowCount | Should -Be 2
+            # A library holding its own permissions has its root re-read every incremental scan.
+            $script:ReadItemIds | Should -Contain '01ROOT'
+            $DriveState.RootItemId | Should -Be '01ROOT'
+            # Incremental completion must not claim a full scan happened.
+            $DriveState.LastFullScanUtc | Should -Be $script:LastFullScanUtc
+        }
+
+        It 'falls back to a classic full scan when the stored token is rejected' {
+            $script:GraphGetHandler = {
+                param($Uri)
+                if ($Uri -match 'token=stored') { throw 'resyncRequired: The delta token is no longer valid, and the app must obtain a new one.' }
+                & $script:IncrementalHandler $Uri
+            }
 
             Invoke-SiteAndDrives -SiteItem (New-SiteItem -ScanId $script:ScanId)
 
             $Keys = Get-CacheRowKeys
-            $Keys | Should -Contain 'SharePointSharingLinks-b!driveone_01ITEMY_perm-01ITEMY'
-            $Keys | Should -Not -Contain 'SharePointSharingLinks-b!driveone_01ITEMX_permOld'
-            $Keys | Should -Not -Contain 'SharePointSharingLinks-b!driveone_01ITEMY_permKeep'
+            $Keys | Should -Contain 'b!driveone_01ITEMY_perm-01ITEMY'
+            $Keys | Should -Not -Contain 'b!driveone_01ITEMX_permOld'
+            $Keys | Should -Not -Contain 'b!driveone_01ITEMY_permKeep'
 
             $DriveState = Get-CIPPSharingLinksDriveState -TenantFilter 'contoso.com' -DriveId 'b!driveone'
             $DriveState.DeltaLink | Should -BeLike '*token=rebuilt'
             $DriveState.LastFullScanUtc | Should -Not -Be $script:LastFullScanUtc
+        }
+
+        It 'scans in full when the drive holds fewer rows than it recorded' {
+            Remove-CIPPAzDataTableEntity -TableName 'CippSharingLinks' -Entity @{ PartitionKey = 'contoso.com'; RowKey = 'b!driveone_01ITEMY_permKeep' }
+
+            Invoke-SiteAndDrives -SiteItem (New-SiteItem -ScanId $script:ScanId)
+
+            @($script:GraphGetCalls | Where-Object { $_ -match 'token=stored' }).Count | Should -Be 0
+            Get-CacheRowKeys | Should -Be @('b!driveone_01ITEMY_perm-01ITEMY')
+            (Get-CIPPSharingLinksDriveState -TenantFilter 'contoso.com' -DriveId 'b!driveone').DeltaLink | Should -BeLike '*token=rebuilt'
+        }
+
+        It 'scans in full when the drive state predates row counts' {
+            $State = (Get-FakeTableRows -TableName 'CippSharingLinksState') | Where-Object { $_.RowKey -eq 'delta-b!driveone' }
+            $State.PSObject.Properties.Remove('RowCount')
+
+            Invoke-SiteAndDrives -SiteItem (New-SiteItem -ScanId $script:ScanId)
+
+            @($script:GraphGetCalls | Where-Object { $_ -match 'token=stored' }).Count | Should -Be 0
+            Get-CacheRowKeys | Should -Be @('b!driveone_01ITEMY_perm-01ITEMY')
+        }
+
+        It 'keeps only the last occurrence of an item that appears twice' {
+            $script:GraphGetHandler = {
+                param($Uri)
+                if ($Uri -match 'token=stored') {
+                    return New-DeltaPage -Items @(
+                        [pscustomobject]@{ id = '01ITEMQ'; name = 'q.docx'; shared = [pscustomobject]@{ scope = 'anonymous' } }
+                    ) -NextLink 'https://graph.microsoft.com/beta/drives/b!driveone/root/delta?token=page2'
+                }
+                if ($Uri -match 'token=page2') {
+                    return New-DeltaPage -Items @(
+                        [pscustomobject]@{ id = '01ITEMQ'; name = 'q.docx'; deleted = [pscustomobject]@{ state = 'deleted' } }
+                    ) -DeltaLink 'https://graph.microsoft.com/beta/drives/b!driveone/root/delta?token=newer'
+                }
+                & $script:IncrementalHandler $Uri
+            }
+
+            Invoke-SiteAndDrives -SiteItem (New-SiteItem -ScanId $script:ScanId)
+
+            Get-CacheRowKeys | Should -Not -Contain 'b!driveone_01ITEMQ_perm-01ITEMQ'
+            [int](Get-CIPPSharingLinksDriveState -TenantFilter 'contoso.com' -DriveId 'b!driveone').RowCount | Should -Be 3
+        }
+
+        It 'keeps its old token when permission reads drop, so the next scan replays the changes' {
+            Mock New-GraphBulkRequest {
+                foreach ($Request in @($Requests)) {
+                    [pscustomobject]@{ id = $Request.id; status = 429; body = $null }
+                }
+            }
+
+            Invoke-SiteAndDrives -SiteItem (New-SiteItem -ScanId $script:ScanId)
+
+            (Get-CIPPSharingLinksDriveState -TenantFilter 'contoso.com' -DriveId 'b!driveone').DeltaLink | Should -BeLike '*token=stored'
+            Get-StateRowKeys | Should -Contain 'summary'
         }
     }
 
@@ -553,10 +648,10 @@ Describe 'Per-drive sharing-links scan' {
 
             # No call restarted the drive from the beginning.
             @($script:GraphGetCalls | Where-Object { $_ -match '\$top=999' }).Count | Should -Be 0
-            Get-CacheRowKeys | Should -Contain 'SharePointSharingLinks-b!driveone_01ITEMC_perm-01ITEMC'
+            Get-CacheRowKeys | Should -Contain 'b!driveone_01ITEMC_perm-01ITEMC'
             # Drive finished: checkpoint gone, drive marker present, scan finalised.
             (Get-FakeTableRows -TableName 'CippSharingLinksState') | Where-Object { $_.RowKey -like 'chk-*' } | Should -BeNullOrEmpty
-            Get-CacheRowKeys | Should -Contain 'SharePointSharingLinks-Count'
+            Get-StateRowKeys | Should -Contain 'summary'
         }
     }
 
@@ -591,7 +686,7 @@ Describe 'Per-drive sharing-links scan' {
 
             # Page 1 persisted and the checkpoint points at page 2; the drive is neither completed
             # nor failed, and the task queued nothing itself.
-            Get-CacheRowKeys | Should -Contain 'SharePointSharingLinks-b!driveone_01ITEMA_perm-01ITEMA'
+            Get-CacheRowKeys | Should -Contain 'b!driveone_01ITEMA_perm-01ITEMA'
             $Checkpoint = (Get-FakeTableRows -TableName 'CippSharingLinksState') | Where-Object { $_.RowKey -like 'chk-*' }
             $Checkpoint.StateJson | Should -BeLike '*token=page2*'
             $script:Orchestrations.Count | Should -Be 0
@@ -608,28 +703,28 @@ Describe 'Per-drive sharing-links scan' {
             @($script:Orchestrations.OrchestratorName) | Should -Be @('SharingLinksDrives_contoso.com_r1', 'SharingLinksDrives_contoso.com_r2')
             # Round 2 resumed at page 2 rather than restarting the drive.
             @($script:GraphGetCalls | Where-Object { $_ -match '\$top=999' }).Count | Should -Be 1
-            Get-CacheRowKeys | Should -Contain 'SharePointSharingLinks-b!driveone_01ITEMB_perm-01ITEMB'
+            Get-CacheRowKeys | Should -Contain 'b!driveone_01ITEMB_perm-01ITEMB'
             (Get-CIPPSharingLinksDriveState -TenantFilter 'contoso.com' -DriveId 'b!driveone').DeltaLink | Should -BeLike '*token=done'
-            Get-CacheRowKeys | Should -Contain 'SharePointSharingLinks-Count'
+            Get-StateRowKeys | Should -Contain 'summary'
         }
 
-        It 'gives up after 10 rounds, keeping the drive rows and finalising the scan' {
+        It 'gives up after 20 rounds, keeping the drive rows and finalising the scan' {
             $ScanId = 'scan-throttle-3'
             Initialize-TestScan -ScanId $ScanId -TotalSites 1
             $script:Page2Failures = 100
-            Add-CacheRow -RowKey 'SharePointSharingLinks-b!driveone_01OLD_permOld'
+            Add-CacheRow -RowKey 'b!driveone_01OLD_permOld'
 
             Invoke-SiteAndDrives -SiteItem (New-SiteItem -ScanId $ScanId -IsPersonalSite $true)
 
-            $script:Orchestrations.Count | Should -Be 10
-            $script:Orchestrations[9].OrchestratorName | Should -Be 'SharingLinksDrives_contoso.com_r10'
+            $script:Orchestrations.Count | Should -Be 20
+            $script:Orchestrations[19].OrchestratorName | Should -Be 'SharingLinksDrives_contoso.com_r20'
             # Rows protected, next scan starts the drive over in full, and the scan still finalised.
-            Get-CacheRowKeys | Should -Contain 'SharePointSharingLinks-b!driveone_01OLD_permOld'
+            Get-CacheRowKeys | Should -Contain 'b!driveone_01OLD_permOld'
             $DriveState = Get-CIPPSharingLinksDriveState -TenantFilter 'contoso.com' -DriveId 'b!driveone'
             $DriveState.LastScanId | Should -Be $ScanId
             [string]$DriveState.DeltaLink | Should -BeNullOrEmpty
             (Get-FakeTableRows -TableName 'CippSharingLinksState') | Where-Object { $_.RowKey -like 'chk-*' } | Should -BeNullOrEmpty
-            Get-CacheRowKeys | Should -Contain 'SharePointSharingLinks-Count'
+            Get-StateRowKeys | Should -Contain 'summary'
         }
     }
 
@@ -652,7 +747,122 @@ Describe 'Per-drive sharing-links scan' {
 
             @((Get-FakeTableRows -TableName 'CippSharingLinksState') | Where-Object { $_.RowKey -like 'done-*' }).Count | Should -Be 1
             # One of two sites complete: no finalisation.
-            Get-CacheRowKeys | Should -Not -Contain 'SharePointSharingLinks-Count'
+            Get-StateRowKeys | Should -Not -Contain 'summary'
+        }
+    }
+
+    Context 'library root permissions' {
+        It 'reads library roots only where the library holds its own permissions' {
+            $ScanId = 'scan-preflight-1'
+            Initialize-TestScan -ScanId $ScanId -TotalSites 1
+            $script:GraphGetHandler = {
+                param($Uri)
+                if ($Uri -match '/_api/web/lists') {
+                    return @(
+                        [pscustomobject]@{ HasUniqueRoleAssignments = $false; RootFolder = [pscustomobject]@{ ServerRelativeUrl = '/sites/one/Shared Documents' } }
+                        [pscustomobject]@{ HasUniqueRoleAssignments = $true; RootFolder = [pscustomobject]@{ ServerRelativeUrl = '/sites/one/Private' } }
+                    )
+                }
+                if ($Uri -match '/sites/[^/]+/drives\?') {
+                    return @(
+                        [pscustomobject]@{ id = 'b!shared'; name = 'Documents'; webUrl = 'https://contoso.sharepoint.com/sites/one/Shared%20Documents' }
+                        [pscustomobject]@{ id = 'b!private'; name = 'Private'; webUrl = 'https://contoso.sharepoint.com/sites/one/Private' }
+                        [pscustomobject]@{ id = 'b!unknown'; name = 'Unknown'; webUrl = 'https://contoso.sharepoint.com/sites/one/Unknown' }
+                    )
+                }
+                if ($Uri -match '/drives/(b![a-z]+)/root/delta') {
+                    $Id = $Matches[1].Substring(2)
+                    return New-DeltaPage -Items @(
+                        [pscustomobject]@{ id = "01${Id}ROOT"; name = 'root'; root = [pscustomobject]@{}; shared = [pscustomobject]@{} }
+                        [pscustomobject]@{ id = "01${Id}FILE"; name = 'a.docx'; shared = [pscustomobject]@{ scope = 'users' } }
+                    ) -DeltaLink "https://graph.microsoft.com/beta/drives/b!$Id/root/delta?token=fresh"
+                }
+                throw "Unrouted GET: $Uri"
+            }
+            $SiteItem = New-SiteItem -ScanId $ScanId
+            $SiteItem | Add-Member -NotePropertyName SharePointScope -NotePropertyValue 'https://contoso.sharepoint.com/.default'
+
+            Invoke-SiteAndDrives -SiteItem $SiteItem
+
+            @($script:Orchestrations[0].Batch | Sort-Object DriveId | ForEach-Object { "$($_.DriveId)=$($_.ReadRoot)" }) | Should -Be @('b!private=True', 'b!shared=False', 'b!unknown=True')
+            $script:ReadItemIds | Should -Not -Contain '01sharedROOT'
+            $script:ReadItemIds | Should -Contain '01privateROOT'
+            $script:ReadItemIds | Should -Contain '01unknownROOT'
+            # Every file with its own permissions is still read.
+            @($script:ReadItemIds | Where-Object { $_ -like '*FILE' }).Count | Should -Be 3
+        }
+
+        It 'reads every library root when SharePoint cannot be asked' {
+            $ScanId = 'scan-preflight-2'
+            Initialize-TestScan -ScanId $ScanId -TotalSites 1
+            $SiteItem = New-SiteItem -ScanId $ScanId
+            $SiteItem | Add-Member -NotePropertyName SharePointScope -NotePropertyValue 'https://contoso.sharepoint.com/.default'
+            $script:GraphGetHandler = {
+                param($Uri)
+                if ($Uri -match '/_api/web/lists') { throw 'Unauthorized' }
+                if ($Uri -match '/sites/[^/]+/drives\?') { return @([pscustomobject]@{ id = 'b!driveone'; name = 'Documents'; webUrl = 'https://contoso.sharepoint.com/sites/one/Shared%20Documents' }) }
+                throw "Unrouted GET: $Uri"
+            }
+
+            @(New-DriveTasks -SiteItem $SiteItem)[0].ReadRoot | Should -BeTrue
+        }
+
+        It 'drops an inheriting library root rows on an incremental scan' {
+            $ScanId = 'scan-preflight-3'
+            Initialize-TestScan -ScanId $ScanId -TotalSites 1
+            Add-CIPPAzDataTableEntity -TableName 'CippSharingLinksState' -Entity @{
+                PartitionKey = 'contoso.com'; RowKey = 'delta-b!driveone'; DriveId = 'b!driveone'; SiteId = 'contoso.sharepoint.com,site1,web1'
+                DeltaLink = 'https://graph.microsoft.com/beta/drives/b!driveone/root/delta?token=stored'; LastScanId = 'previous-scan'; RowCount = 1; RootItemId = '01ROOT'
+            }
+            Add-CacheRow -RowKey 'b!driveone_01ROOT_permGuest'
+            $script:GraphGetHandler = {
+                param($Uri)
+                if ($Uri -match 'token=stored') { return New-DeltaPage -DeltaLink 'https://graph.microsoft.com/beta/drives/b!driveone/root/delta?token=newer' }
+                throw "Unrouted GET: $Uri"
+            }
+            $DriveTask = New-SiteItem -ScanId $ScanId
+            $DriveTask | Add-Member -NotePropertyName DriveId -NotePropertyValue 'b!driveone'
+            $DriveTask | Add-Member -NotePropertyName DriveName -NotePropertyValue 'Documents'
+            $DriveTask | Add-Member -NotePropertyName ReadRoot -NotePropertyValue $false
+            Add-CIPPAzDataTableEntity -TableName 'CippSharingLinksState' -Entity @{ PartitionKey = 'contoso.com'; RowKey = 'drives-contoso.sharepoint.com,site1,web1'; ScanId = $ScanId; DriveCount = 1 }
+
+            Push-DBCacheSharePointSiteSharingLinks -Item $DriveTask
+
+            Get-CacheRowKeys | Should -Not -Contain 'b!driveone_01ROOT_permGuest'
+            $script:ReadItemIds.Count | Should -Be 0
+        }
+    }
+
+    Context 'scan in progress' {
+        BeforeEach {
+            $script:StartedUtc = [DateTimeOffset]::UtcNow.AddMinutes(-5).ToString('o')
+            Add-CIPPAzDataTableEntity -TableName 'CippSharingLinksState' -Entity @{
+                PartitionKey = 'contoso.com'; RowKey = 'scan'; ScanId = 'scan-live'; TotalSites = 3; StartedUtc = $script:StartedUtc; QueueId = 'queue-1'
+            }
+        }
+
+        It 'reports a scan as running until it finalises' {
+            $Status = Get-CIPPSharingLinksScanStatus -TenantFilter 'contoso.com'
+            $Status.inProgress | Should -BeTrue
+            $Status.queueId | Should -Be 'queue-1'
+            $Status.startedUtc | Should -Be $script:StartedUtc
+
+            Add-CIPPAzDataTableEntity -TableName 'CippSharingLinksState' -Entity @{ PartitionKey = 'contoso.com'; RowKey = 'final'; ScanId = 'scan-live' }
+            (Get-CIPPSharingLinksScanStatus -TenantFilter 'contoso.com').inProgress | Should -BeFalse
+        }
+
+        It 'treats a scan unfinished after 24 hours as abandoned' {
+            $Row = (Get-FakeTableRows -TableName 'CippSharingLinksState') | Where-Object { $_.RowKey -eq 'scan' }
+            $Row.StartedUtc = [DateTimeOffset]::UtcNow.AddHours(-25).ToString('o')
+            (Get-CIPPSharingLinksScanStatus -TenantFilter 'contoso.com').inProgress | Should -BeFalse
+        }
+
+        It 'does not start a second scan while one is running' {
+            Set-CIPPDBCacheSharePointSharingLinks -TenantFilter 'contoso.com' -QueueId 'queue-2'
+
+            $script:Orchestrations.Count | Should -Be 0
+            $script:GraphGetCalls.Count | Should -Be 0
+            ((Get-FakeTableRows -TableName 'CippSharingLinksState') | Where-Object { $_.RowKey -eq 'scan' }).ScanId | Should -Be 'scan-live'
         }
     }
 
@@ -671,34 +881,34 @@ Describe 'Per-drive sharing-links scan' {
                 )) {
                 Add-CIPPAzDataTableEntity -TableName 'CippSharingLinksState' -Entity (@{ PartitionKey = 'contoso.com'; DeltaLink = 'x'; LastScanUtc = 'x'; LastFullScanUtc = 'x' } + $State)
             }
-            Add-CacheRow -RowKey 'SharePointSharingLinks-b!current_01ITEMA_p1' -RunId $ScanId
-            Add-CacheRow -RowKey 'SharePointSharingLinks-b!vanished_01ITEMB_p1'
-            Add-CacheRow -RowKey 'SharePointSharingLinks-b!unreachable_01ITEMC_p1'
+            Add-CacheRow -RowKey 'b!current_01ITEMA_p1' -ScanId $ScanId
+            Add-CacheRow -RowKey 'b!vanished_01ITEMB_p1'
+            Add-CacheRow -RowKey 'b!unreachable_01ITEMC_p1'
 
             Push-StoreSharePointSharingLinks -TenantFilter 'contoso.com' -ScanId $ScanId
 
             $Keys = Get-CacheRowKeys
-            $Keys | Should -Contain 'SharePointSharingLinks-b!current_01ITEMA_p1'
-            $Keys | Should -Not -Contain 'SharePointSharingLinks-b!vanished_01ITEMB_p1'
-            $Keys | Should -Contain 'SharePointSharingLinks-b!unreachable_01ITEMC_p1'
+            $Keys | Should -Contain 'b!current_01ITEMA_p1'
+            $Keys | Should -Not -Contain 'b!vanished_01ITEMB_p1'
+            $Keys | Should -Contain 'b!unreachable_01ITEMC_p1'
             (Get-CIPPSharingLinksDriveState -TenantFilter 'contoso.com' -DriveId 'b!vanished') | Should -BeNullOrEmpty
             (Get-CIPPSharingLinksDriveState -TenantFilter 'contoso.com' -DriveId 'b!unreachable') | Should -Not -BeNullOrEmpty
 
-            $CountRow = (Get-FakeTableRows -TableName 'CippReportingDB') | Where-Object { $_.RowKey -eq 'SharePointSharingLinks-Count' }
-            [int]$CountRow.DataCount | Should -Be 2
+            $CountRow = (Get-FakeTableRows -TableName 'CippSharingLinksState') | Where-Object { $_.RowKey -eq 'summary' }
+            [int]$CountRow.LinkCount | Should -Be 2
         }
 
         It 'sweeps every row the scan did not write when the scan was a full sweep' {
             $ScanId = 'scan-final-2'
             Initialize-TestScan -ScanId $ScanId -TotalSites 1 -FullSweep $true
-            Add-CacheRow -RowKey 'SharePointSharingLinks-b!current_01ITEMA_p1' -RunId $ScanId
-            Add-CacheRow -RowKey 'SharePointSharingLinks-b!orphandrive_01ITEMO_p1' -RunId 'ancient-scan'
+            Add-CacheRow -RowKey 'b!current_01ITEMA_p1' -ScanId $ScanId
+            Add-CacheRow -RowKey 'b!orphandrive_01ITEMO_p1' -ScanId 'ancient-scan'
 
             Push-StoreSharePointSharingLinks -TenantFilter 'contoso.com' -ScanId $ScanId
 
             $Keys = Get-CacheRowKeys
-            $Keys | Should -Contain 'SharePointSharingLinks-b!current_01ITEMA_p1'
-            $Keys | Should -Not -Contain 'SharePointSharingLinks-b!orphandrive_01ITEMO_p1'
+            $Keys | Should -Contain 'b!current_01ITEMA_p1'
+            $Keys | Should -Not -Contain 'b!orphandrive_01ITEMO_p1'
         }
 
         It 'does no housekeeping when a newer scan owns the state' {
@@ -707,11 +917,11 @@ Describe 'Per-drive sharing-links scan' {
                 PartitionKey = 'contoso.com'; RowKey = 'delta-b!inflight'; DriveId = 'b!inflight'; SiteId = 's1'
                 DeltaLink = 'x'; LastScanId = 'scan-newer'; LastScanUtc = 'x'; LastFullScanUtc = 'x'
             }
-            Add-CacheRow -RowKey 'SharePointSharingLinks-b!inflight_01ITEMN_p1' -RunId 'scan-newer'
+            Add-CacheRow -RowKey 'b!inflight_01ITEMN_p1' -ScanId 'scan-newer'
 
             Push-StoreSharePointSharingLinks -TenantFilter 'contoso.com' -ScanId 'scan-older'
 
-            Get-CacheRowKeys | Should -Contain 'SharePointSharingLinks-b!inflight_01ITEMN_p1'
+            Get-CacheRowKeys | Should -Contain 'b!inflight_01ITEMN_p1'
             (Get-CIPPSharingLinksDriveState -TenantFilter 'contoso.com' -DriveId 'b!inflight') | Should -Not -BeNullOrEmpty
         }
     }

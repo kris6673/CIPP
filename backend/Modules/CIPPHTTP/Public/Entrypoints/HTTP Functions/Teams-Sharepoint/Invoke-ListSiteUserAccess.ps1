@@ -173,7 +173,7 @@ function Invoke-ListSiteUserAccess {
         # --- Sharing links this user received, from the cache ---
         $SharingLinksChecked = $false
         try {
-            $CachedLinks = @(New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'SharePointSharingLinks')
+            $CachedLinks = @(Get-CIPPSharingLinks -TenantFilter $TenantFilter)
             $SharingLinksChecked = $CachedLinks.Count -gt 0
             $SiteHost = ([System.Uri]$SiteUrl).AbsoluteUri.TrimEnd('/')
             foreach ($Link in $CachedLinks) {
