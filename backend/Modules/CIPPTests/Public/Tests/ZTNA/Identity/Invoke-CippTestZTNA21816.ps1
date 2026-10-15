@@ -53,7 +53,7 @@ function Invoke-CippTestZTNA21816 {
             } else {
                 $GroupPrincipal = $GroupsById[$EligibleGA.principalId]
                 if ($GroupPrincipal -and $GroupPrincipal.members) {
-                    $MemberSet = [System.Collections.Generic.HashSet[string]]::new([string[]]$GroupPrincipal.members)
+                    $MemberSet = [System.Collections.Generic.HashSet[string]]::new([string[]]@($GroupPrincipal.members.id))
                     foreach ($U in $Users) { if ($MemberSet.Contains($U.id)) { $EligibleGAUsers++ } }
                 }
             }
@@ -113,7 +113,7 @@ function Invoke-CippTestZTNA21816 {
 
                     $Group = $GroupsById[$Member.id]
                     if ($Group -and $Group.members) {
-                        $MemberSet = [System.Collections.Generic.HashSet[string]]::new([string[]]$Group.members)
+                        $MemberSet = [System.Collections.Generic.HashSet[string]]::new([string[]]@($Group.members.id))
                         foreach ($GroupMember in $Users) {
                             if (-not $MemberSet.Contains($GroupMember.id)) { continue }
                             $GroupMemberInfo = [PSCustomObject]@{
