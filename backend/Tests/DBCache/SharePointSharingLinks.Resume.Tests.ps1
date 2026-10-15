@@ -170,17 +170,33 @@ BeforeAll {
         }
     }
 
-    # Runs a site task, queues its drive tasks through the site run's post-execution, then runs
-    # every queued task (and any tasks those queue in turn), the way the orchestrator would.
+    function New-DispatchItem {
+        param($SiteItem, [int]$Round = 0)
+        @{ Parameters = @{ TenantFilter = $SiteItem.TenantFilter; ScanId = $SiteItem.ScanId; InternalDomains = $SiteItem.InternalDomains; ForceFull = $SiteItem.ForceFull; Round = $Round } }
+    }
+
+    # Runs a site task and its post-execution, and returns the drive tasks that queued.
+    function New-DriveTasks {
+        param($SiteItem)
+        $null = Push-DBCacheSharePointSiteSharingLinks -Item $SiteItem
+        Push-SharingLinksDispatchDrives -Item (New-DispatchItem -SiteItem $SiteItem)
+        $Run = $script:Orchestrations[$script:Orchestrations.Count - 1]
+        $null = $script:Orchestrations.Remove($Run)
+        @($Run.Batch)
+    }
+
+    # Runs a site task and its post-execution, then every queued run's tasks followed by that
+    # run's post-execution, the way the orchestrator would.
     function Invoke-SiteAndDrives {
         param($SiteItem)
-        $DriveTasks = Push-DBCacheSharePointSiteSharingLinks -Item $SiteItem
-        Push-SharingLinksDispatchDrives -Item @{ Parameters = @{ TenantFilter = $SiteItem.TenantFilter }; Results = @(, $DriveTasks) }
+        $null = Push-DBCacheSharePointSiteSharingLinks -Item $SiteItem
+        Push-SharingLinksDispatchDrives -Item (New-DispatchItem -SiteItem $SiteItem)
         $Cursor = 0
         while ($Cursor -lt $script:Orchestrations.Count) {
             $Queued = $script:Orchestrations[$Cursor]
             $Cursor++
-            foreach ($Task in @($Queued.Batch)) { Push-DBCacheSharePointSiteSharingLinks -Item $Task }
+            foreach ($Task in @($Queued.Batch)) { $null = Push-DBCacheSharePointSiteSharingLinks -Item $Task }
+            if ($Queued.PostExecution) { Push-SharingLinksDispatchDrives -Item @{ Parameters = $Queued.PostExecution.Parameters } }
         }
     }
 
@@ -225,7 +241,6 @@ Describe 'Per-drive sharing-links scan' {
         $script:GraphGetCalls = [System.Collections.Generic.List[string]]::new()
         $script:DeltaPrefer = [System.Collections.Generic.List[string]]::new()
         $env:CIPP_SHARINGLINKS_FULLSCAN_DAYS = $null
-        $env:CIPP_SHARINGLINKS_TIMEBOX_SECONDS = $null
 
         # Default Graph: a personal-site style drive whose full scan is a classic delta walk
         # with one shared file, plus the Principal-mode routes for team-site tests.
@@ -274,31 +289,51 @@ Describe 'Per-drive sharing-links scan' {
                 throw "Unrouted GET: $Uri"
             }
 
-            $Tasks = @(Push-DBCacheSharePointSiteSharingLinks -Item (New-SiteItem -ScanId $ScanId))
-
+            @(Push-DBCacheSharePointSiteSharingLinks -Item (New-SiteItem -ScanId $ScanId)).Count | Should -Be 0
             $script:Orchestrations.Count | Should -Be 0
-            $Tasks.Count | Should -Be 1
-            $Tasks[0].DriveId | Should -Be 'b!docs'
             # The dispatch total the drive tasks complete against matches what was dispatched.
             $DrivesRow = (Get-FakeTableRows -TableName 'CippSharingLinksState') | Where-Object { $_.RowKey -like 'drives-*' }
             [int]$DrivesRow.DriveCount | Should -Be 1
+
+            Push-SharingLinksDispatchDrives -Item (New-DispatchItem -SiteItem (New-SiteItem -ScanId $ScanId))
+            $Tasks = @($script:Orchestrations[0].Batch)
+            $Tasks.Count | Should -Be 1
+            $Tasks[0].DriveId | Should -Be 'b!docs'
+            $Tasks[0].SiteUrl | Should -Be 'https://contoso.sharepoint.com/sites/one'
+            @($Tasks[0].InternalDomains) | Should -Be @('contoso.com')
         }
 
-        It 'queues the drives of every site as one run of at most two at a time' {
-            $Drive = { param($Id, $Site) [pscustomobject]@{ FunctionName = 'DBCacheSharePointSiteSharingLinks'; TenantFilter = 'contoso.com'; SiteId = $Site; DriveId = $Id } }
-            Push-SharingLinksDispatchDrives -Item @{
-                Parameters = @{ TenantFilter = 'contoso.com' }
-                Results    = @(, @((& $Drive 'b!one' 'site1'), (& $Drive 'b!two' 'site1')); @(); (& $Drive 'b!three' 'site2'))
+        It 'queues every unfinished drive of the scan as one run of at most two at a time' {
+            $ScanId = 'scan-dispatch-4'
+            Initialize-TestScan -ScanId $ScanId -TotalSites 2
+            Add-CIPPAzDataTableEntity -TableName 'CippSharingLinksState' -Entity @{
+                PartitionKey = 'contoso.com'; RowKey = 'drives-site1'; ScanId = $ScanId; DriveCount = 2; SiteUrl = 'https://one'
+                DrivesJson = '[{"id":"b!one","name":"One"},{"id":"b!two","name":"Two"}]'
             }
+            Add-CIPPAzDataTableEntity -TableName 'CippSharingLinksState' -Entity @{
+                PartitionKey = 'contoso.com'; RowKey = 'drives-site2'; ScanId = $ScanId; DriveCount = 1; SiteUrl = 'https://two'
+                DrivesJson = '[{"id":"b!three","name":"Three"}]'
+            }
+            Add-CIPPAzDataTableEntity -TableName 'CippSharingLinksState' -Entity @{ PartitionKey = 'contoso.com'; RowKey = 'ddone-site1~b!two'; ScanId = $ScanId }
+
+            Push-SharingLinksDispatchDrives -Item @{ Parameters = @{ TenantFilter = 'contoso.com'; ScanId = $ScanId; Round = 3 } }
 
             $script:Orchestrations.Count | Should -Be 1
-            $script:Orchestrations[0].OrchestratorName | Should -Be 'SharingLinksDrives_contoso.com'
+            $script:Orchestrations[0].OrchestratorName | Should -Be 'SharingLinksDrives_contoso.com_r4'
             $script:Orchestrations[0].MaxConcurrency | Should -Be 2
-            @($script:Orchestrations[0].Batch.DriveId) | Should -Be @('b!one', 'b!two', 'b!three')
+            @($script:Orchestrations[0].Batch.DriveId) | Should -Be @('b!one', 'b!three')
+            $script:Orchestrations[0].PostExecution.FunctionName | Should -Be 'SharingLinksDispatchDrives'
+            $script:Orchestrations[0].PostExecution.Parameters.Round | Should -Be 4
         }
 
-        It 'queues nothing when no site has drives' {
-            Push-SharingLinksDispatchDrives -Item @{ Parameters = @{ TenantFilter = 'contoso.com' }; Results = @(@(), @()) }
+        It 'queues nothing when every drive finished or the scan was superseded' {
+            Initialize-TestScan -ScanId 'scan-dispatch-5' -TotalSites 1
+            Add-CIPPAzDataTableEntity -TableName 'CippSharingLinksState' -Entity @{
+                PartitionKey = 'contoso.com'; RowKey = 'drives-site1'; ScanId = 'scan-dispatch-5'; DriveCount = 1; DrivesJson = '[{"id":"b!one","name":"One"}]'
+            }
+            Push-SharingLinksDispatchDrives -Item @{ Parameters = @{ TenantFilter = 'contoso.com'; ScanId = 'scan-older'; Round = 1 } }
+            Add-CIPPAzDataTableEntity -TableName 'CippSharingLinksState' -Entity @{ PartitionKey = 'contoso.com'; RowKey = 'ddone-site1~b!one'; ScanId = 'scan-dispatch-5' }
+            Push-SharingLinksDispatchDrives -Item @{ Parameters = @{ TenantFilter = 'contoso.com'; ScanId = 'scan-dispatch-5'; Round = 1 } }
             $script:Orchestrations.Count | Should -Be 0
         }
 
@@ -485,7 +520,7 @@ Describe 'Per-drive sharing-links scan' {
         }
     }
 
-    Context 'resume and timebox' {
+    Context 'resume' {
         It 'resumes a drive task at the checkpointed page' {
             $ScanId = 'scan-resume-1'
             Initialize-TestScan -ScanId $ScanId -TotalSites 1
@@ -523,45 +558,21 @@ Describe 'Per-drive sharing-links scan' {
             (Get-FakeTableRows -TableName 'CippSharingLinksState') | Where-Object { $_.RowKey -like 'chk-*' } | Should -BeNullOrEmpty
             Get-CacheRowKeys | Should -Contain 'SharePointSharingLinks-Count'
         }
-
-        It 'checkpoints and requeues itself when the timebox is spent instead of completing' {
-            $ScanId = 'scan-timebox-1'
-            Initialize-TestScan -ScanId $ScanId -TotalSites 1
-            $env:CIPP_SHARINGLINKS_TIMEBOX_SECONDS = '1'
-            $script:GraphGetHandler = {
-                param($Uri)
-                if ($Uri -match '/sites/[^/]+/drives\?') { return @([pscustomobject]@{ id = 'b!driveone'; name = 'Documents'; webUrl = 'https://contoso.sharepoint.com/sites/one/Shared%20Documents' }) }
-                if ($Uri -match '/root/delta') {
-                    Start-Sleep -Seconds 2 # burn the timebox on the first page
-                    return New-DeltaPage -Items @(
-                        [pscustomobject]@{ id = '01ITEMA'; name = 'a.docx'; shared = [pscustomobject]@{ scope = 'anonymous' } }
-                    ) -NextLink 'https://graph.microsoft.com/beta/drives/b!driveone/root/delta?token=page2'
-                }
-                throw "Unrouted GET: $Uri"
-            }
-
-            $DriveTask = @(Push-DBCacheSharePointSiteSharingLinks -Item (New-SiteItem -ScanId $ScanId -IsPersonalSite $true))[0]
-            Push-DBCacheSharePointSiteSharingLinks -Item $DriveTask
-
-            # Page 1's rows are persisted, the resume position is saved, and the task re-queued
-            # itself rather than finishing the drive.
-            Get-CacheRowKeys | Should -Contain 'SharePointSharingLinks-b!driveone_01ITEMA_perm-01ITEMA'
-            $Checkpoint = (Get-FakeTableRows -TableName 'CippSharingLinksState') | Where-Object { $_.RowKey -like 'chk-*' }
-            $Checkpoint.StateJson | Should -BeLike '*token=page2*'
-            $Requeued = @($script:Orchestrations | Where-Object { $_.OrchestratorName -like 'SharingLinksResume_*' })
-            $Requeued.Count | Should -Be 1
-            @($Requeued[0].Batch)[0].DriveId | Should -Be 'b!driveone'
-            (Get-FakeTableRows -TableName 'CippSharingLinksState') | Where-Object { $_.RowKey -like 'ddone-*' } | Should -BeNullOrEmpty
-        }
     }
 
-    Context 'throttle mid-scan' {
+    Context 'throttle mid-scan and redrive' {
         BeforeEach {
-            # Page 1 succeeds; page 2 throttles out even after the helper's own retries.
+            # Page 1 succeeds; page 2 throttles out even after the helper's own retries, then recovers.
+            $script:Page2Failures = 1
             $script:GraphGetHandler = {
                 param($Uri)
                 if ($Uri -match '/sites/[^/]+/drives\?') { return @([pscustomobject]@{ id = 'b!driveone'; name = 'Documents'; webUrl = 'https://contoso.sharepoint.com/sites/one/Shared%20Documents' }) }
-                if ($Uri -match 'token=page2') { throw 'The request has been throttled' }
+                if ($Uri -match 'token=page2') {
+                    if ($script:Page2Failures-- -gt 0) { throw 'The request has been throttled' }
+                    return New-DeltaPage -Items @(
+                        [pscustomobject]@{ id = '01ITEMB'; name = 'b.docx'; shared = [pscustomobject]@{ scope = 'anonymous' } }
+                    ) -DeltaLink 'https://graph.microsoft.com/beta/drives/b!driveone/root/delta?token=done'
+                }
                 if ($Uri -match '/root/delta') {
                     return New-DeltaPage -Items @(
                         [pscustomobject]@{ id = '01ITEMA'; name = 'a.docx'; shared = [pscustomobject]@{ scope = 'anonymous' } }
@@ -571,39 +582,53 @@ Describe 'Per-drive sharing-links scan' {
             }
         }
 
-        It 'requeues from the checkpoint instead of failing the drive' {
+        It 'leaves the drive unfinished at its checkpoint' {
             $ScanId = 'scan-throttle-1'
             Initialize-TestScan -ScanId $ScanId -TotalSites 1
 
-            $DriveTask = @(Push-DBCacheSharePointSiteSharingLinks -Item (New-SiteItem -ScanId $ScanId -IsPersonalSite $true))[0]
+            $DriveTask = @(New-DriveTasks -SiteItem (New-SiteItem -ScanId $ScanId -IsPersonalSite $true))[0]
             Push-DBCacheSharePointSiteSharingLinks -Item $DriveTask
 
-            # Page 1 persisted, checkpoint points at page 2, and a resume task carries the
-            # incremented requeue count; the drive is neither completed nor failed.
+            # Page 1 persisted and the checkpoint points at page 2; the drive is neither completed
+            # nor failed, and the task queued nothing itself.
             Get-CacheRowKeys | Should -Contain 'SharePointSharingLinks-b!driveone_01ITEMA_perm-01ITEMA'
             $Checkpoint = (Get-FakeTableRows -TableName 'CippSharingLinksState') | Where-Object { $_.RowKey -like 'chk-*' }
             $Checkpoint.StateJson | Should -BeLike '*token=page2*'
-            $Requeued = @($script:Orchestrations | Where-Object { $_.OrchestratorName -like 'SharingLinksResume_*' })
-            $Requeued.Count | Should -Be 1
-            [int]@($Requeued[0].Batch)[0].RequeueCount | Should -Be 1
+            $script:Orchestrations.Count | Should -Be 0
             (Get-FakeTableRows -TableName 'CippSharingLinksState') | Where-Object { $_.RowKey -like 'ddone-*' } | Should -BeNullOrEmpty
             (Get-CIPPSharingLinksDriveState -TenantFilter 'contoso.com' -DriveId 'b!driveone') | Should -BeNullOrEmpty
         }
 
-        It 'fails the drive normally once the requeue budget is spent' {
+        It 'redrives the unfinished drive from its checkpoint in the next round' {
             $ScanId = 'scan-throttle-2'
             Initialize-TestScan -ScanId $ScanId -TotalSites 1
 
-            $DriveTask = @(Push-DBCacheSharePointSiteSharingLinks -Item (New-SiteItem -ScanId $ScanId -IsPersonalSite $true))[0]
-            $DriveTask | Add-Member -NotePropertyName RequeueCount -NotePropertyValue 6 -Force
-            Push-DBCacheSharePointSiteSharingLinks -Item $DriveTask
+            Invoke-SiteAndDrives -SiteItem (New-SiteItem -ScanId $ScanId -IsPersonalSite $true)
 
-            # Budget exhausted: no further resume, drive state written (rows protected, next
-            # scan full), drive and site complete so the scan can finalise.
-            @($script:Orchestrations | Where-Object { $_.OrchestratorName -like 'SharingLinksResume_*' }).Count | Should -Be 0
+            @($script:Orchestrations.OrchestratorName) | Should -Be @('SharingLinksDrives_contoso.com_r1', 'SharingLinksDrives_contoso.com_r2')
+            # Round 2 resumed at page 2 rather than restarting the drive.
+            @($script:GraphGetCalls | Where-Object { $_ -match '\$top=999' }).Count | Should -Be 1
+            Get-CacheRowKeys | Should -Contain 'SharePointSharingLinks-b!driveone_01ITEMB_perm-01ITEMB'
+            (Get-CIPPSharingLinksDriveState -TenantFilter 'contoso.com' -DriveId 'b!driveone').DeltaLink | Should -BeLike '*token=done'
+            Get-CacheRowKeys | Should -Contain 'SharePointSharingLinks-Count'
+        }
+
+        It 'gives up after 10 rounds, keeping the drive rows and finalising the scan' {
+            $ScanId = 'scan-throttle-3'
+            Initialize-TestScan -ScanId $ScanId -TotalSites 1
+            $script:Page2Failures = 100
+            Add-CacheRow -RowKey 'SharePointSharingLinks-b!driveone_01OLD_permOld'
+
+            Invoke-SiteAndDrives -SiteItem (New-SiteItem -ScanId $ScanId -IsPersonalSite $true)
+
+            $script:Orchestrations.Count | Should -Be 10
+            $script:Orchestrations[9].OrchestratorName | Should -Be 'SharingLinksDrives_contoso.com_r10'
+            # Rows protected, next scan starts the drive over in full, and the scan still finalised.
+            Get-CacheRowKeys | Should -Contain 'SharePointSharingLinks-b!driveone_01OLD_permOld'
             $DriveState = Get-CIPPSharingLinksDriveState -TenantFilter 'contoso.com' -DriveId 'b!driveone'
             $DriveState.LastScanId | Should -Be $ScanId
             [string]$DriveState.DeltaLink | Should -BeNullOrEmpty
+            (Get-FakeTableRows -TableName 'CippSharingLinksState') | Where-Object { $_.RowKey -like 'chk-*' } | Should -BeNullOrEmpty
             Get-CacheRowKeys | Should -Contain 'SharePointSharingLinks-Count'
         }
     }

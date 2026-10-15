@@ -132,7 +132,13 @@
             SkipLog          = $true
             PostExecution    = @{
                 FunctionName = 'SharingLinksDispatchDrives'
-                Parameters   = @{ TenantFilter = $TenantFilter }
+                Parameters   = @{
+                    TenantFilter    = $TenantFilter
+                    ScanId          = $ScanId
+                    InternalDomains = @($InternalDomains)
+                    ForceFull       = [bool]$ForceFullSync
+                    QueueId         = $QueueId
+                }
             }
         }
 
