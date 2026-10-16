@@ -148,6 +148,7 @@ try {
             displayName  = Get-JsonString $Element 'displayName'
             description  = $Description
             categoryName = Get-JsonString $Element 'categoryName'
+            categoryId   = Get-JsonString $Element 'categoryId'
             technologies = Get-JsonString $Applicability 'technologies'
         }
         $Platform = Get-JsonString $Applicability 'platform'
