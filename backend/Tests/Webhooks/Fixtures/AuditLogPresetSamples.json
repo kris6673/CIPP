@@ -1985,6 +1985,124 @@
         "TargetContextId": "e75dcc09-5152-44ca-8550-f8f22fa4cfa3"
       }
     },
+    "aad-pim-time-bound-assignment": {
+      "id": "d9a634af-57ab-45f6-b0e2-6fe077c4f583",
+      "createdDateTime": "10/17/2026 17:27:30Z",
+      "auditLogRecordType": "AzureActiveDirectory",
+      "operation": "Add member to role.",
+      "organizationId": "e75dcc09-5152-44ca-8550-f8f22fa4cfa3",
+      "userType": 4,
+      "userId": "ServicePrincipal_34947cfc-e6d6-4830-859f-1665963a99e8",
+      "service": "AzureActiveDirectory",
+      "objectId": "cipp.audit.preset.20261017172249@contoso.onmicrosoft.com",
+      "userPrincipalName": "ServicePrincipal_34947cfc-e6d6-4830-859f-1665963a99e8",
+      "clientIp": null,
+      "administrativeUnits": [],
+      "auditData": {
+        "CreationTime": "2026-10-17T17:27:30",
+        "Id": "d9a634af-57ab-45f6-b0e2-6fe077c4f583",
+        "Operation": "Add member to role.",
+        "OrganizationId": "e75dcc09-5152-44ca-8550-f8f22fa4cfa3",
+        "RecordType": 8,
+        "ResultStatus": "Success",
+        "UserKey": "Not Available",
+        "UserType": 4,
+        "Version": 1,
+        "Workload": "AzureActiveDirectory",
+        "ObjectId": "cipp.audit.preset.20261017172249@contoso.onmicrosoft.com",
+        "UserId": "ServicePrincipal_34947cfc-e6d6-4830-859f-1665963a99e8",
+        "AzureActiveDirectoryEventType": 1,
+        "ExtendedProperties": [
+          {
+            "Name": "additionalDetails",
+            "Value": "{}"
+          },
+          {
+            "Name": "extendedAuditEventCategory",
+            "Value": "Role"
+          }
+        ],
+        "ModifiedProperties": [
+          {
+            "Name": "Role.ObjectID",
+            "NewValue": "b26bbcc0-1327-4617-92f8-0bda655d3b05",
+            "OldValue": ""
+          },
+          {
+            "Name": "Role.DisplayName",
+            "NewValue": "Message Center Reader",
+            "OldValue": ""
+          },
+          {
+            "Name": "Role.TemplateId",
+            "NewValue": "790c1fb9-7f7d-4f88-86a1-ef1f95c05c1b",
+            "OldValue": ""
+          },
+          {
+            "Name": "Role.WellKnownObjectName",
+            "NewValue": "MessageCenterReaders",
+            "OldValue": ""
+          }
+        ],
+        "Actor": [
+          {
+            "ID": "MS-PIM",
+            "Type": 1
+          },
+          {
+            "ID": "6ada1f60-9273-45c4-9723-3fdd99c2d7cf",
+            "Type": 2
+          },
+          {
+            "ID": "ServicePrincipal_34947cfc-e6d6-4830-859f-1665963a99e8",
+            "Type": 2
+          },
+          {
+            "ID": "34947cfc-e6d6-4830-859f-1665963a99e8",
+            "Type": 2
+          },
+          {
+            "ID": "ServicePrincipal",
+            "Type": 2
+          },
+          {
+            "ID": "NotAgentic",
+            "Type": 2
+          }
+        ],
+        "ActorContextId": "e75dcc09-5152-44ca-8550-f8f22fa4cfa3",
+        "InterSystemsId": "8f7a8a08-af33-46cc-852a-11f06167c9a2",
+        "IntraSystemId": "c390c67d-ae7a-4002-bce9-2c855f7c29b5",
+        "SupportTicketId": "",
+        "Target": [
+          {
+            "ID": "User_c02023e2-fa6a-4823-9061-70e4f6cab116",
+            "Type": 2
+          },
+          {
+            "ID": "c02023e2-fa6a-4823-9061-70e4f6cab116",
+            "Type": 2
+          },
+          {
+            "ID": "User",
+            "Type": 2
+          },
+          {
+            "ID": "NotAgentic",
+            "Type": 2
+          },
+          {
+            "ID": "cipp.audit.preset.20261017172249@contoso.onmicrosoft.com",
+            "Type": 5
+          },
+          {
+            "ID": "1003200657D23B93",
+            "Type": 3
+          }
+        ],
+        "TargetContextId": "e75dcc09-5152-44ca-8550-f8f22fa4cfa3"
+      }
+    },
     "aad-pim-activation": {
       "id": "ece28271-dbb8-412e-986f-92cd6005aa06",
       "createdDateTime": "10/17/2026 17:40:22Z",
@@ -5960,7 +6078,9 @@
       ],
       "noTrigger": [
         "user-add-member-to-role",
-        "aad-add-member-to-group"
+        "aad-add-member-to-group",
+        "aad-pim-activation",
+        "aad-pim-permanent-assignment"
       ]
     },
     {
@@ -6127,28 +6247,27 @@
       ]
     },
     {
-      "preset": "PIMPermanentAssignmentAdded",
-      "trigger": [],
-      "noTrigger": [
-        "aad-pim-permanent-assignment"
-      ],
-      "pending": "a permanent PIM assignment reaches the unified audit log as \"Add member to role.\", not \"…role in PIM completed (permanent)\""
-    },
-    {
-      "preset": "PIMRoleActivated",
-      "trigger": [],
-      "noTrigger": [
+      "preset": "PIMRoleAssigned",
+      "trigger": [
+        "aad-pim-permanent-assignment",
+        "aad-pim-time-bound-assignment",
         "aad-pim-activation"
       ],
-      "pending": "a PIM self-activation reaches the unified audit log as \"Add member to role.\", not \"Add member to role completed (PIM activation)\""
+      "noTrigger": [
+        "aad-add-member-to-role",
+        "app-add-member-to-role",
+        "aad-add-eligible-member-to-role"
+      ]
     },
     {
-      "preset": "PIMRoleSettingChanged",
-      "trigger": [],
-      "noTrigger": [
+      "preset": "PIMEligibleRoleAssigned",
+      "trigger": [
         "aad-add-eligible-member-to-role"
       ],
-      "pending": "no record for a PIM role setting change reached the unified audit log"
+      "noTrigger": [
+        "aad-pim-permanent-assignment",
+        "aad-add-member-to-role"
+      ]
     }
   ]
 }
