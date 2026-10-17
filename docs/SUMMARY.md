@@ -450,6 +450,7 @@
       * [CIPP Roles](user-documentation/cipp/advanced/authentication/cipp-roles/README.md)
         * [Add Role](user-documentation/cipp/advanced/authentication/cipp-roles/add.md)
       * [CIPP Users](user-documentation/cipp/advanced/authentication/cipp-users.md)
+      * [Credentials](user-documentation/cipp/advanced/authentication/credentials.md)
       * [SSO](user-documentation/cipp/advanced/authentication/sso.md)
       * [SAM App Roles](user-documentation/cipp/advanced/authentication/sam-app-roles.md)
       * [SAM App Permissions](user-documentation/cipp/advanced/authentication/sam-app-permissions.md)
