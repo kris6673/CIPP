@@ -209,7 +209,7 @@ export const CippSAMCredentials = () => {
     rotateSecret: {
       title: "Rotate client secret",
       confirmText:
-        "Create a new client secret for CIPP-SAM and switch to it straight away? Microsoft can take several minutes to activate a new secret, so token requests may fail with AADSTS7000215 until it has replicated. The previous secret stays on the app until it expires.",
+        "Create a new client secret for CIPP-SAM and switch to it straight away? Microsoft can take several minutes to activate a new secret, sometimes 10 to 15, so token requests may fail with AADSTS7000215 until it has replicated. The previous secret stays on the app until it expires.",
       url: "/api/ExecSAMCredentials",
       data: { Action: "!RotateSecret" },
     },
