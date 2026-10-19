@@ -12,6 +12,8 @@ The report reads from cached usage data rather than querying SharePoint and OneD
 | Scan cleanup | Queues the cleanup scan described under [#finding-cleanup-opportunities](storage-report.md#finding-cleanup-opportunities "mention"). It fills the reclaim columns only, and does not refresh usage sizes. Unavailable until usage data has been synced, and reads **Rescan cleanup** once a scan has run. Greyed out unless you have SharePoint report write access. |
 | Refresh      | Reloads the report from the cached data without running a new sync.                                                                                                                                                                                                    |
 
+A **Last data refresh** line shows when the usage data and the cleanup scan were last refreshed, so you can tell how current the figures are before relying on them.
+
 {% hint style="info" %}
 If no cached data has been synced yet, or one of SharePoint or OneDrive comes back empty, a banner invites you to use **Sync usage**.
 {% endhint %}
