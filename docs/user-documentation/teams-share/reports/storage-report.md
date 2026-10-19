@@ -162,4 +162,4 @@ The **Libraries** column opens a dialog listing the site's top-level document li
 
 <table><thead><tr><th>Action</th><th>Description</th><th data-type="checkbox">Bulk Action Available</th></tr></thead><tbody><tr><td>Set quota…</td><td>Sets the account's storage limit and warning level, in MB, prefilled from its current allocation where CIPP has a figure for it. Only takes effect when the tenant uses manual site storage limits. Greyed out unless you have SharePoint site write access.</td><td>true</td></tr><tr><td>Open in OneDrive</td><td>Opens the account in a new browser tab.</td><td>false</td></tr></tbody></table>
 
-{% include "../../../.gitbook/includes/feature-request.md" %}
+{% include "../../../../.gitbook/includes/feature-request.md" %}
