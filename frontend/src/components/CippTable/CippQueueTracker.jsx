@@ -84,7 +84,8 @@ export const CippQueueTracker = ({ queueId, queryKey, title, onQueueComplete }) 
         return false;
       }
 
-      return queueConnected ? false : 3000;
+      // A tenant-restricted caller gets no live events for the run, so it polls the narrowed status.
+      return queueConnected && !currentData?.Polled ? false : 3000;
     },
     refetchOnMount: true,
     refetchOnWindowFocus: false,
