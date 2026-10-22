@@ -153,7 +153,11 @@ function Invoke-HuduExtensionSync {
                 }
                 $CreateDevices = $Configuration.CreateMissingDevices
                 if ($DesktopsLayout.id) {
-                    $HuduDesktopDevices = Get-HuduAssets -CompanyId $company_id -AssetLayoutId $DesktopsLayout.id
+                    # Archived copies still count as existing so they block re-creation.
+                    $HuduDesktopDevices = @(
+                        Get-HuduAssets -CompanyId $company_id -AssetLayoutId $DesktopsLayout.id
+                        Get-HuduAssets -CompanyId $company_id -AssetLayoutId $DesktopsLayout.id -Archived
+                    ) | Where-Object { $_ } | Sort-Object -Property id -Unique
                     $HuduDevices = [System.Collections.Generic.List[object]]::new([object[]]@($HuduDesktopDevices))
                 } else {
                     $CreateDevices = $false
@@ -828,6 +832,9 @@ function Invoke-HuduExtensionSync {
         if (![string]::IsNullOrEmpty($DeviceLayoutId)) {
             $CompanyResult.Logs.Add('Starting Device Processing')
             Write-Information "### Processing Devices for $($Tenant.defaultDomainName)"
+            # Once Hudu holds devices, creating more than half the Intune fleet in one run means matching has failed.
+            $DevicesCreated = 0
+            $MaxDeviceCreates = if ($HuduDevices.Count -gt 0) { [Math]::Max(10, [Math]::Floor(@($Devices).Count / 2)) } else { [int]::MaxValue }
             foreach ($Device in $Devices) {
                 try {
                     $DevicePoliciesTable = foreach ($Policy in $DeviceComplianceDetails) {
@@ -888,6 +895,40 @@ function Invoke-HuduExtensionSync {
                 $DeviceAppsFormatted = $DeviceAppsTable | ConvertTo-Html -Fragment | Out-String
 #>
                     $HuduDevice = Find-HuduDeviceMatch -Device $Device -HuduDevices $HuduDevices -ExcludeSerials $ExcludeSerials -SerialIndex $HuduDevicesBySerial -NameIndex $HuduDevicesByName
+
+                    if ($device.deviceType -in $IntuneDesktopDeviceTypes) {
+                        $CreateLayoutId = $DesktopsLayout.id
+                        $DeviceCreation = $CreateDevices
+                    } else {
+                        $CreateLayoutId = $MobilesLayout.id
+                        $DeviceCreation = $CreateMobileDevices
+                    }
+                    if (-not $HuduDevice -and $DeviceCreation -eq $true) {
+                        # Re-query Hudu (archived included) before creating, so a stale or partial asset list cannot create a duplicate.
+                        $RecheckDevices = [System.Collections.Generic.List[object]]::new()
+                        $SerialIsUsable = -not [string]::IsNullOrWhiteSpace([string]$Device.serialNumber) -and [string]$Device.serialNumber -notin $ExcludeSerials
+                        foreach ($IncludeArchived in $false, $true) {
+                            $RecheckDevices.AddRange([object[]]@(Get-HuduAssets -CompanyId $company_id -AssetLayoutId $CreateLayoutId -Name $Device.deviceName -Archived:$IncludeArchived))
+                            if ($SerialIsUsable) {
+                                $RecheckDevices.AddRange([object[]]@(Get-HuduAssets -CompanyId $company_id -AssetLayoutId $CreateLayoutId -PrimarySerial $Device.serialNumber -Archived:$IncludeArchived))
+                            }
+                        }
+                        $HuduDevice = Find-HuduDeviceMatch -Device $Device -HuduDevices @($RecheckDevices | Where-Object { $_ } | Sort-Object -Property id -Unique) -ExcludeSerials $ExcludeSerials
+                        foreach ($FoundDevice in @($HuduDevice)) {
+                            $CompanyResult.Logs.Add("Found existing $($FoundDevice.name) in Hudu, not creating $($Device.deviceName)")
+                            $HuduDevices.Add($FoundDevice)
+                            $FoundKeys = Get-HuduDeviceMatchKey -HuduDevice $FoundDevice
+                            foreach ($Key in $FoundKeys.Serial) { $HuduDevicesBySerial.AddItem($Key, $FoundDevice) }
+                            foreach ($Key in $FoundKeys.Name) { $HuduDevicesByName.AddItem($Key, $FoundDevice) }
+                        }
+                    }
+                    # Archived matches only block creation; they are never written to.
+                    $ActiveHuduDevice = $HuduDevice | Where-Object { -not $_.archived }
+                    if ($HuduDevice -and -not $ActiveHuduDevice) {
+                        $CompanyResult.Logs.Add("Skipping $($Device.deviceName), it matches an archived asset in Hudu")
+                        continue
+                    }
+                    $HuduDevice = $ActiveHuduDevice
 
                     $RmmLinks = [System.Collections.Generic.List[object]]::new()
                     if ($HuduDevice) {
@@ -1101,16 +1142,16 @@ function Invoke-HuduExtensionSync {
                                 $CompanyResult.Errors.add("Device $($HuduDevice.name): Multiple devices matched on name or serial ($($device.serialNumber -join ', '))")
                             }
                         } else {
-                            if ($device.deviceType -in $IntuneDesktopDeviceTypes) {
-                                $CreateLayoutId = $DesktopsLayout.id
-                                $DeviceCreation = $CreateDevices
-                            } else {
-                                $CreateLayoutId = $MobilesLayout.id
-                                $DeviceCreation = $CreateMobileDevices
+                            if ($DeviceCreation -eq $true -and $DevicesCreated -ge $MaxDeviceCreates) {
+                                $CreateDevices = $false
+                                $CreateMobileDevices = $false
+                                $DeviceCreation = $false
+                                [void]$CompanyResult.Errors.Add("Company: Stopped creating devices after $DevicesCreated new assets this run (limit $MaxDeviceCreates). Check Hudu for duplicate devices before the next sync.")
                             }
                             if ($DeviceCreation -eq $true) {
                                 $CompanyResult.Logs.Add("Creating $($device.deviceName) in Hudu")
                                 $CreateHuduDevice = (New-HuduAsset -Name $device.deviceName -company_id $company_id -asset_layout_id $CreateLayoutId -Fields $DeviceAssetFields -PrimarySerial $Device.serialNumber).asset
+                                $DevicesCreated++
 
                                 if (!$CreateHuduDevice) {
                                     $CompanyResult.Errors.add("Device $($device.deviceName): Failed to create device in Hudu, check your device asset fields for 'Primary Serial'.")
