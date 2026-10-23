@@ -148,6 +148,10 @@ A standard that deploys one object per operator-chosen name or per stored templa
 bundle the template. One instance grades ONE object; an unresolvable template grades **No
 Data, never Compliant**.
 
+A standard that deploys an Intune policy outside IntuneTemplate lists the policy names it owns
+in `"driftManagedNames"` (literal names, or `"%Variable%"` for an instance's name) so Detect
+Intune Drift does not report its own policy as unmanaged.
+
 ## Non-negotiables
 
 - **One function per file.** Hook and executor are separate files. Never build arrays with
