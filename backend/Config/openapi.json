@@ -42582,6 +42582,9 @@
                         "type": "string",
                         "x-cipp-field-source": "storage"
                       },
+                      "ExecutedTime": {
+                        "x-cipp-field-source": "storage,backend,frontend"
+                      },
                       "New": {
                         "x-cipp-field-source": "backend,frontend"
                       },
@@ -42600,14 +42603,11 @@
                       "RowKey": {
                         "x-cipp-field-source": "storage"
                       },
-                      "ScheduledUtc": {
+                      "ScheduledTime": {
                         "x-cipp-field-source": "storage,backend,frontend"
                       },
                       "Snoozed": {
                         "x-cipp-field-source": "backend"
-                      },
-                      "StartedUtc": {
-                        "x-cipp-field-source": "storage,backend,frontend"
                       },
                       "Summary": {
                         "type": "string",

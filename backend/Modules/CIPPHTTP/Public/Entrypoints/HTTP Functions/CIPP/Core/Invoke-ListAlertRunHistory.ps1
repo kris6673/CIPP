@@ -45,20 +45,20 @@ function Invoke-ListAlertRunHistory {
         $Results = foreach ($Row in @($Rows | Select-CippAllowedTenantData -TenantProperty 'Tenant')) {
             if ($null -eq $Row) { continue }
             [PSCustomObject]@{
-                StartedUtc   = $Row.StartedUtc
-                ScheduledUtc = $Row.ScheduledUtc
-                TaskName     = $Row.TaskName
-                Alert        = $Row.Alert
-                Tenant       = $Row.Tenant
-                Outcome      = $Row.Outcome
-                Summary      = $Row.Summary
-                New          = [int]$Row.New
-                Reopened     = [int]$Row.Reopened
-                Continuing   = [int]$Row.Continuing
-                Resolved     = [int]$Row.Resolved
-                Snoozed      = [int]$Row.Snoozed
-                DurationMs   = [int64]$Row.DurationMs
-                TaskId       = $Row.TaskId
+                ExecutedTime  = $Row.ExecutedTime
+                ScheduledTime = $Row.ScheduledTime
+                TaskName      = $Row.TaskName
+                Alert         = $Row.Alert
+                Tenant        = $Row.Tenant
+                Outcome       = $Row.Outcome
+                Summary       = $Row.Summary
+                New           = [int]$Row.New
+                Reopened      = [int]$Row.Reopened
+                Continuing    = [int]$Row.Continuing
+                Resolved      = [int]$Row.Resolved
+                Snoozed       = [int]$Row.Snoozed
+                DurationMs    = [int64]$Row.DurationMs
+                TaskId        = $Row.TaskId
             }
         }
         $StatusCode = [HttpStatusCode]::OK
