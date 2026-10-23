@@ -42541,6 +42541,15 @@
             }
           },
           {
+            "name": "Outcome",
+            "in": "query",
+            "description": "Only runs with these outcomes, comma-separated: Completed, Skipped, Failed, Not reported.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "TaskId",
             "in": "query",
             "description": "Only runs of this alert, by its scheduled task RowKey.",
