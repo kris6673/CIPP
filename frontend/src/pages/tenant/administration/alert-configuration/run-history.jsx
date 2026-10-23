@@ -7,30 +7,41 @@ import { CippTablePage } from '../../../../components/CippComponents/CippTablePa
 import { CippFormComponent } from '../../../../components/CippComponents/CippFormComponent.jsx'
 import CippButtonCard from '../../../../components/CippCards/CippButtonCard'
 import { CippIcons } from '../../../../utils/icon-registry'
+import { useSettings } from '../../../../hooks/use-settings'
 import { Layout as DashboardLayout } from '../../../../layouts/index'
 import { TabbedLayout } from '../../../../layouts/TabbedLayout'
 import tabOptions from './tabOptions.json'
 
 // Run history is kept for 30 days; ListAlertRunHistory caps Days there too.
 const MAX_DAYS = 30
+const OUTCOME_OPTIONS = ['Completed', 'Skipped', 'Failed', 'Not reported'].map(
+  (value) => ({ label: value, value })
+)
 
 const Page = () => {
   const router = useRouter()
+  const tenant = useSettings().currentTenant
   const taskId = router.query.taskId
   // One alert: its whole retained history. Every alert: the last day, which is already one row per run per tenant.
   const defaultDays = taskId ? MAX_DAYS : 1
-  const formControl = useForm({ defaultValues: { Days: defaultDays } })
-  const [appliedDays, setAppliedDays] = useState(null)
+  const formControl = useForm({
+    defaultValues: { Days: defaultDays, Outcome: [] },
+  })
+  const [applied, setApplied] = useState(null)
   const [filterExpanded, setFilterExpanded] = useState(false)
-  const days = appliedDays ?? defaultDays
+  const days = applied?.days ?? defaultDays
+  const outcomes = applied?.outcomes ?? []
 
   // taskId arrives once the router is ready, after the form was created with the all-alerts default.
   useEffect(() => {
-    formControl.reset({ Days: defaultDays })
+    formControl.reset({ Days: defaultDays, Outcome: [] })
   }, [defaultDays])
 
   const handleFilterSubmit = formControl.handleSubmit((data) => {
-    setAppliedDays(Math.min(Math.max(Number(data.Days) || 1, 1), MAX_DAYS))
+    setApplied({
+      days: Math.min(Math.max(Number(data.Days) || 1, 1), MAX_DAYS),
+      outcomes: (data.Outcome ?? []).map((option) => option.value),
+    })
     setFilterExpanded(false)
   })
 
@@ -54,6 +65,18 @@ const Page = () => {
             helperText={`Days of run history to show, up to ${MAX_DAYS}`}
           />
         </Grid>
+        <Grid size={{ sm: 6, xs: 12 }}>
+          <CippFormComponent
+            type="autoComplete"
+            label="Outcome"
+            name="Outcome"
+            formControl={formControl}
+            options={OUTCOME_OPTIONS}
+            multiple={true}
+            creatable={false}
+            helperText="Only runs with these outcomes. Leave empty to include all."
+          />
+        </Grid>
         <Grid size={{ xs: 12 }}>
           <Button
             variant="contained"
@@ -73,8 +96,11 @@ const Page = () => {
       title={`Run History${taskId ? ' for this alert' : ''} (last ${days === 1 ? '24 hours' : `${days} days`})`}
       tableFilter={tableFilter}
       apiUrl="/api/ListAlertRunHistory"
-      apiData={{ tenantFilter: 'AllTenants', Days: days, TaskId: taskId }}
-      tenantInTitle={false}
+      apiData={{
+        Days: days,
+        TaskId: taskId,
+        Outcome: outcomes.length ? outcomes.join(',') : undefined,
+      }}
       simpleColumns={[
         'ExecutedTime',
         'ScheduledTime',
@@ -87,7 +113,7 @@ const Page = () => {
         'Resolved',
         'DurationMs',
       ]}
-      queryKey={`ListAlertRunHistory-${taskId ?? 'all'}-${days}`}
+      queryKey={`ListAlertRunHistory-${tenant}-${taskId ?? 'all'}-${days}-${outcomes.join(',')}`}
     />
   )
 }
