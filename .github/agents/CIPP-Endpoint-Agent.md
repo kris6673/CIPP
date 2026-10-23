@@ -124,6 +124,19 @@ A helper must let its caller tell an input problem apart from an upstream failur
   (`New-CIPPUserTask`, offboarding tasks, BEC containment, extension syncs) must keep collecting per-step results and
   must not start aborting halfway.
 
+## Storing a tenant
+
+`tenantFilter` arrives as the tenant's current default domain, which can change. When an endpoint saves a tenant
+reference (a table row or key, saved settings), store the `customerId`:
+
+```powershell
+$Tenant = @(Get-Tenants -TenantFilter $TenantFilter -IncludeErrors)[0]
+$TenantId = $Tenant.customerId ?? $TenantFilter
+```
+
+Reads match any of the tenant's identifiers, because older rows may hold a domain. Rules and the lookup helper:
+"Storing tenant references" in `.github/copilot-instructions.md`.
+
 ---
 
 ## Cached list reads (AllTenants)
