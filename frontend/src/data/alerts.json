@@ -388,6 +388,8 @@
   {
     "name": "Vulnerabilities",
     "label": "Alert on software vulnerabilities",
+    "recommendedRunInterval": "1d",
+    "minimumRunInterval": "6h",
     "requiresInput": true,
     "multipleInput": true,
     "inputs": [
@@ -659,7 +661,8 @@
   {
     "name": "BreachAlert",
     "label": "Alert on (new) potentially breached passwords. Generates an alert if a password is found to be breached.",
-    "recommendedRunInterval": "7d"
+    "recommendedRunInterval": "7d",
+    "minimumRunInterval": "1d"
   },
   {
     "name": "LicensedUsersWithRoles",
