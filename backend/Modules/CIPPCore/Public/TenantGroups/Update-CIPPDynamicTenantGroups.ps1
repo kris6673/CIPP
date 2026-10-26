@@ -71,7 +71,8 @@ function Update-CIPPDynamicTenantGroups {
                     $SkuHashtable = @{}
                     $Skus = Get-CIPPAzDataTableEntity @LicenseCacheTable -Filter "PartitionKey eq 'sku' and Timestamp ge datetime'$( (Get-Date).ToUniversalTime().AddHours(-8).ToString('yyyy-MM-ddTHH:mm:ssZ') )'"
                     foreach ($Sku in $Skus) {
-                        if (-not $Sku.JSON) { continue }
+                        # A tenant without licences is cached as an empty row
+                        if (-not $Sku.JSON) { $SkuHashtable[$Sku.RowKey] = @(); continue }
                         try { $SkuHashtable[$Sku.RowKey] = @(($Sku.JSON | ConvertFrom-Json).skuId) } catch { Write-Information "Skipping unreadable licence cache row $($Sku.RowKey)" }
                     }
                 }

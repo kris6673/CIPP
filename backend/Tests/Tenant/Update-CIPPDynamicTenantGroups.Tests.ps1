@@ -26,6 +26,7 @@ Describe 'Update-CIPPDynamicTenantGroups' {
         $script:Tenants = @(
             [pscustomobject]@{ customerId = 'c1'; defaultDomainName = 'one.com'; displayName = 'One'; delegatedPrivilegeStatus = 'granularDelegatedAdminPrivileges' }
             [pscustomobject]@{ customerId = 'c2'; defaultDomainName = 'two.com'; displayName = 'Two'; delegatedPrivilegeStatus = 'granularDelegatedAdminPrivileges' }
+            [pscustomobject]@{ customerId = 'c3'; defaultDomainName = 'three.com'; displayName = 'Three'; delegatedPrivilegeStatus = 'granularDelegatedAdminPrivileges' }
         )
         $LicenseRule = { param($Guid) "[{`"property`":`"availableLicense`",`"operator`":`"eq`",`"value`":{`"guid`":`"$Guid`"}}]" }
         $script:Rows = @{
@@ -34,7 +35,10 @@ Describe 'Update-CIPPDynamicTenantGroups' {
                 [pscustomobject]@{ RowKey = 'gB'; Name = 'B'; DynamicRules = (& $LicenseRule 'bbbbbbbb-0000-0000-0000-000000000000') }
             )
             TenantGroupMembers = @()
-            cachetenantskus    = @([pscustomobject]@{ RowKey = 'c1'; JSON = '[{"skuId":"aaaaaaaa-0000-0000-0000-000000000000","servicePlans":[]}]' })
+            cachetenantskus    = @(
+                [pscustomobject]@{ RowKey = 'c1'; JSON = '[{"skuId":"aaaaaaaa-0000-0000-0000-000000000000","servicePlans":[]}]' }
+                [pscustomobject]@{ RowKey = 'c3'; JSON = '' }
+            )
         }
     }
 
@@ -53,6 +57,6 @@ Describe 'Update-CIPPDynamicTenantGroups' {
         $null = Update-CIPPDynamicTenantGroups
 
         $script:Reads | Should -Not -Contain 'cachetenantskus'
-        $script:Added | Sort-Object | Should -Be @('gC-c1', 'gC-c2')
+        $script:Added | Sort-Object | Should -Be @('gC-c1', 'gC-c2', 'gC-c3')
     }
 }
