@@ -256,6 +256,12 @@ export const nativeMenuItems = [
             scope: 'global',
           },
           {
+            title: 'Compare Policies',
+            path: '/tenant/conditional/compare-policies',
+            permissions: ['Tenant.ConditionalAccess.*'],
+            scope: 'global',
+          },
+          {
             title: 'Named Locations',
             path: '/tenant/conditional/list-named-locations',
             permissions: ['Tenant.ConditionalAccess.*'],
