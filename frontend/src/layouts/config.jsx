@@ -256,12 +256,6 @@ export const nativeMenuItems = [
             scope: 'global',
           },
           {
-            title: 'Compare Policies',
-            path: '/tenant/conditional/compare-policies',
-            permissions: ['Tenant.ConditionalAccess.*'],
-            scope: 'global',
-          },
-          {
             title: 'Named Locations',
             path: '/tenant/conditional/list-named-locations',
             permissions: ['Tenant.ConditionalAccess.*'],
@@ -1092,6 +1086,12 @@ export const nativeMenuItems = [
             path: '/tenant/tools/geoiplookup',
             docsPath: 'tools/tenant-tools/geoiplookup',
             permissions: ['CIPP.IPDatabase.*'],
+            scope: 'global',
+          },
+          {
+            title: 'Compare CA Policies',
+            path: '/tenant/tools/compare-ca-policies',
+            permissions: ['Tenant.ConditionalAccess.*'],
             scope: 'global',
           },
         ],
