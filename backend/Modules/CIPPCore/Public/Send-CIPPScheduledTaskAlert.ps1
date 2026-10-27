@@ -233,6 +233,7 @@ function Send-CIPPScheduledTaskAlert {
 
             # Replace other variables
             $AlertComment = Get-CIPPTextReplacement -Text $AlertComment -TenantFilter $TenantFilter
+            $AlertComment = $AlertComment -replace '(?<![="''>])(https?://[^\s<"'']*[^\s<"''.,;:!?)])', '<a href="$1">$1</a>' -replace '\r?\n', '<br>'
             $AlertCommentHtml = "<div style='background-color: transparent; border-left: 4px solid #007bff; padding: 15px; margin: 15px 0;'><h4 style='margin-top: 0; color: #007bff;'>Alert Information</h4><p style='margin-bottom: 0;'>$AlertComment</p></div>"
             $HTML += $AlertCommentHtml
         }

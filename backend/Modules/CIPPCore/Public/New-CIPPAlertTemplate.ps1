@@ -150,12 +150,6 @@ function New-CIPPAlertTemplate {
 
         $DataHTML = ($Data | Select-Object * -ExcludeProperty Etag, PartitionKey, TimeStamp | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
         $IntroText = "<p>You've configured CIPP to send you alerts based on the logbook. The following alerts match your configured rules</p>$dataHTML"
-
-        # Add alert comment if provided
-        if ($AlertComment) {
-            $IntroText = "$IntroText<div style='background-color: #f8f9fa; border-left: 4px solid #007bff; padding: 15px; margin: 15px 0;'><h4 style='margin-top: 0; color: #007bff;'>Alert Information</h4><p style='margin-bottom: 0;'>$AlertComment</p></div>"
-        }
-
         $ButtonUrl = "$CIPPURL/cipp/logs"
         $ButtonText = 'Check logbook information'
     }
@@ -434,6 +428,11 @@ function New-CIPPAlertTemplate {
                 if ($Distinct.Count -eq 1) { $Distinct[0] } else { $Match.Value }
             })
         $Title = '{0} - {1}' -f $Tenant, $ResolvedSubject
+    }
+
+    if ($AlertComment) {
+        $CommentHtml = $AlertComment -replace '(?<![="''>])(https?://[^\s<"'']*[^\s<"''.,;:!?)])', '<a href="$1">$1</a>' -replace '\r?\n', '<br>'
+        $IntroText = "$IntroText<div style='background-color: #f8f9fa; border-left: 4px solid #007bff; padding: 15px; margin: 15px 0;'><h4 style='margin-top: 0; color: #007bff;'>Alert Information</h4><p style='margin-bottom: 0;'>$CommentHtml</p></div>"
     }
 
     if ($Format -eq 'html') {
