@@ -146,7 +146,7 @@ Describe 'Get-CIPPBaselineAlignment -TenantScores' {
 
         Should -Invoke Get-CIPPBaselineDefinition -Times 1 -Exactly
         Should -Invoke Get-CIPPAzDataTableEntity -Times 1 -Exactly -ParameterFilter {
-            $TableName -eq 'BaselineAlignment' -and $Property -contains 'PartitionKey' -and $Property -contains 'Status'
+            $TableName -eq 'BaselineAlignment' -and $Property -contains 'PartitionKey' -and $Property -contains 'RowKey' -and $Property -contains 'Status'
         }
         $Scores.Count | Should -Be 3
         foreach ($Tenant in $Full) {
