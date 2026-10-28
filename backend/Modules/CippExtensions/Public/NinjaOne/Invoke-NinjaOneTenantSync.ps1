@@ -851,15 +851,15 @@ function Invoke-NinjaOneTenantSync {
 
                 $DeviceSummaryHTML = $null
                 if ($MappedFields.DeviceSummary) {
-                    $DeviceModel = Get-HuduDeviceViewModel -Device $Device -Tenant $Customer -Policies $DevicePolicyRows -Groups @($DeviceGroups | ForEach-Object { $_.Name }) -RmmLinks @() -Culture $Culture -TimeZone $TimeZone
+                    $DeviceModel = Get-CippExtensionDeviceViewModel -Device $Device -Tenant $Customer -Policies $DevicePolicyRows -Groups @($DeviceGroups | ForEach-Object { $_.Name }) -RmmLinks @() -Culture $Culture -TimeZone $TimeZone
                     $DeviceModel.Links.Microsoft = @(
                         $DeviceModel.Links.Microsoft
                         [ordered]@{ Label = 'Entra ID'; Tip = 'Open this device in Entra ID'; Url = "https://entra.microsoft.com/$($Customer.defaultDomainName)/#view/Microsoft_AAD_Devices/DeviceDetailsMenuBlade/~/Properties/deviceId/$($Device.azureADDeviceId)" }
                         [ordered]@{ Label = 'View in CIPP'; Tip = 'View this device in CIPP'; Url = "https://$($CIPPURL)/endpoint/MEM/devices/device?deviceId=$($Device.id)&tenantFilter=$($Customer.defaultDomainName)" }
                     )
                     # The hash takes the body without the synced stamp; the stamped body replaces it once hashed
-                    $DeviceSummaryHTML = Get-HuduDeviceBody -Model $DeviceModel -Layout NinjaOne -SyncedAt (Get-Date) -Culture $Culture -TimeZone $TimeZone
-                    $NinjaDeviceUpdate | Add-Member -NotePropertyName $MappedFields.DeviceSummary -NotePropertyValue @{'html' = (Get-HuduDeviceBody -Model $DeviceModel -Layout NinjaOne -Culture $Culture -TimeZone $TimeZone) }
+                    $DeviceSummaryHTML = Get-CippExtensionDeviceBody -Model $DeviceModel -Layout NinjaOne -SyncedAt (Get-Date) -Culture $Culture -TimeZone $TimeZone
+                    $NinjaDeviceUpdate | Add-Member -NotePropertyName $MappedFields.DeviceSummary -NotePropertyValue @{'html' = (Get-CippExtensionDeviceBody -Model $DeviceModel -Layout NinjaOne -Culture $Culture -TimeZone $TimeZone) }
                 }
             }
 
