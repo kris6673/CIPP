@@ -71,6 +71,8 @@ function Invoke-NinjaOneTenantSync {
         # Get the NinjaOne general extension settings.
         $Table = Get-CIPPTable -TableName Extensionsconfig
         $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).NinjaOne
+        $Culture = Get-CippExtensionCulture -Value $Configuration.Locale
+        $TimeZone = try { [TimeZoneInfo]::FindSystemTimeZoneById([string]$env:CIPP_TIMEZONE) } catch { [TimeZoneInfo]::Utc }
 
         $AllowedNinjaHostnames = @(
             'app.ninjarmm.com',
@@ -90,6 +92,21 @@ function Invoke-NinjaOneTenantSync {
         $Filter = "PartitionKey eq 'NinjaOneFieldMapping'"
         Get-CIPPAzDataTableEntity @CIPPMapping -Filter $Filter | Where-Object { $Null -ne $_.IntegrationId -and $_.IntegrationId -ne '' } | ForEach-Object {
             $MappedFields | Add-Member -NotePropertyName $_.RowKey -NotePropertyValue $($_.IntegrationId)
+        }
+
+        if (($Configuration.IncludeLAPS -and -not $MappedFields.LAPSPassword) -or ($Configuration.IncludeBitLocker -and -not $MappedFields.BitLockerRecoveryKeys)) {
+            $Token = Get-NinjaOneToken -configuration $Configuration -WebSession $NinjaSession
+            Initialize-NinjaOneCredentialField -Configuration $Configuration -Token $Token -MappedFields $MappedFields -WebSession $NinjaSession
+        }
+
+        # Per-tenant opt-out of password data; the global switches still gate the feature.
+        $SyncPasswords = $MappedTenant.SyncPasswords -ne $false
+        $IncludeLAPS = [bool]$Configuration.IncludeLAPS -and $SyncPasswords -and [bool]$MappedFields.LAPSPassword
+        $IncludeBitLocker = [bool]$Configuration.IncludeBitLocker -and $SyncPasswords -and [bool]$MappedFields.BitLockerRecoveryKeys
+        # Also true for opted-out tenants so previously written credentials get blanked.
+        $CredentialSyncConfigured = ([bool]$Configuration.IncludeLAPS -and [bool]$MappedFields.LAPSPassword) -or ([bool]$Configuration.IncludeBitLocker -and [bool]$MappedFields.BitLockerRecoveryKeys)
+        if (-not $SyncPasswords -and ($Configuration.IncludeLAPS -or $Configuration.IncludeBitLocker)) {
+            Write-LogMessage -tenant $TenantFilter -API 'NinjaOneSync' -message 'Password data excluded for this tenant by mapping' -Sev 'Info'
         }
 
         # Get NinjaOne Devices
@@ -594,6 +611,10 @@ function Invoke-NinjaOneTenantSync {
                     $DeviceEntry.Ok = $true
                     $DeviceEntry.Map | Add-Member -NotePropertyName FieldsHash -NotePropertyValue $DeviceEntry.Hash -Force
                     $DeviceEntry.Map | Add-Member -NotePropertyName FieldsTime -NotePropertyValue (Get-Date).ToUniversalTime().ToString('o') -Force
+                    if ($DeviceEntry.Credentials -and -not $DeviceEntry.Credentials.Failed) {
+                        $DeviceEntry.Map | Add-Member -NotePropertyName LapsBackupDate -NotePropertyValue $DeviceEntry.Credentials.LapsBackupDate -Force
+                        $DeviceEntry.Map | Add-Member -NotePropertyName BitLockerKeyIds -NotePropertyValue $DeviceEntry.Credentials.BitLockerKeyIds -Force
+                    }
                     $DeviceMapWrites["$($DeviceEntry.Map.RowKey)"] = $DeviceEntry.Map
                     $PendingDeviceCache.Add((& $DeviceCacheEntity $DeviceEntry))
                 } else {
@@ -618,6 +639,52 @@ function Invoke-NinjaOneTenantSync {
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -tenant $TenantFilter -API 'NinjaOneSync' -message "Failed to retrieve the non-compliant settings for $($NonCompliantDeviceIds.Count) devices, the Intune Non-Compliant Settings field will not be updated this run: $($ErrorMessage.NormalizedError)" -Sev 'Warning' -LogData $ErrorMessage
+            }
+        }
+
+        # Credential metadata is loaded once per tenant; a failed load skips that credential type for every device this run.
+        $LAPSMetadataAvailable = $true
+        $LAPSMetadataByDeviceId = @{}
+        if ($IncludeLAPS) {
+            try {
+                $LAPSMetadata = @(New-GraphGetRequest -NoAuthCheck $true -uri 'https://graph.microsoft.com/v1.0/directory/deviceLocalCredentials?$select=id,deviceName,lastBackupDateTime,refreshDateTime' -tenantid $TenantFilter -ErrorAction Stop)
+                foreach ($LAPSMetadataItem in $LAPSMetadata) {
+                    if ($LAPSMetadataItem -is [string] -or [string]::IsNullOrWhiteSpace([string]$LAPSMetadataItem.id) -or [string]::IsNullOrWhiteSpace([string]$LAPSMetadataItem.lastBackupDateTime)) {
+                        throw 'The LAPS metadata response contained an incomplete record.'
+                    }
+                    $LAPSMetadataByDeviceId[[string]$LAPSMetadataItem.id] = $LAPSMetadataItem
+                }
+            } catch {
+                $LAPSMetadataAvailable = $false
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -tenant $TenantFilter -API 'NinjaOneSync' -message "LAPS sync skipped for all devices, unable to retrieve LAPS metadata: $($ErrorMessage.NormalizedError)" -Sev 'Warning' -LogData $ErrorMessage
+            }
+        }
+        $BitLockerMetadataAvailable = $true
+        $BitLockerKeysByDevice = [CIPP.CippIndex]::Build(@(), @())
+        if ($IncludeBitLocker) {
+            try {
+                $BitLockerCacheRows = @(Get-CIPPDbItem -TenantFilter $TenantFilter -Type 'BitlockerKeys' -ErrorAction Stop)
+                $BitLockerCountRow = $BitLockerCacheRows | Where-Object { $_.RowKey -eq 'BitlockerKeys-Count' } | Select-Object -First 1
+                if ($null -eq $BitLockerCountRow) {
+                    throw 'BitLocker key metadata cache has not been populated.'
+                }
+                $BitLockerKeyMetadata = @(
+                    $BitLockerCacheRows |
+                        Where-Object { $_.RowKey -ne 'BitlockerKeys-Count' } |
+                        ForEach-Object { if ($_.Data -is [string]) { $_.Data | ConvertFrom-Json -ErrorAction Stop } else { $_.Data } }
+                )
+                if ($BitLockerKeyMetadata.Count -ne [int]$BitLockerCountRow.DataCount) {
+                    throw 'BitLocker key metadata cache is incomplete.'
+                }
+                if ($BitLockerKeyMetadata | Where-Object { [string]::IsNullOrWhiteSpace([string]$_.id) -or [string]::IsNullOrWhiteSpace([string]$_.deviceId) }) {
+                    throw 'BitLocker key metadata cache contains incomplete records.'
+                }
+                $BitLockerKeysByDevice = [CIPP.CippIndex]::Build($BitLockerKeyMetadata, @(foreach ($Key in $BitLockerKeyMetadata) { , ($($Key.deviceId) ?? $null) }))
+            } catch {
+                $BitLockerMetadataAvailable = $false
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -tenant $TenantFilter -API 'NinjaOneSync' -message "BitLocker sync skipped for all devices, unable to retrieve BitLocker key metadata: $($ErrorMessage.NormalizedError)" -Sev 'Warning' -LogData $ErrorMessage
             }
         }
 
@@ -680,6 +747,7 @@ function Invoke-NinjaOneTenantSync {
 
             # Compliance Polciies
             [System.Collections.Generic.List[PSCustomObject]]$DevicePolcies = @()
+            $DevicePolicyRows = [System.Collections.Generic.List[PSCustomObject]]::new()
             foreach ($Policy in $DeviceComplianceDetails) {
                 $Status = $Policy.StatusIndex.Find($device.deviceName)
                 if ($Status) {
@@ -691,6 +759,12 @@ function Invoke-NinjaOneTenantSync {
                                     Status         = $Stat.status
                                     'Last Report'  = & $ToDate $Stat.lastReportedDateTime[0] 'yyyy-MM-dd'
                                     'Grace Expiry' = & $ToDate $Stat.complianceGracePeriodExpirationDateTime[0] 'yyyy-MM-dd'
+                                })
+                            $DevicePolicyRows.Add([PSCustomObject]@{
+                                    Name         = $Policy.DisplayName
+                                    Status       = $Stat.status
+                                    LastReported = @($Stat.lastReportedDateTime)[0]
+                                    GraceExpiry  = @($Stat.complianceGracePeriodExpirationDateTime)[0]
                                 })
                         }
                     }
@@ -775,80 +849,17 @@ function Invoke-NinjaOneTenantSync {
 
                 }
 
+                $DeviceSummaryHTML = $null
                 if ($MappedFields.DeviceSummary) {
-
-                    # Set Compliance Status
-                    if ($Device.complianceState -eq 'compliant') {
-                        $Compliance = '<i class="fas fa-check-circle" title="Device Compliant" style="color:#26A644;"></i>&nbsp;&nbsp; Compliant'
-                    } else {
-                        $Compliance = '<i class="fas fa-times-circle" title="Device Not Compliant" style="color:#D53948;"></i>&nbsp;&nbsp; Not Compliant'
-                    }
-
-                    # Device Details
-                    $DeviceDetailsData = [PSCustomObject]@{
-                        'Device Name'        = $Device.deviceName
-                        'Primary User'       = $Device.userDisplayName
-                        'Primary User Email' = $Device.userPrincipalName
-                        'Owner'              = $Device.ownerType
-                        'Enrolled'           = & $ToDate $Device.enrolledDateTime
-                        'Last Checkin'       = & $ToDate $Device.lastSyncDateTime
-                        'Compliant'          = $Compliance
-                        'Management Type'    = $Device.managementAgent
-                    }
-
-                    $DeviceDetailsCard = Get-NinjaOneInfoCard -Title 'Device Details' -Data $DeviceDetailsData -Icon 'fas fa-laptop'
-
-                    # Device Hardware
-                    $DeviceHardwareData = [PSCustomObject]@{
-                        'Serial Number' = $Device.serialNumber
-                        'OS'            = $Device.operatingSystem
-                        'OS Versions'   = $Device.osVersion
-                        'Chassis'       = $Device.chassisType
-                        'Model'         = $Device.model
-                        'Manufacturer'  = $Device.manufacturer
-                    }
-
-                    $DeviceHardwareCard = Get-NinjaOneInfoCard -Title 'Device Details' -Data $DeviceHardwareData -Icon 'fas fa-microchip'
-
-                    # Device Enrollment
-                    $DeviceEnrollmentData = [PSCustomObject]@{
-                        'Enrollment Type'                = $Device.deviceEnrollmentType
-                        'Join Type'                      = $Device.joinType
-                        'Registration State'             = $Device.deviceRegistrationState
-                        'Autopilot Enrolled'             = $Device.autopilotEnrolled
-                        'Device Guard Requirements'      = $Device.hardwareinformation.deviceGuardVirtualizationBasedSecurityHardwareRequirementState
-                        'Virtualistation Based Security' = $Device.hardwareinformation.deviceGuardVirtualizationBasedSecurityState
-                        'Credential Guard'               = $Device.hardwareinformation.deviceGuardLocalSystemAuthorityCredentialGuardState
-                    }
-
-                    $DeviceEnrollmentCard = Get-NinjaOneInfoCard -Title 'Device Enrollment' -Data $DeviceEnrollmentData -Icon 'fas fa-table-list'
-
-
-                    # Compliance Policies
-                    $DevicePoliciesFormatted = $DevicePolcies | ConvertTo-Html -As Table -Fragment
-                    $DevicePoliciesHTML = ([System.Web.HttpUtility]::HtmlDecode($DevicePoliciesFormatted) -replace '<th>', '<th style="white-space: nowrap;">') -replace '<td>', '<td style="white-space: nowrap;">'
-                    $TitleLink = "https://intune.microsoft.com/$($Customer.defaultDomainName)/#view/Microsoft_Intune_Devices/DeviceSettingsMenuBlade/~/compliance/mdmDeviceId/$($Device.id)/primaryUserId/"
-                    $DeviceCompliancePoliciesCard = Get-NinjaOneCard -Title 'Device Compliance Policies' -Body $DevicePoliciesHTML -Icon 'fas fa-list-check' -TitleLink $TitleLink
-
-                    # Device Groups
-                    $DeviceGroupsTable = foreach ($Group in ($GroupsByDeviceId.Find($device.azureADDeviceId))) {
-                        [PSCustomObject]@{
-                            Name = $Group.displayName
-                        }
-                    }
-                    $DeviceGroupsFormatted = $DeviceGroupsTable | ConvertTo-Html -Fragment
-                    $DeviceGroupsHTML = ([System.Web.HttpUtility]::HtmlDecode($DeviceGroupsFormatted) -replace '<th>', '<th style="white-space: nowrap;">') -replace '<td>', '<td style="white-space: nowrap;">'
-                    $DeviceGroupsCard = Get-NinjaOneCard -Title 'Device Groups' -Body $DeviceGroupsHTML -Icon 'fas fa-layer-group'
-
-                    $DeviceSummaryHTML = '<div class="row g-3">' +
-                    '<div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $DeviceDetailsCard +
-                    '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $DeviceHardwareCard +
-                    '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $DeviceEnrollmentCard +
-                    '</div><div class="col-xl-8 col-lg-8 col-md-12 col-sm-12 d-flex">' + $DeviceCompliancePoliciesCard +
-                    '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $DeviceGroupsCard +
-                    '</div></div>'
-
-                    $NinjaDeviceUpdate | Add-Member -NotePropertyName $MappedFields.DeviceSummary -NotePropertyValue @{'html' = $DeviceSummaryHTML }
+                    $DeviceModel = Get-HuduDeviceViewModel -Device $Device -Tenant $Customer -Policies $DevicePolicyRows -Groups @($DeviceGroups | ForEach-Object { $_.Name }) -RmmLinks @() -Culture $Culture -TimeZone $TimeZone
+                    $DeviceModel.Links.Microsoft = @(
+                        $DeviceModel.Links.Microsoft
+                        [ordered]@{ Label = 'Entra ID'; Tip = 'Open this device in Entra ID'; Url = "https://entra.microsoft.com/$($Customer.defaultDomainName)/#view/Microsoft_AAD_Devices/DeviceDetailsMenuBlade/~/Properties/deviceId/$($Device.azureADDeviceId)" }
+                        [ordered]@{ Label = 'View in CIPP'; Tip = 'View this device in CIPP'; Url = "https://$($CIPPURL)/endpoint/MEM/devices/device?deviceId=$($Device.id)&tenantFilter=$($Customer.defaultDomainName)" }
+                    )
+                    # The hash takes the body without the synced stamp; the stamped body replaces it once hashed
+                    $DeviceSummaryHTML = Get-HuduDeviceBody -Model $DeviceModel -Layout NinjaOne -SyncedAt (Get-Date) -Culture $Culture -TimeZone $TimeZone
+                    $NinjaDeviceUpdate | Add-Member -NotePropertyName $MappedFields.DeviceSummary -NotePropertyValue @{'html' = (Get-HuduDeviceBody -Model $DeviceModel -Layout NinjaOne -Culture $Culture -TimeZone $TimeZone) }
                 }
             }
 
@@ -867,13 +878,30 @@ function Invoke-NinjaOneTenantSync {
                 $NinjaDeviceUpdate | Add-Member -NotePropertyName $MappedFields.DeviceNonCompliantSettings -NotePropertyValue $DeviceNonCompliantSettings
             }
 
+            $CredentialUpdate = $null
+            if ($CredentialSyncConfigured -and $Device.operatingSystem -eq 'Windows' -and -not [string]::IsNullOrWhiteSpace([string]$Device.azureADDeviceId)) {
+                $CredentialUpdate = Get-NinjaOneCredentialFieldUpdate -MappedFields $MappedFields -SyncLAPS ([bool]$Configuration.IncludeLAPS) -SyncBitLocker ([bool]$Configuration.IncludeBitLocker) -SyncPasswords $SyncPasswords `
+                    -LapsMetadata $LAPSMetadataByDeviceId[[string]$Device.azureADDeviceId] -LapsMetadataAvailable $LAPSMetadataAvailable `
+                    -BitLockerKeyMetadata @($BitLockerKeysByDevice.Find($Device.azureADDeviceId)) -BitLockerMetadataAvailable $BitLockerMetadataAvailable `
+                    -StoredLapsBackupDate $MappedDevice.LapsBackupDate -StoredBitLockerKeyIds $MappedDevice.BitLockerKeyIds -DeviceId $Device.azureADDeviceId -TenantFilter $TenantFilter
+                if ($CredentialUpdate.Failed) {
+                    Write-LogMessage -tenant $TenantFilter -API 'NinjaOneSync' -message "Device $($Device.deviceName): credential sync skipped, custom fields updated without credentials: $($CredentialUpdate.Reason)" -Sev 'Warning'
+                }
+            }
+            $HasCredentialFields = $CredentialUpdate.Fields.Count -gt 0
+
             # Update Device. Default to success so devices with no mapped fields are still cached.
-            $DeviceEntry = [PSCustomObject]@{ Device = $Device; Parsed = $ParsedDevice; Ok = $true; Map = $MappedDevice; NinjaId = $MatchedNinjaDevice.id; Body = $null; Hash = $null }
-            if ($MappedFields.DeviceSummary -or $MappedFields.DeviceLinks -or $MappedFields.DeviceCompliance -or $MappedFields.DeviceNonCompliantSettings) {
+            $DeviceEntry = [PSCustomObject]@{ Device = $Device; Parsed = $ParsedDevice; Ok = $true; Map = $MappedDevice; NinjaId = $MatchedNinjaDevice.id; Body = $null; Hash = $null; Credentials = $CredentialUpdate }
+            if ($MappedFields.DeviceSummary -or $MappedFields.DeviceLinks -or $MappedFields.DeviceCompliance -or $MappedFields.DeviceNonCompliantSettings -or $HasCredentialFields) {
                 try {
+                    # Credential values stay out of the hash; a body carrying them is always sent.
+                    $DeviceEntry.Hash = & $GetHash ($NinjaDeviceUpdate | ConvertTo-Json -Depth 100)
+                    if ($DeviceSummaryHTML) { $NinjaDeviceUpdate.($MappedFields.DeviceSummary) = @{'html' = $DeviceSummaryHTML } }
+                    foreach ($FieldName in @(if ($HasCredentialFields) { $CredentialUpdate.Fields.Keys })) {
+                        $NinjaDeviceUpdate | Add-Member -NotePropertyName $FieldName -NotePropertyValue $CredentialUpdate.Fields[$FieldName] -Force
+                    }
                     $DeviceEntry.Body = $NinjaDeviceUpdate | ConvertTo-Json -Depth 100
-                    $DeviceEntry.Hash = & $GetHash $DeviceEntry.Body
-                    if ($MappedDevice.FieldsHash -eq $DeviceEntry.Hash -and (& $IsFresh $MappedDevice.FieldsTime)) {
+                    if (-not $HasCredentialFields -and $MappedDevice.FieldsHash -eq $DeviceEntry.Hash -and (& $IsFresh $MappedDevice.FieldsTime)) {
                         $SkippedDeviceUpdates++
                         $DeviceEntry.Body = $null
                     } else {

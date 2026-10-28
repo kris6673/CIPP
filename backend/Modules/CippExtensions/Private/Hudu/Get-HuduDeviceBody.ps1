@@ -9,13 +9,17 @@ function Get-HuduDeviceBody {
 
         .PARAMETER SyncedAt
         Shown in the header when given.
+
+        .PARAMETER Layout
+        NinjaOne strips CSS grid and backgrounds, so its card row uses its Bootstrap grid classes and storage has no bar.
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][System.Collections.IDictionary]$Model,
         [Nullable[datetime]]$SyncedAt,
         [cultureinfo]$Culture = [cultureinfo]::GetCultureInfo('en-GB'),
-        [TimeZoneInfo]$TimeZone = [TimeZoneInfo]::Utc
+        [TimeZoneInfo]$TimeZone = [TimeZoneInfo]::Utc,
+        [ValidateSet('Hudu', 'NinjaOne')][string]$Layout = 'Hudu'
     )
 
     $m = $Model
@@ -30,6 +34,10 @@ function Get-HuduDeviceBody {
     # Hudu's mobile app ignores grid and stacks the cells, which suits a phone
     $Columns = {
         param($Cards, $Basis)
+        if ($Layout -eq 'NinjaOne') {
+            $Cells = @(foreach ($c in $Cards) { if ($c) { "<div class=`"col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex`">$($c -replace '^<div ', '<div class="flex-grow-1" ')</div>" } }) -join ''
+            return "<div class=`"row g-3`" style=`"margin-top:0`">$Cells</div>"
+        }
         $Cells = @(foreach ($c in $Cards) { if ($c) { "<div style=`"min-width:0;margin:6px`">$c</div>" } }) -join ''
         "<div style=`"display:grid;grid-template-columns:repeat(auto-fit,minmax($($Basis)px,1fr));margin:6px -6px -6px`">$Cells</div>"
     }
@@ -71,7 +79,7 @@ function Get-HuduDeviceBody {
     $S = $m.Hardware.Storage
     $StorageHtml = if ($S.Present) {
         "<tr><td style=`"$($TableStyle.RowLabel);$($TableStyle.RowSep)`">Storage</td><td style=`"$($TableStyle.RowValue);$($TableStyle.RowSep)`">$(ConvertTo-HuduUiText $S.UsedText) <span style=`"opacity:.7`">of $(ConvertTo-HuduUiText $S.AllocatedText), $(ConvertTo-HuduUiText $S.FreeText) free, $(ConvertTo-HuduUiText $S.PctText) used</span></td></tr>" +
-        "<tr><td colspan=`"2`" style=`"$($TableStyle.RowCell);padding:0 0 7px`">$(New-HuduUiBar -Pct $S.Pct -Tone $S.Tone -Title "Storage usage $($S.PctText)")</td></tr>"
+        $(if ($Layout -ne 'NinjaOne') { "<tr><td colspan=`"2`" style=`"$($TableStyle.RowCell);padding:0 0 7px`">$(New-HuduUiBar -Pct $S.Pct -Tone $S.Tone -Title "Storage usage $($S.PctText)")</td></tr>" })
     }
     $HardwareCard = New-HuduUiCard -Title 'Hardware' -Icon 'microchip' -Body ((New-HuduUiRow -Label 'Serial number' -Value $m.Hardware.Serial) +
         (New-HuduUiRow -Label 'Chassis' -Value $m.Hardware.Chassis) +

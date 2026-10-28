@@ -103,6 +103,41 @@ Describe 'Get-HuduDeviceBody' {
     }
 }
 
+Describe 'Get-HuduDeviceBody layouts' {
+    BeforeAll {
+        $script:LayoutParams = New-TestDeviceParams
+        $script:LayoutParams.Device.complianceState = 'noncompliant'
+        $script:LayoutModel = Get-HuduDeviceViewModel @script:LayoutParams
+        $script:HashOf = { param($Text) [Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData([System.Text.Encoding]::UTF8.GetBytes($Text))) }
+    }
+
+    It 'keeps the Hudu layout output unchanged' {
+        $Default = Get-HuduDeviceBody -Model $script:LayoutModel -SyncedAt $script:AsOf
+        & $script:HashOf $Default | Should -BeExactly '85A9D5DEAE057A828144974E9BA7B6402EA8B9FDAC7630FE53C3BF9084683573'
+        Get-HuduDeviceBody -Model $script:LayoutModel -SyncedAt $script:AsOf -Layout Hudu | Should -BeExactly $Default
+    }
+
+    It 'uses the NinjaOne Bootstrap grid instead of CSS grid' {
+        $Body = Get-HuduDeviceBody -Model $script:LayoutModel -SyncedAt $script:AsOf -Layout NinjaOne
+        $Body | Should -Not -Match 'display:grid|grid-template-columns'
+        $Body | Should -Match '<div class="row g-3"[^>]*><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex"><div class="flex-grow-1" style="border:1px solid'
+        [regex]::Matches($Body, 'class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex"').Count | Should -Be 3
+        [regex]::Matches($Body, 'class="flex-grow-1"').Count | Should -Be 3
+        foreach ($Text in 'Needs attention', 'Synced 20 Oct 2026 12:00 UTC', '>Compliance policies <span', '>Groups <span', '256 GB <span style="opacity:.7">of 512 GB') {
+            $Body | Should -Match ([regex]::Escape($Text))
+        }
+    }
+
+    It 'shows storage as text only in the NinjaOne layout' {
+        $Bar = New-HuduUiBar -Pct $script:LayoutModel.Hardware.Storage.Pct -Tone $script:LayoutModel.Hardware.Storage.Tone -Title 'Storage usage 50%'
+        $Bar | Should -Match 'background'
+        Get-HuduDeviceBody -Model $script:LayoutModel -SyncedAt $script:AsOf | Should -Match ([regex]::Escape($Bar))
+        $Body = Get-HuduDeviceBody -Model $script:LayoutModel -SyncedAt $script:AsOf -Layout NinjaOne
+        $Body | Should -Not -Match ([regex]::Escape($Bar))
+        $Body | Should -Not -Match 'Storage usage|width:50%;background'
+    }
+}
+
 Describe 'Hudu labels' {
     It 'humanises <Value> as <Expected>' -ForEach @(
         @{ Value = 'hybridAzureADJoined'; Expected = 'Hybrid Azure AD joined' }
