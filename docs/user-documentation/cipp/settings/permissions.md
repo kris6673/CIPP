@@ -34,7 +34,7 @@ The check also compares the Microsoft Graph permissions CIPP needs with the ones
 CIPP grants these permissions itself during its nightly permission update, signed in as the CIPP service account. The usual cause is that the service account does not hold a role that is allowed to grant them. To fix it:
 
 1. In Entra, assign the **Privileged Role Administrator** role to the CIPP service account. **Global Administrator** also works. If you use Privileged Identity Management, make the assignment active rather than eligible.
-2. Wait for the next nightly permission update. A failed update is retried a day after the last attempt, so this can take up to two nights.
+2. Wait for the next nightly permission update. A failed update is retried a day after the last attempt, so this can take up to two nights. To apply it straight away, run **Refresh CPV Permissions** on the \*Partner Tenant row under CIPP > Application Settings > Tenants. That row is listed only when the partner tenant is included in the tenant list, and the action needs a role with access to it.
 3. Select **Refresh** on the Permissions check and confirm the warnings have cleared.
 
 If you would rather not give the service account that role, a Global Administrator can grant the permissions manually:
