@@ -11,7 +11,8 @@ function Get-CippExtensionDeviceBody {
         Shown in the header when given.
 
         .PARAMETER Layout
-        NinjaOne strips CSS grid and backgrounds, so its card row uses its Bootstrap grid classes and storage has no bar.
+        NinjaOne strips CSS grid, backgrounds, opacity and border-top and paints its own cell grid, so its card row uses
+        its Bootstrap grid classes, cells are padded on every side, chips and accents use borders and text colour.
     #>
     [CmdletBinding()]
     param(
@@ -79,7 +80,11 @@ function Get-CippExtensionDeviceBody {
     $S = $m.Hardware.Storage
     $StorageHtml = if ($S.Present) {
         "<tr><td style=`"$($TableStyle.RowLabel);$($TableStyle.RowSep)`">Storage</td><td style=`"$($TableStyle.RowValue);$($TableStyle.RowSep)`">$(ConvertTo-CippExtensionUiText $S.UsedText) <span style=`"opacity:.7`">of $(ConvertTo-CippExtensionUiText $S.AllocatedText), $(ConvertTo-CippExtensionUiText $S.FreeText) free, $(ConvertTo-CippExtensionUiText $S.PctText) used</span></td></tr>" +
-        $(if ($Layout -ne 'NinjaOne') { "<tr><td colspan=`"2`" style=`"$($TableStyle.RowCell);padding:0 0 7px`">$(New-CippExtensionUiBar -Pct $S.Pct -Tone $S.Tone -Title "Storage usage $($S.PctText)")</td></tr>" })
+        $(if ($Layout -eq 'NinjaOne') {
+                # NinjaOne strips background fills, so the bar is drawn with borders
+                $BarColor = if ($S.Tone -in 'ok', 'neutral') { '#f77f00' } else { (Get-CippExtensionUiTone $S.Tone).Bar }
+                "<tr><td colspan=`"2`" style=`"$($TableStyle.RowCell);padding:0 0 7px`"><div style=`"height:8px;border:1px solid rgba(128,128,128,.4);border-radius:4px`"><div style=`"width:$(ConvertTo-CippExtensionUiText $S.Pct)%;height:8px;border:4px solid $BarColor;box-sizing:border-box;border-radius:4px`"></div></div></td></tr>"
+            } else { "<tr><td colspan=`"2`" style=`"$($TableStyle.RowCell);padding:0 0 7px`">$(New-CippExtensionUiBar -Pct $S.Pct -Tone $S.Tone -Title "Storage usage $($S.PctText)")</td></tr>" })
     }
     $HardwareCard = New-CippExtensionUiCard -Title 'Hardware' -Icon 'microchip' -Body ((New-CippExtensionUiRow -Label 'Serial number' -Value $m.Hardware.Serial) +
         (New-CippExtensionUiRow -Label 'Chassis' -Value $m.Hardware.Chassis) +
@@ -113,5 +118,7 @@ function Get-CippExtensionDeviceBody {
         New-CippExtensionUiCard -Title 'Groups' -Icon 'users' -Count $m.Groups.Count -Spaced -Body "<div>$Chips</div>"
     }
 
-    "<div style=`"overflow:hidden`">$HeaderCard$AttentionHtml$RowOne$PolicyCard$GroupCard</div>"
+    $Html = "<div style=`"overflow:hidden`">$HeaderCard$AttentionHtml$RowOne$PolicyCard$GroupCard</div>"
+    if ($Layout -eq 'NinjaOne') { $Html = ConvertTo-CippExtensionNinjaOneHtml -Html $Html }
+    $Html
 }

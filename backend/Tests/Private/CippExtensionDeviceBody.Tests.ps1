@@ -128,13 +128,34 @@ Describe 'Get-CippExtensionDeviceBody layouts' {
         }
     }
 
-    It 'shows storage as text only in the NinjaOne layout' {
+    It 'draws the NinjaOne storage bar with borders instead of a background fill' {
         $Bar = New-CippExtensionUiBar -Pct $script:LayoutModel.Hardware.Storage.Pct -Tone $script:LayoutModel.Hardware.Storage.Tone -Title 'Storage usage 50%'
         $Bar | Should -Match 'background'
         Get-CippExtensionDeviceBody -Model $script:LayoutModel -SyncedAt $script:AsOf | Should -Match ([regex]::Escape($Bar))
         $Body = Get-CippExtensionDeviceBody -Model $script:LayoutModel -SyncedAt $script:AsOf -Layout NinjaOne
         $Body | Should -Not -Match ([regex]::Escape($Bar))
-        $Body | Should -Not -Match 'Storage usage|width:50%;background'
+        $Body | Should -Match ([regex]::Escape('<div style="width:50%;height:8px;border:4px solid #f77f00;box-sizing:border-box;border-radius:4px"></div>'))
+    }
+
+    It 'pads every NinjaOne cell on all sides' {
+        $Body = Get-CippExtensionDeviceBody -Model $script:LayoutModel -SyncedAt $script:AsOf -Layout NinjaOne
+        $Cells = [regex]::Matches($Body, '<t[dh] style="[^"]*"').Value
+        $Cells.Count | Should -BeGreaterThan 20
+        $Cells | Where-Object { $_ -match 'padding:(7px 12px 7px 0|7px 0|8px|6px 8px)(;|")|padding-(left|right):0' } | Should -BeNullOrEmpty
+        ($Cells | Where-Object { $_ -match 'padding:7px 10px' }).Count | Should -Be $Cells.Count
+        $Body | Should -Match '<td colspan="2" style="[^"]*padding:0 0 7px"'
+    }
+
+    It 'colours toned chips and accents the header and attention block in the NinjaOne layout' {
+        $Hudu = Get-CippExtensionDeviceBody -Model $script:LayoutModel -SyncedAt $script:AsOf
+        $Hudu | Should -Not -Match 'color:rgb\('
+        $Body = Get-CippExtensionDeviceBody -Model $script:LayoutModel -SyncedAt $script:AsOf -Layout NinjaOne
+        $Body | Should -Match ([regex]::Escape('border:1px solid rgba(240,68,56,.6);color:rgb(240,68,56)'))
+        $Body | Should -Not -Match 'rgba\(128,128,128,[.\d]+\);color:rgb'
+        $Body | Should -Match ([regex]::Escape('border:1px solid rgba(247,144,9,.5);border-left:4px solid #F79009"'))
+        $Body | Should -Not -Match ([regex]::Escape('rgba(247,144,9,.5);color:rgb'))
+        $Body | Should -Match ([regex]::Escape('border-left:3px solid #f77f00'))
+        $Body | Should -Not -Match 'border-top:3px'
     }
 }
 

@@ -619,6 +619,17 @@
           "compareType": "is",
           "compareValue": true
         }
+      },
+      {
+        "type": "LocaleSelect",
+        "name": "NinjaOne.Locale",
+        "label": "Date and number format (default English (United Kingdom))",
+        "condition": {
+          "field": "NinjaOne.Enabled",
+          "compareType": "is",
+          "compareValue": true,
+          "action": "disable"
+        }
       }
     ],
     "mappingRequired": true,
