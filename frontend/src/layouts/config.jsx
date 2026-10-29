@@ -187,7 +187,7 @@ export const nativeMenuItems = [
           {
             title: 'Authentication Methods',
             path: '/tenant/administration/authentication-methods',
-            permissions: ['Tenant.Config.*'],
+            permissions: ['Tenant.Administration.*'],
           },
           {
             title: 'Partner Relationships',
@@ -1086,6 +1086,12 @@ export const nativeMenuItems = [
             path: '/tenant/tools/geoiplookup',
             docsPath: 'tools/tenant-tools/geoiplookup',
             permissions: ['CIPP.IPDatabase.*'],
+            scope: 'global',
+          },
+          {
+            title: 'Compare CA Policies',
+            path: '/tenant/tools/compare-ca-policies',
+            permissions: ['Tenant.ConditionalAccess.*'],
             scope: 'global',
           },
         ],
