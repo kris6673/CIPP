@@ -72,6 +72,13 @@ Describe 'Get-CIPPDbItem allTenants' {
         Should -Invoke Get-CIPPAzDataTableEntity -Times 2 -Exactly -ParameterFilter { $Property -contains 'DataCount' }
     }
 
+    It 'looks up one type''s count row per managed tenant for an unrestricted caller, never by table scan' {
+        $script:CippAllowedTenantsStorage.Value = $null
+        Mock Get-Tenants { @($script:TenantA, $script:TenantB) }
+        $null = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'MailboxRules' -CountsOnly
+        $script:Filters | Should -Be @("PartitionKey eq 'a.com' and RowKey eq 'MailboxRules-Count'", "PartitionKey eq 'b.com' and RowKey eq 'MailboxRules-Count'")
+    }
+
     It '-ByTenant groups data rows by managed tenant, without count rows' {
         $script:CippAllowedTenantsStorage.Value = $null
         Mock Get-Tenants { @($script:TenantA, $script:TenantB) }
@@ -88,6 +95,25 @@ Describe 'Get-CIPPDbItem allTenants' {
         $Result = Get-CIPPDbItem -TenantFilter 'allTenants' -Type 'MailboxRules' -ByTenant
         @($Result.Keys) | Should -Be @('b.com')
         $script:Filters | Should -HaveCount 1
+    }
+
+    It '-Partition reads that one partition without a tenant lookup' {
+        $script:CippAllowedTenantsStorage.Value = $null
+        Mock Get-Tenants { throw 'no lookup expected' }
+        $Result = Get-CIPPDbItem -Partition 'b.com' -Type 'MailboxRules'
+        $script:Filters | Should -Be @("PartitionKey eq 'b.com' and RowKey ge 'MailboxRules-' and RowKey lt 'MailboxRules.'")
+        @($Result.PartitionKey) | Should -Be @('b.com')
+    }
+
+    It 'the tenant lock overrides -Partition' {
+        Mock Get-Tenants { @($script:TenantA) }
+        $script:CIPPLockedTenant = 'a.com'
+        try {
+            $Result = Get-CIPPDbItem -Partition 'b.com' -Type 'MailboxRules'
+        } finally {
+            $script:CIPPLockedTenant = $null
+        }
+        @($Result.PartitionKey | Sort-Object -Unique) | Should -Be @('a.com')
     }
 
     AfterAll { $script:CippAllowedTenantsStorage.Value = $null }

@@ -145,6 +145,11 @@
     "description": "MFA registration details for users"
   },
   {
+    "type": "ServicePrincipalSignInActivities",
+    "friendlyName": "Service Principal Sign-In Activity",
+    "description": "Last sign-in of every app, delegated or app-only (Entra ID P1)"
+  },
+  {
     "type": "OAuth2PermissionGrants",
     "friendlyName": "OAuth2 Permission Grants",
     "description": "OAuth2 permission grants"
@@ -324,7 +329,7 @@
   {
     "type": "SPOSites",
     "friendlyName": "SharePoint Site Settings",
-    "description": "Per-site SharePoint admin settings (site owner, sharing controls, lifecycle, version policy, People Picker, unmanaged-device access) for every site collection, keyed by site id"
+    "description": "Per-site SharePoint settings (URL, title, template, guest People Picker suggestions) for every site collection, keyed by site id"
   },
   {
     "type": "SiteActivity",

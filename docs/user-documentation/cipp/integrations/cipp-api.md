@@ -15,7 +15,7 @@ If you're using a **hosted CIPP instance**, you can follow the instructions belo
       2. Fill out the form with the App Name.
    2. If you've already created an App Registration and would like to import it:
       1. Click on Actions > Add Existing Client.
-      2. Select the API Client from the list.
+      2. Select the API Client from the list. The CIPP-SAM and CIPP-SSO applications are never offered here and cannot be added, reset or deleted as API clients; manage them from [credentials.md](../advanced/authentication/credentials.md "mention") instead.
    3. Ensure that you Enable the client in order to save it to the Function App authentication settings.
    4. Optionally set the [#custom-roles](../../../setup/setting-up-cipp/roles.md#custom-roles "mention") and Allowed IP Ranges for additional security.
    5. Select if you want MCP Access Allowed for this client. Enabling MCP Access sets this client up as an MCP connector app (the app your AI signs in as); CIPP automatically creates and manages a separate shared **CIPP-MCP** resource app that the tokens are issued for. You can enable MCP Access on more than one client. Connectors that sign a user in run with that user's own CIPP role; the client's role and IP range only apply when the client calls with its own secret and no user. MCP Access is only supported on the latest CIPP infrastructure. See [#enable-the-mcp-feature](cipp-api.md#enable-the-mcp-feature "mention") for more information.
@@ -100,13 +100,17 @@ For full authentication examples, usage patterns, and endpoint information, see 
 The CIPP MCP allows you to add CIPP to any AI you use and immediately talk to it in natural language. For example, you can ask "List all tenants with unassigned licences" or "list all users for tenant MySpecialTenant.com". To set up the MCP, follow these instructions:
 
 {% hint style="warning" %}
+**Self-hosted instances must be on the new infrastructure.** The MCP is only available on CIPP's new infrastructure. If you self-host CIPP on the legacy Function App infrastructure, you cannot use it until you migrate. For the steps, see [migrating-to-the-new-infrastructure.md](../../../setup/maintaining-cipp/migrating-to-the-new-infrastructure.md "mention").
+{% endhint %}
+
+{% hint style="warning" %}
 **Connected the MCP before version 11?** Version 11 changed how the MCP signs in, so existing connections stop working and CIPP has to be added to your AI again. Select **Actions → Save to Azure** on the API Clients tab so CIPP creates the new **CIPP-MCP** resource app, then remove CIPP from your AI and add it back using the **Connector URL** shown for your client on the **MCP** tab of the CIPP-API integration.
 
 If the MCP tab reports that setup is blocked, an app registration left over from the previous setup is still using the MCP address. Delete it in Entra, remove it from **API Clients** if it is listed there, and select **Save to Azure** again.
 {% endhint %}
 
 {% hint style="info" %}
-**No client ID or secret needed.** CIPP publishes its OAuth details at a standard discovery address, so supported AI clients configure themselves from the MCP URL alone. Going forward, MCP is only supported on CIPP's latest infrastructure.
+**No client ID or secret needed.** CIPP publishes its OAuth details at a standard discovery address, so supported AI clients configure themselves from the MCP URL alone.
 {% endhint %}
 
 {% stepper %}

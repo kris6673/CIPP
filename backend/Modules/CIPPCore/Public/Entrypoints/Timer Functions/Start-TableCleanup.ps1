@@ -163,15 +163,38 @@ function Start-TableCleanup {
             }
         }
         @{
+            # Scripted alert run history, one partition per UTC day. The range leaves the 'LastRun' markers alone.
+            FunctionName   = 'TableCleanupTask'
+            Type           = 'CleanupRule'
+            TableName      = 'AlertRunHistory'
+            DataTableProps = @{
+                Filter   = "PartitionKey lt '$((Get-Date).AddDays(-30).ToUniversalTime().ToString('yyyyMMdd'))'"
+                First    = 10000
+                Property = @('PartitionKey', 'RowKey', 'ETag')
+            }
+        }
+        @{
+            # Audit records processing never drained, including pre-partition tenant rows.
+            FunctionName   = 'TableCleanupTask'
+            Type           = 'CleanupRule'
+            TableName      = 'CacheWebhooks'
+            DataTableProps = @{
+                Filter   = "Timestamp lt datetime'$((Get-Date).AddDays(-7).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))'"
+                First    = 10000
+                Property = @('PartitionKey', 'RowKey', 'ETag')
+            }
+        }
+        @{
             FunctionName = 'TableCleanupTask'
             Type         = 'DeleteTable'
-            Tables       = @('knownlocationdb', 'CacheExtensionSync', 'ExtensionSync', 'cachebpav2')
+            Tables       = @('knownlocationdb', 'CacheExtensionSync', 'ExtensionSync', 'cachebpav2', 'CacheWebhookStats', 'FailedAuditLogDownloads', 'cachealertsandincidents', 'cachembxrules')
         }
     )
 
     $InputObject = @{
         Batch            = @($Batch)
         OrchestratorName = 'TableCleanup'
+        AllowCollision   = $false
         Priority         = 8
         SkipLog          = $true
     }

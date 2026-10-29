@@ -6,7 +6,7 @@ function Invoke-ExecGetPermissionsReportPdf {
         Sharepoint.Site.Read
     .DESCRIPTION
         Server-renders the SharePoint Permissions report as application/pdf bytes. Gathers the same shaped
-        data the Permissions page uses (ListSharePointPermissions, from the CIPP reporting cache), composes
+        data the Permissions page uses (ListSharePointPermissions, from cached scan data), composes
         it through the shared CIPPSharp component kit (Build-CippPermissionsReportTree) and returns the
         finished PDF - the server-side replacement for the client react-pdf PermissionsReportButton.
     #>
@@ -20,9 +20,10 @@ function Invoke-ExecGetPermissionsReportPdf {
         if ([string]::IsNullOrWhiteSpace($TenantFilter)) {
             return ([HttpResponseContext]@{ StatusCode = [HttpStatusCode]::BadRequest; Body = 'A tenantFilter is required' })
         }
-        $TenantName = Get-CippReportTenantName -TenantFilter $TenantFilter
+        $BrandingPresetId = [string]($Request.Body.brandingPresetId ?? $Request.Query.brandingPresetId)
+        $TenantName = Get-CippReportTenantName -TenantFilter $TenantFilter -BrandingPresetId $BrandingPresetId
 
-        # The same shaped data the Permissions page reads (from the reporting cache).
+        # The same shaped data the Permissions page reads (from cached scan data).
         $Raw = Get-CIPPSharePointPermissionsReport -TenantFilter $TenantFilter
         $Report = Build-CippPermissionsReportTree -Data @{
             TenantName   = $TenantName
@@ -31,7 +32,7 @@ function Invoke-ExecGetPermissionsReportPdf {
             skippedSites = $Raw.skippedSites
         }
 
-        $Bytes = ConvertTo-CippReportPdf -Blocks $Report.Blocks -Variables $Report.Variables -TenantName $TenantName -TenantFilter $TenantFilter -ReportName 'Permissions Report'
+        $Bytes = ConvertTo-CippReportPdf -Blocks $Report.Blocks -Variables $Report.Variables -TenantName $TenantName -TenantFilter $TenantFilter -ReportName 'Permissions Report' -BrandingPresetId $BrandingPresetId
         $FileName = ("Permissions_Report_$TenantFilter" -replace '[^a-zA-Z0-9_\-]', '_') + '.pdf'
         return ([HttpResponseContext]@{
                 StatusCode  = [HttpStatusCode]::OK

@@ -29,6 +29,7 @@ function Test-CIPPAuditLogRules {
             [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
         )
         $script:PartnerUpnRegex = [regex]'user_([0-9a-f]{32})@([^@]+\.onmicrosoft\.com)'
+        $script:KeyDescriptionRegex = [regex]'\[KeyIdentifier=(?<Id>[^,\]]*),KeyType=(?<Type>[^,\]]*),KeyUsage=(?<Usage>[^,\]]*)'
         $script:PartnerExchangeRegex = [regex]'([^\\]+\.onmicrosoft\.com)\\tenant:\s*([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}),\s*object:\s*([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})'
 
         # Helper function to map GUIDs and partner UPNs to user objects (Optimized with hashtable lookups)
@@ -199,55 +200,7 @@ function Test-CIPPAuditLogRules {
             HasLocationData        = $null
         }
 
-        # In-process memo of the expanded rule set, shared by every tenant and filtered per call. Rebuilding it reads the whole
-        # WebhookRules table and calls Expand-CIPPTenantGroups for every entry that survives, which
-        # measured 179 ms on every invocation - and the engine is invoked once per slice, so a
-        # tenant with a large backlog paid it over and over for an answer that had not changed.
-        #
-        # The cost is a bounded staleness in when a rule edit takes effect. Two minutes is well
-        # inside the latency the pipeline already has: the ingestion timer runs every 15 minutes and
-        # the search window trails real time by longer than that, so this does not become the reason
-        # an alert is late.
-        $ConfigTtl = [TimeSpan]::FromMinutes(2)
-        $Now = [datetime]::UtcNow
-        if ($null -eq $script:AuditRuleSetCache -or $script:AuditRuleSetCache.Expires -le $Now) {
-            $ConfigTable = Get-CIPPTable -TableName 'WebhookRules'
-            $Rules = foreach ($ConfigEntry in (Get-CIPPAzDataTableEntity @ConfigTable)) {
-                if ($ConfigEntry.Disabled -eq $true) {
-                    continue
-                }
-                if ([string]::IsNullOrEmpty($ConfigEntry.Tenants)) {
-                    continue
-                }
-                $Tenants = $ConfigEntry.Tenants | ConvertFrom-Json -ErrorAction SilentlyContinue
-                if ($null -eq $Tenants) {
-                    continue
-                }
-                # Expand tenant groups in inclusions and exclusions alike
-                $ExcludedTenants = $ConfigEntry.excludedTenants | ConvertFrom-Json -ErrorAction SilentlyContinue
-                if ($ExcludedTenants) {
-                    $ExcludedTenants = @(Expand-CIPPTenantGroups -TenantFilter $ExcludedTenants)
-                }
-                [pscustomobject]@{
-                    Expanded = @((Expand-CIPPTenantGroups -TenantFilter $Tenants).value)
-                    Rule     = [pscustomobject]@{
-                        Tenants           = $Tenants
-                        Excluded          = $ExcludedTenants
-                        Conditions        = $ConfigEntry.Conditions
-                        Actions           = $ConfigEntry.Actions
-                        BecActions        = $ConfigEntry.BecActions
-                        LogType           = $ConfigEntry.Type
-                        AlertComment      = $ConfigEntry.AlertComment
-                        CustomSubject     = $ConfigEntry.CustomSubject
-                        PsaTicketPriority = $ConfigEntry.PsaTicketPriority
-                    }
-                }
-            }
-            $script:AuditRuleSetCache = [pscustomobject]@{ Expires = $Now.Add($ConfigTtl); Rules = @($Rules) }
-        }
-        $Configuration = @(foreach ($Entry in $script:AuditRuleSetCache.Rules) {
-                if ($Entry.Expanded -contains $TenantFilter -or $Entry.Expanded -contains 'AllTenants') { $Entry.Rule }
-            })
+        $Configuration = @(Get-CIPPAuditLogRuleSet -TenantFilter $TenantFilter)
 
         # Only the referenced entries of a cached blob, as the same hashtable a full ConvertFrom-Json -AsHashtable gives.
         # Entries are flat objects, so a cut at a '}' inside a string is invalid JSON and takes the full parse instead.
@@ -288,6 +241,7 @@ function Test-CIPPAuditLogRules {
 
         # Check if cached data needs refresh (wrong format or corrupted)
         $NeedsRefresh = $false
+        $LookupFailed = $false
         if ($Lookups) {
             try {
                 # Test-Json validates without building the objects.
@@ -358,7 +312,14 @@ function Test-CIPPAuditLogRules {
                         method = 'GET'
                     }
                 )
-                $Response = New-GraphBulkRequest -TenantId $TenantFilter -Requests $Requests
+                try {
+                    $Response = New-GraphBulkRequest -TenantId $TenantFilter -Requests $Requests
+                } catch {
+                    # Rules still run on the raw records; only GUID-to-name enrichment is lost.
+                    Write-Warning "Directory lookup failed for $TenantFilter, processing audit logs without name enrichment: $($_.Exception.Message)"
+                    $Response = $null
+                    $LookupFailed = $true
+                }
                 $Users = ($Response | Where-Object { $_.id -eq 'users' }).body.value ?? @()
                 $Groups = ($Response | Where-Object { $_.id -eq 'groups' }).body.value ?? @()
                 $Devices = ($Response | Where-Object { $_.id -eq 'devices' }).body.value ?? @()
@@ -428,9 +389,11 @@ function Test-CIPPAuditLogRules {
                     Format       = 'hashtable'
                 }
             )
-            # Save the cached lookups
-            Add-CIPPAzDataTableEntity @Table -Entity $Entities -Force
-            Write-Information "Cached directory hashtable lookups for tenant $TenantFilter"
+            # Save the cached lookups, unless they are empty because the lookup failed
+            if (-not $LookupFailed) {
+                Add-CIPPAzDataTableEntity @Table -Entity $Entities -Force
+                Write-Information "Cached directory hashtable lookups for tenant $TenantFilter"
+            }
         } else {
             # Use cached lookups - check if they're already hashtables or need conversion
             $UsersLookup = $Lookups | Where-Object { $_.RowKey -eq 'users' }
@@ -695,10 +658,31 @@ function Test-CIPPAuditLogRules {
                                 if ([string]::IsNullOrEmpty($Prop.Name)) { continue }
                                 $Flattened["$($Prop.Name)"] = "$($Prop.NewValue)"
                                 $Flattened["Previous_Value_$($Prop.Name)"] = "$($Prop.OldValue)"
+                                if ($Prop.Name -eq 'KeyDescription') {
+                                    # Keys in the new list but not the old; only Verify keys can sign in as the app.
+                                    $OldKeyIds = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+                                    foreach ($KeyMatch in $script:KeyDescriptionRegex.Matches([string]$Prop.OldValue)) {
+                                        [void]$OldKeyIds.Add($KeyMatch.Groups['Id'].Value)
+                                    }
+                                    $AddedKeyTypes = [System.Collections.Generic.List[string]]::new()
+                                    $AddedKeys = [System.Collections.Generic.List[string]]::new()
+                                    foreach ($KeyMatch in $script:KeyDescriptionRegex.Matches([string]$Prop.NewValue)) {
+                                        if ($KeyMatch.Groups['Usage'].Value -ne 'Verify' -or $OldKeyIds.Contains($KeyMatch.Groups['Id'].Value)) { continue }
+                                        $KeyType = $KeyMatch.Groups['Type'].Value
+                                        $AddedKeys.Add("$($KeyType): $($KeyMatch.Groups['Id'].Value)")
+                                        if (-not $AddedKeyTypes.Contains($KeyType)) { $AddedKeyTypes.Add($KeyType) }
+                                    }
+                                    $Flattened['CIPPAddedKeyTypes'] = $AddedKeyTypes -join ','
+                                    $Flattened['CIPPAddedKeys'] = $AddedKeys -join ', '
+                                }
                             }
                         } catch {
                             Write-Information "Error flattening ModifiedProperties for $($AuditRecord.id): $($_.Exception.Message)"
                         }
+                    }
+                    if ($Data.Actor) {
+                        # One string so a rule can test who acted (e.g. MS-PIM); -notlike against the Actor array itself is always true.
+                        $Flattened['CIPPActor'] = @(foreach ($ActorEntry in $Data.Actor) { [string]$ActorEntry.ID }) -join ', '
                     }
                     if ($Flattened.Count -gt 0) {
                         $Data | Add-Member -NotePropertyMembers $Flattened -Force -ErrorAction SilentlyContinue

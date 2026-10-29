@@ -4,6 +4,7 @@
 BeforeAll {
     $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
     $FunctionPath = Join-Path $RepoRoot 'Modules/CIPPCore/Public/Add-CIPPScheduledTask.ps1'
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Get-CIPPScheduledTaskNextRun.ps1')
 
     function Get-CIPPTable { param($TableName) }
     function Get-CIPPAzDataTableEntity { param($Context, $Filter, $Property) }
@@ -65,5 +66,33 @@ Describe 'Add-CIPPScheduledTask hashtable input' {
 
         $script:CapturedEntity.ScheduledTime | Should -BeOfType [string]
         [int64]$script:CapturedEntity.ScheduledTime | Should -BeLessThan ([int64]$script:Future)
+    }
+
+    It 'keeps a recurring task on its slots when re-queuing with RunNow' {
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith {
+            [pscustomobject]@{ PartitionKey = 'ScheduledTask'; RowKey = 'abc'; Name = 'Existing'; ScheduledTime = $script:Future; Recurrence = '1h'; TaskState = 'Planned' }
+        }
+        Mock -CommandName Add-CippQueueMessage -MockWith { $true }
+
+        Add-CIPPScheduledTask -RunNow -RowKey 'abc'
+
+        $Stored = [int64]$script:CapturedEntity.ScheduledTime
+        $Stored | Should -BeLessOrEqual ([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())
+        (([int64]$script:Future - $Stored) % 3600) | Should -Be 0
+    }
+
+    It 'doubles single quotes in the name when checking for a duplicate' {
+        Mock -CommandName Get-CIPPAzDataTableEntity -MockWith { $null }
+
+        $null = Add-CIPPScheduledTask -DisallowDuplicateName $true -Task ([pscustomobject]@{
+                Name          = "Add Group Member: sseck@contoso.com -> Bob's Team"
+                Command       = @{ value = 'Write-LogMessage' }
+                TenantFilter  = 'contoso.onmicrosoft.com'
+                Parameters    = [pscustomobject]@{ message = 'hi' }
+                ScheduledTime = $script:Future
+            })
+
+        Should -Invoke Get-CIPPAzDataTableEntity -ParameterFilter { $Filter -like "*Name eq 'Add Group Member: sseck@contoso.com -> Bob''s Team' and*" }
+        $script:CapturedEntity.Name | Should -Be "Add Group Member: sseck@contoso.com -> Bob's Team"
     }
 }

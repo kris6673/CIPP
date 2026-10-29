@@ -53,6 +53,29 @@ Endpoints in `backend/Modules/CIPPHTTP` must return a status code that matches w
 - Helpers throw `[System.ArgumentException]` / `[System.Management.Automation.ItemNotFoundException]` for input and
   not-found errors, and return per-item `@{ resultText; state }` results rather than swallowing failures into strings.
 
+## Storing tenant references
+
+A tenant's default domain can change (`contoso.onmicrosoft.com` becomes `contoso.com`); its `customerId` cannot.
+Anything that persists a tenant (table keys and columns, saved settings, JSON stored for later) stores the `customerId`.
+
+- Resolve stored values through `Get-CIPPTenantLookup`, built once per call. It maps `customerId`, default domain and
+  initial domain to the tenant, so values saved as a domain before this rule still resolve. Use the tenant's current
+  `defaultDomainName` for Graph calls, logs and display.
+- Match stored values on the tenant, never on the raw string: existing rows may still hold a domain.
+- Don't call `Get-Tenants -TenantFilter` once per stored value. An unknown value sends it down its refresh path.
+- Results rebuilt on every run (report caches, baseline alignment rows) can stay keyed by the current default domain.
+
+## Cached list reads
+
+AllTenants List reads come from the reporting database (`Get-CIPP<X>Report`, paged through `Get-CIPPReportPage`) or
+the graph request cache (`Get-GraphRequestList -TenantFilter 'AllTenants'`). Full guide: "Cached list reads" in
+`.github/agents/CIPP-Endpoint-Agent.md`.
+
+- Paging is opt-in with `manualPagination`; without it a report-backed endpoint returns the whole report as an array.
+- Never add a cache table that writes new random RowKeys on each refresh and is read whole, then filtered by
+  `Timestamp` in PowerShell. It grows without bound.
+- Frontend pages use `useCippReportDB({ serverPagination: true })` and pass its `resolvedApiData` and `apiDataKey`.
+
 ## PowerShell hot paths
 
 Code that runs per row or per batch (cache collectors, `Push-*` activities, post-execution, report folds, alerts and
@@ -91,3 +114,14 @@ churn; these patterns do.
   members: once anything has enumerated `Properties`, the reserved `pstypenames` sits among the instance members).
 - A Pester test whose code under test uses a `[CIPP.*]` type must `Add-Type` `Shared/CIPPSharp/bin/CIPPSharp.dll` in
   `BeforeAll`; helpers that fall back when the type is missing otherwise pass while testing the wrong path.
+
+## Helper functions
+
+Every function is one more place a contributor has to look, so a new one has to earn its place.
+
+- Write logic that has one caller inline where it is used. Add a function only when it has two or more real callers, or
+  it is a generic building block like the Graph, Exchange, table and tenant helpers in `CIPPCore/Public/GraphHelper`.
+- Don't wrap a single call to an existing function (a new function whose body is one `Start-CIPPOrchestrator` call):
+  call the existing function directly.
+- Don't declare functions inside functions. Put the branch inline, or compute the input first and classify it once.
+- Search for an existing helper before writing one, and extend it rather than adding a near-copy.

@@ -38,6 +38,7 @@ BeforeAll {
     function Write-LogMessage { param($headers, $API, $tenant, $message, $Sev, $LogData) }
 
     . $FunctionPath
+    . (Join-Path $RepoRoot 'Modules/CIPPCore/Public/Authentication/Select-CippAllowedTenantData.ps1')
 
     function New-SaveRequest {
         param(
@@ -168,6 +169,13 @@ Describe 'Invoke-ExecCippReplacemap - variable types' {
             $script:SavedEntity.Value | Should -Be '["Site A"]'
         }
 
+        It 'stores lines that start with a bracket as values, not as JSON' {
+            $Response = Invoke-ExecCippReplacemap -Request (New-SaveRequest -Name 'locations' -Value "[HQ] Office Allow`n[HQ] VPN Allow" -VariableType 'list')
+
+            $Response.StatusCode | Should -Be 200
+            $script:SavedEntity.Value | Should -Be '["[HQ] Office Allow","[HQ] VPN Allow"]'
+        }
+
         It 'accepts the {label, value} shape the type selector posts' {
             $Response = Invoke-ExecCippReplacemap -Request (
                 New-SaveRequest -Name 'lockseconds' -Value '300' -VariableType ([pscustomobject]@{ label = 'Integer'; value = 'integer' })
@@ -204,7 +212,7 @@ Describe 'Invoke-ExecCippReplacemap - variable types' {
         }
 
         It 'rejects a list that is not a JSON array' {
-            foreach ($Value in @('{"a":1}', '[not json')) {
+            foreach ($Value in @('{"a":1}', '["Site A",')) {
                 $script:SavedEntity = $null
                 $Response = Invoke-ExecCippReplacemap -Request (New-SaveRequest -Name 'sites' -Value $Value -VariableType 'list')
 
@@ -254,6 +262,28 @@ Describe 'Invoke-ExecCippReplacemap - variable types' {
             $script:SavedEntity.PartitionKey | Should -Be '11111111-1111-1111-1111-111111111111'
         }
 
+        It 'rejects a request without a tenantId instead of matching every tenant' {
+            Mock -CommandName Get-Tenants -MockWith { throw 'must not look up tenants without a tenantId' }
+            $Request = New-SaveRequest
+            $Request.Body.PSObject.Properties.Remove('tenantId')
+
+            $Response = Invoke-ExecCippReplacemap -Request $Request
+
+            $Response.StatusCode | Should -Be 400
+            $Response.Body.Results | Should -BeLike 'Provide tenantId*'
+            $script:SavedEntity | Should -BeNullOrEmpty
+        }
+
+        It 'returns 404 for a tenant that does not exist' {
+            Mock -CommandName Get-Tenants -MockWith { }
+
+            $Response = Invoke-ExecCippReplacemap -Request (New-SaveRequest -TenantId 'gone.onmicrosoft.com')
+
+            $Response.StatusCode | Should -Be 404
+            $Response.Body.Results | Should -Be "Tenant 'gone.onmicrosoft.com' was not found."
+            $script:SavedEntity | Should -BeNullOrEmpty
+        }
+
         It 'still deletes a variable' {
             $script:ExistingEntity = [pscustomobject]@{ PartitionKey = 'AllTenants'; RowKey = 'wallpaperpath' }
             $Request = [pscustomobject]@{
@@ -294,6 +324,29 @@ Describe 'Invoke-ExecCippReplacemap - Usage' {
             if ($IncludeAll) { return $script:AllTenants }
             [pscustomobject]@{ customerId = 'contoso-id' }
         }
+    }
+
+    It 'shows a tenant-restricted caller only global rows and their own tenants' {
+        $script:CippAllowedTenantsStorage = [pscustomobject]@{ Value = @('contoso-id') }
+        try {
+            $Response = Invoke-ExecCippReplacemap -Request (New-UsageRequest)
+        } finally {
+            $script:CippAllowedTenantsStorage = $null
+        }
+
+        $Tenants = @($Response.Body.Results.Definitions.TenantId | Sort-Object -Unique)
+        $Tenants | Should -Be @('AllTenants', 'contoso-id')
+    }
+
+    It 'shows a caller with no tenants only global rows' {
+        $script:CippAllowedTenantsStorage = [pscustomobject]@{ Value = @() }
+        try {
+            $Response = Invoke-ExecCippReplacemap -Request (New-UsageRequest)
+        } finally {
+            $script:CippAllowedTenantsStorage = $null
+        }
+
+        @($Response.Body.Results.Definitions.TenantId | Sort-Object -Unique) | Should -Be @('AllTenants')
     }
 
     It 'groups every definition of a name across tenants' {

@@ -51,6 +51,13 @@ function New-CippCoreRequest {
     if ($DisabledEndpoint) {
         Write-Information "Endpoint $($Request.Params.CIPPEndpoint) is disabled via feature flag: $($DisabledEndpoint.Name)"
         $HttpTotalStopwatch.Stop()
+        if ($Request.Params.CIPPEndpoint -eq 'ExecMcp') {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::ServiceUnavailable
+                    Headers    = @{ 'Content-Type' = 'application/json' }
+                    Body       = (@{ jsonrpc = '2.0'; id = $null; error = @{ code = -32001; message = 'The MCP Server feature is disabled on this CIPP instance. Enable it in CIPP > Application Settings > Features.' } } | ConvertTo-Json -Compress)
+                })
+        }
         return ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::ServiceUnavailable
                 Body       = "This feature has been disabled: $($DisabledEndpoint.Description)"
@@ -154,6 +161,8 @@ function New-CippCoreRequest {
                 $script:CippAllowedGroupsStorage.Value = $null
             }
 
+            $ErrorMark = $global:Error[0]
+            $HttpResponse = $null
             try {
                 Write-Debug "Access: $Access"
                 Write-LogMessage -headers $Request.Headers -API $Request.Params.CIPPEndpoint -message 'Accessed this API' -Sev 'Debug'
@@ -185,52 +194,48 @@ function New-CippCoreRequest {
                     $HttpTimings['InvokeEndpoint'] = $swInvoke.Elapsed.TotalMilliseconds
 
                     # Filter to only return HttpResponseContext objects
-                    $HttpResponse = $Response | Where-Object { $_.PSObject.TypeNames -eq 'Microsoft.Azure.Functions.PowerShellWorker.HttpResponseContext' }
-                    if ($HttpResponse) {
-                        # Return the first valid HttpResponseContext found
-                        $HttpTotalStopwatch.Stop()
-                        $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
-                        $HttpTimingsRounded = [ordered]@{}
-                        foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
-                        Write-Debug "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
-                        return ([HttpResponseContext]($HttpResponse | Select-Object -First 1))
-                    } else {
+                    $HttpResponse = $Response | Where-Object { $_.PSObject.TypeNames -eq 'Microsoft.Azure.Functions.PowerShellWorker.HttpResponseContext' } | Select-Object -First 1
+                    if (-not $HttpResponse) {
                         # If no valid response context found, create a default success response
-                        if ($Response.PSObject.Properties.Name -contains 'StatusCode' -and $Response.PSObject.Properties.Name -contains 'Body') {
-                            $HttpTotalStopwatch.Stop()
-                            $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
-                            $HttpTimingsRounded = [ordered]@{}
-                            foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
-                            Write-Debug "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
-                            return ([HttpResponseContext]@{
-                                    StatusCode = $Response.StatusCode
-                                    Body       = $Response.Body
-                                })
+                        $HttpResponse = if ($Response.PSObject.Properties.Name -contains 'StatusCode' -and $Response.PSObject.Properties.Name -contains 'Body') {
+                            @{ StatusCode = $Response.StatusCode; Body = $Response.Body }
                         } else {
-                            $HttpTotalStopwatch.Stop()
-                            $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
-                            $HttpTimingsRounded = [ordered]@{}
-                            foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
-                            Write-Debug "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
-                            return ([HttpResponseContext]@{
-                                    StatusCode = [HttpStatusCode]::OK
-                                    Body       = $Response
-                                })
+                            @{ StatusCode = [HttpStatusCode]::OK; Body = $Response }
                         }
                     }
+                    $HttpResponse = [HttpResponseContext]$HttpResponse
                 }
             } catch {
                 Write-Warning "Exception occurred on HTTP trigger ($FunctionName): $($_.Exception.Message)"
-                $HttpTotalStopwatch.Stop()
-                $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
-                $HttpTimingsRounded = [ordered]@{}
-                foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
-                Write-Debug "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
-                return ([HttpResponseContext]@{
-                        StatusCode = [HttpStatusCode]::InternalServerError
-                        Body       = $_.Exception.Message
-                    })
+                $HttpResponse = [HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::InternalServerError
+                    Body       = $_.Exception.Message
+                }
             }
+
+            # Endpoints catch their own errors, so look for an out-of-memory error raised anywhere during this request (a module's own $Error stays empty)
+            if ($HttpResponse -and [int]$HttpResponse.StatusCode -ge 500 -and $global:Error.Where({ [object]::ReferenceEquals($_, $ErrorMark) }, 'Until').Where({ ($_.Exception ?? $_).ToString() -match '(^|---> )System\.OutOfMemoryException' }, 'First').Count -gt 0) {
+                Write-Warning "Out of memory on HTTP trigger ($FunctionName)"
+                $HttpResponse = [HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::InternalServerError
+                    Body       = @{
+                        Results = if ($Request.Query.manualPagination -eq $true) {
+                            'This page is too large for the server to build. Request a smaller page (PageSize), or narrow tenantFilter to a single tenant.'
+                        } elseif ((Get-Command -Name $FunctionName).Definition -match 'manualPagination') {
+                            'This result is too large for the server to return in one response. Request it in pages with manualPagination=true and follow Metadata.nextLink, or narrow tenantFilter to a single tenant.'
+                        } else {
+                            'This result is too large for the server to return in one response. Narrow tenantFilter to a single tenant.'
+                        }
+                    }
+                }
+            }
+
+            $HttpTotalStopwatch.Stop()
+            $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds
+            $HttpTimingsRounded = [ordered]@{}
+            foreach ($Key in ($HttpTimings.Keys | Sort-Object)) { $HttpTimingsRounded[$Key] = [math]::Round($HttpTimings[$Key], 2) }
+            Write-Debug "#### HTTP Request Timings #### $($HttpTimingsRounded | ConvertTo-Json -Compress)"
+            return $HttpResponse
         } else {
             $HttpTotalStopwatch.Stop()
             $HttpTimings['Total'] = $HttpTotalStopwatch.Elapsed.TotalMilliseconds

@@ -13,6 +13,25 @@ function Invoke-ExecUpdateRefreshToken {
     $Headers = $Request.Headers
     $KV = Get-CippKeyVaultName
 
+    $TenantId = [string]$Request.Body.tenantId
+    if ($TenantId -notmatch '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
+        return ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = @{ Results = 'tenantId must be a tenant ID (GUID).' }
+            })
+    }
+    # A tenant CIPP does not manage yet is being onboarded, which only needs the permission.
+    $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+    if ($AllowedTenants -notcontains 'AllTenants' -and $AllowedTenants -notcontains $TenantId) {
+        $TenantsTable = Get-CIPPTable -tablename 'Tenants'
+        if ($TenantId -eq $env:TenantID -or (Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and customerId eq '$TenantId'")) {
+            return ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::Forbidden
+                    Body       = @{ Results = "$TenantId is outside your access." }
+                })
+        }
+    }
+
     try {
         # Handle refresh token update
         #make sure we get the latest authentication:
@@ -54,11 +73,8 @@ function Invoke-ExecUpdateRefreshToken {
             $null = Clear-CippTokenCache
         } else {
             $null = Clear-CippTokenCache -TenantFilter $Request.body.tenantId
-            $TenantsTable = Get-CippTable -tablename 'Tenants'
-            $SafeTenantId = ConvertTo-CIPPODataFilterValue -Value $Request.body.tenantId -Type String
-            $Domain = (Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and customerId eq '$SafeTenantId'" -Property defaultDomainName).defaultDomainName
-            if ($Domain) { $null = Clear-CippTokenCache -TenantFilter $Domain }
         }
+        $null = Set-CIPPCredentialVersion
 
         if ($IsPartnerTenant) {
             try {
