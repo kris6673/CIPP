@@ -6076,7 +6076,13 @@
       "CIS M365 7.0.0 (8.5.6)",
       "CIS M365 7.0.0 (8.5.7)",
       "CIS M365 7.0.0 (8.5.8)",
-      "CIS M365 7.0.0 (8.5.9)"
+      "CIS M365 7.0.0 (8.5.9)",
+      "meeting_anonymousstartmeeting_v1",
+      "meeting_restrictanonymousjoin_v1",
+      "meeting_autoadmitusers_v1",
+      "meeting_designatedpresenter_v1",
+      "meeting_externalrequestcontrol_v1",
+      "meeting_pstnusersbypasslobby_v1"
     ],
     "appliesToTest": [
       "CIS_8_5_1",

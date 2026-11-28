@@ -19,6 +19,12 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
             "CIS M365 5.0 (8.5.4)"
             "CIS M365 5.0 (8.5.5)"
             "CIS M365 5.0 (8.5.6)"
+            "meeting_anonymousstartmeeting_v1"
+            "meeting_restrictanonymousjoin_v1"
+            "meeting_autoadmitusers_v1"
+            "meeting_designatedpresenter_v1"
+            "meeting_externalrequestcontrol_v1"
+            "meeting_pstnusersbypasslobby_v1"
         EXECUTIVETEXT
             Establishes security-focused default settings for Teams meetings, controlling who can join meetings, present content, and participate in chats. These policies balance collaboration needs with security requirements, ensuring meetings remain productive while protecting against unauthorized access and disruption.
         ADDEDCOMPONENT

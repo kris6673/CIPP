@@ -105,6 +105,7 @@ export function useSecureScore({ waiting = true } = {}) {
         const translation = controlScore.data.Results?.find(
           (controlTranslation) => controlTranslation.id === control.controlName
         )
+        // TODO: match against the baseline catalog's tags once classic standards are deprecated. -Bobby
         const remediation = getStandards().find((standard) =>
           standard.tag?.includes(control.controlName)
         )
