@@ -2859,15 +2859,15 @@
       "NIST CSF 2.0 (DE.CM-09)"
     ],
     "appliesToTest": ["CISAMSEXO131", "CIS_6_1_1", "CIS_6_1_2", "CIS_6_1_3"],
-    "helpText": "Enables Mailbox auditing for all mailboxes and on tenant level. Disables audit bypass on all mailboxes. Unified Audit Log needs to be enabled for this standard to function.",
-    "docsDescription": "Enables mailbox auditing on tenant level and for all mailboxes. Disables audit bypass on all mailboxes. By default Microsoft does not enable mailbox auditing for Resource Mailboxes, Public Folder Mailboxes and DiscoverySearch Mailboxes. Unified Audit Log needs to be enabled for this standard to function.",
+    "helpText": "Enables Mailbox auditing on tenant level and on the room, equipment, discovery and Bookings mailboxes the tenant default does not cover. Disables audit bypass on all mailboxes. Unified Audit Log needs to be enabled for this standard to function.",
+    "docsDescription": "Enables mailbox auditing on tenant level. Microsoft only enables auditing by default for user, shared and group mailboxes, so auditing is also turned on for each room, equipment, discovery and Bookings mailbox. Public folder mailboxes are not covered. Disables audit bypass on all mailboxes. Unified Audit Log needs to be enabled for this standard to function.",
     "executiveText": "Enables comprehensive logging of all email access and modifications across all employee mailboxes, providing detailed audit trails for security investigations and compliance requirements. This helps detect unauthorized access, data breaches, and supports regulatory compliance efforts.",
     "addedComponent": [],
     "label": "Enable Mailbox auditing",
     "impact": "Low Impact",
     "impactColour": "info",
     "addedDate": "2024-01-08",
-    "powershellEquivalent": "Set-OrganizationConfig -AuditDisabled $false",
+    "powershellEquivalent": "Set-OrganizationConfig -AuditDisabled $false; Set-Mailbox -AuditEnabled $true",
     "recommendedBy": ["CIS", "CIPP"],
     "requiredCapabilities": [
       "EXCHANGE_S_STANDARD",

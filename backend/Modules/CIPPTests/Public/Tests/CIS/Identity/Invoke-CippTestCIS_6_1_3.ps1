@@ -6,22 +6,19 @@ function Invoke-CippTestCIS_6_1_3 {
     param($Tenant)
 
     try {
-        $Mailboxes = Get-CIPPTestData -TenantFilter $Tenant -Type 'Mailboxes'
+        $Bypassed = @(@(Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoMailboxAuditBypass').Where({ $_ }))
 
-        if (-not $Mailboxes) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_6_1_3' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'Mailboxes cache not found.' -Risk 'High' -Name "'AuditBypassEnabled' is not enabled on mailboxes" -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Audit & Compliance'
+        if ($Bypassed.Count -eq 0 -and -not (Get-CIPPDbItem -TenantFilter $Tenant -Type 'ExoMailboxAuditBypass' -CountsOnly)) {
+            Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_6_1_3' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'Mailbox audit bypass data has not been collected yet.' -Risk 'High' -Name "'AuditBypassEnabled' is not enabled on mailboxes" -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Audit & Compliance'
             return
         }
 
-        $Bypassed = $Mailboxes.Where({ $_.AuditBypassEnabled -eq $true })
-
-        if (-not $Bypassed -or $Bypassed.Count -eq 0) {
+        if ($Bypassed.Count -eq 0) {
             $Status = 'Passed'
-            $Result = 'No mailboxes have AuditBypassEnabled set to true.'
+            $Result = 'No accounts have AuditBypassEnabled set to true.'
         } else {
             $Status = 'Failed'
-            $Result = "$($Bypassed.Count) mailbox(es) have audit bypass enabled:`n`n"
-            $Result += ($Bypassed.Where({ $true }, 'First', 25) | ForEach-Object { "- $($_.UserPrincipalName)" }) -join "`n"
+            $Result = "$($Bypassed.Count) account(s) have audit bypass enabled:`n`n$(($Bypassed.Where({ $true }, 'First', 25).ForEach({ "- $($_.Name)" })) -join "`n")"
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'CIS_6_1_3' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'High' -Name "'AuditBypassEnabled' is not enabled on mailboxes" -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Audit & Compliance'

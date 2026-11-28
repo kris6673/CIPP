@@ -381,6 +381,11 @@
     "description": "Mailboxes with SMTP AUTH explicitly enabled despite the tenant default"
   },
   {
+    "type": "ExoMailboxAuditBypass",
+    "friendlyName": "Mailbox Audit Bypass",
+    "description": "Accounts with mailbox audit bypass enabled, whose actions are not written to mailbox audit logs"
+  },
+  {
     "type": "MailboxMessageConfiguration",
     "friendlyName": "Mailbox Message Configuration",
     "description": "Outlook on the web compose settings (font, undo send, From/Bcc, read receipts) of every user and shared mailbox (collected on demand)"

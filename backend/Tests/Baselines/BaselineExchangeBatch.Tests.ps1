@@ -528,3 +528,190 @@ Describe 'Get-CIPPBaselineMailboxDefaultAuditSetState' {
         { Invoke-CIPPBaselineMailboxDefaultAuditSet -Remediate $null -TenantFilter $script:Tenant -Current $Current } | Should -Throw '*all 2 writes failed*a@contoso.com -> proxy*'
     }
 }
+
+Describe 'Get-CIPPBaselineEnableMailboxAuditingState' {
+    BeforeAll {
+        . (Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public/PrepareHooks/Get-CIPPBaselineEnableMailboxAuditingState.ps1')
+        . (Join-Path $script:RepoRoot 'Modules/CIPPBaselines/Public/Executors/Invoke-CIPPBaselineEnableMailboxAuditing.ps1')
+        $script:Enforce = [PSCustomObject]@{ Variables = [PSCustomObject]@{ auditDisabled = $false } }
+    }
+
+    BeforeEach {
+        Mock Write-LogMessage {}
+        Mock New-CIPPDbRequest {
+            switch ($Type) {
+                'ExoOrganizationConfig' { @($script:OrgConfig | ConvertTo-Cached) }
+                'Mailboxes' { @($script:Mailboxes | ConvertTo-Cached) }
+                'ExoMailboxAuditBypass' { @($script:Bypass | ConvertTo-Cached) }
+            }
+        }
+        $script:OrgConfig = @(@{ AuditDisabled = $false })
+        $script:Bypass = @()
+        $script:Mailboxes = @(
+            @{ UPN = 'user@contoso.com'; recipientTypeDetails = 'UserMailbox'; AuditEnabled = $false }
+            @{ UPN = 'room2@contoso.com'; recipientTypeDetails = 'RoomMailbox'; AuditEnabled = $false }
+            @{ UPN = 'room1@contoso.com'; recipientTypeDetails = 'RoomMailbox'; AuditEnabled = $true }
+            @{ UPN = 'equip@contoso.com'; recipientTypeDetails = 'EquipmentMailbox'; AuditEnabled = 'False' }
+            @{ UPN = 'discovery@contoso.com'; recipientTypeDetails = 'DiscoveryMailbox'; AuditEnabled = $false }
+            @{ UPN = 'bookings@contoso.com'; recipientTypeDetails = 'SchedulingMailbox'; AuditEnabled = $false }
+            @{ UPN = 'old@contoso.com'; recipientTypeDetails = 'RoomMailbox' }
+        )
+    }
+
+    It 'reports drift for mailboxes outside the tenant default that have auditing off, with the tenant flag correct' {
+        $Prepared = Get-CIPPBaselineEnableMailboxAuditingState -Item $script:Enforce -TenantFilter $script:Tenant
+        $Prepared.Current.MailboxesWithoutAuditing | Should -Be @('bookings@contoso.com', 'discovery@contoso.com', 'equip@contoso.com', 'room2@contoso.com')
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -BeGreaterThan 0
+    }
+
+    It 'is compliant when the tenant flag is set and every such mailbox has auditing on' {
+        $script:Mailboxes = @($script:Mailboxes[0], $script:Mailboxes[2])
+        $Prepared = Get-CIPPBaselineEnableMailboxAuditingState -Item $script:Enforce -TenantFilter $script:Tenant
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+    }
+
+    It 'reports drift for accounts with audit bypass enabled and hands their ids to the executor' {
+        $script:Mailboxes = @($script:Mailboxes[2])
+        $script:Bypass = @(@{ Name = 'svc-b'; Guid = 'bbbbbbbb-0000-0000-0000-000000000002' }, @{ Name = 'svc-a'; Guid = 'aaaaaaaa-0000-0000-0000-000000000001' })
+        $Prepared = Get-CIPPBaselineEnableMailboxAuditingState -Item $script:Enforce -TenantFilter $script:Tenant
+        $Prepared.Current.AccountsWithAuditBypass | Should -Be @('svc-a', 'svc-b')
+        @($Prepared.Current.bypassTargets.id) | Should -Contain 'aaaaaaaa-0000-0000-0000-000000000001'
+        $script:Bypass = @(@{ Name = 'no-id' })
+        $NoId = Get-CIPPBaselineEnableMailboxAuditingState -Item $script:Enforce -TenantFilter $script:Tenant
+        $NoId.Current.AccountsWithAuditBypass | Should -Be @('no-id')
+        @($NoId.Current.bypassTargets).Count | Should -Be 0
+        $Prepared.Expected.PSObject.Properties.Name | Should -Not -Contain 'bypassTargets'
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -BeGreaterThan 0
+    }
+
+    It 'reports No Data when the audit bypass list was never collected' {
+        Mock Get-CIPPDbItem {}
+        $Prepared = Get-CIPPBaselineEnableMailboxAuditingState -Item $script:Enforce -TenantFilter $script:Tenant
+        $Prepared.Current | Should -BeNullOrEmpty
+        $Prepared.NoDataReason | Should -BeLike '*audit bypass*'
+    }
+
+    It 'still grades the tenant flag' {
+        $script:OrgConfig = @(@{ AuditDisabled = $true })
+        $script:Mailboxes = @($script:Mailboxes[2])
+        $Prepared = Get-CIPPBaselineEnableMailboxAuditingState -Item $script:Enforce -TenantFilter $script:Tenant
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -BeGreaterThan 0
+    }
+
+    It 'does not grade mailboxes when the operator deliberately keeps auditing off' {
+        $script:OrgConfig = @(@{ AuditDisabled = $true })
+        $script:Mailboxes = @()
+        $Item = [PSCustomObject]@{ Variables = [PSCustomObject]@{ auditDisabled = $true } }
+        $Prepared = Get-CIPPBaselineEnableMailboxAuditingState -Item $Item -TenantFilter $script:Tenant
+        $Prepared.Expected.PSObject.Properties.Name | Should -Not -Contain 'MailboxesWithoutAuditing'
+        $Prepared.Expected.PSObject.Properties.Name | Should -Not -Contain 'AccountsWithAuditBypass'
+        (Get-Verdict -Expected $Prepared.Expected -Current $Prepared.Current).Count | Should -Be 0
+    }
+
+    It 'names why it cannot grade when the organization config or the mailbox list is missing' {
+        $script:Mailboxes = @()
+        $Prepared = Get-CIPPBaselineEnableMailboxAuditingState -Item $script:Enforce -TenantFilter $script:Tenant
+        $Prepared.Current | Should -BeNullOrEmpty
+        $Prepared.NoDataReason | Should -BeLike '*mailbox list*'
+        $script:OrgConfig = @()
+        $Prepared = Get-CIPPBaselineEnableMailboxAuditingState -Item $script:Enforce -TenantFilter $script:Tenant
+        $Prepared.Current | Should -BeNullOrEmpty
+        $Prepared.NoDataReason | Should -BeLike '*organization settings*'
+    }
+
+    It 'turns auditing on per mailbox, anchored to each mailbox' {
+        Mock New-ExoRequest {}
+        Mock New-ExoBulkRequest { @([PSCustomObject]@{ Success = $true; OperationGuid = 'a@contoso.com' }, [PSCustomObject]@{ Success = $true; OperationGuid = 'b@contoso.com' }) }
+        $Current = [PSCustomObject]@{ AuditDisabled = $false; MailboxesWithoutAuditing = @('a@contoso.com', 'b@contoso.com') }
+        Invoke-CIPPBaselineEnableMailboxAuditing -Remediate ([PSCustomObject]@{ auditDisabled = $false }) -TenantFilter $script:Tenant -Current $Current | Should -BeNullOrEmpty
+        Should -Invoke New-ExoRequest -Times 0
+        Should -Invoke New-ExoBulkRequest -Times 1 -ParameterFilter {
+            $AnchorPerMailbox -and $MaxConcurrency -eq 10 -and @($cmdletArray).Count -eq 2 -and
+            @($cmdletArray)[1].OperationGuid -eq 'b@contoso.com' -and
+            @($cmdletArray)[1].CmdletInput.CmdletName -eq 'Set-Mailbox' -and
+            @($cmdletArray)[1].CmdletInput.Parameters.Identity -eq 'b@contoso.com' -and
+            @($cmdletArray)[1].CmdletInput.Parameters.AuditEnabled -eq $true
+        }
+    }
+
+    It 'sets the tenant flag only when it differs and leaves mailboxes alone when auditing is kept off' {
+        Mock New-ExoRequest {}
+        Mock New-ExoBulkRequest {}
+        $Current = [PSCustomObject]@{ AuditDisabled = $false; MailboxesWithoutAuditing = @('a@contoso.com') }
+        Invoke-CIPPBaselineEnableMailboxAuditing -Remediate ([PSCustomObject]@{ auditDisabled = $true }) -TenantFilter $script:Tenant -Current $Current
+        Should -Invoke New-ExoRequest -Times 1 -ParameterFilter { $cmdlet -eq 'Set-OrganizationConfig' -and $cmdParams.AuditDisabled -eq $true }
+        Should -Invoke New-ExoBulkRequest -Times 0
+    }
+
+    It 'clears audit bypass by id, without a mailbox anchor' {
+        Mock New-ExoRequest {}
+        Mock New-ExoBulkRequest { @([PSCustomObject]@{ Success = $true; OperationGuid = 'aaaaaaaa-0000-0000-0000-000000000001' }) }
+        $Current = [PSCustomObject]@{ AuditDisabled = $false; MailboxesWithoutAuditing = @(); bypassTargets = @([PSCustomObject]@{ id = 'aaaaaaaa-0000-0000-0000-000000000001'; name = 'svc-a' }) }
+        Invoke-CIPPBaselineEnableMailboxAuditing -Remediate ([PSCustomObject]@{ auditDisabled = $false }) -TenantFilter $script:Tenant -Current $Current | Should -BeNullOrEmpty
+        Should -Invoke New-ExoBulkRequest -Times 1 -ParameterFilter {
+            -not $AnchorPerMailbox -and @($cmdletArray).Count -eq 1 -and
+            @($cmdletArray)[0].CmdletInput.CmdletName -eq 'Set-MailboxAuditBypassAssociation' -and
+            @($cmdletArray)[0].CmdletInput.Parameters.Identity -eq 'aaaaaaaa-0000-0000-0000-000000000001' -and
+            @($cmdletArray)[0].CmdletInput.Parameters.AuditBypassEnabled -eq $false
+        }
+    }
+
+    It 'names the account when clearing audit bypass fails' {
+        Mock New-ExoRequest {}
+        Mock New-ExoBulkRequest {
+            if (@($cmdletArray)[0].CmdletInput.CmdletName -eq 'Set-Mailbox') { [PSCustomObject]@{ Success = $true; OperationGuid = 'a@contoso.com' } }
+            else { [PSCustomObject]@{ error = 'denied'; OperationGuid = 'aaaaaaaa-0000-0000-0000-000000000001' } }
+        }
+        $Current = [PSCustomObject]@{ AuditDisabled = $false; MailboxesWithoutAuditing = @('a@contoso.com'); bypassTargets = @([PSCustomObject]@{ id = 'aaaaaaaa-0000-0000-0000-000000000001'; name = 'svc-a' }) }
+        { Invoke-CIPPBaselineEnableMailboxAuditing -Remediate ([PSCustomObject]@{ auditDisabled = $false }) -TenantFilter $script:Tenant -Current $Current } | Should -Not -Throw
+        Should -Invoke Write-LogMessage -Times 1 -ParameterFilter { $message -like '*1 of 2*svc-a (audit bypass) -> denied*' }
+    }
+
+    It 'still clears audit bypass when the mailbox writes throw, and does not fail a run that changed the tenant flag' {
+        Mock New-ExoRequest {}
+        Mock New-ExoBulkRequest {
+            if (@($cmdletArray)[0].CmdletInput.CmdletName -eq 'Set-Mailbox') { throw 'exchange down' }
+            [PSCustomObject]@{ Success = $true; OperationGuid = 'aaaaaaaa-0000-0000-0000-000000000001' }
+        }
+        $Remediate = [PSCustomObject]@{ auditDisabled = $false }
+        $Current = [PSCustomObject]@{ AuditDisabled = $false; MailboxesWithoutAuditing = @('a@contoso.com'); bypassTargets = @([PSCustomObject]@{ id = 'aaaaaaaa-0000-0000-0000-000000000001'; name = 'svc-a' }) }
+        { Invoke-CIPPBaselineEnableMailboxAuditing -Remediate $Remediate -TenantFilter $script:Tenant -Current $Current } | Should -Not -Throw
+        Should -Invoke New-ExoBulkRequest -Times 1 -ParameterFilter { @($cmdletArray)[0].CmdletInput.CmdletName -eq 'Set-MailboxAuditBypassAssociation' }
+        Should -Invoke Write-LogMessage -Times 1 -ParameterFilter { $message -like '*1 of 2*a@contoso.com -> exchange down*' }
+
+        $Current = [PSCustomObject]@{ AuditDisabled = $true; MailboxesWithoutAuditing = @('a@contoso.com') }
+        { Invoke-CIPPBaselineEnableMailboxAuditing -Remediate $Remediate -TenantFilter $script:Tenant -Current $Current } | Should -Not -Throw
+        Should -Invoke New-ExoRequest -Times 1 -ParameterFilter { $cmdlet -eq 'Set-OrganizationConfig' }
+    }
+
+    It 'reports no change when the tenant flag and every mailbox are already right' {
+        Mock New-ExoRequest {}
+        Mock New-ExoBulkRequest {}
+        $Current = [PSCustomObject]@{ AuditDisabled = $false; MailboxesWithoutAuditing = @() }
+        (Invoke-CIPPBaselineEnableMailboxAuditing -Remediate ([PSCustomObject]@{ auditDisabled = $false }) -TenantFilter $script:Tenant -Current $Current).Changed | Should -BeFalse
+        Should -Invoke New-ExoRequest -Times 0
+        Should -Invoke New-ExoBulkRequest -Times 0
+    }
+
+    It 'counts a mailbox Exchange did not answer for as failed' {
+        Mock New-ExoRequest {}
+        $Current = [PSCustomObject]@{ AuditDisabled = $false; MailboxesWithoutAuditing = @('a@contoso.com', 'b@contoso.com') }
+        $Remediate = [PSCustomObject]@{ auditDisabled = $false }
+        Mock New-ExoBulkRequest { @([PSCustomObject]@{ Success = $true; OperationGuid = 'b@contoso.com' }) }
+        { Invoke-CIPPBaselineEnableMailboxAuditing -Remediate $Remediate -TenantFilter $script:Tenant -Current $Current } | Should -Not -Throw
+        Should -Invoke Write-LogMessage -Times 1 -ParameterFilter { $message -like '*1 of 2*a@contoso.com -> no response*' }
+        Mock New-ExoBulkRequest {}
+        { Invoke-CIPPBaselineEnableMailboxAuditing -Remediate $Remediate -TenantFilter $script:Tenant -Current $Current } | Should -Throw '*all 2 writes failed*'
+    }
+
+    It 'continues past a failed mailbox and throws only when every write failed' {
+        Mock New-ExoRequest {}
+        $Current = [PSCustomObject]@{ AuditDisabled = $false; MailboxesWithoutAuditing = @('a@contoso.com', 'b@contoso.com') }
+        $Remediate = [PSCustomObject]@{ auditDisabled = $false }
+        Mock New-ExoBulkRequest { @([PSCustomObject]@{ error = 'proxy'; OperationGuid = 'a@contoso.com' }, [PSCustomObject]@{ Success = $true; OperationGuid = 'b@contoso.com' }) }
+        { Invoke-CIPPBaselineEnableMailboxAuditing -Remediate $Remediate -TenantFilter $script:Tenant -Current $Current } | Should -Not -Throw
+        Should -Invoke Write-LogMessage -Times 1 -ParameterFilter { $message -like '*1 of 2*a@contoso.com -> proxy*' }
+        Mock New-ExoBulkRequest { @([PSCustomObject]@{ error = 'proxy'; OperationGuid = 'a@contoso.com' }, [PSCustomObject]@{ error = 'proxy'; OperationGuid = 'b@contoso.com' }) }
+        { Invoke-CIPPBaselineEnableMailboxAuditing -Remediate $Remediate -TenantFilter $script:Tenant -Current $Current } | Should -Throw '*all 2 writes failed*a@contoso.com -> proxy*'
+    }
+}

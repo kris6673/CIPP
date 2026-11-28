@@ -122,6 +122,7 @@ function Get-CIPPDBCacheSchedule {
             License = 'Exchange'
             Types   = @(
                 'CASMailboxes'
+                'ExoMailboxAuditBypass'
                 'MailboxUsage'
                 'MailTrafficSummary'
                 'OfficeActivations'

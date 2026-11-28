@@ -7,8 +7,8 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
     .SYNOPSIS
         (Label) Enable Mailbox auditing
     .DESCRIPTION
-        (Helptext) Enables Mailbox auditing for all mailboxes and on tenant level. Disables audit bypass on all mailboxes. Unified Audit Log needs to be enabled for this standard to function.
-        (DocsDescription) Enables mailbox auditing on tenant level and for all mailboxes. Disables audit bypass on all mailboxes. By default Microsoft does not enable mailbox auditing for Resource Mailboxes, Public Folder Mailboxes and DiscoverySearch Mailboxes. Unified Audit Log needs to be enabled for this standard to function.
+        (Helptext) Enables Mailbox auditing on tenant level and on the room, equipment, discovery and Bookings mailboxes the tenant default does not cover. Disables audit bypass on all mailboxes. Unified Audit Log needs to be enabled for this standard to function.
+        (DocsDescription) Enables mailbox auditing on tenant level. Microsoft only enables auditing by default for user, shared and group mailboxes, so auditing is also turned on for each room, equipment, discovery and Bookings mailbox. Public folder mailboxes are not covered. Disables audit bypass on all mailboxes. Unified Audit Log needs to be enabled for this standard to function.
     .NOTES
         CAT
             Exchange Standards
@@ -29,7 +29,7 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
         ADDEDDATE
             2024-01-08
         POWERSHELLEQUIVALENT
-            Set-OrganizationConfig -AuditDisabled \$false
+            Set-OrganizationConfig -AuditDisabled \$false; Set-Mailbox -AuditEnabled \$true
         RECOMMENDEDBY
             "CIS"
             "CIPP"
@@ -60,6 +60,16 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
         return
     }
 
+    # Mailbox auditing on by default covers user, shared and group mailboxes only, so these types
+    # keep their own AuditEnabled flag, which Secure Score grades. Public folder mailboxes are not
+    # in the mailbox cache.
+    $AuditTypes = @('RoomMailbox', 'EquipmentMailbox', 'DiscoveryMailbox', 'SchedulingMailbox')
+    $Mailboxes = @(try { New-CIPPDbRequest -TenantFilter $Tenant -Type 'Mailboxes' -Fields 'UPN', 'recipientTypeDetails', 'AuditEnabled' } catch { Write-Information "EnableMailboxAuditing: reading the mailbox cache for $Tenant failed: $($_.Exception.Message)" })
+    if ($Mailboxes.Count -eq 0) {
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message 'EnableMailboxAuditing: the cached mailbox list is empty, so per-mailbox auditing was not checked. It is checked once mailbox data has been collected.' -sev Warning
+    }
+    $Unaudited = @($Mailboxes.Where({ $_.UPN -and $_.recipientTypeDetails -in $AuditTypes -and "$($_.AuditEnabled)" -eq 'False' }).UPN | Sort-Object)
+
     if ($Settings.remediate -eq $true) {
         if ($AuditState) {
             # Enable tenant level mailbox audit
@@ -74,16 +84,39 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Tenant level mailbox audit already enabled' -sev Info
         }
 
-        # Per-mailbox AuditEnabled is intentionally not set here. With mailbox auditing on by default
-        # (AuditDisabled = $false, set above) Microsoft applies the default per-sign-in-type audit
-        # action sets and Get-Mailbox reports AuditEnabled = True on supported mailboxes, so enabling
-        # each mailbox individually is redundant.
-        # https://learn.microsoft.com/en-us/purview/audit-mailboxes
+        if ($Unaudited.Count -gt 0) {
+            $Request = foreach ($UPN in $Unaudited) {
+                @{
+                    CmdletInput   = @{ CmdletName = 'Set-Mailbox'; Parameters = @{ Identity = $UPN; AuditEnabled = $true } }
+                    OperationGuid = $UPN
+                }
+            }
+            # Audit settings are written on the mailbox's own server, so each write is anchored to its mailbox.
+            # A mailbox counts as written only when Exchange answered for it without an error.
+            $Answers = @{}
+            try {
+                foreach ($Answer in @(New-ExoBulkRequest -tenantid $Tenant -cmdletArray @($Request) -AnchorPerMailbox -MaxConcurrency 10)) {
+                    if ($Answer.OperationGuid) { $Answers["$($Answer.OperationGuid)"] = "$($Answer.error)" }
+                }
+            } catch {
+                foreach ($UPN in $Unaudited) { $Answers[$UPN] = "$($_.Exception.Message)" }
+            }
+            $Failed = @($Unaudited.Where({ -not $Answers.ContainsKey($_) -or $Answers[$_] }))
+            if ($Failed.Count -gt 0) {
+                $Failures = foreach ($UPN in $Failed[0..([Math]::Min(9, $Failed.Count - 1))]) { "$UPN -> $(if ($Answers[$UPN]) { Get-NormalizedError -Message $Answers[$UPN] } else { 'no response from Exchange' })" }
+                $Sev = if ($Failed.Count -ge $Unaudited.Count) { 'Error' } else { 'Warning' }
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to enable mailbox auditing for $($Failed.Count) of $($Unaudited.Count) mailbox(es). $($Failures -join ' | ')" -sev $Sev
+            }
+            if ($Failed.Count -lt $Unaudited.Count) {
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Enabled mailbox auditing for $($Unaudited.Count - $Failed.Count) mailbox(es)" -sev Info
+            }
+            $Unaudited = $Failed
+        }
 
         # Disable audit bypass for any mailbox that has it enabled, so no user is excluded from
         # auditing. The bypass flag is not a Get-Mailbox property - it lives on the association.
         try {
-            $BypassMailboxes = @(New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxAuditBypassAssociation' -useSystemMailbox $true | Where-Object { $_.AuditBypassEnabled -eq $true })
+            $BypassMailboxes = @(New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxAuditBypassAssociation' -cmdParams @{ ResultSize = 'Unlimited' } -useSystemMailbox $true | Where-Object { $_.AuditBypassEnabled -eq $true })
         } catch {
             $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to retrieve mailbox audit bypass associations. Error: $ErrorMessage" -sev Error
@@ -120,16 +153,22 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
         } else {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Tenant level mailbox audit is enabled' -sev Info
         }
+        if ($Unaudited.Count -gt 0) {
+            Write-StandardsAlert -message "Mailbox auditing is not enabled on $($Unaudited.Count) mailbox(es)" -object $Unaudited -tenant $Tenant -standardName 'EnableMailboxAuditing' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Mailbox auditing is not enabled on $($Unaudited.Count) mailbox(es): $($Unaudited -join ', ')" -sev Info
+        }
     }
 
     if ($Settings.report -eq $true) {
         $AuditState = -not $AuditState
 
         $CurrentValue = [PSCustomObject]@{
-            EnableMailboxAuditing = $AuditState
+            EnableMailboxAuditing    = $AuditState
+            MailboxesWithoutAuditing = $Unaudited
         }
         $ExpectedValue = [PSCustomObject]@{
-            EnableMailboxAuditing = $true
+            EnableMailboxAuditing    = $true
+            MailboxesWithoutAuditing = @()
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.EnableMailboxAuditing' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
