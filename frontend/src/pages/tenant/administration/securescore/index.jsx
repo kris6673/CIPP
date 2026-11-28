@@ -12,6 +12,7 @@ import {
   Container,
   ToggleButton,
   ToggleButtonGroup,
+  Tooltip,
   Typography,
 } from '@mui/material'
 import { Grid } from '@mui/system'
@@ -90,11 +91,17 @@ const Page = () => {
       case 'incomplete':
         filtered = controlScores.filter((score) => score.scoreInPercentage < 100)
         break
+      case 'changed':
+        filtered = controlScores.filter((score) => score.controlState)
+        break
       default:
         filtered = controlScores
     }
+    const isIgnored = (score) => score.controlState === 'Ignored'
     return selectedSort === 'gain'
-      ? [...filtered].sort((a, b) => (b.pointsToGain ?? 0) - (a.pointsToGain ?? 0))
+      ? [...filtered].sort(
+          (a, b) => isIgnored(a) - isIgnored(b) || (b.pointsToGain ?? 0) - (a.pointsToGain ?? 0)
+        )
       : filtered
   }
 
@@ -109,6 +116,7 @@ const Page = () => {
     { value: 'zero', label: 'Not Started (0%)' },
     { value: 'started', label: 'In Progress (Started)' },
     { value: 'incomplete', label: 'Not Completed (Started + Not Started)' },
+    { value: 'changed', label: 'Status Changed (Ignored / Third Party)' },
   ]
   return (
     <Container
@@ -323,18 +331,16 @@ const Page = () => {
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                         <Chip
                           variant="outlined"
-                          label={`${secureScoreControl.scoreInPercentage}% ${
-                            secureScoreControl.controlStateUpdates?.[0]?.state === 'ThirdParty'
-                              ? '- Resolved by Third Party'
-                              : ''
-                          }`}
+                          label={`${secureScoreControl.scoreInPercentage}%`}
                           size="small"
                           color={
-                            secureScoreControl.scoreInPercentage === 100
-                              ? 'success'
-                              : secureScoreControl.scoreInPercentage > 50
-                                ? 'warning'
-                                : 'error'
+                            secureScoreControl.controlState === 'Ignored'
+                              ? 'default'
+                              : secureScoreControl.scoreInPercentage === 100
+                                ? 'success'
+                                : secureScoreControl.scoreInPercentage > 50
+                                  ? 'warning'
+                                  : 'error'
                           }
                         />
                         {secureScoreControl.pointsToGain != null && (
@@ -348,6 +354,32 @@ const Page = () => {
                             size="small"
                             color="info"
                           />
+                        )}
+                        {secureScoreControl.controlState && (
+                          <Tooltip
+                            describeChild
+                            title={[
+                              secureScoreControl.statusUpdate.updatedBy,
+                              Date.parse(secureScoreControl.statusUpdate.updatedDateTime) &&
+                                new Date(
+                                  secureScoreControl.statusUpdate.updatedDateTime
+                                ).toLocaleDateString(),
+                              secureScoreControl.statusUpdate.comment,
+                            ]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          >
+                            <Chip
+                              label={secureScoreControl.status}
+                              size="small"
+                              tabIndex={0}
+                              color={
+                                { Ignored: 'default', ThirdParty: 'success' }[
+                                  secureScoreControl.controlState
+                                ] ?? 'info'
+                              }
+                            />
+                          </Tooltip>
                         )}
                       </Box>
 

@@ -97,7 +97,7 @@ const Page = () => {
         title="Secure Score"
         cardButton={secureScore.controls}
         data={secureScore.translatedData.controlScores}
-        simpleColumns={['title', 'tier', 'actionUrl', 'userImpact', 'threats']}
+        simpleColumns={['title', 'status', 'tier', 'actionUrl', 'userImpact', 'threats']}
       />
       {secureScore.syncDialog}
     </>

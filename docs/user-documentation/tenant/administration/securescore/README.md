@@ -19,15 +19,15 @@ Selecting All Tenants replaces the cards with a portfolio view, built from CIPP'
 
 **Secure score by tenant**, below the summary, lists one row per tenant, sorted lowest score first so the tenants that need attention are at the top.
 
-| Column           | Description                                                                                         |
-| ---------------- | --------------------------------------------------------------------------------------------------- |
-| Tenant Name      | The tenant's display name, falling back to its domain where no name is recorded.                    |
-| Tenant           | The tenant's default domain.                                                                        |
-| Percentage Score | The tenant's latest score as a percentage of the maximum available to it.                           |
-| Change           | How far the tenant's score has moved across the retained history, in percentage points.             |
-| Current Score    | The latest score in points.                                                                         |
-| Max Score        | The maximum score available to that tenant.                                                         |
-| Captured At      | When the score CIPP is showing was recorded.                                                        |
+| Column           | Description                                                                                        |
+| ---------------- | -------------------------------------------------------------------------------------------------- |
+| Tenant Name      | The tenant's display name, falling back to its domain where no name is recorded.                   |
+| Tenant           | The tenant's default domain.                                                                       |
+| Percentage Score | The tenant's latest score as a percentage of the maximum available to it.                          |
+| Change           | How far the tenant's score has moved across the retained history, in percentage points.            |
+| Current Score    | The latest score in points.                                                                        |
+| Max Score        | The maximum score available to that tenant.                                                        |
+| Captured At      | When the score CIPP is showing was recorded.                                                       |
 | Tenant Groups    | The CIPP tenant groups the tenant belongs to. Hidden by default; enable it from the column picker. |
 
 The **Tenant groups** picker above the table limits it to tenants in any of the CIPP tenant groups you tick; with none ticked it shows every tenant. **View tenant secure score** opens the selected tenant's own Secure Score page and switches the tenant selector to it.
@@ -55,40 +55,42 @@ Below them, the **Secure Score** card charts the last seven score readings Micro
 
 The filter button above the cards limits which recommendations are shown. The current selection is shown on the button itself.
 
-| Filter                | Description                                                                         |
-| --------------------- | ----------------------------------------------------------------------------------- |
-| All Recommendations   | Shows every recommendation regardless of status.                                    |
-| Completed (100%)      | Shows only recommendations that are fully complete.                                 |
-| Not Started (0%)      | Shows only recommendations with no progress at all.                                 |
-| In Progress (Started) | Shows recommendations that are partially complete, meaning anything from 1% to 99%. |
-| Not Completed (Started + Not Started) | Shows every recommendation below 100%, combining the two filters above. |
+| Filter                                 | Description                                                                         |
+| -------------------------------------- | ----------------------------------------------------------------------------------- |
+| All Recommendations                    | Shows every recommendation regardless of status.                                    |
+| Completed (100%)                       | Shows only recommendations that are fully complete.                                 |
+| Not Started (0%)                       | Shows only recommendations with no progress at all.                                 |
+| In Progress (Started)                  | Shows recommendations that are partially complete, meaning anything from 1% to 99%. |
+| Not Completed (Started + Not Started)  | Shows every recommendation below 100%, combining the two filters above.             |
+| Status Changed (Ignored / Third Party) | Shows only recommendations whose status has been changed from the default.          |
 
 ## Sorting
 
 The sort button next to the filter sets the order of the cards. The current selection is shown on the button itself.
 
-| Sort             | Description                                                                                     |
-| ---------------- | ----------------------------------------------------------------------------------------------- |
-| Points to gain   | The default. Recommendations worth the most remaining points come first.                        |
-| Implementation % | Orders by how complete each recommendation is, with the most complete first.                    |
+| Sort             | Description                                                                                                       |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Points to gain   | The default. Recommendations worth the most remaining points come first. Ignored recommendations are listed last. |
+| Implementation % | Orders by how complete each recommendation is, with the most complete first.                                      |
 
 ## Recommendation Cards
 
 Each card covers one recommendation and carries the following, where Microsoft supplies it:
 
-* A chip showing how complete the recommendation is, coloured green at 100%, amber above 50%, and red at 50% or below. A recommendation marked as handled elsewhere also reads "Resolved by Third Party".
-* A chip showing what completing the recommendation is worth, such as **+6 pts (+2.21% total)**: the points still available on it and how much the tenant's overall score would rise. Completed recommendations show +0. The chip is left out where Microsoft does not publish a maximum for the recommendation.
-* **Description**, explaining what the recommendation covers.
-* **Remediation Recommendation**, explaining how to satisfy it. Where a CIPP standard covers the recommendation, this points to that standard instead of Microsoft's own instructions. It is hidden once the recommendation reaches 100%.
-* **Threats**, the threat categories the recommendation mitigates.
-* **Compliance Frameworks**, the certifications and controls the recommendation maps to.
+- A chip showing how complete the recommendation is, coloured green at 100%, amber above 50%, and red at 50% or below. On an ignored recommendation the chip is grey.
+- A chip showing what completing the recommendation is worth, such as **+6 pts (+2.21% total)**: the points still available on it and how much the tenant's overall score would rise. Completed recommendations show +0. The chip is left out where Microsoft does not publish a maximum for the recommendation.
+- A filled status chip where the recommendation's status has been changed: **Ignored** in grey or **Resolved by Third Party** in green. Any other status Microsoft records, such as **Reviewed**, shows under its own name in blue. Hover over it to see when the status was set, the reason given and, where Microsoft records it, who set it. Recommendations left on the default status show no status chip.
+- **Description**, explaining what the recommendation covers.
+- **Remediation Recommendation**, explaining how to satisfy it. Where a CIPP standard covers the recommendation, this points to that standard instead of Microsoft's own instructions. It is hidden once the recommendation reaches 100%.
+- **Threats**, the threat categories the recommendation mitigates.
+- **Compliance Frameworks**, the certifications and controls the recommendation maps to.
 
 ## Card Actions
 
 | Action        | Description                                                                                                                                                                                                                         |
 | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Change Status | Records how the recommendation has been handled, choosing a resolution type and a reason. Unavailable, and shown greyed out, for Microsoft Defender controls.                                                                       |
-| Remediate     | Opens the Microsoft portal page for the recommendation in a new tab. Where a CIPP standard covers the recommendation, it opens that standard on the Baselines page, or on the standards list where Baselines is turned off. |
+| Remediate     | Opens the Microsoft portal page for the recommendation in a new tab. Where a CIPP standard covers the recommendation, it opens that standard on the Baselines page, or on the standards list where Baselines is turned off.         |
 | Updates       | Lists the status changes recorded against the recommendation, showing the state set, who it was assigned to, the reason given, who made the change and when. Only shown where changes exist, with the number of them on the button. |
 
 ### Resolution types

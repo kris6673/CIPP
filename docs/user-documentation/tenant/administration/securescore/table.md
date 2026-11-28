@@ -6,15 +6,15 @@ The Table Overview presents Secure Score as a single sortable, searchable table,
 
 Selecting All Tenants replaces the recommendation list with one row per tenant per recommendation, drawn from CIPP's nightly score cache rather than live calls to Microsoft. Rows are sorted lowest score first. Only recommendations a tenant actually reports appear; the Controls tab counts the tenants that do not.
 
-| Column        | Description                                                                                                   |
-| ------------- | ------------------------------------------------------------------------------------------------------------- |
-| Tenant Name   | The tenant's display name.                                                                                    |
-| Control Name  | Microsoft's identifier for the recommendation.                                                                |
-| Title         | The name of the recommendation.                                                                               |
-| Score Percent | How complete the recommendation is for that tenant, coloured green at 100%, amber when partial, red at 0%.    |
-| Points        | The points earned out of the maximum available for the recommendation.                                        |
-| Tier          | Core, Defense in Depth, or Advanced.                                                                          |
-| State         | How the recommendation has been handled: Default, Ignored, ThirdParty and so on.                              |
+| Column        | Description                                                                                                |
+| ------------- | ---------------------------------------------------------------------------------------------------------- |
+| Tenant Name   | The tenant's display name.                                                                                 |
+| Control Name  | Microsoft's identifier for the recommendation.                                                             |
+| Title         | The name of the recommendation.                                                                            |
+| Score Percent | How complete the recommendation is for that tenant, coloured green at 100%, amber when partial, red at 0%. |
+| Points        | The points earned out of the maximum available for the recommendation.                                     |
+| Tier          | Core, Defense in Depth, or Advanced.                                                                       |
+| State         | How the recommendation has been handled: Default, Ignored, ThirdParty and so on.                           |
 
 User impact, implementation cost, category, threats, tenant groups, and who changed the state, when and why are available from the column picker.
 
@@ -46,6 +46,7 @@ Each row is one Secure Score recommendation, combining the tenant's own control 
 | Column      | Description                                                                                                                                                       |
 | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Title       | The name of the recommendation.                                                                                                                                   |
+| Status      | How the recommendation has been handled: Ignored, Resolved by Third Party, or another status Microsoft records. Empty where the status has not been changed.      |
 | Tier        | Where the recommendation sits in Microsoft's layering of controls: Core, Defense in Depth, or Advanced.                                                           |
 | Action Url  | Where the recommendation is actioned. This is normally a link into the relevant Microsoft portal but reads as a path within CIPP where a CIPP standard covers it. |
 | User Impact | How disruptive Microsoft considers the change to be for end users: Low, Moderate, or High.                                                                        |

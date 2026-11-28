@@ -113,8 +113,20 @@ export function useSecureScore({ waiting = true } = {}) {
           translation?.maxScore != null
             ? Math.max(translation.maxScore - (control.score ?? 0), 0)
             : null
+        // Graph returns the history newest first today; pick by date so the order can't bite.
+        // An entry without a usable date never beats a dated one; all undated keeps Graph's first.
+        const updatedAt = (update) => Date.parse(update.updatedDateTime) || 0
+        const statusUpdate = (translation?.controlStateUpdates ?? []).reduce(
+          (latest, update) => (!latest || updatedAt(update) > updatedAt(latest) ? update : latest),
+          null
+        )
+        const controlState =
+          statusUpdate?.state && statusUpdate.state !== 'Default' ? statusUpdate.state : null
         return {
           ...control,
+          controlState,
+          status: controlState === 'ThirdParty' ? 'Resolved by Third Party' : (controlState ?? ''),
+          statusUpdate: controlState ? statusUpdate : null,
           pointsToGain,
           percentToGain:
             pointsToGain != null && secureScoreData.maxScore

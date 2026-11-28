@@ -124,6 +124,72 @@ describe('useSecureScore points to gain', () => {
   })
 })
 
+describe('useSecureScore control status', () => {
+  beforeEach(() => {
+    for (const key of Object.keys(responses)) delete responses[key]
+  })
+
+  const statusWith = async (controlStateUpdates) => {
+    setFlags(true)
+    responses['security/secureScoreControlProfiles'].Results[0].controlStateUpdates =
+      controlStateUpdates
+    const { result } = renderHook(() => useSecureScore())
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    return result.current.translatedData.controlScores.find(
+      (c) => c.controlName === 'mdo_commonattachmentsfilter'
+    )
+  }
+
+  it('takes the newest update whatever order Graph returns the history in', async () => {
+    const control = await statusWith([
+      { state: 'ThirdParty', updatedDateTime: '2026-04-01T00:00:00Z' },
+      { state: 'Ignored', updatedDateTime: '2026-06-01T00:00:00Z', comment: 'No P2' },
+      { state: 'Default', updatedDateTime: '2026-01-01T00:00:00Z' },
+    ])
+    expect(control.controlState).toBe('Ignored')
+    expect(control.status).toBe('Ignored')
+    expect(control.statusUpdate.comment).toBe('No P2')
+  })
+
+  it('labels a third party resolution in plain English', async () => {
+    const control = await statusWith([
+      { state: 'ThirdParty', updatedDateTime: '2026-06-01T00:00:00Z' },
+    ])
+    expect(control.status).toBe('Resolved by Third Party')
+  })
+
+  it('shows no status once the newest update is a reset to Default', async () => {
+    const control = await statusWith([
+      { state: 'Default', updatedDateTime: '2026-06-01T00:00:00Z' },
+      { state: 'Ignored', updatedDateTime: '2026-04-01T00:00:00Z' },
+    ])
+    expect(control.controlState).toBeNull()
+    expect(control.status).toBe('')
+    expect(control.statusUpdate).toBeNull()
+  })
+
+  it('lets a dated reset beat an earlier-listed update with no date', async () => {
+    const control = await statusWith([
+      { state: 'Ignored' },
+      { state: 'Default', updatedDateTime: '2026-06-01T00:00:00Z' },
+    ])
+    expect(control.controlState).toBeNull()
+  })
+
+  it("falls back to Graph's first entry when no update carries a date", async () => {
+    const control = await statusWith([
+      { state: 'Ignored', updatedDateTime: null },
+      { state: 'ThirdParty' },
+    ])
+    expect(control.controlState).toBe('Ignored')
+  })
+
+  it('shows no status for a control with no history', async () => {
+    const control = await statusWith(undefined)
+    expect(control.controlState).toBeNull()
+  })
+})
+
 describe('useSecureScore failed fetch', () => {
   beforeEach(() => {
     for (const key of Object.keys(responses)) delete responses[key]
