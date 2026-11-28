@@ -97,6 +97,7 @@ const Page = () => {
         title="Secure Score"
         cardButton={secureScore.controls}
         data={secureScore.translatedData.controlScores}
+        isFetching={secureScore.isFetching}
         simpleColumns={['title', 'tier', 'actionUrl', 'userImpact', 'threats']}
       />
       {secureScore.syncDialog}
