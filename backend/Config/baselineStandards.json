@@ -12721,6 +12721,35 @@
     ]
   },
   {
+    "name": "standards.PurviewLabelConsent",
+    "cat": "Global Standards",
+    "tag": [
+      "mip_purviewlabelconsent"
+    ],
+    "helpText": "Turns on **Extend labeling to assets in Microsoft Purview Data Map**, so sensitivity labels can be applied to files and database columns scanned into the Data Map. Microsoft does not allow this setting to be turned off again. Nothing is labeled until a Purview account scans data sources and an auto-labeling policy covers them.",
+    "docsDescription": "Turns on **Extend labeling to assets in Microsoft Purview Data Map** under Information Protection in the Microsoft Purview portal. This is the Secure Score recommendation *Extend M365 sensitivity labeling to assets in Microsoft Purview data map*. Microsoft does not allow the setting to be turned off once it is on. CIPP reads the state from the tenant's Secure Score, which Microsoft updates about once a day, so the standard can keep showing drift for a day or two after it has been remediated.",
+    "executiveText": "Lets the organization's existing sensitivity labels follow data beyond Microsoft 365, into files and databases catalogued in Microsoft Purview. This gives one consistent view of where sensitive data lives, and satisfies the matching Microsoft Secure Score recommendation.",
+    "label": "Extend sensitivity labeling to Microsoft Purview Data Map assets",
+    "impact": "Low Impact",
+    "impactColour": "info",
+    "addedDate": "2026-11-28",
+    "powershellEquivalent": "Set-PolicyConfig -PurviewLabelConsent $true",
+    "recommendedBy": [],
+    "requiredCapabilities": [
+      "MIP_S_CLP1",
+      "MIP_S_CLP2"
+    ],
+    "secureScoreImpact": 1,
+    "expected": {
+      "scoreInPercentage": 100
+    },
+    "addedComponent": [
+      {
+        "name": "standards.PurviewLabelConsent."
+      }
+    ]
+  },
+  {
     "name": "standards.QuarantineRequestAlert",
     "cat": "Defender Standards",
     "tag": [],
