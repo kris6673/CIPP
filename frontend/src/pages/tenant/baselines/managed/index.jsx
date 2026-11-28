@@ -308,13 +308,18 @@ const requestActions = [
 const Page = () => {
   const pageTitle = 'Managed Baselines'
   const router = useRouter()
-  const [chosenView, setView] = useState(null)
-  // Deep link: ?view=custom or ?view=recommendations (query is empty until the router is ready).
-  const linkedView =
-    router.isReady && ['custom', 'recommendations'].includes(router.query.view)
+  // The chosen card lives in the address: ?view=templates, custom or recommendations.
+  const view =
+    router.isReady &&
+    viewOptions.some((option) => option.value === router.query.view)
       ? router.query.view
       : 'templates'
-  const view = chosenView ?? linkedView
+  const setView = (value) =>
+    router.replace(
+      { pathname: router.pathname, query: { ...router.query, view: value } },
+      undefined,
+      { shallow: true }
+    )
 
   const integrations = ApiGetCall({
     url: '/api/ListExtensionsConfig',

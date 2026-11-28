@@ -950,5 +950,12 @@
       }
     ],
     "description": "Alerts when a user, group or service principal gains a permanent active admin role assignment (no end date) that is not in the approved list. On Entra ID P2 tenants time-bound and PIM-activated assignments are ignored; elsewhere every assignment counts as permanent. The first run only records the current state."
+  },
+  {
+    "name": "ManagedBaselineRecommendations",
+    "label": "Alert on new managed baseline recommendations",
+    "recommendedRunInterval": "1d",
+    "minimumRunInterval": "1d",
+    "description": "Alerts when a recommendations scan finds a new recommendation for the tenant. Needs the CyberDrain Managed Baselines integration and a first scan from the Managed tab under Baselines. The first run reports every recommendation that is open."
   }
 ]

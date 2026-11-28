@@ -116,6 +116,7 @@ function Invoke-ListManagedBaselineRecommendations {
                         total                  = $Scan.Total
                         compared               = $Compared
                         skipped                = $Scan.Skipped
+                        compliant              = $Scan.Compliant
                         newFindings            = $Scan.NewFindings
                         resolvedFindings       = $Scan.ResolvedFindings
                         error                  = $Scan.Error

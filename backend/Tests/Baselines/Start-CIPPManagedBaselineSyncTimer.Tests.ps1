@@ -5,7 +5,9 @@ BeforeAll {
     $BackendRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
 
     function Get-CippTable { param($tablename) @{ Context = $tablename } }
-    function Get-CIPPAzDataTableEntity { param($Context, $Filter) }
+    function Get-CIPPAzDataTableEntity { param($Context, $Filter, $Property) }
+    function Get-CIPPTenantLookup { }
+    function Start-CIPPManagedBaselineRecommendationScan { param($Tenant, $StartedBy) }
     function Add-CIPPAzDataTableEntity { param($Context, $Entity, [string]$OperationType) }
     function Write-LogMessage { param($API, $message, $Sev) }
     function Update-CIPPManagedBaselineRequest { param($Row) }
@@ -22,12 +24,19 @@ BeforeAll {
 Describe 'Start-CIPPManagedBaselineSyncTimer' {
     BeforeEach {
         $script:Rows = @()
+        $script:Scans = @()
+        Mock Start-CIPPManagedBaselineRecommendationScan {}
+        Mock Get-CIPPTenantLookup {
+            $Lookup = @{}
+            foreach ($Id in 'old', 'older', 'oldest', 'ancient', 'recent', 'running', 'lost') { $Lookup[$Id] = [pscustomobject]@{ customerId = $Id; defaultDomainName = "$Id.example" } }
+            $Lookup
+        }
         $script:Config = $script:Enabled
         $script:Failed = [System.Collections.Generic.List[object]]::new()
         Mock Write-LogMessage {}
         Mock Update-CIPPManagedBaselineRequest { 'Waiting on CyberDrain' }
         Mock Add-CIPPAzDataTableEntity { $script:Failed.Add($Entity) }
-        Mock Get-CIPPAzDataTableEntity { if ($Context -eq 'Extensionsconfig') { $script:Config } else { $script:Rows } }
+        Mock Get-CIPPAzDataTableEntity { if ($Context -eq 'Extensionsconfig') { $script:Config } elseif ($Context -eq 'BaselineRecommendations') { $script:Scans } else { $script:Rows } }
     }
 
     It 'reads and asks nothing while the integration is off' {
@@ -90,5 +99,47 @@ Describe 'Start-CIPPManagedBaselineSyncTimer' {
         Start-CIPPManagedBaselineSyncTimer
 
         Should -Invoke Update-CIPPManagedBaselineRequest -Times 2 -Exactly
+    }
+
+    It 'rescans a tenant once its last recommendations scan is a week old, oldest first and three per run' {
+        $Week = 604800
+        $script:Scans = @(
+            [pscustomobject]@{ PartitionKey = 'recent'; RowKey = 'scan'; Status = 'Finished'; StartedAt = $script:Now - 3600; FinishedAt = $script:Now - 3500 }
+            [pscustomobject]@{ PartitionKey = 'running'; RowKey = 'scan'; Status = 'Running'; StartedAt = $script:Now - 600 }
+            [pscustomobject]@{ PartitionKey = 'lost'; RowKey = 'scan'; Status = 'Running'; StartedAt = $script:Now - $Week - 500 }
+            [pscustomobject]@{ PartitionKey = 'old'; RowKey = 'scan'; Status = 'Finished'; StartedAt = $script:Now - $Week - 100; FinishedAt = $script:Now - $Week - 50 }
+            [pscustomobject]@{ PartitionKey = 'older'; RowKey = 'scan'; Status = 'Failed'; StartedAt = $script:Now - $Week - 200 }
+            [pscustomobject]@{ PartitionKey = 'oldest'; RowKey = 'scan'; Status = 'Finished'; StartedAt = $script:Now - $Week - 900; FinishedAt = $script:Now - $Week - 800 }
+            [pscustomobject]@{ PartitionKey = 'gone'; RowKey = 'scan'; Status = 'Finished'; StartedAt = 1; FinishedAt = 2 }
+        )
+
+        Start-CIPPManagedBaselineSyncTimer
+
+        Should -Invoke Start-CIPPManagedBaselineRecommendationScan -Times 3 -Exactly
+        foreach ($Id in 'oldest', 'lost', 'older') {
+            Should -Invoke Start-CIPPManagedBaselineRecommendationScan -Times 1 -Exactly -ParameterFilter { $Tenant.customerId -eq $Id -and $StartedBy -eq 'Weekly scan' }
+        }
+    }
+
+    It 'starts no rescans after CyberDrain rejected the key' {
+        $script:Rows = @((New-Row 'a' 'Waiting on CyberDrain'))
+        $script:Scans = @([pscustomobject]@{ PartitionKey = 'old'; RowKey = 'scan'; Status = 'Finished'; StartedAt = 1; FinishedAt = 2 })
+        Mock Update-CIPPManagedBaselineRequest { throw [System.UnauthorizedAccessException]::new('CyberDrain rejected the API key.') }
+
+        Start-CIPPManagedBaselineSyncTimer
+
+        Should -Invoke Start-CIPPManagedBaselineRecommendationScan -Times 0 -Exactly
+    }
+
+    It 'carries on with the next tenant when one rescan cannot start' {
+        $script:Scans = @(
+            [pscustomobject]@{ PartitionKey = 'old'; RowKey = 'scan'; Status = 'Finished'; StartedAt = 1; FinishedAt = 2 }
+            [pscustomobject]@{ PartitionKey = 'older'; RowKey = 'scan'; Status = 'Finished'; StartedAt = 3; FinishedAt = 4 }
+        )
+        Mock Start-CIPPManagedBaselineRecommendationScan { throw 'service is down' }
+
+        Start-CIPPManagedBaselineSyncTimer
+
+        Should -Invoke Start-CIPPManagedBaselineRecommendationScan -Times 2 -Exactly
     }
 }

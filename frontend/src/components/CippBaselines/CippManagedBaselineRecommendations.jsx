@@ -179,6 +179,14 @@ export const CippManagedBaselineRecommendations = () => {
         </Alert>
       )}
       {tenant && (
+        <Alert severity="info">
+          Recommendations show where this tenant differs from what we recommend
+          right now. CIPP scans a tenant again every week once it has been
+          scanned here. Add the alert "Alert on new managed baseline recommendations" in
+          Alert Configuration to hear about new ones.
+        </Alert>
+      )}
+      {tenant && (
         <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
           <Button
             variant="contained"
@@ -207,6 +215,13 @@ export const CippManagedBaselineRecommendations = () => {
         <Alert severity="info">
           Last scan {finished}. {scan.newFindings ?? 0} new and{' '}
           {scan.resolvedFindings ?? 0} resolved since the scan before.
+        </Alert>
+      )}
+      {scan?.status === 'Finished' && scan.compliant > 0 && (
+        <Alert severity="success">
+          {scan.compliant} recommended settings already match on this tenant. A
+          setting that is right today can be changed tomorrow, so keep these in
+          a baseline too. A baseline tells you when one of them drifts.
         </Alert>
       )}
       {scan && (
